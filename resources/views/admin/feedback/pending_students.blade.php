@@ -149,7 +149,7 @@
                             <button type="button" id="exportExcelDetailed"
                                 class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-2 rounded-3 px-3">
                                 <i class="material-symbols-rounded fs-6" aria-hidden="true">view_list</i>
-                               Not givern Feedback details
+                               Not given Feedback details
                             </button>
                             <button type="button" id="btnPrint"
                                 class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2 rounded-3 px-3">

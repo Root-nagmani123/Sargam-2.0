@@ -98,8 +98,13 @@
     ]" />
     <x-session_message />
 
-    {{-- Active / Archived tabs + Print --}}
+    {{-- Active / Archived tabs + Print. The counsellee view is the faculty's
+         Counsellor Groups whatever state their courses are in, so the tabs would
+         be a control that changes nothing — it shows a heading instead. --}}
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        @if(($isCounselleeView ?? false) || ($isHouseView ?? false))
+        <h2 class="h6 fw-semibold mb-0">{{ ($isHouseView ?? false) ? 'House Wise Details' : 'My Counsellees' }}</h2>
+        @else
         <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white" role="group" aria-label="Course status">
             <li class="nav-item" role="presentation">
                 <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $activeStatus === 'active' ? 'active' : '' }}"
@@ -110,6 +115,7 @@
                     data-status="archive">Archived</button>
             </li>
         </ul>
+        @endif
         <div class="d-flex flex-wrap align-items-center gap-2">
             <button type="button" class="btn sl-toolbar-btn border-0" id="otListPrintBtn" >
                 <i class="bi bi-printer" aria-hidden="true"></i>
@@ -154,10 +160,13 @@
                     </div>
                     @endif
 
-                    @if(($cadreOptions ?? collect())->isNotEmpty())
+                    {{-- Cadre and House list only what this viewer's participants
+                         actually belong to, and both default to "All" so the page
+                         opens on the whole set. --}}
+                    @if(! ($isHouseView ?? false) && ($cadreOptions ?? collect())->isNotEmpty())
                     <div class="sl-filter-item">
                         <select id="cadreFilter" class="form-select sl-filter-select" aria-label="Filter by cadre">
-                            <option value="">Cadre</option>
+                            <option value="">Cadre: All</option>
                             @foreach($cadreOptions as $cadre)
                                 <option value="{{ $cadre }}" {{ (string)($filters['cadre'] ?? '') === (string)$cadre ? 'selected' : '' }}>{{ $cadre }}</option>
                             @endforeach
@@ -192,6 +201,21 @@
                     <div class="sl-filter-item" id="otItemHouseFaculty" style="display:none;">
                         <select id="houseFacultyFilter" class="form-select sl-filter-select" aria-label="Filter by house group faculty">
                             <option value="">House Group Faculty</option>
+                        </select>
+                    </div>
+                    @endif
+
+                    {{-- On the House view these are the faculty's House Groups (the House
+                         Group column). Everywhere else they are hostel rooms, which no
+                         column shows — so say so, rather than call a room a "House"
+                         beside a House Group column (PR #334 F-043). --}}
+                    @if(! ($isCounselleeView ?? false) && ($houseOptions ?? collect())->isNotEmpty())
+                    <div class="sl-filter-item">
+                        <select id="houseFilter" class="form-select sl-filter-select" aria-label="{{ ($isHouseView ?? false) ? 'Filter by house' : 'Filter by hostel room' }}">
+                            <option value="">{{ ($isHouseView ?? false) ? 'House: All' : 'Hostel Room: All' }}</option>
+                            @foreach($houseOptions as $house)
+                                <option value="{{ $house }}" {{ (string)($filters['house'] ?? '') === (string)$house ? 'selected' : '' }}>{{ $house }}</option>
+                            @endforeach
                         </select>
                     </div>
                     @endif
@@ -396,6 +420,8 @@
                 status: currentStatus,
                 course_id: $('#courseFilter').val() || '',
                 cadre: $('#cadreFilter').val() || '',
+                house: $('#houseFilter').val() || '',
+                view: (filters.view || '').toString(),
                 // Only meaningful alongside a cadre — cleared with it below.
                 counsellor_faculty: $('#counsellorFacultyFilter').val() || '',
                 house_group: $('#houseGroupFilter').val() || '',
@@ -449,7 +475,11 @@
             searchDelay: 400,
             pageLength: 10,
             lengthMenu: [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
-            order: [[0, 'asc']],
+            // The House Wise Details card opens this list with ?sort=house, so it
+            // lands grouped by house (col 9) instead of by serial number; the My
+            // Counsellees card lands grouped by cadre (col 6).
+            order: (filters.sort === 'house') ? [[9, 'asc']]
+                : (filters.view === 'counsellees') ? [[6, 'asc']] : [[0, 'asc']],
             language: { emptyTable: 'Data not found.' },
             responsive: false,
             autoWidth: false,
@@ -617,6 +647,7 @@
             applyFilter({ house_group: this.value });
         });
         $('#houseFacultyFilter').on('change', function() { applyFilter({ house_faculty: this.value }); });
+        $('#houseFilter').on('change', function() { applyFilter({ house: this.value }); });
         // First paint: restore the faculty carried in the URL, and pre-select the
         // parent's only faculty when the URL names a parent but no faculty —
         // ?cadre=AGMUT picks that cadre's lone counsellor, ?house_group=Kangchendjunga
@@ -630,7 +661,10 @@
         }
         $('#sessionFilter').on('change', function() { applyFilter({ session: this.value }); });
         $('#participantFilter').on('change', function() { applyFilter({ participant: this.value }); });
-        $('#resetFilters').on('click', function() { window.location.href = baseUrl; });
+        $('#resetFilters').on('click', function() {
+            // Reset clears the filters, not the scope the page was opened in.
+            window.location.href = baseUrl + (filters.view ? '?view=' + encodeURIComponent(filters.view) : '');
+        });
 
         /* ── Time Period date-range ── */
         const $period = $('#timePeriodFilter');
@@ -901,17 +935,35 @@
         // past it shifted — a v4 list would hide the wrong columns.
         // v6: the default set below was introduced, so v5 entries (which meant
         // "everything visible") must not survive as a saved preference.
-        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v6';
-        // What the page opens with: the frozen identity columns plus the counts
-        // the list exists for. The contact / mapping columns are one click away in
-        // Column Visibility, so a viewer who wants them turns them on — and that
-        // choice is then saved and wins over this default for good.
-        //   3 Email · 4 Mobile No · 5 User Name · 6 Cadre
+        // v7: Mobile No became a default column. A saved v6 list is carried over
+        // with Mobile No taken out of it, so every other choice survives.
+        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v7';
+        const MOBILE_COL = 4;
+        // What the page opens with: the frozen identity columns, Mobile No, and the
+        // counts the list exists for. The other contact / mapping columns are one
+        // click away in Column Visibility, so a viewer who wants them turns them
+        // on — and that choice is then saved and wins over this default for good.
+        //   3 Email · 5 User Name · 6 Cadre
         //   7 Cadre Counsellor · 8 House Group Faculty · 9 House Group
-        const DEFAULT_HIDDEN_COLUMNS = [3, 4, 5, 6, 7, 8, 9];
+        const DEFAULT_HIDDEN_COLUMNS = [3, 5, 6, 7, 8, 9];
+        // The column each card view is about is always shown there — it is what
+        // the list opens sorted by: Cadre on My Counsellees, House Group on House
+        // Wise Details. Not saved, so the general preference is left alone.
+        const VIEW_FORCED_COLUMNS = filters.view === 'counsellees' ? [6]
+            : (filters.view === 'house' ? [9] : []);
         function otGetHiddenCols() {
             try {
-                const raw = localStorage.getItem(otColStorageKey);
+                let raw = localStorage.getItem(otColStorageKey);
+                if (raw === null) {
+                    const v6 = localStorage.getItem('otParticipantsGrid:hiddenColumns:v6');
+                    if (v6 !== null) {
+                        const old = JSON.parse(v6);
+                        if (Array.isArray(old)) {
+                            raw = JSON.stringify(old.filter(idx => idx !== MOBILE_COL));
+                            localStorage.setItem(otColStorageKey, raw);
+                        }
+                    }
+                }
                 // No saved preference yet (null) → the default set. An empty ARRAY is
                 // a real choice ("show everything") and must be honoured as one.
                 if (raw === null) { return DEFAULT_HIDDEN_COLUMNS.slice(); }
@@ -924,8 +976,9 @@
         function setupOtColumns() {
             if (!dt) { return; }
             const singleDay = isSingleDayFilter();
-            const hidden = otGetHiddenCols().filter(idx => LOCKED_COLUMNS.indexOf(idx) === -1);
+            let hidden = otGetHiddenCols().filter(idx => LOCKED_COLUMNS.indexOf(idx) === -1);
             otPersistHiddenCols(hidden);
+            hidden = hidden.filter(idx => VIEW_FORCED_COLUMNS.indexOf(idx) === -1);
             dt.columns().every(function() {
                 const idx = this.index();
                 if (LOCKED_COLUMNS.indexOf(idx) !== -1) { this.visible(true, false); return; }

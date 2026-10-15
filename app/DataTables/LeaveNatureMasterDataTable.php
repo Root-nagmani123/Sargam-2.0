@@ -2,7 +2,6 @@
 
 namespace App\DataTables;
 
-use App\Models\LeaveApplication;
 use App\Models\LeaveNatureMaster;
 use Illuminate\Database\Eloquent\Builder;
 use Yajra\DataTables\EloquentDataTable;
@@ -16,11 +15,7 @@ class LeaveNatureMasterDataTable extends DataTable
         return (new EloquentDataTable($query))
             ->addIndexColumn()
 
-            ->editColumn('leave_type', function ($row) {
-                return $row->leave_type === LeaveApplication::TYPE_PT_EXEMPTION
-                    ? 'PT Exemption'
-                    : 'Stationed Leave';
-            })
+            ->editColumn('leave_type', fn ($row) => $row->leave_type_label)
 
             ->editColumn('nature_name', fn ($row) => $row->nature_name ?? 'N/A')
 

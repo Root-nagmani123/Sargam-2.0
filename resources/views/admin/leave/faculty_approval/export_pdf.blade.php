@@ -82,10 +82,12 @@
         .col-sno { width: 3%; text-align: center; }
         .col-code { width: 6%; }
         .col-name { width: 10%; }
-        .col-type { width: 9%; }
+        .col-course { width: 10%; }
+        .col-type { width: 8%; }
         .col-date { width: 7%; text-align: center; }
-        .col-days { width: 6%; text-align: center; }
-        .col-reason { width: 20%; }
+        .col-time { width: 5%; text-align: center; }
+        .col-days { width: 5%; text-align: center; }
+        .col-reason { width: 14%; }
         .col-status { width: 7%; text-align: center; }
         .col-approver { width: 12%; }
 
@@ -131,9 +133,12 @@
                 <th class="col-sno">#</th>
                 <th class="col-code">OT Code</th>
                 <th class="col-name">OT Name</th>
+                <th class="col-course">Course Name</th>
                 <th class="col-type">Leave Type</th>
                 <th class="col-date">From</th>
                 <th class="col-date">To</th>
+                <th class="col-time">Time From</th>
+                <th class="col-time">Time To</th>
                 <th class="col-days">Days</th>
                 <th class="col-reason">Reason</th>
                 <th class="col-status">Status</th>
@@ -154,9 +159,12 @@
                     <td class="col-sno">{{ $index + 1 }}</td>
                     <td class="col-code">{{ $row->student->generated_OT_code ?? '-' }}</td>
                     <td class="col-name">{{ $approvalService->studentDisplayName($row->student) }}</td>
+                    <td class="col-course">{{ $row->course->course_name ?? '-' }}</td>
                     <td class="col-type">{{ $row->leave_type_label }}</td>
                     <td class="col-date">{{ $row->from_date?->format('d-m-Y') ?? '-' }}</td>
                     <td class="col-date">{{ $row->to_date?->format('d-m-Y') ?? '-' }}</td>
+                    <td class="col-time">{{ $row->time_from_display }}</td>
+                    <td class="col-time">{{ $row->time_to_display }}</td>
                     <td class="col-days">{{ number_format((float) $row->total_days, 0) }}</td>
                     <td class="col-reason">{{ $row->reason ?? '-' }}</td>
                     <td class="col-status"><span class="badge badge-{{ $variant }}">{{ $row->status_label }}</span></td>
@@ -164,7 +172,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="10" style="text-align:center;">No leave applications found.</td>
+                    <td colspan="13" style="text-align:center;">No leave applications found.</td>
                 </tr>
             @endforelse
         </tbody>

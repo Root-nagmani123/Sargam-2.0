@@ -13,6 +13,31 @@ class MemoDiscipline extends Model
     protected $primaryKey = 'pk';
     public $timestamps = false; // created_date / modified_date manual hain
 
+    /** status: 1 Recorded, 2 Memo Sent, 3 Closed (see MemoDisciplineController). */
+    public const STATUS_CLOSED = 3;
+
+    /**
+     * Marks actually deducted from this OT — the dashboard's "Total Marks Deducted
+     * in Discipline".
+     *
+     * Only CLOSED memos count, and only their final_mark_deduction. A memo that is
+     * merely Recorded or Sent carries mark_deduction_submit, which is what was
+     * proposed, not what was taken: closeMemo() writes final_mark_deduction at
+     * conclusion and the incharge can settle on a different figure — 5 of the rows
+     * on record differ from what was submitted, and an exonerating conclusion
+     * closes at nothing at all. Summing the proposal would overstate the penalty.
+     *
+     * final_mark_deduction is a varchar column, so it is cast before summing
+     * rather than left to an implicit conversion.
+     */
+    public static function totalMarksDeductedFor(int $studentPk): float
+    {
+        return (float) static::query()
+            ->where('student_master_pk', $studentPk)
+            ->where('status', self::STATUS_CLOSED)
+            ->sum(\Illuminate\Support\Facades\DB::raw('CAST(COALESCE(final_mark_deduction, 0) AS DECIMAL(10,2))'));
+    }
+
     protected $fillable = [
         'course_master_pk',
         'discipline_master_pk',
