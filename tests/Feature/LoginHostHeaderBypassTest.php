@@ -15,7 +15,8 @@ use Tests\TestCase;
  * in as any user with no password. It is now chosen by APP_ENV, which a request cannot set.
  *
  * The actor is a student-category (`S`) account: outside `local` its password is checked
- * against a fixed value without an LDAP call, so a wrong password is refused
+ * against that account's own stored jbp_password without an LDAP call (see
+ * LoginProductionPasswordTest for F-001), so a wrong password is refused
  * deterministically. Every write (failed-attempt counters, last_login) is rolled back.
  */
 class LoginHostHeaderBypassTest extends TestCase
