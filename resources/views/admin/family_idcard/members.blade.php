@@ -134,10 +134,10 @@
                                 <td class="col-individual_photo">
                                     @php
                                         $indPath = $member->id_photo_path ?: $member->family_photo;
-                                        $indExists = $indPath && \Storage::disk('public')->exists($indPath);
+                                        $indExists = $indPath && security_file_exists($indPath);
                                     @endphp
                                     @if($indExists)
-                                        <a href="{{ asset('storage/' . $indPath) }}" target="_blank" class="btn btn-link btn-sm p-0">DOWNLOAD</a>
+                                        <a href="{{ security_file_url($indPath) }}" target="_blank" class="btn btn-link btn-sm p-0">DOWNLOAD</a>
                                     @elseif($indPath)
                                         <span class="text-warning small">No file available in storage</span>
                                     @else
@@ -149,10 +149,10 @@
                                 <td class="col-family_photo">
                                     @php
                                         $famPath = $member->family_photo;
-                                        $famExists = $famPath && \Storage::disk('public')->exists($famPath);
+                                        $famExists = $famPath && security_file_exists($famPath);
                                     @endphp
                                     @if($famExists)
-                                        <a href="{{ asset('storage/' . $famPath) }}" target="_blank" class="btn btn-link btn-sm p-0">DOWNLOAD</a>
+                                        <a href="{{ security_file_url($famPath) }}" target="_blank" class="btn btn-link btn-sm p-0">DOWNLOAD</a>
                                     @elseif($famPath)
                                         <span class="text-warning small">No file available in storage</span>
                                     @else

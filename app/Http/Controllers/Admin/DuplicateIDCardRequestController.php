@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController;
 use App\Http\Controllers\Controller;
 use App\Support\DataTableRedisCache;
+use App\Support\SecurityFiles;
 use App\Models\DepartmentMaster;
 use App\Models\EmployeeMaster;
 use App\Models\SecurityDupOtherIdApply;
@@ -19,7 +20,6 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class DuplicateIDCardRequestController extends Controller
@@ -126,8 +126,8 @@ class DuplicateIDCardRequestController extends Controller
                 'mobile_no' => $row->mobile_no ?? '--',
                 'card_reason' => $row->card_reason ?? '--',
                 'employee_type' => 'Permanent',
-                'photo_path' => $row->id_photo_path,
-                'doc_path' => $row->service_ext ?? $row->payment_receipt ?? $row->fir_doc,
+                'photo_path' => SecurityFiles::forRow('security_dup_perm_id_apply', $row, 'id_photo_path'),
+                'doc_path' => SecurityFiles::forRow('security_dup_perm_id_apply', $row, 'service_ext') ?? SecurityFiles::forRow('security_dup_perm_id_apply', $row, 'payment_receipt') ?? SecurityFiles::forRow('security_dup_perm_id_apply', $row, 'fir_doc'),
                 'valid_from' => $row->card_valid_from,
                 'valid_to' => $row->card_valid_to,
                 'status_label' => $statusLabel,
@@ -155,8 +155,8 @@ class DuplicateIDCardRequestController extends Controller
                 'mobile_no' => $row->mobile_no ?? '--',
                 'card_reason' => $row->card_reason ?? '--',
                 'employee_type' => ($row->card_type ?: 'Contractual'),
-                'photo_path' => $row->id_photo_path,
-                'doc_path' => $row->service_ext ?? $row->payment_receipt ?? $row->fir_doc ?? $row->aadhar_doc,
+                'photo_path' => SecurityFiles::forRow('security_dup_other_id_apply', $row, 'id_photo_path'),
+                'doc_path' => SecurityFiles::forRow('security_dup_other_id_apply', $row, 'service_ext') ?? SecurityFiles::forRow('security_dup_other_id_apply', $row, 'payment_receipt') ?? SecurityFiles::forRow('security_dup_other_id_apply', $row, 'fir_doc') ?? SecurityFiles::forRow('security_dup_other_id_apply', $row, 'aadhar_doc'),
                 'valid_from' => $row->card_valid_from,
                 'valid_to' => $row->card_valid_to,
                 'status_label' => $statusLabel,
@@ -636,12 +636,12 @@ class DuplicateIDCardRequestController extends Controller
                 'card_valid_from' => $row->card_valid_from ? $row->card_valid_from->format('Y-m-d') : '',
                 'card_valid_to' => $row->card_valid_to ? $row->card_valid_to->format('Y-m-d') : '',
                 'id_proof' => 1,
-                'photo_path' => $row->id_photo_path,
+                'photo_path' => SecurityFiles::forRow('security_dup_perm_id_apply', $row, 'id_photo_path'),
             ];
             $existing_docs = [
-                'aadhar_doc' => $row->service_ext ?? null,
-                'fir_doc' => $row->fir_doc ?? null,
-                'payment_receipt' => $row->payment_receipt ?? null,
+                'aadhar_doc' => SecurityFiles::forRow('security_dup_perm_id_apply', $row, 'service_ext'),
+                'fir_doc' => SecurityFiles::forRow('security_dup_perm_id_apply', $row, 'fir_doc'),
+                'payment_receipt' => SecurityFiles::forRow('security_dup_perm_id_apply', $row, 'payment_receipt'),
             ];
         } else {
             $row = SecurityDupOtherIdApply::where('emp_id_apply', $id)->first();
@@ -706,15 +706,15 @@ class DuplicateIDCardRequestController extends Controller
                 'card_valid_from' => $row->card_valid_from ? $row->card_valid_from->format('Y-m-d') : '',
                 'card_valid_to' => $row->card_valid_to ? $row->card_valid_to->format('Y-m-d') : '',
                 'id_proof' => (int) ($row->id_proof ?? 1),
-                'photo_path' => $row->id_photo_path,
+                'photo_path' => SecurityFiles::forRow('security_dup_other_id_apply', $row, 'id_photo_path'),
                 'section' => $sectionDisplayName,
                 'approval_authority' => $approverPk,
             ];
             $existing_docs = [
-                'aadhar_doc' => $row->aadhar_doc ?? null,
-                'fir_doc' => $row->fir_doc ?? null,
-                'service_ext' => $row->service_ext ?? null,
-                'payment_receipt' => $row->payment_receipt ?? null,
+                'aadhar_doc' => SecurityFiles::forRow('security_dup_other_id_apply', $row, 'aadhar_doc'),
+                'fir_doc' => SecurityFiles::forRow('security_dup_other_id_apply', $row, 'fir_doc'),
+                'service_ext' => SecurityFiles::forRow('security_dup_other_id_apply', $row, 'service_ext'),
+                'payment_receipt' => SecurityFiles::forRow('security_dup_other_id_apply', $row, 'payment_receipt'),
             ];
         }
 
@@ -783,6 +783,9 @@ class DuplicateIDCardRequestController extends Controller
         ]);
 
         $cardReason = $validated['card_reason'];
+        // New files join the request's DuplicateCardRequest/<card no> folder; columns hold the file name only.
+        $fileTable = str_starts_with($id, 'DUP') ? 'security_dup_perm_id_apply' : 'security_dup_other_id_apply';
+        $fileKeys = $row;
 
         if (str_starts_with($id, 'DUP')) {
             $updates = ['card_reason' => $cardReason];
@@ -793,54 +796,38 @@ class DuplicateIDCardRequestController extends Controller
                 $updates['card_valid_to'] = $request->card_valid_to;
             }
             if ($request->hasFile('photo')) {
-                if ($row->id_photo_path) {
-                    Storage::disk('public')->delete($row->id_photo_path);
-                }
-                $updates['id_photo_path'] = $request->file('photo')->store('idcard/photos', 'public');
+                SecurityFiles::deleteForRow($fileTable, $row, 'id_photo_path');
+                $updates['id_photo_path'] = SecurityFiles::storeForRow($request->file('photo'), $fileTable, $fileKeys);
             }
             if ($request->hasFile('aadhar_doc')) {
-                $ext = safe_upload_extension($request->file('aadhar_doc'));
-                $file = $id . '_IDPROOF_' . time() . '.' . $ext;
-                $request->file('aadhar_doc')->storeAs('idcard/dup_docs', $file, 'public');
+                $file = SecurityFiles::storeForRow($request->file('aadhar_doc'), $fileTable, $fileKeys);
                 $updates['service_ext'] = $file;
             }
             if ($request->hasFile('damage_doc')) {
-                $ext = safe_upload_extension($request->file('damage_doc'));
-                $file = $id . '_DAMAGE_PROOF_' . time() . '.' . $ext;
-                $request->file('damage_doc')->storeAs('idcard/dup_docs', $file, 'public');
+                $file = SecurityFiles::storeForRow($request->file('damage_doc'), $fileTable, $fileKeys);
                 $updates['fir_doc'] = $file;
             }
             if ($request->hasFile('fir_doc')) {
-                $ext = safe_upload_extension($request->file('fir_doc'));
-                $file = $id . '_FIR_' . time() . '.' . $ext;
-                $request->file('fir_doc')->storeAs('idcard/dup_docs', $file, 'public');
+                $file = SecurityFiles::storeForRow($request->file('fir_doc'), $fileTable, $fileKeys);
                 $updates['fir_doc'] = $file;
             }
             if ($request->hasFile('service_ext')) {
-                $ext = safe_upload_extension($request->file('service_ext'));
-                $file = $id . '_SERVICE_EXT_' . time() . '.' . $ext;
-                $request->file('service_ext')->storeAs('idcard/dup_docs', $file, 'public');
+                $file = SecurityFiles::storeForRow($request->file('service_ext'), $fileTable, $fileKeys);
                 $updates['service_ext'] = $file;
             }
             if ($request->hasFile('payment_receipt')) {
-                $ext = safe_upload_extension($request->file('payment_receipt'));
-                $file = $id . '_PAY_' . time() . '.' . $ext;
-                $request->file('payment_receipt')->storeAs('idcard/dup_docs', $file, 'public');
+                $file = SecurityFiles::storeForRow($request->file('payment_receipt'), $fileTable, $fileKeys);
                 $updates['payment_receipt'] = $file;
             }
             if ($cardReason === 'Change in Name' && $request->filled('new_employee_name')) {
                 $updates['employee_name'] = $request->new_employee_name;
                 if ($request->hasFile('name_proof')) {
-                    $ext = safe_upload_extension($request->file('name_proof'));
-                    $file = $id . '_NAME_PROOF_' . time() . '.' . $ext;
-                    $request->file('name_proof')->storeAs('idcard/dup_docs', $file, 'public');
+                    $file = SecurityFiles::storeForRow($request->file('name_proof'), $fileTable, $fileKeys);
                     $updates['payment_receipt'] = $file;
                 }
             }
             if ($cardReason === 'Designation Change' && $request->hasFile('designation_order')) {
-                $ext = safe_upload_extension($request->file('designation_order'));
-                $file = $id . '_DESIG_ORDER_' . time() . '.' . $ext;
-                $request->file('designation_order')->storeAs('idcard/dup_docs', $file, 'public');
+                $file = SecurityFiles::storeForRow($request->file('designation_order'), $fileTable, $fileKeys);
                 $updates['payment_receipt'] = $file;
             }
             $row->update($updates);
@@ -853,57 +840,41 @@ class DuplicateIDCardRequestController extends Controller
                 $updates['card_valid_to'] = $request->card_valid_to;
             }
             if ($request->hasFile('photo')) {
-                if ($row->id_photo_path) {
-                    Storage::disk('public')->delete($row->id_photo_path);
-                }
-                $updates['id_photo_path'] = $request->file('photo')->store('idcard/photos', 'public');
+                SecurityFiles::deleteForRow($fileTable, $row, 'id_photo_path');
+                $updates['id_photo_path'] = SecurityFiles::storeForRow($request->file('photo'), $fileTable, $fileKeys);
             }
             if ($request->filled('id_proof')) {
                 $updates['id_proof'] = (int) $request->id_proof;
             }
             if ($request->hasFile('aadhar_doc')) {
-                $ext = safe_upload_extension($request->file('aadhar_doc'));
-                $file = $id . '_IDPROOF_' . time() . '.' . $ext;
-                $request->file('aadhar_doc')->storeAs('idcard/dup_docs', $file, 'public');
+                $file = SecurityFiles::storeForRow($request->file('aadhar_doc'), $fileTable, $fileKeys);
                 $updates['aadhar_doc'] = $file;
             }
             if ($request->hasFile('damage_doc')) {
-                $ext = safe_upload_extension($request->file('damage_doc'));
-                $file = $id . '_DAMAGE_PROOF_' . time() . '.' . $ext;
-                $request->file('damage_doc')->storeAs('idcard/dup_docs', $file, 'public');
+                $file = SecurityFiles::storeForRow($request->file('damage_doc'), $fileTable, $fileKeys);
                 $updates['fir_doc'] = $file;
             }
             if ($request->hasFile('fir_doc')) {
-                $ext = safe_upload_extension($request->file('fir_doc'));
-                $file = $id . '_FIR_' . time() . '.' . $ext;
-                $request->file('fir_doc')->storeAs('idcard/dup_docs', $file, 'public');
+                $file = SecurityFiles::storeForRow($request->file('fir_doc'), $fileTable, $fileKeys);
                 $updates['fir_doc'] = $file;
             }
             if ($request->hasFile('service_ext')) {
-                $ext = safe_upload_extension($request->file('service_ext'));
-                $file = $id . '_SERVICE_EXT_' . time() . '.' . $ext;
-                $request->file('service_ext')->storeAs('idcard/dup_docs', $file, 'public');
+                $file = SecurityFiles::storeForRow($request->file('service_ext'), $fileTable, $fileKeys);
                 $updates['service_ext'] = $file;
             }
             if ($request->hasFile('payment_receipt')) {
-                $ext = safe_upload_extension($request->file('payment_receipt'));
-                $file = $id . '_PAY_' . time() . '.' . $ext;
-                $request->file('payment_receipt')->storeAs('idcard/dup_docs', $file, 'public');
+                $file = SecurityFiles::storeForRow($request->file('payment_receipt'), $fileTable, $fileKeys);
                 $updates['payment_receipt'] = $file;
             }
             if ($cardReason === 'Change in Name' && $request->filled('new_employee_name')) {
                 $updates['employee_name'] = $request->new_employee_name;
                 if ($request->hasFile('name_proof')) {
-                    $ext = safe_upload_extension($request->file('name_proof'));
-                    $file = $id . '_NAME_PROOF_' . time() . '.' . $ext;
-                    $request->file('name_proof')->storeAs('idcard/dup_docs', $file, 'public');
+                    $file = SecurityFiles::storeForRow($request->file('name_proof'), $fileTable, $fileKeys);
                     $updates['payment_receipt'] = $file;
                 }
             }
             if ($cardReason === 'Designation Change' && $request->hasFile('designation_order')) {
-                $ext = safe_upload_extension($request->file('designation_order'));
-                $file = $id . '_DESIG_ORDER_' . time() . '.' . $ext;
-                $request->file('designation_order')->storeAs('idcard/dup_docs', $file, 'public');
+                $file = SecurityFiles::storeForRow($request->file('designation_order'), $fileTable, $fileKeys);
                 $updates['payment_receipt'] = $file;
             }
             $row->update($updates);
@@ -1051,24 +1022,25 @@ class DuplicateIDCardRequestController extends Controller
         // If no approvers found, allow submission anyway - request will stay Pending until approvers are configured
         $now = now()->format('Y-m-d H:i:s');
 
-        $photoPath = $request->file('photo')->store('idcard/photos', 'public');
+        // Legacy layout: files in DuplicateCardRequest/<id_card_no>/, the columns hold the file name only.
+        $fileTable = $validated['id_card_type'] === 'Permanent' ? 'security_dup_perm_id_apply' : 'security_dup_other_id_apply';
+        $fileKeys = ['id_card_no' => $validated['id_card_number']];
+        $photoPath = SecurityFiles::storeForRow($request->file('photo'), $fileTable, $fileKeys);
 
         $approval1AuthorityPk = null; // set inside the transaction for contractual duplicates
-        DB::transaction(function () use ($validated, $employeePk, $approvers, $now, $photoPath, $request, $cardReason, &$approval1AuthorityPk) {
+        DB::transaction(function () use ($validated, $employeePk, $approvers, $now, $photoPath, $request, $cardReason, $fileTable, $fileKeys, &$approval1AuthorityPk) {
             if ($validated['id_card_type'] === 'Permanent') {
                 $nextPk = (int) DB::table('security_dup_perm_id_apply')->max('pk') + 1;
                 $applyId = 'DUP' . str_pad((string) $nextPk, 5, '0', STR_PAD_LEFT);
 
                 $aadharFile = null;
                 if ($request->hasFile('aadhar_doc')) {
-                    $ext = safe_upload_extension($request->file('aadhar_doc'));
-                    $file = $applyId . '_IDPROOF_' . time() . '.' . $ext;
-                    $request->file('aadhar_doc')->storeAs('idcard/dup_docs', $file, 'public');
+                    $file = SecurityFiles::storeForRow($request->file('aadhar_doc'), $fileTable, $fileKeys);
                     $aadharFile = $file;
                 }
 
                 // Handle reason-specific documents for Permanent
-                $reasonDocData = $this->handleReasonDocuments($request, $applyId, $cardReason);
+                $reasonDocData = $this->handleReasonDocuments($request, $fileTable, $fileKeys, $cardReason);
 
                 // Permanent duplicate table doesn't have id_proof/aadhar_doc columns; store in service_ext as fallback doc.
                 SecurityDupPermIdApply::create([
@@ -1116,14 +1088,12 @@ class DuplicateIDCardRequestController extends Controller
 
                 $aadharFile = null;
                 if ($request->hasFile('aadhar_doc')) {
-                    $ext = safe_upload_extension($request->file('aadhar_doc'));
-                    $file = $applyId . '_IDPROOF_' . time() . '.' . $ext;
-                    $request->file('aadhar_doc')->storeAs('idcard/dup_docs', $file, 'public');
+                    $file = SecurityFiles::storeForRow($request->file('aadhar_doc'), $fileTable, $fileKeys);
                     $aadharFile = $file;
                 }
 
                 // Handle reason-specific documents for Other
-                $reasonDocData = $this->handleReasonDocuments($request, $applyId, $cardReason);
+                $reasonDocData = $this->handleReasonDocuments($request, $fileTable, $fileKeys, $cardReason);
 
                 $authEmp = EmployeeMaster::where('pk', $employeePk)->orWhere('pk_old', $employeePk)->first(['department_master_pk']);
                 $sectionPk = $authEmp->department_master_pk ?? null;
@@ -1202,47 +1172,35 @@ class DuplicateIDCardRequestController extends Controller
     /**
      * Handle reason-specific document uploads and processing
      */
-    private function handleReasonDocuments(Request $request, string $applyId, string $cardReason): array
+    private function handleReasonDocuments(Request $request, string $fileTable, array $fileKeys, string $cardReason): array
     {
         $data = [];
 
         if ($cardReason === 'Damage Card' && $request->hasFile('damage_doc')) {
-            $ext = safe_upload_extension($request->file('damage_doc'));
-            $file = $applyId . '_DAMAGE_PROOF_' . time() . '.' . $ext;
-            $request->file('damage_doc')->storeAs('idcard/dup_docs', $file, 'public');
+            $file = SecurityFiles::storeForRow($request->file('damage_doc'), $fileTable, $fileKeys);
             $data['fir_doc'] = $file; // Reusing fir_doc column for damage proof
         } elseif ($cardReason === 'Card Lost') {
             if ($request->hasFile('fir_doc')) {
-                $ext = safe_upload_extension($request->file('fir_doc'));
-                $file = $applyId . '_FIR_' . time() . '.' . $ext;
-                $request->file('fir_doc')->storeAs('idcard/dup_docs', $file, 'public');
+                $file = SecurityFiles::storeForRow($request->file('fir_doc'), $fileTable, $fileKeys);
                 $data['fir_doc'] = $file;
             }
             if ($request->hasFile('payment_receipt')) {
-                $ext = safe_upload_extension($request->file('payment_receipt'));
-                $file = $applyId . '_PAY_' . time() . '.' . $ext;
-                $request->file('payment_receipt')->storeAs('idcard/dup_docs', $file, 'public');
+                $file = SecurityFiles::storeForRow($request->file('payment_receipt'), $fileTable, $fileKeys);
                 $data['payment_receipt'] = $file;
             }
         } elseif ($cardReason === 'Service Extended' && $request->hasFile('service_ext')) {
-            $ext = safe_upload_extension($request->file('service_ext'));
-            $file = $applyId . '_SERVICE_EXT_' . time() . '.' . $ext;
-            $request->file('service_ext')->storeAs('idcard/dup_docs', $file, 'public');
+            $file = SecurityFiles::storeForRow($request->file('service_ext'), $fileTable, $fileKeys);
             $data['service_ext'] = $file;
         } elseif ($cardReason === 'Change in Name') {
             if ($request->has('new_employee_name')) {
                 $data['new_name'] = $request->get('new_employee_name');
             }
             if ($request->hasFile('name_proof')) {
-                $ext = safe_upload_extension($request->file('name_proof'));
-                $file = $applyId . '_NAME_PROOF_' . time() . '.' . $ext;
-                $request->file('name_proof')->storeAs('idcard/dup_docs', $file, 'public');
+                $file = SecurityFiles::storeForRow($request->file('name_proof'), $fileTable, $fileKeys);
                 $data['payment_receipt'] = $file; // Reusing payment_receipt column for name proof
             }
         } elseif ($cardReason === 'Designation Change' && $request->hasFile('designation_order')) {
-            $ext = safe_upload_extension($request->file('designation_order'));
-            $file = $applyId . '_DESIG_ORDER_' . time() . '.' . $ext;
-            $request->file('designation_order')->storeAs('idcard/dup_docs', $file, 'public');
+            $file = SecurityFiles::storeForRow($request->file('designation_order'), $fileTable, $fileKeys);
             $data['payment_receipt'] = $file; // Reusing payment_receipt column for designation order
         }
 
@@ -1298,26 +1256,13 @@ class DuplicateIDCardRequestController extends Controller
      */
     private function deleteDuplicateRequestAttachmentsFromRow($row, bool $isPerm): void
     {
-        $disk = Storage::disk('public');
-        $paths = [];
-        if (! empty($row->id_photo_path)) {
-            $p = (string) $row->id_photo_path;
-            $paths[] = str_contains($p, '/') ? $p : 'idcard/photos/' . $p;
-        }
-        $docCols = $isPerm
-            ? ['service_ext', 'fir_doc', 'payment_receipt']
-            : ['service_ext', 'fir_doc', 'payment_receipt', 'aadhar_doc'];
-        foreach ($docCols as $col) {
-            if (empty($row->{$col})) {
-                continue;
-            }
-            $f = (string) $row->{$col};
-            $paths[] = str_contains($f, '/') ? $f : 'idcard/dup_docs/' . $f;
-        }
-        foreach (array_unique(array_filter($paths)) as $path) {
-            if ($disk->exists($path)) {
-                $disk->delete($path);
-            }
+        $cols = $isPerm
+            ? ['id_photo_path', 'service_ext', 'fir_doc', 'payment_receipt']
+            : ['id_photo_path', 'service_ext', 'fir_doc', 'payment_receipt', 'aadhar_doc'];
+        $table = $isPerm ? 'security_dup_perm_id_apply' : 'security_dup_other_id_apply';
+        foreach ($cols as $col) {
+            // Only files this application wrote; archive files from E:\security are left alone.
+            SecurityFiles::deleteForRow($table, $row, $col);
         }
     }
 

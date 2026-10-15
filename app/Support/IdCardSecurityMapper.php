@@ -233,17 +233,9 @@ class IdCardSecurityMapper
         $dto->emp_id_apply = $row->emp_id_apply;
         $dto->name = $row->employee ? trim($row->employee->first_name . ' ' . ($row->employee->last_name ?? '')) : '--';
         $dto->designation = $row->employee && $row->employee->designation ? ($row->employee->designation->designation_name ?? '--') : '--';
-        // Normalize photo path: if it doesn't contain a slash, treat as filename under idcard/photos
-        $photoPath = $row->id_photo_path;
-        if ($photoPath && strpos($photoPath, '/') === false) {
-            $photoPath = 'idcard/photos/' . $photoPath;
-        }
-        $dto->photo = $photoPath;
-        $joiningPath = $row->joining_letter_path ?? null;
-        if ($joiningPath && strpos((string) $joiningPath, '/') === false) {
-            $joiningPath = 'idcard/joining_letters/' . $joiningPath;
-        }
-        $dto->joining_letter = $joiningPath;
+        // File refs (see SecurityFiles): null when the file is not on disk.
+        $dto->photo = SecurityFiles::forRow('security_parm_id_apply', $row, 'id_photo_path');
+        $dto->joining_letter = SecurityFiles::forRow('security_parm_id_apply', $row, 'joining_letter_path');
         $dto->created_at = $row->created_date;
         // Card type display name from sec_id_cardno_master (permanent_type = master pk)
         $cardTypeName = '--';
@@ -271,7 +263,7 @@ class IdCardSecurityMapper
         $dto->remarks = $row->remarks;
         $dto->created_by = $row->created_by;
         $dto->extension_reason = $row->extension_reason ?? null;
-        $dto->extension_document_path = $row->extension_document_path ?? null;
+        $dto->extension_document_path = SecurityFiles::locate($row->extension_document_path ?? null);
 
         $dto->id_status = $row->id_status;
         $dto->status = $row->status_label;
@@ -422,20 +414,13 @@ class IdCardSecurityMapper
         $dto->emp_id_apply = $row->emp_id_apply ?? '';
         $dto->name = $row->employee_name ?? '--';
         $dto->designation = $row->designation_name ?? '--';
-        // Photo: DB may store full path (idcard/photos/xyz.jpg) or just filename (xyz.jpg)
-        $photoPath = $row->id_photo_path ?? null;
-        if ($photoPath && strpos($photoPath, '/') === false) {
-            $photoPath = 'idcard/photos/' . $photoPath;
-        }
-        $dto->photo = $photoPath;
+        // File refs (see SecurityFiles): a bare legacy name resolves via contractual/<photo_path>
+        // or DuplicateCardRequest/<id_card_no>; null when the file is not on disk.
+        $dto->photo = SecurityFiles::forRow('security_con_oth_id_apply', $row, 'id_photo_path');
         // Contractual: supporting document is doc_path only. Do not set joining_letter — same path caused duplicate rows in approval "Uploaded Documents".
-        $docPathRaw = $row->doc_path ?? $row->joining_letter_path ?? null;
-        $docPathNorm = $docPathRaw;
-        if ($docPathNorm && strpos((string) $docPathNorm, '/') === false) {
-            $docPathNorm = 'idcard/documents/' . $docPathNorm;
-        }
         $dto->joining_letter = null;
-        $dto->documents = $docPathNorm;
+        $dto->documents = SecurityFiles::forRow('security_con_oth_id_apply', $row, 'doc_path')
+            ?? SecurityFiles::forRow('security_con_oth_id_apply', $row, 'joining_letter_path');
         $dto->created_at = isset($row->created_date) ? \Carbon\Carbon::parse($row->created_date) : null;
         $cardTypeName = '--';
         if (!empty($row->permanent_type)) {
@@ -606,11 +591,7 @@ class IdCardSecurityMapper
         $dto->emp_id_apply = $row->emp_id_apply ?? '';
         $dto->name = $row->employee_name ?? '--';
         $dto->designation = $row->designation_name ?? '--';
-        $photoPath = $row->id_photo_path ?? null;
-        if ($photoPath && strpos($photoPath, '/') === false) {
-            $photoPath = 'idcard/photos/' . $photoPath;
-        }
-        $dto->photo = $photoPath;
+        $dto->photo = SecurityFiles::forRow('security_con_oth_id_apply', $row, 'id_photo_path');
         $dto->created_at = isset($row->created_date) ? \Carbon\Carbon::parse($row->created_date) : null;
         $pt = ! empty($row->permanent_type) ? (int) $row->permanent_type : 0;
         $dto->card_type = ($pt > 0 && isset($secCardNamesByPk[$pt]))
@@ -710,7 +691,9 @@ class IdCardSecurityMapper
         $dto->name = $row->family_name;
         $dto->employee_id = $row->emp_id_apply;
         $dto->relation = $row->family_relation;
-        $dto->family_photo = $row->family_photo ?? $row->id_photo_path;
+        // File refs (see SecurityFiles): bare legacy names resolve via familyCard/<emp_id_apply>.
+        $dto->family_photo = SecurityFiles::forRow('security_family_id_apply', $row, 'family_photo')
+            ?? SecurityFiles::forRow('security_family_id_apply', $row, 'id_photo_path');
         $dto->dob = $row->employee_dob;
         $dto->valid_from = $row->card_valid_from;
         $dto->valid_to = $row->card_valid_to;
@@ -732,8 +715,8 @@ class IdCardSecurityMapper
             default => 'Unknown',
         };
         $dto->status = $dto->status_label;
-        $dto->id_photo_path = $row->id_photo_path ?? null;
-        
+        $dto->id_photo_path = SecurityFiles::forRow('security_family_id_apply', $row, 'id_photo_path');
+
         // Fetch guardian (primary employee) details
         $guardianName = '--';
         $guardianDesignation = '--';

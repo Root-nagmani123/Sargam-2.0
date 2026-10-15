@@ -123,11 +123,11 @@
                                         <td class="fw-medium ps-4">{{ ($allRequests->currentPage() - 1) * $allRequests->perPage() + $loop->iteration }}</td>
                                         <td>
                                             @php
-                                                $photoExists = $request->photo && \Storage::disk('public')->exists($request->photo);
+                                                $photoExists = $request->photo && security_file_exists($request->photo);
                                             @endphp
                                             @if($photoExists)
-                                                <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="d-inline-block rounded-2 overflow-hidden shadow-sm">
-                                                    <img src="{{ asset('storage/' . $request->photo) }}" alt="ID Card" class="rounded-2 object-fit-cover" style="width:40px;height:50px;">
+                                                <a href="{{ security_file_url($request->photo) }}" target="_blank" class="d-inline-block rounded-2 overflow-hidden shadow-sm">
+                                                    <img src="{{ security_file_url($request->photo) }}" alt="ID Card" class="rounded-2 object-fit-cover" style="width:40px;height:50px;">
                                                 </a>
                                             @else
                                                 <img src="{{ asset('images/dummypic.jpeg') }}" alt="ID Card" class="rounded-2 object-fit-cover" style="width:40px;height:50px;">
@@ -234,8 +234,8 @@
                                         <td class="fw-medium ps-4">{{ ($duplicationRequests->currentPage() - 1) * $duplicationRequests->perPage() + $loop->iteration }}</td>
                                         <td>
                                             @php
-                                                $photoExists = $request->photo && \Storage::disk('public')->exists($request->photo);
-                                                $photoUrl = $photoExists ? asset('storage/' . $request->photo) : asset('images/dummypic.jpeg');
+                                                $photoExists = $request->photo && security_file_exists($request->photo);
+                                                $photoUrl = $photoExists ? security_file_url($request->photo) : asset('images/dummypic.jpeg');
                                             @endphp
                                             <a href="{{ $photoUrl }}" target="_blank" class="d-inline-block rounded-2 overflow-hidden shadow-sm">
                                                 <img src="{{ $photoUrl }}" alt="ID Card" class="rounded-2 object-fit-cover" style="width:40px;height:50px;">
@@ -342,8 +342,8 @@
                                         <td class="fw-medium ps-4">{{ ($archivedRequests->currentPage() - 1) * $archivedRequests->perPage() + $loop->iteration }}</td>
                                         <td>
                                             @php
-                                                $photoExists = $request->photo && \Storage::disk('public')->exists($request->photo);
-                                                $photoUrl = $photoExists ? asset('storage/' . $request->photo) : asset('images/dummypic.jpeg');
+                                                $photoExists = $request->photo && security_file_exists($request->photo);
+                                                $photoUrl = $photoExists ? security_file_url($request->photo) : asset('images/dummypic.jpeg');
                                             @endphp
                                             <a href="{{ $photoUrl }}" target="_blank" class="d-inline-block rounded-2 overflow-hidden shadow-sm">
                                                 <img src="{{ $photoUrl }}" alt="ID Card" class="rounded-2 object-fit-cover" style="width:40px;height:50px;">

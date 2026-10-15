@@ -108,10 +108,10 @@
                                 <td class="col-doc">
                                     @php
                                         $docPath = $r->doc_upload;
-                                        $docExists = $docPath && \Storage::disk('public')->exists($docPath);
+                                        $docExists = $docPath && security_file_exists($docPath);
                                     @endphp
                                     @if($docExists)
-                                        <a href="{{ asset('storage/' . $docPath) }}" target="_blank" class="text-primary d-inline-flex align-items-center gap-1">
+                                        <a href="{{ security_file_url($docPath) }}" target="_blank" class="text-primary d-inline-flex align-items-center gap-1">
                                             <i class="material-icons material-symbols-rounded" style="font-size:20px;">description</i>
                                             <span class="d-none d-sm-inline">Download</span>
                                         </a>

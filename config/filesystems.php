@@ -46,6 +46,15 @@ return [
             'visibility' => 'public',
         ],
 
+        // Security module files (ID cards, family cards, vehicle passes). Private:
+        // no 'url', not linked under public/; served by the authenticated
+        // admin.security.file route. Layout: config/security_files.php.
+        'security' => [
+            'driver' => 'local',
+            'root' => env('SECURITY_FILES_ROOT', storage_path('app/security')),
+            'throw' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

@@ -247,12 +247,12 @@
                         <label class="form-label">Upload Photo</label>
                         @php
                             $editPhotoPath = $request->photo;
-                            $editPhotoExists = $editPhotoPath && \Storage::disk('public')->exists($editPhotoPath);
+                            $editPhotoExists = $editPhotoPath && security_file_exists($editPhotoPath);
                         @endphp
                         @if($editPhotoExists)
                             <div class="alert alert-success py-2 px-3 mb-2 small">
                                 <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">check_circle</i>
-                                <a href="{{ asset('storage/' . $editPhotoPath) }}" target="_blank" rel="noopener">View / Download</a>
+                                <a href="{{ security_file_url($editPhotoPath) }}" target="_blank" rel="noopener">View / Download</a>
                             </div>
                         @elseif($editPhotoPath)
                             <div class="alert alert-warning py-2 px-3 mb-2 small">
@@ -277,12 +277,12 @@
                         <label class="form-label">Upload Joining Letter</label>
                         @php
                             $editJoinPath = $request->joining_letter ?? null;
-                            $editJoinExists = $editJoinPath && \Storage::disk('public')->exists($editJoinPath);
+                            $editJoinExists = $editJoinPath && security_file_exists($editJoinPath);
                         @endphp
                         @if($editJoinExists)
                             <div class="alert alert-success py-2 px-3 mb-2 small">
                                 <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">check_circle</i>
-                                <a href="{{ asset('storage/' . $editJoinPath) }}" target="_blank" rel="noopener">View / Download</a>
+                                <a href="{{ security_file_url($editJoinPath) }}" target="_blank" rel="noopener">View / Download</a>
                             </div>
                         @elseif($editJoinPath)
                             <div class="alert alert-warning py-2 px-3 mb-2 small">
@@ -308,12 +308,12 @@
                         <label class="form-label">Supporting document</label>
                         @php
                             $editDocPath = $request->documents ?? null;
-                            $editDocExists = $editDocPath && \Storage::disk('public')->exists($editDocPath);
+                            $editDocExists = $editDocPath && security_file_exists($editDocPath);
                         @endphp
                         @if($editDocExists)
                             <div class="alert alert-success py-2 px-3 mb-2 small">
                                 <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">check_circle</i>
-                                <a href="{{ asset('storage/' . $editDocPath) }}" target="_blank" rel="noopener">View / Download</a>
+                                <a href="{{ security_file_url($editDocPath) }}" target="_blank" rel="noopener">View / Download</a>
                             </div>
                         @elseif($editDocPath)
                             <div class="alert alert-warning py-2 px-3 mb-2 small">
@@ -415,7 +415,7 @@
                                         <i class="material-icons material-symbols-rounded idcard-doc-icon">description</i>
                                         <span class="idcard-doc-name" id="firReceiptFileNameEdit">{{ $request->fir_receipt ? basename($request->fir_receipt) : '' }}</span>
                                         @if($request->fir_receipt)
-                                        <small class="text-muted">Current: <a href="{{ asset('storage/' . $request->fir_receipt) }}" target="_blank">View</a></small>
+                                        <small class="text-muted">Current: <a href="{{ security_file_url($request->fir_receipt) }}" target="_blank">View</a></small>
                                         @endif
                                         <button type="button" class="idcard-preview-remove btn btn-sm btn-danger" id="firReceiptRemoveEdit">&times;</button>
                                     </div>
@@ -435,7 +435,7 @@
                                         <i class="material-icons material-symbols-rounded idcard-doc-icon">description</i>
                                         <span class="idcard-doc-name" id="paymentReceiptFileNameEdit">{{ $request->payment_receipt ? basename($request->payment_receipt) : '' }}</span>
                                         @if($request->payment_receipt)
-                                        <small class="text-muted">Current: <a href="{{ asset('storage/' . $request->payment_receipt) }}" target="_blank">View</a></small>
+                                        <small class="text-muted">Current: <a href="{{ security_file_url($request->payment_receipt) }}" target="_blank">View</a></small>
                                         @endif
                                         <button type="button" class="idcard-preview-remove btn btn-sm btn-danger" id="paymentReceiptRemoveEdit">&times;</button>
                                     </div>

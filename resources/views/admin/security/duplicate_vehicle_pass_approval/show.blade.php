@@ -110,13 +110,13 @@
 
             @php
                 $docPath = $application->doc_upload;
-                $docExists = $docPath && \Storage::disk('public')->exists($docPath);
+                $docExists = $docPath && security_file_exists($docPath);
             @endphp
             @if($docExists)
                 <div class="row mb-3">
                     <div class="col-md-12">
                         <h5 class="text-primary mb-3">Attached Document</h5>
-                        <a href="{{ asset('storage/' . $docPath) }}" target="_blank" class="btn btn-outline-primary">
+                        <a href="{{ security_file_url($docPath) }}" target="_blank" class="btn btn-outline-primary">
                             <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">download</i>
                             Download Document
                         </a>

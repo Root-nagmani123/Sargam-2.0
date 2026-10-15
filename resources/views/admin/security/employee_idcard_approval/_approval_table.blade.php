@@ -58,16 +58,11 @@
                     </td>
                     <td class="text-center">
                         @php
-                            // PERF: Avoid per-row storage existence checks (slow on Windows/network disks).
-                            // Use a deterministic URL and fall back to dummy image on load error.
-                            $photoPath = null;
-                            if ($req->photo) {
-                                $photoPath = str_starts_with($req->photo, 'idcard/')
-                                    ? $req->photo
-                                    : 'idcard/photos/' . $req->photo;
-                            }
-                            $photoUrl = $photoPath ? asset('storage/' . $photoPath) : asset('images/dummypic.jpeg');
+                            // $req->photo is a file ref resolved when the row was mapped (SecurityFiles::forRow);
+                            // the existence check is memoised there, and the dummy image covers a load error.
                             $dummyUrl = asset('images/dummypic.jpeg');
+                            $photoUrl = security_file_url($req->photo);
+                            $photoPath = $photoUrl !== null ? $req->photo : null;
                         @endphp
                         @if($photoPath)
                             <a href="{{ $photoUrl }}" target="_blank" class="d-inline-block">

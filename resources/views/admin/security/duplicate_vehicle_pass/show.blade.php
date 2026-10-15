@@ -64,10 +64,10 @@
                     <div class="text-muted small mb-1">Uploaded Document</div>
                     @php
                         $docPath = $req->doc_upload;
-                        $docExists = $docPath && \Storage::disk('public')->exists($docPath);
+                        $docExists = $docPath && security_file_exists($docPath);
                     @endphp
                     @if($docExists)
-                        <a href="{{ asset('storage/' . $docPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1">
+                        <a href="{{ security_file_url($docPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1">
                             <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">description</i>
                             <span>View / Download</span>
                         </a>

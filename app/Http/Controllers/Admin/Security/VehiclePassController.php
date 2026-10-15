@@ -11,6 +11,7 @@ use App\Models\VehiclePassTWApply;
 use App\Services\SecurityRequestNotifier;
 use App\Support\DataTableRedisCache;
 use App\Support\IdCardSecurityMapper;
+use App\Support\SecurityFiles;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -19,7 +20,6 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 
 class VehiclePassController extends Controller
@@ -677,7 +677,7 @@ class VehiclePassController extends Controller
         // Handle file upload
         $docPath = null;
         if ($request->hasFile('doc_upload')) {
-            $docPath = $request->file('doc_upload')->store('vehicle_documents', 'public');
+            $docPath = SecurityFiles::store($request->file('doc_upload'), SecurityFiles::newFolder('vehicle'));
         }
 
         // Generate vehicle_tw_pk per SQL: TW + zero-padded next pk (primary key in table is vehicle_tw_pk)
@@ -988,9 +988,9 @@ class VehiclePassController extends Controller
         // Handle file upload
         if ($request->hasFile('doc_upload')) {
             if ($vehiclePass->doc_upload) {
-                Storage::disk('public')->delete($vehiclePass->doc_upload);
+                SecurityFiles::delete($vehiclePass->doc_upload);
             }
-            $vehiclePass->doc_upload = $request->file('doc_upload')->store('vehicle_documents', 'public');
+            $vehiclePass->doc_upload = SecurityFiles::store($request->file('doc_upload'), SecurityFiles::folderOf([$vehiclePass->doc_upload], 'vehicle'));
         }
 
         $vehiclePass->employee_id_card = $employeeIdCard ?? $vehiclePass->employee_id_card;
@@ -1033,7 +1033,7 @@ class VehiclePassController extends Controller
 
         // Delete uploaded document
         if ($vehiclePass->doc_upload) {
-            Storage::disk('public')->delete($vehiclePass->doc_upload);
+            SecurityFiles::delete($vehiclePass->doc_upload);
         }
 
         $vehiclePass->delete();

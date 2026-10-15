@@ -87,11 +87,10 @@
                                 <td>
                                     @php
                                         $p = $r->photo_path;
-                                        if ($p && strpos($p,'/') === false) { $p = 'idcard/photos/'.$p; }
-                                        $photoExists = $p && \Storage::disk('public')->exists($p);
+                                        $photoExists = $p && security_file_exists($p);
                                          @endphp
                                      @if($photoExists)
-                                        <a href="{{ asset('storage/'.$p) }}" target="_blank">Download</a>
+                                        <a href="{{ security_file_url($p) }}" target="_blank">Download</a>
                                     @else
                                         --
                                     @endif
@@ -99,11 +98,10 @@
                                 <td>
                                     @php
                                         $d = $r->doc_path;
-                                        if ($d && strpos($d,'/') === false) { $d = 'idcard/dup_docs/'.$d; }
-                                        $docExists = $d && \Storage::disk('public')->exists($d);
+                                        $docExists = $d && security_file_exists($d);
                                     @endphp
                                     @if($docExists)
-                                        <a href="{{ asset('storage/'.$d) }}" target="_blank">Download</a>
+                                        <a href="{{ security_file_url($d) }}" target="_blank">Download</a>
                                     @else
                                         --
                                     @endif

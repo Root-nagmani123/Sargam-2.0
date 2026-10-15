@@ -60,16 +60,15 @@
                                     $photoPath = null;
                                     $photoExists = false;
                                     if ($request->photo) {
-                                        $photoPath = str_starts_with($request->photo, 'idcard/')
-                                            ? $request->photo
-                                            : 'idcard/photos/' . $request->photo;
-                                        $photoExists = \Storage::disk('public')->exists($photoPath);
+                                        // Already a resolved file ref (SecurityFiles::forRow).
+                                        $photoPath = $request->photo;
+                                        $photoExists = security_file_exists($photoPath);
                                     }
                                 @endphp
                                 @if($photoExists)
-                                    <img src="{{ asset('storage/' . $photoPath) }}" alt="Employee Photo" class="img-fluid rounded" style="max-height: 250px; object-fit: cover; border: 1px solid #dee2e6;">
+                                    <img src="{{ security_file_url($photoPath) }}" alt="Employee Photo" class="img-fluid rounded" style="max-height: 250px; object-fit: cover; border: 1px solid #dee2e6;">
                                     <div class="mt-2">
-                                        <a href="{{ asset('storage/' . $photoPath) }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+                                        <a href="{{ security_file_url($photoPath) }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
                                             <i class="material-icons material-symbols-rounded" style="font-size:16px;">visibility</i>
                                             View
                                         </a>
@@ -89,15 +88,15 @@
                                 if (!empty($request->joining_letter)) {
                                     $docLinks[] = [
                                         'label' => 'Joining Letter',
-                                        // For permanent ID cards, joining_letter is already the full storage path (e.g. idcard/joining_letters/...)
-                                        'path' => ltrim($request->joining_letter, '/'),
+                                        // Values are resolved file refs (SecurityFiles::forRow / IdCardSecurityMapper)
+                                        'path' => $request->joining_letter,
                                         'full' => false,
                                     ];
                                 }
                                 if (!empty($request->extension_document_path)) {
                                     $docLinks[] = [
                                         'label' => 'Extension Document',
-                                        'path' => ltrim($request->extension_document_path, '/'),
+                                        'path' => $request->extension_document_path,
                                         'full' => false,
                                     ];
                                 }
@@ -105,42 +104,42 @@
                                 if (!empty($request->fir_receipt)) {
                                     $docLinks[] = [
                                         'label' => 'FIR Copy / Document Proof',
-                                        'path' => 'idcard/dup_docs/' . ltrim($request->fir_receipt, '/'),
+                                        'path' => $request->fir_receipt,
                                         'full' => false,
                                     ];
                                 }
                                 if (!empty($request->payment_receipt)) {
                                     $docLinks[] = [
                                         'label' => 'Payment Receipt',
-                                        'path' => 'idcard/dup_docs/' . ltrim($request->payment_receipt, '/'),
+                                        'path' => $request->payment_receipt,
                                         'full' => false,
                                     ];
                                 }
                                 if (!empty($request->service_ext)) {
                                     $docLinks[] = [
                                         'label' => 'Service Extension / Renewal Proof',
-                                        'path' => 'idcard/dup_docs/' . ltrim($request->service_ext, '/'),
+                                        'path' => $request->service_ext,
                                         'full' => false,
                                     ];
                                 }
                                 if (!empty($request->id_proof_doc)) {
                                     $docLinks[] = [
                                         'label' => 'ID Proof (Aadhar / Other)',
-                                        'path' => 'idcard/dup_docs/' . ltrim($request->id_proof_doc, '/'),
+                                        'path' => $request->id_proof_doc,
                                         'full' => false,
                                     ];
                                 }
                                 if (!empty($request->documents)) {
                                     $docLinks[] = [
                                         'label' => 'Supporting Document',
-                                        'path' => ltrim($request->documents, '/'),
+                                        'path' => $request->documents,
                                         'full' => false,
                                     ];
                                 }
                                 if (!empty($request->other_documents)) {
                                     $docLinks[] = [
                                         'label' => 'Other Document',
-                                        'path' => 'idcard/dup_docs/' . ltrim($request->other_documents, '/'),
+                                        'path' => $request->other_documents,
                                         'full' => false,
                                     ];
                                 }
@@ -163,12 +162,12 @@
                                     @foreach($docLinks as $doc)
                                         @php
                                             $p = $doc['path'] ?? null;
-                                            $exists = $p && \Storage::disk('public')->exists($p);
+                                            $exists = $p && security_file_exists($p);
                                         @endphp
                                         <li class="mb-1">
                                             <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:16px;">attach_file</i>
                                             @if($exists)
-                                                <a href="{{ asset('storage/' . $p) }}" target="_blank">
+                                                <a href="{{ security_file_url($p) }}" target="_blank">
                                                     {{ $doc['label'] }}
                                                 </a>
                                             @else

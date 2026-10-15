@@ -14,6 +14,7 @@ use App\Models\SecurityDupOtherIdApply;
 use App\Models\SecurityDupOtherIdApplyApproval;
 use App\Support\DataTableRedisCache;
 use App\Support\IdCardSecurityMapper;
+use App\Support\SecurityFiles;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -221,7 +222,7 @@ class EmployeeIDCardApprovalController extends Controller
             $dto->emp_id_apply = $r->emp_id_apply ?? '';
             $dto->name = $r->employee_name ?? '--';
             $dto->designation = $r->designation_name ?? '--';
-            $dto->photo = $r->id_photo_path ?? null;
+            $dto->photo = SecurityFiles::forRow('security_dup_other_id_apply', $r, 'id_photo_path');
             $dto->joining_letter = null;
             $dto->created_at = isset($r->created_date) ? \Carbon\Carbon::parse($r->created_date) : null;
             $dto->card_type = $r->card_type ?? 'Contractual';
@@ -391,7 +392,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'telephone_number' => null,
                 'id_card_valid_from' => $r->card_valid_from,
                 'id_card_valid_upto' => $r->card_valid_to,
-                'photo' => $r->id_photo_path,
+                'photo' => SecurityFiles::forRow('security_dup_perm_id_apply', $r, 'id_photo_path'),
                 'created_at' => isset($r->created_date) ? \Carbon\Carbon::parse($r->created_date) : null,
                 'requested_by' => $fullName,
                 'requested_section' => $r->department_name ?? null,
@@ -531,7 +532,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'telephone_number' => null,
                 'id_card_valid_from' => $r->card_valid_from,
                 'id_card_valid_upto' => $r->card_valid_to,
-                'photo' => $r->id_photo_path,
+                'photo' => SecurityFiles::forRow('security_dup_other_id_apply', $r, 'id_photo_path'),
                 'created_at' => isset($r->created_date) ? \Carbon\Carbon::parse($r->created_date) : null,
                 'requested_by' => null,
                 'requested_section' => $requestedSection,
@@ -645,7 +646,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'telephone_number'  => null,
                 'id_card_valid_from' => $r->card_valid_from,
                 'id_card_valid_upto' => $r->card_valid_to,
-                'photo'             => $r->id_photo_path,
+                'photo'             => SecurityFiles::forRow('security_dup_perm_id_apply', $r, 'id_photo_path'),
                 'created_at'        => isset($r->created_date) ? \Carbon\Carbon::parse($r->created_date) : null,
                 'requested_by'      => $fullName,
                 'requested_section' => $r->department_name ?? null,
@@ -704,7 +705,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'telephone_number'  => null,
                 'id_card_valid_from' => $r->card_valid_from,
                 'id_card_valid_upto' => $r->card_valid_to,
-                'photo'             => $r->id_photo_path,
+                'photo'             => SecurityFiles::forRow('security_dup_other_id_apply', $r, 'id_photo_path'),
                 'created_at'        => isset($r->created_date) ? \Carbon\Carbon::parse($r->created_date) : null,
                 'requested_by'      => null,
                 'requested_section' => $requestedSection,
@@ -781,7 +782,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'telephone_number'  => null,
                 'id_card_valid_from' => $r->card_valid_from,
                 'id_card_valid_upto' => $r->card_valid_to,
-                'photo'             => $r->id_photo_path,
+                'photo'             => SecurityFiles::forRow('security_dup_perm_id_apply', $r, 'id_photo_path'),
                 'created_at'        => isset($r->created_date) ? \Carbon\Carbon::parse($r->created_date) : null,
                 'requested_by'      => $fullName,
                 'requested_section' => $r->department_name ?? null,
@@ -831,7 +832,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'telephone_number'  => null,
                 'id_card_valid_from' => $r->card_valid_from,
                 'id_card_valid_upto' => $r->card_valid_to,
-                'photo'             => $r->id_photo_path,
+                'photo'             => SecurityFiles::forRow('security_dup_other_id_apply', $r, 'id_photo_path'),
                 'created_at'        => isset($r->created_date) ? \Carbon\Carbon::parse($r->created_date) : null,
                 'requested_by'      => null,
                 'requested_section' => $requestedSection,
@@ -1121,7 +1122,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'telephone_number' => null,
                 'id_card_valid_from' => $r->card_valid_from,
                 'id_card_valid_upto' => $r->card_valid_to,
-                'photo' => $r->id_photo_path,
+                'photo' => SecurityFiles::forRow('security_dup_perm_id_apply', $r, 'id_photo_path'),
                 'created_at' => isset($r->created_date) ? \Carbon\Carbon::parse($r->created_date) : null,
                 'requested_by' => $fullName,
                 'requested_section' => $r->department_name ?? null,
@@ -1194,7 +1195,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'telephone_number' => null,
                 'id_card_valid_from' => $r->card_valid_from,
                 'id_card_valid_upto' => $r->card_valid_to,
-                'photo' => $r->id_photo_path,
+                'photo' => SecurityFiles::forRow('security_dup_other_id_apply', $r, 'id_photo_path'),
                 'created_at' => isset($r->created_date) ? \Carbon\Carbon::parse($r->created_date) : null,
                 'requested_by' => null,
                 'requested_section' => $requestedSection,
@@ -1338,7 +1339,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'date_of_birth' => $row->employee_dob,
                 'blood_group' => $row->blood_group,
                 'mobile_number' => $row->mobile_no,
-                'photo' => $row->id_photo_path,
+                'photo' => SecurityFiles::forRow('security_dup_other_id_apply', $row, 'id_photo_path'),
                 'created_at' => $row->created_date ? \Carbon\Carbon::parse($row->created_date) : null,
                 'id_card_valid_from' => $row->card_valid_from,
                 'id_card_valid_upto' => $row->card_valid_to,
@@ -1349,11 +1350,11 @@ class EmployeeIDCardApprovalController extends Controller
                 'requested_section' => null,
                 'card_reason' => $row->card_reason ?? null,
                 // Reason/document-specific fields for display
-                'fir_receipt' => $row->fir_doc ?? null,
-                'payment_receipt' => $row->payment_receipt ?? null,
-                'service_ext' => $row->service_ext ?? null,
-                'id_proof_doc' => $row->aadhar_doc ?? null,
-                'other_documents' => $row->doc_path ?? null,
+                'fir_receipt' => SecurityFiles::forRow('security_dup_other_id_apply', $row, 'fir_doc'),
+                'payment_receipt' => SecurityFiles::forRow('security_dup_other_id_apply', $row, 'payment_receipt'),
+                'service_ext' => SecurityFiles::forRow('security_dup_other_id_apply', $row, 'service_ext'),
+                'id_proof_doc' => SecurityFiles::forRow('security_dup_other_id_apply', $row, 'aadhar_doc'),
+                'other_documents' => SecurityFiles::forRow('security_dup_other_id_apply', $row, 'doc_path'),
                 'status' => (int) $row->id_status === 1 ? 'Pending' : ((int) $row->id_status === 2 ? 'Approved' : 'Rejected'),
                 'approver1' => null,
                 'approver2' => null,
@@ -1453,7 +1454,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'blood_group' => $row->blood_group,
                 'mobile_number' => $mobile,
                 'telephone_number' => $telephone,
-                'photo' => $row->id_photo_path,
+                'photo' => SecurityFiles::forRow('security_dup_perm_id_apply', $row, 'id_photo_path'),
                 'created_at' => $row->created_date ? \Carbon\Carbon::parse($row->created_date) : null,
                 'id_card_valid_from' => $row->card_valid_from,
                 'id_card_valid_upto' => $row->card_valid_to,
@@ -1464,9 +1465,9 @@ class EmployeeIDCardApprovalController extends Controller
                 'requested_section' => $row->department_name ?? null,
                 'card_reason' => $row->card_reason ?? null,
                 // Reason/document-specific fields for display
-                'fir_receipt' => $row->fir_doc ?? null,
-                'payment_receipt' => $row->payment_receipt ?? null,
-                'service_ext' => $row->service_ext ?? null,
+                'fir_receipt' => SecurityFiles::forRow('security_dup_perm_id_apply', $row, 'fir_doc'),
+                'payment_receipt' => SecurityFiles::forRow('security_dup_perm_id_apply', $row, 'payment_receipt'),
+                'service_ext' => SecurityFiles::forRow('security_dup_perm_id_apply', $row, 'service_ext'),
                 'id_proof_doc' => null,
                 'other_documents' => null,
                 'status' => (int) $row->id_status === 1 ? 'Pending' : ((int) $row->id_status === 2 ? 'Approved' : 'Rejected'),

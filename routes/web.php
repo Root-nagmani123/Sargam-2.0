@@ -925,6 +925,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/reject-group/{id}', 'rejectGroup')->name('reject_group');
     });
 
+    // Security-module files (private disk); `f` is an encrypted ref from security_file_url().
+    Route::get('security/file', [\App\Http\Controllers\Admin\Security\SecurityFileController::class, 'show'])->name('admin.security.file');
+
     // ============================================
     // End Security Management Routes (prefix: security/)
     // ============================================

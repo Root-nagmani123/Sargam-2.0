@@ -14,12 +14,12 @@ use App\Services\SecurityRequestNotifier;
 use App\Support\DataTableRedisCache;
 use App\Support\IdCardSecurityMapper;
 use App\Support\IdCardSecurityLookup;
+use App\Support\SecurityFiles;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
@@ -166,7 +166,7 @@ class EmployeeIDCardRequestController extends Controller
         }
 
         // Contractual
-        $contCols = ['pk', 'emp_id_apply', 'employee_name', 'designation_name', 'id_status', 'depart_approval_status', 'department_approval_emp_pk', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'mobile_no', 'telephone_no', 'blood_group', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob', 'vender_name', 'father_name', 'doc_path'];
+        $contCols = ['pk', 'emp_id_apply', 'employee_name', 'designation_name', 'id_status', 'depart_approval_status', 'department_approval_emp_pk', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'photo_path', 'mobile_no', 'telephone_no', 'blood_group', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob', 'vender_name', 'father_name', 'doc_path'];
         $contQuery = DB::table('security_con_oth_id_apply')->select($contCols)->orderBy('created_date', 'desc');
         if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
             $currentUserId = Auth::user()->user_id ?? Auth::id();
@@ -1008,17 +1008,36 @@ class EmployeeIDCardRequestController extends Controller
             ]);
         }
 
+        // Legacy E:\security layout (config/security_files.php). Duplicates go to
+        // DuplicateCardRequest/<card no>/ and contractual cards to contractual/<photo_path>/, the
+        // columns holding the file name only; permanent cards get permanent/<new number>/ and the
+        // column holds the path, since no permanent column records that number.
+        $fileTable = match (true) {
+            $isDupOrExt => $employeeType === 'Permanent Employee' ? 'security_dup_perm_id_apply' : 'security_dup_other_id_apply',
+            $employeeType === 'Permanent Employee' => 'security_parm_id_apply',
+            default => 'security_con_oth_id_apply',
+        };
+        $fileKeys = match ($fileTable) {
+            'security_parm_id_apply' => [],
+            'security_con_oth_id_apply' => ['photo_path' => SecurityFiles::folderKey(SecurityFiles::newFolder('contractual'))],
+            default => ['id_card_no' => $validated['id_card_number'] ?? null],
+        };
+        $permanentFolder = $fileTable === 'security_parm_id_apply' ? SecurityFiles::newFolder('permanent') : null;
+        $storeFile = fn ($file, array $extraKeys = []) => $permanentFolder !== null
+            ? SecurityFiles::store($file, $permanentFolder)
+            : SecurityFiles::storeForRow($file, $fileTable, $fileKeys + $extraKeys);
+
         $photoPath = null;
         if ($employeeType === 'Permanent Employee' && $request->hasFile('photo_perm')) {
-            $photoPath = $request->file('photo_perm')->store('idcard/photos', 'public');
+            $photoPath = $storeFile($request->file('photo_perm'));
         } elseif ($employeeType === 'Contractual Employee' && $request->hasFile('photo_cont')) {
-            $photoPath = $request->file('photo_cont')->store('idcard/photos', 'public');
+            $photoPath = $storeFile($request->file('photo_cont'));
         } elseif ($request->hasFile('photo')) {
-            $photoPath = $request->file('photo')->store('idcard/photos', 'public');
+            $photoPath = $storeFile($request->file('photo'));
         }
         $joiningLetterPath = null;
         if ($request->hasFile('joining_letter')) {
-            $joiningLetterPath = $request->file('joining_letter')->store('idcard/joining_letters', 'public');
+            $joiningLetterPath = $storeFile($request->file('joining_letter'));
         }
 
         $cardValidFrom = null;
@@ -1073,7 +1092,10 @@ class EmployeeIDCardRequestController extends Controller
             $approvers,
             $isDupOrExt,
             $request,
-            $userDepartmentPk
+            $userDepartmentPk,
+            $fileTable,
+            $fileKeys,
+            $storeFile
         ) {
             // If user is applying for duplication/extension via this form,
             // insert into duplication tables; otherwise insert into normal apply tables.
@@ -1082,29 +1104,15 @@ class EmployeeIDCardRequestController extends Controller
                     $nextPk = (int) DB::table('security_dup_perm_id_apply')->max('pk') + 1;
                     $applyId = 'DUP' . str_pad((string) $nextPk, 5, '0', STR_PAD_LEFT);
 
-                    $paymentReceipt = null;
-                    if ($request->hasFile('payment_receipt')) {
-                        $ext = safe_upload_extension($request->file('payment_receipt'));
-                        $file = $applyId . '_PAY_' . time() . '.' . $ext;
-                        $request->file('payment_receipt')->storeAs('idcard/dup_docs', $file, 'public');
-                        $paymentReceipt = $file;
-                    }
-
-                    $firDoc = null;
-                    if ($request->hasFile('fir_receipt')) {
-                        $ext = safe_upload_extension($request->file('fir_receipt'));
-                        $file = $applyId . '_FIR_' . time() . '.' . $ext;
-                        $request->file('fir_receipt')->storeAs('idcard/dup_docs', $file, 'public');
-                        $firDoc = $file;
-                    }
-
-                    $serviceExt = null;
-                    if ($request->hasFile('joining_letter')) {
-                        $ext = safe_upload_extension($request->file('joining_letter'));
-                        $file = $applyId . '_EXT_' . time() . '.' . $ext;
-                        $request->file('joining_letter')->storeAs('idcard/dup_docs', $file, 'public');
-                        $serviceExt = $file;
-                    }
+                    $paymentReceipt = $request->hasFile('payment_receipt')
+                        ? $storeFile($request->file('payment_receipt'), ['emp_id_apply' => $applyId])
+                        : null;
+                    $firDoc = $request->hasFile('fir_receipt')
+                        ? $storeFile($request->file('fir_receipt'), ['emp_id_apply' => $applyId])
+                        : null;
+                    $serviceExt = $request->hasFile('joining_letter')
+                        ? $storeFile($request->file('joining_letter'), ['emp_id_apply' => $applyId])
+                        : null;
 
                     $reason = $validated['duplication_reason'] ?? null;
                     $cardReason = match ($validated['request_for'] ?? '') {
@@ -1147,29 +1155,15 @@ class EmployeeIDCardRequestController extends Controller
                     $nextPk = (int) DB::table('security_dup_other_id_apply')->max('pk') + 1;
                     $applyId = 'DUO' . str_pad((string) $nextPk, 5, '0', STR_PAD_LEFT);
 
-                    $paymentReceipt = null;
-                    if ($request->hasFile('payment_receipt')) {
-                        $ext = safe_upload_extension($request->file('payment_receipt'));
-                        $file = $applyId . '_PAY_' . time() . '.' . $ext;
-                        $request->file('payment_receipt')->storeAs('idcard/dup_docs', $file, 'public');
-                        $paymentReceipt = $file;
-                    }
-
-                    $firDoc = null;
-                    if ($request->hasFile('fir_receipt')) {
-                        $ext = safe_upload_extension($request->file('fir_receipt'));
-                        $file = $applyId . '_FIR_' . time() . '.' . $ext;
-                        $request->file('fir_receipt')->storeAs('idcard/dup_docs', $file, 'public');
-                        $firDoc = $file;
-                    }
-
-                    $serviceExt = null;
-                    if ($request->hasFile('documents')) {
-                        $ext = safe_upload_extension($request->file('documents'));
-                        $file = $applyId . '_DOC_' . time() . '.' . $ext;
-                        $request->file('documents')->storeAs('idcard/dup_docs', $file, 'public');
-                        $serviceExt = $file;
-                    }
+                    $paymentReceipt = $request->hasFile('payment_receipt')
+                        ? $storeFile($request->file('payment_receipt'), ['emp_id_apply' => $applyId])
+                        : null;
+                    $firDoc = $request->hasFile('fir_receipt')
+                        ? $storeFile($request->file('fir_receipt'), ['emp_id_apply' => $applyId])
+                        : null;
+                    $serviceExt = $request->hasFile('documents')
+                        ? $storeFile($request->file('documents'), ['emp_id_apply' => $applyId])
+                        : null;
 
                     $reason = $validated['duplication_reason'] ?? null;
                     $cardReason = match ($validated['request_for'] ?? '') {
@@ -1253,10 +1247,9 @@ class EmployeeIDCardRequestController extends Controller
                 $nextId = (int) DB::table('security_con_oth_id_apply')->max('pk') + 1;
                 $empIdApply = 'COD' . str_pad((string) $nextId, 5, '0', STR_PAD_LEFT);
 
-                $docPath = null;
-                if ($request->hasFile('documents')) {
-                    $docPath = $request->file('documents')->store('idcard/documents', 'public');
-                }
+                $docPath = $request->hasFile('documents')
+                    ? $storeFile($request->file('documents'))
+                    : null;
 
                 // Insert matches security_con_oth_id_apply structure (pk auto; section = bigint department_master_pk)
                 $contRow = [
@@ -1281,6 +1274,8 @@ class EmployeeIDCardRequestController extends Controller
                     'telephone_no' => $validated['telephone_number'] ?? null,
                     'vender_name' => $validated['vendor_organization_name'] ?? null,
                     'father_name' => $validated['father_name'] ?? null,
+                    // Legacy meaning of photo_path: the number of this record's contractual/ folder.
+                    'photo_path' => $fileKeys['photo_path'],
                     'doc_path' => $docPath,
                     'department_approval_emp_pk' => !empty($validated['approval_authority']) ? (int) $validated['approval_authority'] : null,
                     'section' => $userDepartmentPk,
@@ -1550,25 +1545,34 @@ class EmployeeIDCardRequestController extends Controller
                 'section' => $userDepartmentPkForUpdate ?? $row->section,
             ];
             $documentsUploadedList = [];
+            $hasNewDoc = $request->hasFile('documents') && $request->file('documents')->isValid();
+            if ($request->hasFile('photo') || $hasNewDoc) {
+                // Files go to the record's contractual/<photo_path> folder (legacy rows without one get a
+                // new number) and the columns hold the file name only, as in the legacy table.
+                $fileKeys = ['photo_path' => $row->photo_path ?? null];
+                if (empty($row->photo_path)) {
+                    $fileKeys['photo_path'] = $up['photo_path'] = SecurityFiles::folderKey(SecurityFiles::newFolder('contractual'));
+                }
+            }
             if ($request->hasFile('photo')) {
-                $up['id_photo_path'] = $request->file('photo')->store('idcard/photos', 'public');
+                $up['id_photo_path'] = SecurityFiles::storeForRow($request->file('photo'), 'security_con_oth_id_apply', $fileKeys);
                 $documentsUploadedList[] = 'Photo';
             }
-            if ($request->hasFile('documents') && $request->file('documents')->isValid()) {
+            if ($hasNewDoc) {
                 $oldDocPath = $row->doc_path ?? null;
                 $oldJoinLetterPath = Schema::hasColumn('security_con_oth_id_apply', 'joining_letter_path')
                     ? ($row->joining_letter_path ?? null)
                     : null;
-                $storedDoc = $request->file('documents')->store('idcard/documents', 'public');
+                $storedDoc = SecurityFiles::storeForRow($request->file('documents'), 'security_con_oth_id_apply', $fileKeys);
                 $up['doc_path'] = $storedDoc;
                 if (Schema::hasColumn('security_con_oth_id_apply', 'joining_letter_path')) {
                     $up['joining_letter_path'] = $storedDoc;
                 }
                 $documentsUploadedList[] = 'Supporting document';
-                foreach (array_unique(array_filter([$oldDocPath, $oldJoinLetterPath])) as $prevPath) {
-                    if ($prevPath !== '' && $prevPath !== $storedDoc && Storage::disk('public')->exists($prevPath)) {
-                        Storage::disk('public')->delete($prevPath);
-                    }
+                // Replaced document: removed only if this application wrote it (archive files stay).
+                SecurityFiles::deleteForRow('security_con_oth_id_apply', $row, 'doc_path');
+                if ($oldJoinLetterPath !== null && $oldJoinLetterPath !== $oldDocPath) {
+                    SecurityFiles::deleteForRow('security_con_oth_id_apply', $row, 'joining_letter_path');
                 }
             }
             DB::table('security_con_oth_id_apply')->where('pk', $res['pk'])->update($up);
@@ -1638,12 +1642,16 @@ class EmployeeIDCardRequestController extends Controller
             }
         }
         $documentsUploadedList = [];
+        $fileFolder = SecurityFiles::folderOf(
+            [$row->id_photo_path, $row->joining_letter_path ?? null, $row->extension_document_path ?? null],
+            'permanent'
+        );
         if ($request->hasFile('photo')) {
-            $row->id_photo_path = $request->file('photo')->store('idcard/photos', 'public');
+            $row->id_photo_path = SecurityFiles::store($request->file('photo'), $fileFolder);
             $documentsUploadedList[] = 'Photo';
         }
         if ($request->hasFile('joining_letter')) {
-            $row->joining_letter_path = $request->file('joining_letter')->store('idcard/joining_letters', 'public');
+            $row->joining_letter_path = SecurityFiles::store($request->file('joining_letter'), $fileFolder);
             $documentsUploadedList[] = 'Joining Letter';
         }
         $row->save();
@@ -1720,7 +1728,10 @@ class EmployeeIDCardRequestController extends Controller
             $row->extension_reason = $validated['extension_reason'] ?: null;
         }
         if ($request->hasFile('extension_document')) {
-            $row->extension_document_path = $request->file('extension_document')->store('idcard/extension_documents', 'public');
+            $row->extension_document_path = SecurityFiles::store(
+                $request->file('extension_document'),
+                SecurityFiles::folderOf([$row->id_photo_path, $row->joining_letter_path ?? null, $row->extension_document_path ?? null], 'permanent')
+            );
         }
         $row->save();
 
@@ -1773,19 +1784,18 @@ class EmployeeIDCardRequestController extends Controller
             $cardValidTo = $parentRow->card_valid_to->format('Y-m-d');
         }
 
+        // DuplicateCardRequest/<card no, else DUP number>/; the columns hold the file name only.
+        $fileKeys = ['id_card_no' => $request->get('id_card_number') ?: $parentRow->id_card_no, 'emp_id_apply' => $applyId];
+
         $firDoc = null;
         if ($cardReason === 'Lost' && $request->hasFile('fir_receipt')) {
-            $ext = safe_upload_extension($request->file('fir_receipt'));
-            $firDoc = $applyId . '_FIR_' . time() . '.' . $ext;
-            $request->file('fir_receipt')->storeAs('idcard/dup_docs', $firDoc, 'public');
+            $firDoc = SecurityFiles::storeForRow($request->file('fir_receipt'), 'security_dup_perm_id_apply', $fileKeys);
         }
 
         $paymentReceipt = null;
         $serviceExt = null;
         if ($request->hasFile('payment_receipt')) {
-            $ext = safe_upload_extension($request->file('payment_receipt'));
-            $file = $applyId . '_DOC_' . time() . '.' . $ext;
-            $request->file('payment_receipt')->storeAs('idcard/dup_docs', $file, 'public');
+            $file = SecurityFiles::storeForRow($request->file('payment_receipt'), 'security_dup_perm_id_apply', $fileKeys);
             if ($cardReason === 'Expired Card') {
                 $serviceExt = $file;
             } else {
@@ -1795,10 +1805,7 @@ class EmployeeIDCardRequestController extends Controller
 
         $nameChangeDoc = null;
         if ($request->hasFile('supporting_document')) {
-            $ext = safe_upload_extension($request->file('supporting_document'));
-            $file = $applyId . '_SUPPORT_' . time() . '.' . $ext;
-            $request->file('supporting_document')->storeAs('idcard/dup_docs', $file, 'public');
-            $nameChangeDoc = $file;
+            $nameChangeDoc = SecurityFiles::storeForRow($request->file('supporting_document'), 'security_dup_perm_id_apply', $fileKeys);
         }
 
         $designationPk = $parentRow->employee && isset($parentRow->employee->designation_master_pk)
@@ -1934,7 +1941,7 @@ class EmployeeIDCardRequestController extends Controller
         }
 
         $permQuery = SecurityParmIdApply::select($columns)->with($with)->orderBy('created_date', 'desc');
-        $contCols = ['pk', 'emp_id_apply', 'employee_name', 'designation_name', 'id_status', 'depart_approval_status', 'department_approval_emp_pk', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'mobile_no', 'telephone_no', 'blood_group', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob', 'vender_name', 'father_name', 'doc_path'];
+        $contCols = ['pk', 'emp_id_apply', 'employee_name', 'designation_name', 'id_status', 'depart_approval_status', 'department_approval_emp_pk', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'photo_path', 'mobile_no', 'telephone_no', 'blood_group', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob', 'vender_name', 'father_name', 'doc_path'];
         $contQuery = DB::table('security_con_oth_id_apply')->select($contCols)->orderBy('created_date', 'desc');
 
         static::applyEmployeeIdcardListStatusFilters($permQuery, $contQuery, $filter, $listStatus);

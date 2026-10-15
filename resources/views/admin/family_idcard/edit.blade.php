@@ -75,13 +75,13 @@
                         <label class="form-label">Upload Family Photo</label>
                         @php
                             $familyPhotoPath = $request->family_photo;
-                            $familyPhotoExists = $familyPhotoPath && \Storage::disk('public')->exists($familyPhotoPath);
+                            $familyPhotoExists = $familyPhotoPath && security_file_exists($familyPhotoPath);
                         @endphp
                         <div class="family-idcard-upload-zone position-relative" id="familyPhotoUploadZone">
                             <input type="file" name="family_photo" id="family_photo" class="d-none" accept=".jpeg,.jpg,.png">
                             <div class="family-idcard-upload-placeholder" id="familyPhotoPlaceholder">
                                 @if($familyPhotoExists)
-                                    <img src="{{ asset('storage/' . $familyPhotoPath) }}" alt="Current" class="family-idcard-preview-img mb-2" style="max-height:120px;">
+                                    <img src="{{ security_file_url($familyPhotoPath) }}" alt="Current" class="family-idcard-preview-img mb-2" style="max-height:120px;">
                                     <p class="mb-0 small text-muted">Click to change or drag and drop</p>
                                 @elseif($familyPhotoPath)
                                     <p class="mb-0 small text-muted text-warning">No file available in storage</p>
@@ -153,14 +153,14 @@
                                     </td>
                                     <td class="align-middle">
                                         @php
-                                            $memberPhoto = $member->id_photo_path ?? $member->family_photo ?? null;
-                                            $memberPhotoExists = $memberPhoto && \Storage::disk('public')->exists($memberPhoto);
+                                            $memberPhoto = security_row_file('security_family_id_apply', $member, 'id_photo_path') ?? security_row_file('security_family_id_apply', $member, 'family_photo');
+                                            $memberPhotoExists = $memberPhoto && security_file_exists($memberPhoto);
                                         @endphp
                                         <div class="family-idcard-upload-zone-sm position-relative member-photo-cell" data-row="{{ $idx }}">
                                             <input type="file" name="members[{{ $idx }}][family_photo]" class="d-none member-photo-input" accept=".jpeg,.jpg,.png" data-row="{{ $idx }}">
                                             <div class="family-idcard-upload-placeholder-sm" data-placeholder="{{ $idx }}">
                                                 @if($memberPhotoExists)
-                                                    <img src="{{ asset('storage/' . $memberPhoto) }}" alt="" class="member-preview-img" data-img="{{ $idx }}" style="max-height:60px; border-radius:4px;">
+                                                    <img src="{{ security_file_url($memberPhoto) }}" alt="" class="member-preview-img" data-img="{{ $idx }}" style="max-height:60px; border-radius:4px;">
                                                     <span class="small d-block mt-1 text-muted">Click to change</span>
                                                 @elseif($memberPhoto)
                                                     <span class="small d-block mt-1 text-warning">No file available in storage</span>

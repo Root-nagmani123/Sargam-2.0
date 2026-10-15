@@ -10,6 +10,7 @@ use App\Models\SecurityParmIdApply;
 use App\Services\SecurityRequestNotifier;
 use App\Support\DataTableRedisCache;
 use App\Support\IdCardSecurityMapper;
+use App\Support\SecurityFiles;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -587,8 +588,9 @@ class FamilyIDCardRequestController extends Controller
         $count = 0;
         $nextPk = (int) SecurityFamilyIdApply::max('pk') + 1;
         $groupPhotoPath = null;
+        // Legacy layout: files in familyCard/<emp_id_apply>/, the column holds the file name only.
         if ($request->hasFile('group_photo')) {
-            $groupPhotoPath = $request->file('group_photo')->store('family_idcard/Group_photos', 'public');
+            $groupPhotoPath = SecurityFiles::storeForRow($request->file('group_photo'), 'security_family_id_apply', ['emp_id_apply' => $employeeId]);
         }
         foreach ($members as $index => $member) {
             $name = $member['name'] ?? null;
@@ -621,7 +623,7 @@ class FamilyIDCardRequestController extends Controller
 
             $familyPhotoPath_individual = null;
             if ($request->hasFile('members.' . $index . '.family_photo')) {
-                $familyPhotoPath_individual = $request->file('members.' . $index . '.family_photo')->store('family_idcard/Individual_photos', 'public');
+                $familyPhotoPath_individual = SecurityFiles::storeForRow($request->file('members.' . $index . '.family_photo'), 'security_family_id_apply', ['emp_id_apply' => $employeeId]);
             }
             $fmlIdApply = 'FMD' . str_pad((string) $nextPk, 5, '0', STR_PAD_LEFT);
             $nextPk++;
@@ -820,7 +822,7 @@ class FamilyIDCardRequestController extends Controller
             $row->department_approval_emp_pk = $approvalAuthorityPk;
         }
         if ($request->hasFile('family_photo')) {
-            $row->family_photo = $request->file('family_photo')->store('family_idcard/photos', 'public');
+            $row->family_photo = SecurityFiles::storeForRow($request->file('family_photo'), 'security_family_id_apply', $row);
             $row->id_photo_path = $row->family_photo;
         }
         $row->save();
@@ -884,7 +886,7 @@ class FamilyIDCardRequestController extends Controller
                     $memberRow->card_valid_to = $validTo ?: null;
 
                     if ($request->hasFile($fileKey)) {
-                        $path = $request->file($fileKey)->store('family_idcard/Individual_photos', 'public');
+                        $path = SecurityFiles::storeForRow($request->file($fileKey), 'security_family_id_apply', $memberRow);
                         $memberRow->id_photo_path = $path;
                     }
                     $memberRow->save();
@@ -903,7 +905,7 @@ class FamilyIDCardRequestController extends Controller
 
                     $photoPath = null;
                     if ($request->hasFile($fileKey)) {
-                        $photoPath = $request->file($fileKey)->store('family_idcard/Individual_photos', 'public');
+                        $photoPath = SecurityFiles::storeForRow($request->file($fileKey), 'security_family_id_apply', $row);
                     }
 
                     SecurityFamilyIdApply::create([
@@ -1021,7 +1023,7 @@ class FamilyIDCardRequestController extends Controller
             : Carbon::parse($mainRow->created_date)->format('Y-m-d H:i:s');
         $photoPath = null;
         if ($request->hasFile('family_photo')) {
-            $photoPath = $request->file('family_photo')->store('family_idcard/Individual_photos', 'public');
+            $photoPath = SecurityFiles::storeForRow($request->file('family_photo'), 'security_family_id_apply', $mainRow);
         }
         SecurityFamilyIdApply::create([
             'fml_id_apply' => $fmlIdApply,
@@ -1083,7 +1085,7 @@ class FamilyIDCardRequestController extends Controller
         $memberRow->card_valid_from = $validated['valid_from'] ?? null;
         $memberRow->card_valid_to = $validated['valid_to'] ?? null;
         if ($request->hasFile('family_photo')) {
-            $memberRow->id_photo_path = $request->file('family_photo')->store('family_idcard/Individual_photos', 'public');
+            $memberRow->id_photo_path = SecurityFiles::storeForRow($request->file('family_photo'), 'security_family_id_apply', $memberRow);
             $memberRow->family_photo = $memberRow->family_photo ?? $memberRow->id_photo_path;
         }
         $memberRow->save();
@@ -1199,7 +1201,7 @@ class FamilyIDCardRequestController extends Controller
             $row->card_valid_to = $request->input('to_date');
         }
         if ($request->hasFile('dup_doc')) {
-            $row->dup_doc = $request->file('dup_doc')->store('family_idcard/dup_docs', 'public');
+            $row->dup_doc = SecurityFiles::storeForRow($request->file('dup_doc'), 'security_family_id_apply', $row);
         }
         $row->save();
 

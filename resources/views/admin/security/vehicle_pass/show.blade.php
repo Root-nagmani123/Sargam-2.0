@@ -208,7 +208,7 @@
             <!-- Attachment -->
             @php
                 $docPath = $vehiclePass->doc_upload;
-                $docExists = $docPath && \Storage::disk('public')->exists($docPath);
+                $docExists = $docPath && security_file_exists($docPath);
             @endphp
             @if($docPath)
                 <div class="row mb-3 mt-3">
@@ -218,7 +218,7 @@
                             Attached Document
                         </h5>
                         @if($docExists)
-                            <a href="{{ asset('storage/' . $docPath) }}" target="_blank" class="btn btn-outline-primary">
+                            <a href="{{ security_file_url($docPath) }}" target="_blank" class="btn btn-outline-primary">
                                 <i class="material-icons material-symbols-rounded" style="font-size:18px;vertical-align:middle;">download</i>
                                 Download Document
                             </a>

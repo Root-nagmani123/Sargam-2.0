@@ -135,10 +135,10 @@
                                         <td class="align-middle">
                                             @php
                                                 $docPath = $pass->doc_upload;
-                                                $docExists = $docPath && \Storage::disk('public')->exists($docPath);
+                                                $docExists = $docPath && security_file_exists($docPath);
                                             @endphp
                                             @if($docExists)
-                                                <a href="{{ asset('storage/' . $docPath) }}" target="_blank" class="text-primary" title="View Document" data-bs-toggle="tooltip">
+                                                <a href="{{ security_file_url($docPath) }}" target="_blank" class="text-primary" title="View Document" data-bs-toggle="tooltip">
                                                     <i class="material-icons material-symbols-rounded" style="font-size:22px;">picture_as_pdf</i>
                                                 </a>
                                             @elseif($docPath)
@@ -224,10 +224,10 @@
                                         <td class="align-middle">
                                             @php
                                                 $docPath = $pass->doc_upload;
-                                                $docExists = $docPath && \Storage::disk('public')->exists($docPath);
+                                                $docExists = $docPath && security_file_exists($docPath);
                                             @endphp
                                             @if($docExists)
-                                                <a href="{{ asset('storage/' . $docPath) }}" target="_blank" class="text-primary" title="View Document" data-bs-toggle="tooltip">
+                                                <a href="{{ security_file_url($docPath) }}" target="_blank" class="text-primary" title="View Document" data-bs-toggle="tooltip">
                                                     <i class="material-icons material-symbols-rounded" style="font-size:22px;">picture_as_pdf</i>
                                                 </a>
                                             @elseif($docPath)

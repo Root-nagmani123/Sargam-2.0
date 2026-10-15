@@ -59,10 +59,10 @@
                         @if(isset($edit_id))
                             @php
                                 $photoPath = $data['photo_path'] ?? null;
-                                $photoExists = $photoPath && \Storage::disk('public')->exists($photoPath);
+                                $photoExists = $photoPath && security_file_exists($photoPath);
                             @endphp
                             @if($photoExists)
-                                <a href="{{ asset('storage/' . $photoPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current Photo</a>
+                                <a href="{{ security_file_url($photoPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current Photo</a>
                             @else
                                 <div class="text-muted small mb-2">No file available in storage</div>
                             @endif
@@ -90,11 +90,11 @@
                         @if(isset($edit_id))
                             @php
                                 $aadharDoc = $existing_docs['aadhar_doc'] ?? null;
-                                $aadharPath = $aadharDoc ? 'idcard/dup_docs/' . $aadharDoc : null;
-                                $aadharExists = $aadharPath && \Storage::disk('public')->exists($aadharPath);
+                                $aadharPath = $aadharDoc ?: null; // resolved file ref (SecurityFiles::forRow)
+                                $aadharExists = $aadharPath && security_file_exists($aadharPath);
                             @endphp
                             @if($aadharExists)
-                                <a href="{{ asset('storage/' . $aadharPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current Document</a>
+                                <a href="{{ security_file_url($aadharPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current Document</a>
                             @elseif($aadharDoc)
                                 <div class="text-muted small mb-2">No file available in storage</div>
                             @endif
@@ -225,11 +225,11 @@
                         @if(isset($edit_id))
                             @php
                                 $firDoc = $existing_docs['fir_doc'] ?? null;
-                                $firPath = $firDoc ? 'idcard/dup_docs/' . $firDoc : null;
-                                $firExists = $firPath && \Storage::disk('public')->exists($firPath);
+                                $firPath = $firDoc ?: null; // resolved file ref (SecurityFiles::forRow)
+                                $firExists = $firPath && security_file_exists($firPath);
                             @endphp
                             @if($firExists)
-                                <a href="{{ asset('storage/' . $firPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current FIR Document</a>
+                                <a href="{{ security_file_url($firPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current FIR Document</a>
                             @elseif($firDoc)
                                 <div class="text-muted small mb-2">No file available in storage</div>
                             @endif
@@ -249,11 +249,11 @@
                         @if(isset($edit_id))
                             @php
                                 $payDoc = $existing_docs['payment_receipt'] ?? null;
-                                $payPath = $payDoc ? 'idcard/dup_docs/' . $payDoc : null;
-                                $payExists = $payPath && \Storage::disk('public')->exists($payPath);
+                                $payPath = $payDoc ?: null; // resolved file ref (SecurityFiles::forRow)
+                                $payExists = $payPath && security_file_exists($payPath);
                             @endphp
                             @if($payExists)
-                                <a href="{{ asset('storage/' . $payPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current Payment Receipt</a>
+                                <a href="{{ security_file_url($payPath) }}" target="_blank" class="btn btn-sm btn-outline-primary d-block mb-2">View Current Payment Receipt</a>
                             @elseif($payDoc)
                                 <div class="text-muted small mb-2">No file available in storage</div>
                             @endif

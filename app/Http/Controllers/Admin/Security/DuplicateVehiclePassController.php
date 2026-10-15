@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Security;
 
 use App\Http\Controllers\Controller;
 use App\Support\IdCardSecurityMapper;
+use App\Support\SecurityFiles;
 use App\Models\EmployeeMaster;
 use App\Models\SecVehicleType;
 use App\Models\VehiclePassDuplicateApplyTwfw;
@@ -11,7 +12,6 @@ use App\Models\VehiclePassTWApply;
 use App\Models\VehiclePassFWApply;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 class DuplicateVehiclePassController extends Controller
 {
@@ -227,7 +227,7 @@ class DuplicateVehiclePassController extends Controller
 
         $docPath = null;
         if ($request->hasFile('doc_upload')) {
-            $docPath = $request->file('doc_upload')->store('duplicate_vehicle_pass_docs', 'public');
+            $docPath = SecurityFiles::store($request->file('doc_upload'), SecurityFiles::newFolder('vehicle'));
         }
 
         // Generate vehicle_tw_pk: DUP + 3-digit padded number (per SQL structure)
@@ -337,9 +337,9 @@ class DuplicateVehiclePassController extends Controller
         $docPath = $req->doc_upload;
         if ($request->hasFile('doc_upload')) {
             if ($req->doc_upload) {
-                Storage::disk('public')->delete($req->doc_upload);
+                SecurityFiles::delete($req->doc_upload);
             }
-            $docPath = $request->file('doc_upload')->store('duplicate_vehicle_pass_docs', 'public');
+            $docPath = SecurityFiles::store($request->file('doc_upload'), SecurityFiles::folderOf([$req->doc_upload], 'vehicle'));
         }
 
         $cardReason = VehiclePassDuplicateApplyTwfw::mapReasonToCardReason($validated['reason_for_duplicate']);
@@ -371,7 +371,7 @@ class DuplicateVehiclePassController extends Controller
         }
 
         if ($req->doc_upload) {
-            Storage::disk('public')->delete($req->doc_upload);
+            SecurityFiles::delete($req->doc_upload);
         }
 
         $req->delete();

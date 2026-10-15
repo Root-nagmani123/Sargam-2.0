@@ -286,14 +286,14 @@
                     <div class="row g-2">
                         <!-- Photo -->
                         @php
-                            $photoExists = $request->photo && \Storage::disk('public')->exists($request->photo);
+                            $photoExists = $request->photo && security_file_exists($request->photo);
                         @endphp
                         @if($photoExists)
                             <div class="col-12">
                                 <div class="card border-0 bg-light rounded-2 p-3 text-center">
                                     <i class="material-icons material-symbols-rounded text-primary" style="font-size:48px;">image</i>
                                     <small class="d-block mt-2 text-muted">Photo</small>
-                                    <a href="{{ asset('storage/' . $request->photo) }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2 w-100">
+                                    <a href="{{ security_file_url($request->photo) }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2 w-100">
                                         <i class="material-icons material-symbols-rounded align-middle" style="font-size:16px;">download</i>
                                         View / Download
                                     </a>
@@ -311,7 +311,7 @@
                         <!-- Joining letter (permanent) or supporting document (contractual: appointment / joining letter etc.) -->
                         @php
                             $supportingPath = $request->joining_letter ?? $request->documents;
-                            $supportingExists = $supportingPath && \Storage::disk('public')->exists($supportingPath);
+                            $supportingExists = $supportingPath && security_file_exists($supportingPath);
                             $supportingLabel = ($request->employee_type ?? '') === 'Contractual Employee'
                                 ? 'Supporting document'
                                 : 'Joining Letter';
@@ -321,7 +321,7 @@
                                 <div class="card border-0 bg-light rounded-2 p-3 text-center">
                                     <i class="material-icons material-symbols-rounded text-info" style="font-size:48px;">description</i>
                                     <small class="d-block mt-2 text-muted">{{ $supportingLabel }}</small>
-                                    <a href="{{ asset('storage/' . $supportingPath) }}" target="_blank" class="btn btn-sm btn-outline-info mt-2 w-100">
+                                    <a href="{{ security_file_url($supportingPath) }}" target="_blank" class="btn btn-sm btn-outline-info mt-2 w-100">
                                         <i class="material-icons material-symbols-rounded align-middle" style="font-size:16px;">visibility</i>
                                         View / Download
                                     </a>
@@ -331,14 +331,14 @@
 
                         <!-- FIR Receipt (for Lost/Damaged) -->
                         @php
-                            $firExists = $request->fir_receipt && \Storage::disk('public')->exists($request->fir_receipt);
+                            $firExists = $request->fir_receipt && security_file_exists($request->fir_receipt);
                         @endphp
                         @if($firExists)
                             <div class="col-12">
                                 <div class="card border-0 bg-light rounded-2 p-3 text-center">
                                     <i class="material-icons material-symbols-rounded text-warning" style="font-size:48px;">gavel</i>
                                     <small class="d-block mt-2 text-muted">FIR Receipt</small>
-                                    <a href="{{ asset('storage/' . $request->fir_receipt) }}" target="_blank" class="btn btn-sm btn-outline-warning mt-2 w-100">
+                                    <a href="{{ security_file_url($request->fir_receipt) }}" target="_blank" class="btn btn-sm btn-outline-warning mt-2 w-100">
                                         <i class="material-icons material-symbols-rounded align-middle" style="font-size:16px;">visibility</i>
                                         View / Download
                                     </a>
@@ -348,14 +348,14 @@
 
                         <!-- Payment Receipt -->
                         @php
-                            $paymentExists = $request->payment_receipt && \Storage::disk('public')->exists($request->payment_receipt);
+                            $paymentExists = $request->payment_receipt && security_file_exists($request->payment_receipt);
                         @endphp
                         @if($paymentExists)
                             <div class="col-12">
                                 <div class="card border-0 bg-light rounded-2 p-3 text-center">
                                     <i class="material-icons material-symbols-rounded text-success" style="font-size:48px;">receipt</i>
                                     <small class="d-block mt-2 text-muted">Payment Receipt</small>
-                                    <a href="{{ asset('storage/' . $request->payment_receipt) }}" target="_blank" class="btn btn-sm btn-outline-success mt-2 w-100">
+                                    <a href="{{ security_file_url($request->payment_receipt) }}" target="_blank" class="btn btn-sm btn-outline-success mt-2 w-100">
                                         <i class="material-icons material-symbols-rounded align-middle" style="font-size:16px;">visibility</i>
                                         View / Download
                                     </a>

@@ -34,12 +34,12 @@
                 <div class="col-md-6">
                     @php
                         $firstMember = isset($members) && count($members) ? $members->first() : null;
-                        $groupPhotoPath = $firstMember->family_photo ?? $request->family_photo ?? null;
-                        $groupPhotoExists = $groupPhotoPath && \Storage::disk('public')->exists($groupPhotoPath);
+                        $groupPhotoPath = security_row_file('security_family_id_apply', $firstMember, 'family_photo') ?? $request->family_photo ?? null;
+                        $groupPhotoExists = $groupPhotoPath && security_file_exists($groupPhotoPath);
                     @endphp
                     @if($groupPhotoExists)
                         <strong>Group Photo:</strong><br>
-                        <img src="{{ asset('storage/' . $groupPhotoPath) }}" alt="Group Photo" class="img-thumbnail mt-1" style="max-height: 200px;">
+                        <img src="{{ security_file_url($groupPhotoPath) }}" alt="Group Photo" class="img-thumbnail mt-1" style="max-height: 200px;">
                     @elseif($groupPhotoPath)
                         <strong>Group Photo:</strong> <span class="text-warning small">No file available in storage</span>
                     @else
@@ -49,11 +49,11 @@
                 <div class="col-md-6">
                     @php
                         $individualPath = $request->id_photo_path;
-                        $individualExists = $individualPath && \Storage::disk('public')->exists($individualPath);
+                        $individualExists = $individualPath && security_file_exists($individualPath);
                     @endphp
                     @if($individualExists)
                         <strong>Individual Photo (selected member):</strong><br>
-                        <img src="{{ asset('storage/' . $individualPath) }}" alt="Individual Photo" class="img-thumbnail mt-1" style="max-height: 200px;">
+                        <img src="{{ security_file_url($individualPath) }}" alt="Individual Photo" class="img-thumbnail mt-1" style="max-height: 200px;">
                     @elseif($individualPath)
                         <strong>Individual Photo (selected member):</strong> <span class="text-warning small">No file available in storage</span>
                     @else
@@ -90,11 +90,11 @@
                                     <td>{{ $member->valid_to ? \App\Support\IdCardSecurityMapper::formatDateForDisplay($member->valid_to) : '--' }}</td>
                                     <td class="text-center">
                                         @php
-                                            $photo = $member->id_photo_path ?? $member->family_photo ?? null;
-                                            $photoExists = $photo && \Storage::disk('public')->exists($photo);
+                                            $photo = security_row_file('security_family_id_apply', $member, 'id_photo_path') ?? security_row_file('security_family_id_apply', $member, 'family_photo');
+                                            $photoExists = $photo && security_file_exists($photo);
                                         @endphp
                                         @if($photoExists)
-                                            <img src="{{ asset('storage/' . $photo) }}" alt="Member Photo" class="img-thumbnail" style="max-height:80px;">
+                                            <img src="{{ security_file_url($photo) }}" alt="Member Photo" class="img-thumbnail" style="max-height:80px;">
                                         @elseif($photo)
                                             <span class="text-warning small">No file available in storage</span>
                                         @else

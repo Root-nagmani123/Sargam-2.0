@@ -70,10 +70,10 @@
                         <input type="file" name="doc_upload" id="doc_upload" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
                         @php
                             $docPath = $req->doc_upload;
-                            $docExists = $docPath && \Storage::disk('public')->exists($docPath);
+                            $docExists = $docPath && security_file_exists($docPath);
                         @endphp
                         @if($docExists)
-                            <small class="text-muted d-block">Current: <a href="{{ asset('storage/' . $docPath) }}" target="_blank">Download</a></small>
+                            <small class="text-muted d-block">Current: <a href="{{ security_file_url($docPath) }}" target="_blank">Download</a></small>
                         @elseif($docPath)
                             <small class="text-warning d-block">No file available in storage</small>
                         @endif

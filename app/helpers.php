@@ -2536,3 +2536,33 @@ if (! function_exists('safe_upload_extension')) {
         return strtolower((string) $file->guessExtension() ?: $fallback);
     }
 }
+
+if (! function_exists('security_file_url')) {
+    /**
+     * Authenticated URL for a security-module file (ref or relative path), or null when
+     * the file does not exist. See App\Support\SecurityFiles.
+     */
+    function security_file_url(?string $refOrPath): ?string
+    {
+        return \App\Support\SecurityFiles::url($refOrPath);
+    }
+}
+
+if (! function_exists('security_file_exists')) {
+    /** True when a security-module file (ref or relative path) exists. */
+    function security_file_exists(?string $refOrPath): bool
+    {
+        return \App\Support\SecurityFiles::exists($refOrPath);
+    }
+}
+
+if (! function_exists('security_row_file')) {
+    /**
+     * File ref for $row->$column of a security table (legacy bare names resolved via the
+     * row's key column), or the stored value when no file is found. See SecurityFiles::forRow().
+     */
+    function security_row_file(string $table, ?object $row, string $column): ?string
+    {
+        return \App\Support\SecurityFiles::forRow($table, $row, $column);
+    }
+}

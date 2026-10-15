@@ -133,15 +133,15 @@
             </div>
 
             @php
-                $photoPath = $application->family_photo ?? $application->id_photo_path ?? null;
-                $photoExists = $photoPath && \Storage::disk('public')->exists($photoPath);
+                $photoPath = security_row_file('security_family_id_apply', $application, 'family_photo') ?? security_row_file('security_family_id_apply', $application, 'id_photo_path');
+                $photoExists = $photoPath && security_file_exists($photoPath);
             @endphp
             @if($photoPath)
                 <div class="row mb-3">
                     <div class="col-md-12">
                         <h5 class="text-primary mb-3">Photo</h5>
                         @if($photoExists)
-                            <img src="{{ asset('storage/' . $photoPath) }}" alt="Family Photo" class="img-thumbnail" style="max-height: 200px;">
+                            <img src="{{ security_file_url($photoPath) }}" alt="Family Photo" class="img-thumbnail" style="max-height: 200px;">
                         @else
                             <p class="text-warning small mb-0">No file available in storage</p>
                         @endif

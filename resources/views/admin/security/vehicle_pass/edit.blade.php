@@ -179,21 +179,21 @@
                             <label for="doc_upload" class="form-label">Ownership Documents</label>
                             @php
                                 $docPath = $vehiclePass->doc_upload;
-                                $docExists = $docPath && \Storage::disk('public')->exists($docPath);
+                                $docExists = $docPath && security_file_exists($docPath);
                             @endphp
                             @if($docExists)
                                 @php $ext = strtolower(pathinfo($docPath, PATHINFO_EXTENSION)); @endphp
                                 <div class="vehicle-pass-edit-current mb-2 position-relative d-inline-block">
                                     <div class="vehicle-pass-preview-inner position-relative p-2 rounded border bg-light">
                                         @if(in_array($ext, ['jpg','jpeg','png','gif']))
-                                            <img src="{{ asset('storage/' . $docPath) }}" alt="Current document" style="max-height:120px; border-radius:4px; display:block;">
+                                            <img src="{{ security_file_url($docPath) }}" alt="Current document" style="max-height:120px; border-radius:4px; display:block;">
                                         @else
                                             <div class="d-flex flex-column align-items-center justify-content-center p-2">
                                                 <i class="material-icons material-symbols-rounded text-muted mb-1">description</i>
                                                 <span class="small text-break text-center">{{ basename($docPath) }}</span>
                                             </div>
                                         @endif
-                                        <a href="{{ asset('storage/' . $docPath) }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2 w-100">View</a>
+                                        <a href="{{ security_file_url($docPath) }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2 w-100">View</a>
                                     </div>
                                 </div>
                             @elseif($docPath)
