@@ -1893,7 +1893,12 @@ class UserController extends Controller
         $availableCourses = $payload['availableCourses'];
 
         $typeScope = $this->otParticipantsViewerTypeScope($request, $payload['students']);
-        $groupView = $this->otParticipantsGroupView($request, $typeScope);
+        // A view the viewer CHOSE is kept even outside their role — the blade then
+        // shows "<view> not available". Only a bare URL is steered to the view they
+        // do have, so the page never opens on the notice.
+        $groupView = $request->has('view')
+            ? $this->otParticipantsGroupView($request)
+            : $this->otParticipantsGroupView($request, $typeScope);
         $viewRequest = $this->otParticipantsViewScopedRequest($request, $groupView);
 
         $participants = $this->otParticipantsRowsFor($viewRequest, $payload['students']);

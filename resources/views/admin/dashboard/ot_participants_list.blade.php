@@ -108,6 +108,10 @@
     // outside it is not offered at all.
     $typeScope = $typeScope ?? ['cadre' => true, 'house' => true];
     $hiddenGroupKeys = $hiddenGroupKeys ?? [];
+    // Both view buttons are always offered. Opening the one this viewer's role
+    // does not reach shows a "not available" notice in place of the list.
+    $viewAvailable = ! empty($typeScope[$activeView]);
+    $activeViewLabel = $activeView === 'house' ? 'House' : 'Cadre';
 @endphp
 <div class="container-fluid ot-list-page">
     <x-breadcrum title="OT/ Participants List" :showBack="true" :items="[
@@ -130,7 +134,7 @@
                     data-status="archive">Archived</button>
             </li>
         </ul>
-        <div class="d-flex flex-wrap align-items-center gap-2">
+        <div class="d-flex flex-wrap align-items-center gap-2 {{ $viewAvailable ? '' : 'd-none' }}">
             <button type="button" class="btn sl-toolbar-btn border-0" id="otListPrintBtn" >
                 <i class="bi bi-printer" aria-hidden="true"></i>
                 <span>Print</span>
@@ -156,23 +160,30 @@
 
          Switching is a full reload, like the Active/Archived tabs and the Course
          filter: which filters exist at all is rendered server-side. --}}
-    @if (! empty($typeScope['cadre']) || ! empty($typeScope['house']))
     <div class="d-flex flex-wrap align-items-center gap-2 mb-3 ot-view-toggle" role="group" aria-label="Group view">
-        @if (! empty($typeScope['cadre']))
         <button type="button" class="btn ot-view-btn {{ $activeView === 'cadre' ? 'active' : '' }}"
             data-view="cadre" aria-pressed="{{ $activeView === 'cadre' ? 'true' : 'false' }}">
             <i class="bi bi-geo-alt-fill" aria-hidden="true"></i><span>Cadre</span>
         </button>
-        @endif
-        @if (! empty($typeScope['house']))
         <button type="button" class="btn ot-view-btn {{ $activeView === 'house' ? 'active' : '' }}"
             data-view="house" aria-pressed="{{ $activeView === 'house' ? 'true' : 'false' }}">
             <i class="bi bi-house-door-fill" aria-hidden="true"></i><span>House</span>
         </button>
-        @endif
     </div>
-    @endif
 
+    @if (! $viewAvailable)
+    {{-- The viewer's Course Group Mapping has no group of this type, so there is
+         nothing to list here. --}}
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body p-4 p-md-5 text-center" role="status">
+            <i class="bi bi-info-circle text-secondary d-block mb-2" style="font-size: 2rem;" aria-hidden="true"></i>
+            <h2 class="h5 fw-semibold mb-1">{{ $activeViewLabel }} not available</h2>
+            <p class="text-muted mb-0">
+                You are not mapped to any {{ $activeView === 'house' ? 'House Group' : 'Counsellor Group' }} in Course Group Mapping.
+            </p>
+        </div>
+    </div>
+    @else
     <div class="card border-0 shadow-sm overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
 
@@ -303,6 +314,7 @@
             </div>
         </div>
     </div>
+    @endif
 </div>
 
 <!-- Column Visibility Modal -->
@@ -377,6 +389,30 @@
 </div>
 
 @push('scripts')
+@if (! $viewAvailable)
+{{-- No list on screen: only the view toggle and the Active / Archived tabs
+     need to work. --}}
+<script>
+    $(function() {
+        const baseUrl = "{{ route('admin.dashboard.ot-participants') }}";
+        const GROUP_VIEW = @json($activeView);
+        function go(key, value) {
+            const p = new URLSearchParams(window.location.search);
+            p.set(key, value);
+            if (key === 'status') { p.set('view', GROUP_VIEW); p.delete('course_id'); }
+            ['cadre', 'counsellor_faculty', 'house_group', 'house_faculty'].forEach(k => p.delete(k));
+            window.location.href = baseUrl + '?' + p.toString();
+        }
+        $('.ot-view-toggle .ot-view-btn[data-view]').on('click', function() {
+            const v = $(this).data('view');
+            if (v !== GROUP_VIEW) { go('view', v); }
+        });
+        $('.programme-status-tabs .programme-status-pill[data-status]').on('click', function() {
+            if (!$(this).hasClass('active')) { go('status', $(this).data('status')); }
+        });
+    });
+</script>
+@else
 @php
     // Official letterhead logos embedded as base64 so the print window (a blank
     // about:blank document) can render them without extra network requests.
@@ -1056,6 +1092,7 @@
         });
     });
 </script>
+@endif
 @endpush
 
 @endsection
