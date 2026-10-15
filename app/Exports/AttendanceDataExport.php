@@ -8,6 +8,7 @@ use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\{Alignment, Border, Fill};
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 use App\Models\{MDOEscotDutyMap, StudentMedicalExemption, Timetable};
+use App\Services\Attendance\OtExemptionResolver;
 
 /**
  * Styled .xlsx of a topic's attendance sheet. The header block + table styling
@@ -87,7 +88,9 @@ class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, W
                         ['course_master_pk', '=', $this->course_pk],
                         ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['mdo']],
                         ['selected_student_list', '=', $studentId]
-                    ])->whereDate('mdo_date', '=', $this->timetableDate)->first();
+                    ])->whereDate('mdo_date', '=', $this->timetableDate)->get()
+                        // Every duty of the day, not the first (PR #334 F-061).
+                        ->first(fn ($d) => $this->checkTimeOverlap($this->timetableClassSession, $d->Time_from, $d->Time_to));
                     
                     if ($mdoDuty && $this->checkTimeOverlap($this->timetableClassSession, $mdoDuty->Time_from, $mdoDuty->Time_to)) {
                         $hasMdoDuty = true;
@@ -100,7 +103,9 @@ class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, W
                         ['course_master_pk', '=', $this->course_pk],
                         ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['escort']],
                         ['selected_student_list', '=', $studentId]
-                    ])->whereDate('mdo_date', '=', $this->timetableDate)->first();
+                    ])->whereDate('mdo_date', '=', $this->timetableDate)->get()
+                        // Every duty of the day, not the first (PR #334 F-061).
+                        ->first(fn ($d) => $this->checkTimeOverlap($this->timetableClassSession, $d->Time_from, $d->Time_to));
                     
                     if ($escortDuty && $this->checkTimeOverlap($this->timetableClassSession, $escortDuty->Time_from, $escortDuty->Time_to)) {
                         $hasEscortDuty = true;
@@ -113,15 +118,21 @@ class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, W
                         ['course_master_pk', '=', $this->course_pk],
                         ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['other']],
                         ['selected_student_list', '=', $studentId]
-                    ])->whereDate('mdo_date', '=', $this->timetableDate)->first();
+                    ])->whereDate('mdo_date', '=', $this->timetableDate)->get()
+                        // Every duty of the day, not the first (PR #334 F-061).
+                        ->first(fn ($d) => $this->checkTimeOverlap($this->timetableClassSession, $d->Time_from, $d->Time_to));
                     
                     if ($otherExemption && $this->checkTimeOverlap($this->timetableClassSession, $otherExemption->Time_from, $otherExemption->Time_to)) {
                         $hasOtherExempt = true;
                     }
                 }
                 
-                // Check Medical Exemption
-                $medicalExemption = StudentMedicalExemption::where([
+                // Check Medical Exemption — by the OtExemptionResolver rule, the
+                // one the on-screen badge, save() and the defaulter list use. The
+                // previous clock-time-only test read a date-only exemption
+                // (00:00 → 00:00) as covering nothing and a multi-day one as
+                // covering only its first day's hours (PR #334 F-004).
+                $medicalCandidates = StudentMedicalExemption::where([
                     ['course_master_pk', '=', $this->course_pk],
                     ['student_master_pk', '=', $studentId],
                     ['active_inactive', '=', 1]
@@ -132,44 +143,44 @@ class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, W
                               $q->whereNull('to_date')
                                 ->orWhereDate('to_date', '>=', $this->timetableDate);
                           });
-                })->first();
-                
-                if ($medicalExemption) {
-                    $exemptionTimeFrom = $medicalExemption->from_date ? date('H:i:s', strtotime($medicalExemption->from_date)) : null;
-                    $exemptionTimeTo = $medicalExemption->to_date ? date('H:i:s', strtotime($medicalExemption->to_date)) : null;
-                    
-                    if ($exemptionTimeFrom && $exemptionTimeTo) {
-                        if ($this->checkTimeOverlap($this->timetableClassSession, $exemptionTimeFrom, $exemptionTimeTo)) {
-                            $hasMedicalExempt = true;
-                        }
-                    } else {
-                        $hasMedicalExempt = true;
-                    }
-                }
+                })->get();
+
+                $hasMedicalExempt = OtExemptionResolver::coveringMedicalExemption(
+                    $medicalCandidates,
+                    $this->timetableDate,
+                    $this->timetableClassSession
+                ) !== null;
             }
 
-            // Get attendance status from saved record or determine based on exemptions
-            // Priority: Exemptions from Tables > Saved Attendance (Medical/Other) > Saved Attendance (MDO/Escort/Present/Late/Absent) > Default Present
+            // Get attendance status from saved record or determine based on exemptions.
+            // Priority: Exemptions from Tables > Saved Attendance > Default Present.
+            // An OT on duty or exempt counts as Present — they are away on Academy
+            // work, not missing — and that outranks the saved row, which may have
+            // been marked before the duty was assigned. The MDO Duty / Escort /
+            // Exemption columns name why. AttendanceController::save writes the same '1'.
             $attendanceStatus = 'Not Marked';
-            $mdoDuty = 'No';
-            $escortDuty = 'No';
+            $mdoDuty = $hasMdoDuty ? 'MDO Duty' : 'No';
+            $escortDuty = $hasEscortDuty ? 'Yes' : 'No';
+            // Medical / other exemptions show as Present; this column says so (PR #334 F-062).
+            $exemption = $hasMedicalExempt ? 'Medical' : ($hasOtherExempt ? 'Other' : 'No');
 
             // First, check exemptions from tables (these take priority)
             if ($hasMedicalExempt || $hasOtherExempt) {
-                $attendanceStatus = 'Not Marked';
+                $attendanceStatus = 'Present';
             } elseif ($hasMdoDuty) {
-                $attendanceStatus = 'Not Marked';
+                $attendanceStatus = 'Present';
                 $mdoDuty = 'MDO Duty';
             } elseif ($hasEscortDuty) {
-                $attendanceStatus = 'Not Marked';
+                $attendanceStatus = 'Present';
                 $escortDuty = 'Yes';
             } elseif ($attendance) {
                 // No exemptions from tables, check saved attendance
                 $status = $attendance->status;
                 
-                // Handle Medical (6) and Other (7) exemptions - show "Not Marked"
+                // Medical (6) and Other (7) were saved as an exemption — also Present.
                 if ($status == 6 || $status == 7) {
-                    $attendanceStatus = 'Not Marked';
+                    $attendanceStatus = 'Present';
+                    $exemption = $status == 6 ? 'Medical' : 'Other';
                 } else {
                     // Handle Present, Late, Absent, MDO (4), Escort (5)
                     // Ensure Late (2) and Absent (3) are properly displayed
@@ -184,11 +195,11 @@ class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, W
                             $attendanceStatus = 'Absent';
                             break;
                         case 4:
-                            $attendanceStatus = 'Not Marked'; // MDO Duty
+                            $attendanceStatus = 'Present'; // on MDO Duty, counted as attending
                             $mdoDuty = 'MDO Duty';
                             break;
                         case 5:
-                            $attendanceStatus = 'Not Marked'; // Escort Duty
+                            $attendanceStatus = 'Present'; // on Escort Duty, counted as attending
                             $escortDuty = 'Yes';
                             break;
                         default:
@@ -218,6 +229,7 @@ class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, W
                 $attendanceStatus,
                 $mdoDuty,
                 $escortDuty,
+                $exemption,
                 $otherExemptionReason,
             ];
 
@@ -365,6 +377,7 @@ class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, W
             'Attendance Status',
             'MDO Duty',
             'Escort Duty',
+            'Exemption',
             'Other Exemption',
         ];
     }
@@ -376,7 +389,7 @@ class AttendanceDataExport implements FromArray, WithColumnWidths, WithEvents, W
 
     public function columnWidths(): array
     {
-        return ['A' => 8, 'B' => 40, 'C' => 18, 'D' => 20, 'E' => 14, 'F' => 18, 'G' => 40];
+        return ['A' => 8, 'B' => 40, 'C' => 18, 'D' => 20, 'E' => 14, 'F' => 18, 'G' => 14, 'H' => 40];
     }
 
     /** Session context shown under the report title, mirroring the on-screen info cards. */

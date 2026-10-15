@@ -102,9 +102,12 @@
                                 <th>S. No.</th>
                                 <th>OT Code</th>
                                 <th>OT Name</th>
+                                <th>Course Name</th>
                                 <th>Leave Type</th>
                                 <th>Date From</th>
                                 <th>Date To</th>
+                                <th>Time From</th>
+                                <th>Time To</th>
                                 <th>Total Days</th>
                                 <th>Reason</th>
                                 <th>Status</th>
@@ -170,9 +173,12 @@ $(function () {
             { data: 'DT_RowIndex', orderable: false, searchable: false },
             { data: 'ot_code', name: 'student.generated_OT_code', orderable: false },
             { data: 'ot_name', name: 'student.display_name', orderable: false },
+            { data: 'course_name', name: 'course.course_name', orderable: false },
             { data: 'leave_type_label', name: 'leave_type' },
             { data: 'from_date_display', name: 'from_date' },
             { data: 'to_date_display', name: 'to_date' },
+            { data: 'time_from_display', name: 'time_from' },
+            { data: 'time_to_display', name: 'time_to' },
             { data: 'total_days_display', name: 'total_days' },
             { data: 'reason_text', name: 'reason', orderable: false },
             { data: 'status_label', name: 'status', orderable: false, searchable: false },
@@ -314,7 +320,10 @@ $(function () {
     });
 
     /* ---------------- Column show / hide (DataTables API) ---------------- */
-    const leaveColStorageKey = 'leaveApprovalGrid:hiddenColumns:v1';
+    // Hidden columns are stored by index, so inserting a column would shift a
+    // returning user's saved set onto the wrong columns. Bumped with the Course
+    // Name / Time From / Time To columns; bump again whenever the order changes.
+    const leaveColStorageKey = 'leaveApprovalGrid:hiddenColumns:v3';
 
     function leaveGetHiddenCols() {
         try {

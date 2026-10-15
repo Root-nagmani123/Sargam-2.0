@@ -27,6 +27,7 @@ use App\Exports\FacultyFeedback_AvgExport;
 use App\Exports\PendingFeedbackSummaryExport;
 use App\Exports\FeedbackDatabaseExport;
 use App\Services\FacultyFeedbackReportService;
+use App\Services\Timetable\FacultySessionScope;
 use App\Http\Controllers\Admin\Concerns\ScopesSessionFeedbackReports;
 use App\Support\FeedbackReportCache;
 use App\Support\FeedbackReportGrouping;
@@ -1647,6 +1648,45 @@ class FeedbackController extends Controller
         ];
     }
 
+    /**
+     * Confine a /faculty_view query to the logged-in faculty's own feedback.
+     *
+     * That page is the admin feedback report and is NOT behind
+     * EnsureFacultyPortalUser, so the request attributes the session-feedback
+     * reports rely on are absent here; the lock is resolved from the session the
+     * same way the Timetable Session Report does it. Super Admin is not confined,
+     * so the admin view is unchanged.
+     *
+     * Applied on top of the faculty_name filter rather than instead of it: that
+     * filter is a free-text LIKE the viewer can set to any colleague's name, so it
+     * cannot serve as the boundary.
+     */
+    private function applyFacultyViewOwnerScope($query): void
+    {
+        $lockedFacultyPk = FacultySessionScope::lockedFacultyPk();
+
+        if ($lockedFacultyPk !== null) {
+            $query->where('tf.faculty_pk', $lockedFacultyPk);
+        }
+    }
+
+    /**
+     * The name /faculty_view's Faculty Name field is pinned to, or null when the
+     * viewer may search freely.
+     *
+     * Deliberately NOT memoised in a method static: that outlives the request under
+     * a persistent worker, and a cached name would then be served to whoever asked
+     * next — an admin was handed the previous faculty's name and a read-only field.
+     */
+    private function facultyViewLockedName(): ?string
+    {
+        $pk = FacultySessionScope::lockedFacultyPk();
+
+        return $pk !== null
+            ? (FacultyMaster::where('pk', $pk)->value('full_name') ?: null)
+            : null;
+    }
+
     public function facultyView(Request $request)
     {
         // Handle POST requests (form submissions)
@@ -1670,10 +1710,23 @@ class FeedbackController extends Controller
             $page = $request->input('page', 1);
         }
 
+        // ?faculty_name[]= reached a LIKE concatenation (PR #334 F-072: was a 500).
+        $facultyName = is_scalar($facultyName) ? (string) $facultyName : '';
+
         // Ensure faculty_type is always an array
         if (is_string($facultyType)) {
             $facultyType = [$facultyType];
         }
+
+        // A faculty viewer searches only themselves. Their own name replaces whatever
+        // was submitted, so a colleague's name typed into the field cannot turn the
+        // page into a confusing empty result — the query is scoped either way, but
+        // the filter should say what it is actually doing.
+        $lockedFacultyName = $this->facultyViewLockedName();
+        if ($lockedFacultyName !== null) {
+            $facultyName = $lockedFacultyName;
+        }
+
         // Get programs based on course type - THIS MUST BE OUTSIDE THE IF/ELSE
         $programsQuery = DB::table('course_master')
             ->select('pk as id', 'course_name', 'active_inactive', 'start_year', 'end_date');
@@ -1779,6 +1832,10 @@ class FeedbackController extends Controller
         if ($facultyName && $facultyName !== 'All Faculty') {
             $query->where('fm.full_name', 'LIKE', '%' . $facultyName . '%');
         }
+
+        // ...then confined to the viewer, if they are a faculty. The name filter
+        // above is a free-text LIKE, so it is not a boundary — this is.
+        $this->applyFacultyViewOwnerScope($query);
 
         if (!empty($facultyType)) {
             $query->whereIn('tt.faculty_type', $facultyType);
@@ -2018,6 +2075,7 @@ class FeedbackController extends Controller
             'courseType' => $courseType,
             'selectedFacultyTypes' => $facultyType,
             'refreshTime' => now()->format('d-M-Y H:i'),
+            'lockedFacultyName' => $lockedFacultyName,
         ]);
     }
 
@@ -2026,7 +2084,8 @@ class FeedbackController extends Controller
     {
         // Handle faculty_type parameter - it might be string or array
         $selectedTypes = $request->input('faculty_type', []);
-        $searchTerm = $request->input('faculty_name', '');
+        // ?faculty_name[]= would reach the sha1() key and the LIKE below as an array.
+        $searchTerm = is_scalar($request->input('faculty_name')) ? (string) $request->input('faculty_name') : '';
 
         // Ensure selectedTypes is always an array
         if (is_string($selectedTypes)) {
@@ -2048,6 +2107,11 @@ class FeedbackController extends Controller
             ->where('fm.full_name', '!=', '')
             ->groupBy('fm.full_name', 'tt.faculty_type');
 
+        // A faculty viewer's autocomplete offers only their own name — otherwise the
+        // control lists every colleague who has feedback, which is a disclosure in
+        // itself even though the report behind it is scoped.
+        $this->applyFacultyViewOwnerScope($query);
+
         // Only apply type filter when specific types are requested
         if (!empty($validTypes)) {
             $query->whereIn('tt.faculty_type', $validTypes);
@@ -2060,15 +2124,19 @@ class FeedbackController extends Controller
             $query->where('fm.full_name', 'LIKE', '%' . $searchTerm . '%');
         }
 
-        // Typeahead: fired on every keystroke, and the answer is the same for every
-        // viewer, so cache it per (type filter, search term).
+        // Typeahead: fired on every keystroke, so cache it per (viewer scope, type
+        // filter, search term). The viewer scope is part of the key because the query
+        // above is narrowed for a faculty viewer — without it an admin's full list was
+        // served to a faculty login, and a faculty's single name to admins, for the TTL
+        // (PR #334 F-039).
         //
         // The term is hashed rather than normalised. Normalising only the key while the LIKE
         // above still uses the raw term would let " Ravi" and "ravi" — which produce different
         // patterns, '% Ravi%' and '%ravi%' — share one entry, so whichever ran first would serve
         // the other for the whole TTL. Hashing keeps one entry per distinct term and keeps the
         // key safe for every store.
-        $suggestionKey = 'faculty_suggestions:' . implode(',', $validTypes) . ':' . sha1((string) $searchTerm);
+        $viewerScope = FacultySessionScope::lockedFacultyPk() ?? 'all';
+        $suggestionKey = 'faculty_suggestions:' . $viewerScope . ':' . implode(',', $validTypes) . ':' . sha1($searchTerm);
         $faculties = FeedbackReportCache::remember(
             $suggestionKey,
             FeedbackReportCache::TTL_SUGGESTIONS,
@@ -2098,7 +2166,7 @@ class FeedbackController extends Controller
     {
         // Get filter parameters
         $programId = $request->input('program_id');
-        $facultyName = $request->input('faculty_name');
+        $facultyName = is_scalar($v = $request->input('faculty_name')) ? (string) $v : ''; // PR #334 F-072
         $fromDate = $request->input('from_date');
         $toDate = $request->input('to_date');
         $courseType = $request->input('course_type', 'current');
@@ -2106,6 +2174,9 @@ class FeedbackController extends Controller
         $exportType = $request->input('export_type', 'excel');
         if (is_string($facultyType)) {
             $facultyType = [$facultyType];
+        }
+        if ($lockedFacultyName = $this->facultyViewLockedName()) {
+            $facultyName = $lockedFacultyName; // a faculty exports only their own
         }
         $facultyTypeMap = [
             '1' => 'Internal',
@@ -2167,6 +2238,10 @@ class FeedbackController extends Controller
         if ($facultyName && $facultyName !== 'All Faculty') {
             $query->where('fm.full_name', 'LIKE', '%' . $facultyName . '%');
         }
+
+        // ...then confined to the viewer, if they are a faculty. The name filter
+        // above is a free-text LIKE, so it is not a boundary — this is.
+        $this->applyFacultyViewOwnerScope($query);
 
         if (!empty($facultyType)) {
             $query->whereIn('tt.faculty_type', $facultyType);
@@ -2399,7 +2474,7 @@ class FeedbackController extends Controller
     {
         try {
             $programId = $request->input('program_id');
-            $facultyName = $request->input('faculty_name');
+            $facultyName = is_scalar($v = $request->input('faculty_name')) ? (string) $v : ''; // PR #334 F-072
             $fromDate = $request->input('from_date');
             $toDate = $request->input('to_date');
             $courseType = $request->input('course_type', 'current');
@@ -2408,6 +2483,9 @@ class FeedbackController extends Controller
                 $facultyType = [$facultyType];
             }
             $facultyTypeMap = ['1' => 'Internal', '2' => 'Guest'];
+            if ($lockedFacultyName = $this->facultyViewLockedName()) {
+                $facultyName = $lockedFacultyName; // a faculty prints only their own
+            }
 
             $query = DB::table('topic_feedback as tf')
                 ->join('timetable as tt', 'tf.timetable_pk', '=', 'tt.pk')
@@ -2458,6 +2536,10 @@ class FeedbackController extends Controller
             if ($facultyName && $facultyName !== 'All Faculty') {
                 $query->where('fm.full_name', 'LIKE', '%' . $facultyName . '%');
             }
+
+            // ...then confined to the viewer, if they are a faculty. The name filter
+            // above is a free-text LIKE, so it is not a boundary — this is.
+            $this->applyFacultyViewOwnerScope($query);
             if (!empty($facultyType)) {
                 $query->whereIn('tt.faculty_type', $facultyType);
             }
@@ -3932,7 +4014,64 @@ class FeedbackController extends Controller
      */
     private function pendingStudentsPendingExpressionSql(): string
     {
-        return '(' . expected_feedback_count_sql('t') . ' - COALESCE(tf.submitted_count, 0))';
+        return '(' . $this->pendingStudentsExpectedExpressionSql() . ' - COALESCE(tf.submitted_count, 0))';
+    }
+
+    /**
+     * Feedbacks expected per timetable row, before subtracting what was submitted.
+     */
+    private function pendingStudentsExpectedExpressionSql(): string
+    {
+        // A session with three Teaching faculty expects three feedbacks — but on the
+        // faculty portal only the viewer's own is in scope, so at most one is
+        // expected. Leaving it at three counted colleagues' missing feedback as this
+        // faculty's, which is what made the totals read too high.
+        $viewerFacultyPk = $this->facultyReportViewerPk();
+
+        return $viewerFacultyPk !== null
+            ? $this->viewerExpectedFeedbackSql($viewerFacultyPk, 't')
+            : expected_feedback_count_sql('t');
+    }
+
+    /**
+     * How many feedbacks a session owes THIS faculty viewer: 1 when they are a
+     * Teaching faculty on it, else 0 (PR #334 F-040).
+     *
+     * The faculty-portal scope (FacultySessionScope::applyFaculty) matches every
+     * faculty listed on the session whatever their role, but trainees are only
+     * offered feedback for Teaching faculty (CalendarController::studentFacultyFeedback),
+     * so a Sectional/Administration slot can never be answered.
+     *
+     * The conditions are the trainee pages' own:
+     *  - valid faculty_details: it must hold {faculty_pk: <int pk>, role: Teaching}
+     *    (CalendarController::studentFacultyFeedback / studentFeedback "new logic").
+     *    A string faculty_pk is offered to no trainee (PR #334 F-048).
+     *  - NULL / empty / invalid faculty_details: a legacy session. The trainee's
+     *    Student Feedback page ("old logic", CalendarController::OLD_FACULTY_JSON_TABLE)
+     *    offers it for every faculty_master entry stored as a JSON string pk — `["84"]`
+     *    or a bare `"84"`, never a number — so it owes the viewer 1 when their pk is one
+     *    of those (PR #334 F-054). JSON_CONTAINS with a quoted pk matches exactly those
+     *    shapes, except that it also looks inside a nested array (`[["84"]]`), which
+     *    the trainee page skips. The Add Event form does not write that shape; whether
+     *    any stored row holds it is not verified.
+     * Each JSON_CONTAINS sits in a nested CASE so it is never evaluated on invalid JSON.
+     * The detail rows select this same expression (mergePendingGroupedAggregatesWithDetailRows),
+     * so the listed sessions and the totals cannot disagree on any JSON shape (PR #334 F-059).
+     */
+    private function viewerExpectedFeedbackSql(int $facultyPk, string $alias = 't'): string
+    {
+        $details = "{$alias}.faculty_details";
+        $master = "{$alias}.faculty_master";
+
+        return "(CASE
+            WHEN JSON_VALID({$details}) = 1 THEN
+                CASE WHEN JSON_CONTAINS({$details}, JSON_OBJECT('faculty_pk', {$facultyPk}, 'role', 'Teaching')) = 1
+                     THEN 1 ELSE 0 END
+            WHEN JSON_VALID({$master}) = 1 THEN
+                CASE WHEN JSON_CONTAINS({$master}, JSON_QUOTE('{$facultyPk}')) = 1
+                     THEN 1 ELSE 0 END
+            ELSE 0
+        END)";
     }
 
     /**
@@ -3946,13 +4085,24 @@ class FeedbackController extends Controller
      */
     private function buildPendingStudentsGroupedBaseQuery(Request $request): \Illuminate\Database\Query\Builder
     {
-        // Count distinct faculty PKs submitted per student per session — prevents over-count from duplicate topic_feedback rows
-        $feedbackSub = DB::raw("(
-            SELECT timetable_pk, student_master_pk, COUNT(DISTINCT faculty_pk) as submitted_count
-            FROM topic_feedback
-            WHERE is_submitted = 1
-            GROUP BY timetable_pk, student_master_pk
-        ) as tf");
+        $viewerFacultyPk = $this->facultyReportViewerPk();
+
+        // Count distinct faculty PKs submitted per student per session — prevents over-count from duplicate topic_feedback rows.
+        // On the faculty portal only the viewer's own feedback counts, matching the
+        // single expected feedback in pendingStudentsPendingExpressionSql().
+        $feedbackSub = $viewerFacultyPk !== null
+            ? DB::raw("(
+                SELECT timetable_pk, student_master_pk, COUNT(DISTINCT faculty_pk) as submitted_count
+                FROM topic_feedback
+                WHERE is_submitted = 1 AND faculty_pk = " . (int) $viewerFacultyPk . "
+                GROUP BY timetable_pk, student_master_pk
+            ) as tf")
+            : DB::raw("(
+                SELECT timetable_pk, student_master_pk, COUNT(DISTINCT faculty_pk) as submitted_count
+                FROM topic_feedback
+                WHERE is_submitted = 1
+                GROUP BY timetable_pk, student_master_pk
+            ) as tf");
 
         // Deduplicated enrollment: one row per (course, student) regardless of duplicate smcm entries
         $smcmSub = DB::raw("(
@@ -3991,6 +4141,13 @@ class FeedbackController extends Controller
 
         $this->applyFeedbackReportCourseScope($query, 'c.pk');
 
+        // Course scope alone still spans every faculty teaching those courses, so the
+        // faculty portal narrows to the viewer's own sessions as well. Same predicate
+        // the Timetable Session Report uses, so both agree on what "my sessions" is.
+        if ($viewerFacultyPk !== null) {
+            FacultySessionScope::applyFaculty($query, $viewerFacultyPk, 't');
+        }
+
         if ($request->filled('course_pk')) {
             $this->assertFacultyReportProgramAccess((int) $request->course_pk);
             $query->where('t.course_master_pk', $request->course_pk);
@@ -4023,7 +4180,10 @@ class FeedbackController extends Controller
     private function buildPendingStudentsAggregateSubquery(Request $request): \Illuminate\Database\Query\Builder
     {
         $pExpr = $this->pendingStudentsPendingExpressionSql();
-        $expectedExpr = expected_feedback_count_sql('t');
+        // The same expected count the pending column uses: on the faculty portal it
+        // is the viewer's own (0 or 1), so "given" cannot count a session the detail
+        // rows do not list (PR #334 F-054).
+        $expectedExpr = $this->pendingStudentsExpectedExpressionSql();
 
         $aggSub = (clone $this->buildPendingStudentsGroupedBaseQuery($request))
             ->select([
@@ -4053,10 +4213,14 @@ class FeedbackController extends Controller
     private function applyPendingStudentsFeedbackStateHaving($query, Request $request): void
     {
         $pExpr = $this->pendingStudentsPendingExpressionSql();
+        $eExpr = $this->pendingStudentsExpectedExpressionSql();
 
         if ($request->input('filter_feedback_state', 'not_given') === 'given') {
+            // "Given" needs at least one session that owed feedback and got it. A
+            // session that owed none (expected 0, e.g. the viewer is only Sectional
+            // on it) is not evidence of anything given (PR #334 F-050).
             $query->havingRaw("SUM(CASE WHEN {$pExpr} > 0 THEN 1 ELSE 0 END) = 0")
-                ->havingRaw("SUM(CASE WHEN {$pExpr} <= 0 THEN 1 ELSE 0 END) >= 1");
+                ->havingRaw("SUM(CASE WHEN {$eExpr} > 0 AND {$pExpr} <= 0 THEN 1 ELSE 0 END) >= 1");
         } else {
             $query->havingRaw("SUM(CASE WHEN {$pExpr} > 0 THEN 1 ELSE 0 END) >= 1");
         }
@@ -4115,6 +4279,39 @@ class FeedbackController extends Controller
     }
 
     /**
+     * Session rows behind the Pending Students aggregate, for the given students.
+     *
+     * On the faculty portal each row also carries viewer_expected — the very
+     * expression the totals sum ({@see viewerExpectedFeedbackSql()}) — so whether a
+     * session is listed is decided by the same SQL that counted it, not by a PHP
+     * re-implementation of JSON_CONTAINS (PR #334 F-059).
+     */
+    private function pendingStudentsDetailQuery(Request $request, array $studentPks): \Illuminate\Database\Query\Builder
+    {
+        $columns = [
+            'sm.pk as student_pk',
+            't.pk as timetable_pk',
+            't.subject_topic as session_name',
+            't.START_DATE as date',
+            't.class_session as time',
+            'c.course_name',
+            't.faculty_details',
+            't.faculty_master',
+        ];
+
+        $viewerFacultyPk = $this->facultyReportViewerPk();
+        if ($viewerFacultyPk !== null) {
+            $columns[] = DB::raw($this->viewerExpectedFeedbackSql($viewerFacultyPk, 't') . ' as viewer_expected');
+        }
+
+        return $this->buildPendingStudentsGroupedBaseQuery($request)
+            ->whereIn('sm.pk', $studentPks)
+            ->select($columns)
+            ->orderByRaw("TRIM(CONCAT(COALESCE(sm.first_name,''),' ',COALESCE(sm.middle_name,''),' ',COALESCE(sm.last_name,'')))")
+            ->orderBy('t.START_DATE');
+    }
+
+    /**
      * Attach session rows for each aggregate row (same order as $aggRows).
      *
      * @param  \Illuminate\Support\Collection<int, object>  $aggRows
@@ -4127,21 +4324,7 @@ class FeedbackController extends Controller
 
         $pks = $aggRows->pluck('student_pk')->all();
 
-        $detailRows = $this->buildPendingStudentsGroupedBaseQuery($request)
-            ->whereIn('sm.pk', $pks)
-            ->select([
-                'sm.pk as student_pk',
-                't.pk as timetable_pk',
-                't.subject_topic as session_name',
-                't.START_DATE as date',
-                't.class_session as time',
-                'c.course_name',
-                't.faculty_details',
-                't.faculty_master',
-            ])
-            ->orderByRaw("TRIM(CONCAT(COALESCE(sm.first_name,''),' ',COALESCE(sm.middle_name,''),' ',COALESCE(sm.last_name,'')))")
-            ->orderBy('t.START_DATE')
-            ->get();
+        $detailRows = $this->pendingStudentsDetailQuery($request, $pks)->get();
 
         // Which faculty the student has actually submitted feedback for, keyed by
         // "timetablePk_studentPk" -> [faculty_pk, ...]. Used to mark each faculty
@@ -4163,8 +4346,27 @@ class FeedbackController extends Controller
         // Resolve the feedback faculty list per session up-front, then batch-load names.
         $facultyByRowKey = [];
         $facultyNamePks = [];
+        $viewerFacultyPk = $this->facultyReportViewerPk();
+
         foreach ($detailRows as $idx => $row) {
             $facultyPks = $this->resolveSessionFeedbackFacultyPks($row->faculty_details, $row->faculty_master);
+
+            // A session's expanded rows list one line per Teaching faculty. On the
+            // faculty portal the other names are out of scope, so only the viewer's
+            // line remains — otherwise the detail contradicts the totals above it.
+            if ($viewerFacultyPk !== null) {
+                // viewer_expected is the totals' own expression (viewerExpectedFeedbackSql()),
+                // so a session the totals do not count is not listed either (F-048, F-059).
+                $facultyPks = (int) $row->viewer_expected === 1
+                    ? [$viewerFacultyPk]
+                    : [];
+                // Not Teaching on this session: it owes the viewer nothing
+                // (viewerExpectedFeedbackSql() counts it as 0), so it is not listed.
+                if (empty($facultyPks)) {
+                    $facultyByRowKey[$idx] = null;
+                    continue;
+                }
+            }
             $facultyByRowKey[$idx] = $facultyPks;
             foreach ($facultyPks as $fpk) {
                 $facultyNamePks[$fpk] = true;
@@ -4194,6 +4396,9 @@ class FeedbackController extends Controller
 
             $submitted = $submittedMap[$row->timetable_pk . '_' . $pk] ?? [];
             $facultyPks = $facultyByRowKey[$idx];
+            if ($facultyPks === null) {
+                continue;
+            }
 
             $base = [
                 'session_name' => $row->session_name,

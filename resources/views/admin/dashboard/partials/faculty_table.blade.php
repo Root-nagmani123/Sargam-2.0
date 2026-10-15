@@ -10,9 +10,8 @@
       $cssFile      - page-specific stylesheet path (asset())
       $cardClass    - card wrapper modifier class
       $pageTitle    - breadcrumb / heading title
-      $exportTitle  - title used for export + print output
-      $badgeClass   - faculty-type badge modifier class
-      $badgeLabel   - faculty-type badge text
+      $exportTitle  - title used for print output
+      $exportUrl    - server-side export endpoint; ?format=excel|pdf is appended
       $emptyMessage - message shown when there are no rows
 --}}
 <link rel="stylesheet" href="{{ asset($cssFile) }}?v={{ @filemtime(public_path($cssFile)) ?: time() }}">
@@ -155,17 +154,18 @@
                          fight this page's own toolbar layout (search/length relocation, etc.). --}}
                     <table class="table table-hover align-middle text-nowrap mb-0" id="{{ $tableId }}"
                         data-sargam-dt-ui="false">
+                        {{-- Four data columns only. Faculty Type, Current Sector,
+                             Session Count and Feedback Average were dropped: the
+                             page is a contact list, and the exports below carry
+                             whatever is listed here, so list and download agree. --}}
                         <thead class="table-light">
                             <tr>
                                 <th scope="col">S. No.</th>
-                                <th scope="col">Faculty Type</th>
                                 <th scope="col">Faculty Name</th>
                                 <th scope="col">Email</th>
                                 <th scope="col">Mobile Number</th>
-                                <th scope="col">Current Sector</th>
-                                <th scope="col">Session Count</th>
-                                <th scope="col">Feedback Average</th>
                                 @if(hasRole('Admin'))
+                                {{-- dt-no-export: a control, never part of a download. --}}
                                 <th scope="col" class="dt-no-export">Action</th>
                                 @endif
                             </tr>
@@ -174,9 +174,6 @@
                             @forelse($faculties as $index => $faculty)
                             <tr>
                                 <td class="text-body-secondary fw-medium">{{ $index + 1 }}</td>
-                                <td>
-                                    <span class="badge rounded-1 {{ $badgeClass }} bg-success-subtle text-success border border-success-subtle">{{ $badgeLabel }}</span>
-                                </td>
                                 <td>
                                     <span class="faculty-name">{{ $faculty->full_name }}</span>
                                 </td>
@@ -191,52 +188,6 @@
                                     @endif
                                 </td>
                                 <td class="fw-medium">{{ $faculty->mobile_no ?? 'N/A' }}</td>
-                                <td>
-                                    @if($faculty->faculty_sector == 1)
-                                        <span class="badge rounded-1 badge-sector-gov border border-primary-subtle">Government</span>
-                                    @elseif($faculty->faculty_sector == 2)
-                                        <span class="badge rounded-1 badge-sector-private border border-warning-subtle">Private</span>
-                                    @else
-                                        <span class="badge rounded-1 badge-sector-other border border-secondary-subtle">Other</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <span class="session-count-badge d-inline-flex align-items-center gap-1">
-                                        <span class="material-symbols-rounded align-text-bottom" style="font-size: 1rem;">event</span>
-                                        {{ $faculty->session_count ?? 0 }}
-                                    </span>
-                                </td>
-                                <td>
-                                    @php
-                                        $avgContent = data_get($faculty, 'feedback_summary.avg_content', 0);
-                                        $avgPresentation = data_get($faculty, 'feedback_summary.avg_presentation', 0);
-                                        $totalFeedback = (int) data_get($faculty, 'feedback_summary.total_feedback', 0);
-                                        $getScoreClass = function($score) {
-                                            if ($score >= 80) return 'excellent';
-                                            if ($score >= 60) return 'good';
-                                            if ($score >= 40) return 'average';
-                                            return 'poor';
-                                        };
-                                    @endphp
-                                    @if($totalFeedback > 0)
-                                        <div class="feedback-average">
-                                            <div class="feedback-score">
-                                                <span class="feedback-label">Content:</span>
-                                                <span class="feedback-value {{ $getScoreClass($avgContent) }}">
-                                                    {{ number_format($avgContent, 1) }}%
-                                                </span>
-                                            </div>
-                                            <div class="feedback-score">
-                                                <span class="feedback-label">Presentation:</span>
-                                                <span class="feedback-value {{ $getScoreClass($avgPresentation) }}">
-                                                    {{ number_format($avgPresentation, 1) }}%
-                                                </span>
-                                            </div>
-                                        </div>
-                                    @else
-                                        <span class="text-muted small">No feedback yet</span>
-                                    @endif
-                                </td>
                                 @if(hasRole('Admin'))
                                 <td class="dt-no-export">
                                     <a href="{{ route('feedback.average', ['faculty_name' => $faculty->full_name]) }}"
@@ -249,7 +200,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="9" class="no-data text-center py-5 text-body-secondary fst-italic">
+                                <td colspan="{{ hasRole('Admin') ? 5 : 4 }}" class="no-data text-center py-5 text-body-secondary fst-italic">
                                     <span class="material-symbols-rounded fs-1 d-block mb-2 opacity-50">person_off</span>
                                     {{ $emptyMessage }}
                                 </td>
@@ -268,6 +219,7 @@
 $(document).ready(function() {
     var tableId = '{{ $tableId }}';
     var exportTitle = @json($exportTitle);
+    var exportUrl   = @json($exportUrl);
     var $toolbar = $('#' + tableId + '_toolbar');
 
     // LBSNAA report branding (mirrors the Mess report theme)
@@ -475,66 +427,38 @@ $(document).ready(function() {
             );
         }
 
-        // PDF (pdfmake) theme matched to the Mess report look: blue title, grey
-        // header fill, zebra rows, page numbers. (pdfmake cannot embed the logo
-        // images the way the server-side Mess PDFs do, so it uses a text header.)
-        function customizePdf(doc) {
-            try {
-                doc.pageMargins = [22, 26, 22, 32];
-                doc.defaultStyle.fontSize = 8;
 
-                doc.styles = doc.styles || {};
-                doc.styles.title = { fontSize: 14, bold: true, color: '#212529', alignment: 'center', margin: [0, 0, 0, 8] };
-                doc.styles.tableHeader = { bold: true, fontSize: 8, color: '#212529', fillColor: '#d3d6d9' };
-
-                // Branding lines above the title.
-                doc.content.unshift(
-                    { text: brandLine1, fontSize: 8, color: '#004a93', alignment: 'center', characterSpacing: 0.5 },
-                    { text: brandLine2.toUpperCase(), fontSize: 12, bold: true, alignment: 'center', margin: [0, 2, 0, 2] },
-                    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 751, y2: 0, lineWidth: 1.5, lineColor: '#004a93' }], margin: [0, 0, 0, 8] }
-                );
-
-                var tableNode = doc.content.find(function (c) { return c && c.table; });
-                if (tableNode) {
-                    tableNode.layout = {
-                        fillColor: function (rowIndex) {
-                            if (rowIndex === 0) { return '#d3d6d9'; }
-                            return rowIndex % 2 === 0 ? '#fafbfc' : null;
-                        },
-                        hLineWidth: function () { return 0.5; },
-                        vLineWidth: function () { return 0.5; },
-                        hLineColor: function () { return '#dee2e6'; },
-                        vLineColor: function () { return '#dee2e6'; }
-                    };
-                }
-
-                doc.footer = function (page, pages) {
-                    return {
-                        columns: [
-                            { text: brandLine2 + ' — ' + exportTitle + ' Report', fontSize: 7, color: '#666', margin: [22, 6, 0, 0] },
-                            { text: page + ' / ' + pages, fontSize: 7, color: '#666', alignment: 'right', margin: [0, 6, 22, 0] }
-                        ]
-                    };
-                };
-            } catch (e) {
-                console.warn('PDF customize failed:', e);
-            }
-        }
+        // Excel and PDF are served by the controller, not by the DataTables
+        // Buttons extension. The client-side builders scrape the rendered table
+        // and emit an unstyled sheet — no letterhead, no column band, no borders
+        // — which is what the branded server-side export replaces. Print still
+        // uses the Buttons extension, since that is a browser dialog, not a file.
+        var $exportGroup = $(
+            '<div class="btn-group" role="group" aria-label="Export">' +
+                '<button type="button" class="btn btn-sm dtb-btn dtb-export dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">' +
+                    '<i class="bi bi-download me-1"></i>Export' +
+                '</button>' +
+                '<ul class="dropdown-menu dropdown-menu-end">' +
+                    '<li><a class="dropdown-item" data-export-format="excel" href="' + exportUrl + '?format=excel">' +
+                        '<i class="bi bi-file-earmark-excel me-2"></i>Excel (.xlsx)</a></li>' +
+                    '<li><a class="dropdown-item" data-export-format="pdf" href="' + exportUrl + '?format=pdf">' +
+                        '<i class="bi bi-file-earmark-pdf me-2"></i>PDF (.pdf)</a></li>' +
+                '</ul>' +
+            '</div>'
+        );
+        // Carry the search box into the download, so the file holds the rows on
+        // screen rather than every faculty member (PR #334 F-053).
+        $exportGroup.on('click', 'a[data-export-format]', function () {
+            this.href = exportUrl + '?' + $.param({
+                format: $(this).data('export-format'),
+                search: api.search() || ''
+            });
+        });
+        $toolbar.find('.dt-toolbar-right').append($exportGroup);
 
         try {
             new $.fn.dataTable.Buttons(api, {
                 buttons: [
-                    {
-                        extend: 'collection',
-                        text: '<i class="bi bi-download me-1"></i>Export',
-                        className: 'btn btn-sm dtb-btn dtb-export',
-                        autoClose: true,
-                        buttons: [
-                            { extend: 'excelHtml5', text: '<i class="bi bi-file-earmark-excel me-2"></i>Excel (.xlsx)', title: exportTitle, exportOptions: sharedExportOptions },
-                            { extend: 'csvHtml5',   text: '<i class="bi bi-filetype-csv me-2"></i>CSV (.csv)',   title: exportTitle, exportOptions: sharedExportOptions },
-                            { extend: 'pdfHtml5',   text: '<i class="bi bi-file-earmark-pdf me-2"></i>PDF (.pdf)',   title: exportTitle + ' Report', orientation: 'landscape', pageSize: 'A4', exportOptions: sharedExportOptions, customize: customizePdf }
-                        ]
-                    },
                     {
                         extend: 'print',
                         text: '<i class="bi bi-printer me-1"></i>Print',
@@ -547,7 +471,7 @@ $(document).ready(function() {
             });
             api.buttons().container().appendTo($toolbar.find('.dt-toolbar-right'));
         } catch (e) {
-            console.warn('DataTables export/print buttons unavailable:', e);
+            console.warn('DataTables print button unavailable:', e);
         }
     }
 });

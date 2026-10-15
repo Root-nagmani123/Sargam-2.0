@@ -49,6 +49,7 @@ Use the token, never the raw value, so the whole app re-themes from one place.
 |---|---|---|
 | `--ds-primary` | `var(--bs-primary, #004a93)` | brand blue |
 | `--ds-secondary` | `#b12923` | brand red |
+| `--ds-secondary-rgb` | `177, 41, 35` | channels for `rgba()` tints of the brand red (`--bs-primary-rgb` is the blue equivalent) |
 | `--ds-ink` | `#1f2937` | primary text |
 | `--ds-ink-muted` | `#667085` | secondary text |
 | `--ds-line` | `#e5e7eb` | hairline borders |

@@ -75,6 +75,18 @@
     font-weight: 600;
 }
 
+/* Time sits beside its date, quieter than it, so the date still reads first. */
+.me-text-time {
+    margin-left: .35rem;
+    padding: .05rem .35rem;
+    border-radius: .25rem;
+    background: #f1f3f5;
+    color: #495057;
+    font-size: .8em;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
 .detail-value {
     font-size: .9rem;
     font-weight: 500;
@@ -84,60 +96,119 @@
 /* =======================
    PRINT MODE
 ======================= */
+/* The letterhead belongs to the printed sheet only. */
+.me-print-head { display: none; }
+
+/* Course, stated once above the entries. */
+.me-course-banner {
+    display: flex;
+    align-items: baseline;
+    gap: .6rem;
+    padding: .6rem .9rem;
+    border: 1px solid #cbd6e6;
+    border-left: 4px solid #004a93;
+    border-radius: .5rem;
+    background: #f0f4fa;
+}
+.me-course-label {
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    font-weight: 700;
+    color: #667085;
+}
+.me-course-value { font-size: 1rem; font-weight: 600; color: #003366; }
+
+/* Per-entry download, tucked into the card's top-right. */
+.exemption-item { position: relative; }
+.me-entry-actions {
+    position: absolute;
+    top: .6rem;
+    right: .6rem;
+    display: flex;
+    gap: .35rem;
+}
+.me-entry-actions .btn { padding: .15rem .45rem; line-height: 1.1; }
+
 @media print {
-    /* Hide unnecessary elements */
-    .btn,
-    .breadcrumb,
-    nav,
-    .navbar,
-    .sidebar,
-    .header,
-    footer,
-    .d-print-none {
-        display: none !important;
-    }
-    
-    /* Reset body and container */
-    body {
-        background: white !important;
-        margin: 0 !important;
-        padding: 20px !important;
-    }
-    
-    .container-fluid {
+    @page { size: A4 portrait; margin: 12mm 10mm; }
+
+    /* Print ONLY the report card. Hiding the shell selector by selector is
+       fragile — the admin layout's wrappers change and a stray topbar or
+       sidebar column leaks onto the page. Blanking everything and re-showing
+       the print area is immune to that. */
+    body * { visibility: hidden !important; }
+    #meOtPrintArea, #meOtPrintArea * { visibility: visible !important; }
+    #meOtPrintArea {
+        position: absolute !important;
+        left: 0; top: 0;
         width: 100% !important;
+        margin: 0 !important;
+        border: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .d-print-none, .btn { display: none !important; }
+
+    body {
+        background: #fff !important;
         margin: 0 !important;
         padding: 0 !important;
     }
-    
-    /* Card styling for print */
-    .card {
-        box-shadow: none !important;
-        border: 1px solid #dee2e6 !important;
-        page-break-inside: avoid;
+
+    /* Keep the fills and the navy rules — a report printed as bare text loses
+       the structure that makes it readable. */
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+    .me-print-head {
+        display: block !important;
+        text-align: center;
+        border-bottom: 2px solid #003366;
+        padding-bottom: 6px;
+        margin-bottom: 10px;
     }
-    
-    .info-card {
-        margin-bottom: 1rem !important;
+    .me-print-head img { max-height: 52px; margin-bottom: 4px; }
+    .me-print-head .mph-academy { font-size: 13pt; font-weight: 700; color: #003366; line-height: 1.25; }
+    .me-print-head .mph-place { font-size: 8.5pt; color: #486581; }
+    .me-print-head .mph-title {
+        margin-top: 6px; font-size: 11.5pt; font-weight: 700; color: #004a93;
+        text-transform: uppercase; letter-spacing: .02em;
     }
-    
-    /* Prevent page breaks inside exemption items */
+    .me-print-head .mph-meta { font-size: 8pt; color: #555; margin-top: 2px; }
+
+    .card { box-shadow: none !important; border: 0 !important; page-break-inside: avoid; }
+    .card-body { padding: 0 !important; }
+    .info-card { margin-bottom: .5rem !important; }
+
+    /* One exemption block per unit — never split across a page. */
     .exemption-item {
         page-break-inside: avoid;
+        border: 1px solid #9bb0c9 !important;
+        border-radius: 0 !important;
+        padding: 8px 10px !important;
+        margin-bottom: 8px !important;
     }
-    
-    /* Optimize colors for print */
+
+    /* The on-screen grid collapses to one long column on paper; two fixed
+       columns keep a label beside its value. */
+    .exemption-details {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 4px 14px !important;
+    }
+    .exemption-details > div { break-inside: avoid; }
+
+    .detail-label { font-size: 7.5pt !important; color: #333 !important; }
+    .detail-value { font-size: 9pt !important; color: #000 !important; }
+    .me-text-time { background: #eceff3 !important; color: #000 !important; }
+
     .exemption-count-badge {
-        background: #f8f9fa !important;
-        border: 1px solid #dee2e6 !important;
-        color: #212529 !important;
+        background: #f0f4fa !important;
+        border: 1px solid #cbd6e6 !important;
+        color: #003366 !important;
     }
-    
-    /* Ensure text is readable */
-    .detail-value,
-    .detail-label {
-        color: #000 !important;
-    }
+
+    .section-divider { border-top: 1px solid #cbd6e6 !important; }
 }
 </style>
 
@@ -146,38 +217,97 @@
         <x-breadcrum title="Medical Exception OT View"></x-breadcrum>
     </div>
 
-    <div class="card info-card">
+    <div class="card info-card" id="meOtPrintArea">
         <div class="card-body">
 
-            <!-- HEADER -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            {{-- Letterhead: print only. On screen the page already sits inside
+                 the admin shell, which carries the branding. --}}
+            <div class="me-print-head">
+                <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA">
+                <div class="mph-academy">LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION</div>
+                <div class="mph-place">Mussoorie, Uttarakhand</div>
+                <div class="mph-title">Medical Exemption</div>
+                <div class="mph-meta">
+                    {{ $studentData['student_name'] ?? '' }}
+                    @if(! empty($studentData['ot_code'])) ({{ $studentData['ot_code'] }}) @endif
+                    &nbsp;|&nbsp; Printed on {{ now()->format('d-m-Y H:i') }}
+                </div>
+            </div>
+
+            {{-- HEADER — screen only. The page title and its strapline are chrome
+                 for the app shell; on a printed or downloaded sheet the letterhead
+                 above already says what the document is. --}}
+            @php
+                // array_key_exists, not isset: isset() is false for a NULL value, so
+                // an OT whose generated_OT_code is NULL used to fall through to the
+                // admin branch below — which iterates $studentData as a list of
+                // students and fatals on this associative array. The admin payload is
+                // numerically keyed, so the key test still tells the two shapes apart.
+                $isStudentView = isset($studentData)
+                    && is_array($studentData)
+                    && array_key_exists('student_name', $studentData)
+                    && array_key_exists('ot_code', $studentData);
+            @endphp
+            <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
                 <div>
                     <h4 class="mb-1 fw-semibold">Medical Exception OT View</h4>
                     <small class="text-muted">Medical exemption summary and history</small>
                 </div>
 
-                <button type="button"
-                        class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
-                        onclick="window.print()">
-                    <i class="material-icons material-symbols-rounded fs-6">print</i>
-                    Print
-                </button>
+                <div class="d-flex align-items-center gap-2">
+                    {{-- The export serves an OT's own record only (it 403s for any
+                         other login), so the admin view, which renders this same
+                         template, gets no Excel/PDF buttons. --}}
+                    @if($isStudentView)
+                    <a href="{{ route('medical.exception.ot.view.export', ['format' => 'excel']) }}"
+                        class="btn btn-outline-success btn-sm d-flex align-items-center gap-1">
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </a>
+                    <a href="{{ route('medical.exception.ot.view.export', ['format' => 'pdf']) }}"
+                        class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1">
+                        <i class="bi bi-file-earmark-pdf"></i> PDF
+                    </a>
+                    @endif
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
+                            onclick="window.print()">
+                        <i class="material-icons material-symbols-rounded fs-6">print</i>
+                        Print
+                    </button>
+                </div>
             </div>
 
             <div class="section-divider"></div>
 
-            @php
-                $isStudentView = isset($studentData)
-                    && isset($studentData['student_name'])
-                    && isset($studentData['ot_code']);
-            @endphp
 
             {{-- ============================
                STUDENT LOGIN VIEW
             ============================ --}}
             @if($isStudentView)
 
-                <div class="card info-card mb-4">
+                @php
+                    // The courses these exemptions belong to. Normally one, so the
+                    // course is stated once at the top instead of heading every
+                    // entry. If an OT somehow has exemptions on two running
+                    // courses, the per-entry heading comes back so the rows can
+                    // still be told apart.
+                    $exemptionCourses = collect($studentData['exemptions'] ?? [])
+                        ->pluck('course_name')->filter()->unique()->values();
+                    $showCoursePerEntry = $exemptionCourses->count() > 1;
+                @endphp
+
+                {{-- Course at the top. On paper this is the only place it appears. --}}
+                @if($exemptionCourses->isNotEmpty())
+                    <div class="me-course-banner mb-3">
+                        <span class="me-course-label">Course</span>
+                        <span class="me-course-value">{{ $exemptionCourses->implode(', ') }}</span>
+                    </div>
+                @endif
+
+                {{-- Identity block: screen only. The printed letterhead already
+                     carries the name and OT code, and repeating them here was
+                     showing each of them twice on the page. --}}
+                <div class="card info-card mb-4 d-print-none">
                     <div class="card-body">
                         <div class="row g-4">
                             <div class="col-md-3">
@@ -209,24 +339,77 @@
                 @if(isset($studentData['has_exemptions']) && $studentData['has_exemptions'] && count($studentData['exemptions']) > 0)
                     @foreach($studentData['exemptions'] as $exemption)
                         <div class="exemption-item">
-                            <h6 class="fw-semibold text-primary mb-3 d-flex align-items-center gap-2">
-                                <i class="material-icons material-symbols-rounded fs-6">school</i>
-                                {{ $exemption['course_name'] }}
-                            </h6>
+                            {{-- Per-entry download. Screen only: on a printed or
+                                 exported sheet a download button is noise. --}}
+                            <div class="me-entry-actions d-print-none">
+                                <a href="{{ route('medical.exception.ot.view.export', ['format' => 'excel', 'entry' => $loop->index]) }}"
+                                    class="btn btn-sm btn-outline-success" title="Download this entry as Excel">
+                                    <i class="bi bi-file-earmark-excel"></i>
+                                </a>
+                                <a href="{{ route('medical.exception.ot.view.export', ['format' => 'pdf', 'entry' => $loop->index]) }}"
+                                    class="btn btn-sm btn-outline-danger" title="Download this entry as PDF">
+                                    <i class="bi bi-file-earmark-pdf"></i>
+                                </a>
+                            </div>
+
+                            @if($showCoursePerEntry)
+                                <h6 class="fw-semibold text-primary mb-3 d-flex align-items-center gap-2">
+                                    <i class="material-icons material-symbols-rounded fs-6">school</i>
+                                    {{ $exemption['course_name'] }}
+                                </h6>
+                            @endif
+
+                            {{-- from_date / to_date are datetime columns, so the date
+                                 and the time are two views of one value. Time shows
+                                 only where one was actually recorded — older rows
+                                 were saved at midnight with no time entered. --}}
+                            @php
+                                $fromDate = $exemption['from_date'] ? \Carbon\Carbon::parse($exemption['from_date']) : null;
+                                $toDate = $exemption['to_date'] ? \Carbon\Carbon::parse($exemption['to_date']) : null;
+                            @endphp
 
                             <div class="exemption-details">
                                 <div>
-                                    <div class="detail-label">From Date</div>
+                                    <div class="detail-label">Doctor Name</div>
+                                    <div class="detail-value">{{ $exemption['doctor_name'] ?: 'N/A' }}</div>
+                                </div>
+
+                                <div>
+                                    <div class="detail-label">Date &amp; Time From</div>
                                     <div class="detail-value">
-                                        {{ $exemption['from_date'] ? \Carbon\Carbon::parse($exemption['from_date'])->format('d/m/Y') : 'N/A' }}
+                                        @if($fromDate)
+                                            {{ $fromDate->format('d/m/Y') }}
+                                            @if($fromDate->format('H:i') !== '00:00')
+                                                <span class="me-text-time">{{ $fromDate->format('h:i A') }}</span>
+                                            @endif
+                                        @else
+                                            N/A
+                                        @endif
                                     </div>
                                 </div>
 
                                 <div>
-                                    <div class="detail-label">To Date</div>
+                                    <div class="detail-label">Date &amp; Time To</div>
                                     <div class="detail-value">
-                                        {{ $exemption['to_date'] ? \Carbon\Carbon::parse($exemption['to_date'])->format('d/m/Y') : 'Ongoing' }}
+                                        @if($toDate)
+                                            {{ $toDate->format('d/m/Y') }}
+                                            @if($toDate->format('H:i') !== '00:00')
+                                                <span class="me-text-time">{{ $toDate->format('h:i A') }}</span>
+                                            @endif
+                                        @else
+                                            Ongoing
+                                        @endif
                                     </div>
+                                </div>
+
+                                <div>
+                                    <div class="detail-label">Exemption Category</div>
+                                    <div class="detail-value">{{ $exemption['exemption_category'] ?: 'N/A' }}</div>
+                                </div>
+
+                                <div>
+                                    <div class="detail-label">Medical Speciality</div>
+                                    <div class="detail-value">{{ $exemption['medical_speciality'] ?: 'N/A' }}</div>
                                 </div>
 
                                 <div>
@@ -245,12 +428,10 @@
                                 </div>
                                 @endif
 
-                                @if($exemption['description'])
                                 <div style="grid-column: 1 / -1;">
-                                    <div class="detail-label">Description</div>
-                                    <div class="detail-value">{{ $exemption['description'] }}</div>
+                                    <div class="detail-label">Diagnosis / Remarks</div>
+                                    <div class="detail-value">{{ $exemption['description'] ?: 'N/A' }}</div>
                                 </div>
-                                @endif
                             </div>
                         </div>
                     @endforeach
