@@ -220,4 +220,38 @@ class IssueNodalLoginKeyCollisionTest extends TestCase
         $this->assertTrue(User::employeeCanSignIn($y), 'by pk_old');
         $this->assertSame((string) $b, User::resolveEmployeePk($y));
     }
+
+    // Non-NULL categories keep the behaviour they had before the collision
+    // rules: an employee login on the employee's own pk or own pk_old counts.
+
+    public function test_an_employee_login_on_the_employees_own_pk_counts(): void
+    {
+        $a = $this->employee();
+        $this->login($a, 'E');
+
+        $this->assertTrue(User::employeeCanSignIn($a));
+        $this->assertSame(1, $this->canLoginInDropdown($a));
+    }
+
+    public function test_an_employee_login_on_the_employees_own_unshared_pk_old_counts(): void
+    {
+        $y = $this->unusedKey();
+        $b = $this->employee($y);
+        $this->login($y, 'E');
+
+        $this->assertTrue(User::employeeCanSignIn($b), 'by pk');
+        $this->assertTrue(User::employeeCanSignIn($y), 'by pk_old');
+        $this->assertSame(1, $this->canLoginInDropdown($b), 'the dropdown disagrees with the server');
+    }
+
+    public function test_an_employee_login_on_a_duplicated_pk_old_counts_for_neither_employee(): void
+    {
+        $y = $this->unusedKey();
+        $b = $this->employee($y);
+        $c = $this->employee($y);
+        $this->login($y, 'E');
+
+        $this->assertFalse(User::employeeCanSignIn($b), 'B counts through a pk_old shared with C');
+        $this->assertFalse(User::employeeCanSignIn($c), 'C counts through a pk_old shared with B');
+    }
 }
