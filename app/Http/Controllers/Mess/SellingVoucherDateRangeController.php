@@ -563,52 +563,54 @@ class SellingVoucherDateRangeController extends Controller
             'bill_file.max' => 'Bill size must not exceed 5 MB.',
         ]);
 
-        // Enforce: Issue Qty cannot exceed available qty (server-side, cannot be bypassed)
-        $storeIdRaw = $request->inve_store_master_pk;
-        $storeType = 'store';
-        if (str_starts_with($storeIdRaw, 'sub_')) {
-            $storeIdRaw = str_replace('sub_', '', $storeIdRaw);
-            $storeType = 'sub_store';
-        }
-        $storeId = (int) $storeIdRaw;
-        $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId, true);
-
-        $requestedByItem = [];
-        foreach ((array) $request->items as $row) {
-            $itemId = (int) ($row['item_subcategory_id'] ?? 0);
-            $qty = (float) ($row['quantity'] ?? 0);
-            if ($itemId > 0) $requestedByItem[$itemId] = ($requestedByItem[$itemId] ?? 0) + $qty;
-        }
-
-        $subcategories = ItemSubcategory::whereIn('id', array_keys($requestedByItem))->get()->keyBy('id');
-        $qtyErrors = [];
-        foreach ($requestedByItem as $itemId => $totalQty) {
-            $avail = (float) ($availableMap[$itemId] ?? 0);
-            if ($totalQty > $avail) {
-                $sub = $subcategories->get($itemId);
-                $name = $sub ? ($sub->item_name ?? $sub->name ?? ('Item #' . $itemId)) : ('Item #' . $itemId);
-                $qtyErrors[] = "{$name}: issue {$totalQty} cannot exceed available {$avail}.";
-            }
-        }
-        if (!empty($qtyErrors)) {
-            $bag = new MessageBag(['items' => implode(' ', $qtyErrors)]);
-
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Validation failed.',
-                    'errors' => ['items' => [implode(' ', $qtyErrors)]],
-                ], 422);
-            }
-
-            return redirect()->route('admin.mess.selling-voucher-date-range.index')
-                ->withInput()
-                ->withErrors($bag)
-                ->with('open_add_modal', true);
-        }
-
         try {
             DB::beginTransaction();
+
+            // Enforce: Issue Qty cannot exceed available qty (server-side, cannot be bypassed).
+            // Checked inside the transaction so the store lock taken by the fresh read holds until commit.
+            $storeIdRaw = $request->inve_store_master_pk;
+            $storeType = 'store';
+            if (str_starts_with($storeIdRaw, 'sub_')) {
+                $storeIdRaw = str_replace('sub_', '', $storeIdRaw);
+                $storeType = 'sub_store';
+            }
+            $storeId = (int) $storeIdRaw;
+            $availableMap = AvailableQuantityService::availableQuantitiesForStore($storeType, $storeId, true);
+
+            $requestedByItem = [];
+            foreach ((array) $request->items as $row) {
+                $itemId = (int) ($row['item_subcategory_id'] ?? 0);
+                $qty = (float) ($row['quantity'] ?? 0);
+                if ($itemId > 0) $requestedByItem[$itemId] = ($requestedByItem[$itemId] ?? 0) + $qty;
+            }
+
+            $subcategories = ItemSubcategory::whereIn('id', array_keys($requestedByItem))->get()->keyBy('id');
+            $qtyErrors = [];
+            foreach ($requestedByItem as $itemId => $totalQty) {
+                $avail = (float) ($availableMap[$itemId] ?? 0);
+                if ($totalQty > $avail) {
+                    $sub = $subcategories->get($itemId);
+                    $name = $sub ? ($sub->item_name ?? $sub->name ?? ('Item #' . $itemId)) : ('Item #' . $itemId);
+                    $qtyErrors[] = "{$name}: issue {$totalQty} cannot exceed available {$avail}.";
+                }
+            }
+            if (!empty($qtyErrors)) {
+                DB::rollBack();
+                $bag = new MessageBag(['items' => implode(' ', $qtyErrors)]);
+
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Validation failed.',
+                        'errors' => ['items' => [implode(' ', $qtyErrors)]],
+                    ], 422);
+                }
+
+                return redirect()->route('admin.mess.selling-voucher-date-range.index')
+                    ->withInput()
+                    ->withErrors($bag)
+                    ->with('open_add_modal', true);
+            }
 
             $issueDate = now()->toDateString();
             $clientTypePk = $request->filled('client_type_pk') ? (int) $request->client_type_pk : null;
@@ -1616,8 +1618,41 @@ class SellingVoucherDateRangeController extends Controller
         $multiStore = $request->input('multi_store') === '1';
         $targetReportCache = [];
 
+        // Every store this save can change stock in; locked as the transaction's first statements so
+        // the stock checks below see other saves that committed while this one waited.
+        $lockStores = [];
+        if ($anchorReport->store_id) {
+            $lockStores[] = [(string) $anchorReport->store_type, (int) $anchorReport->store_id];
+        }
+        if (!$multiStore) {
+            $headerStore = $this->parseStoreIdentifier((string) $request->inve_store_master_pk);
+            $lockStores[] = [$headerStore['store_type'], $headerStore['store_id']];
+        }
+        $existingLineIds = [];
+        foreach ((array) $request->items as $row) {
+            $lineId = (int) ($row['line_id'] ?? 0);
+            if ($lineId <= 0) {
+                $rowStore = $this->parseStoreIdentifier((string) ($row['store_id'] ?? ''));
+                $lockStores[] = [$rowStore['store_type'], $rowStore['store_id']];
+            } elseif ($allowedRows->has($lineId)) {
+                $existingLineIds[] = $lineId;
+            }
+        }
+        if ($existingLineIds !== []) {
+            DB::table('sv_date_range_report_items as svi')
+                ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+                ->whereIn('svi.id', $existingLineIds)
+                ->whereNotNull('svr.store_id')
+                ->distinct()
+                ->get(['svr.store_type', 'svr.store_id'])
+                ->each(function ($r) use (&$lockStores) {
+                    $lockStores[] = [(string) $r->store_type, (int) $r->store_id];
+                });
+        }
+
         try {
             DB::beginTransaction();
+            AvailableQuantityService::lockStoresForStockChange($lockStores);
 
             $headerUpdate = [
                 'remarks' => $request->remarks,
@@ -2019,8 +2054,29 @@ class SellingVoucherDateRangeController extends Controller
                 ->all()
             : $report->items->pluck('id')->map(fn ($itemId) => (int) $itemId)->all();
 
+        // Stores whose stock these returns can change; locked as the transaction's first statements.
+        $requestedItemIds = array_values(array_intersect(
+            array_map(fn ($row) => (int) ($row['id'] ?? 0), (array) $request->items),
+            $allowedItemIds
+        ));
+        $lockStores = DB::table('sv_date_range_report_items as svi')
+            ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+            ->whereIn('svi.id', $requestedItemIds)
+            ->whereNotNull('svr.store_id')
+            ->distinct()
+            ->get(['svr.store_type', 'svr.store_id'])
+            ->map(fn ($r) => [(string) $r->store_type, (int) $r->store_id])
+            ->all();
+        if ($report->store_id) {
+            $lockStores[] = [(string) $report->store_type, (int) $report->store_id];
+        }
+
         try {
             DB::beginTransaction();
+            AvailableQuantityService::lockStoresForStockChange($lockStores);
+            // Per store: stock read before that store's first line changes, and how much its returns go down.
+            $availableMaps = [];
+            $returnReductions = [];
             foreach ($request->items as $row) {
                 $itemId = (int) $row['id'];
                 if (!in_array($itemId, $allowedItemIds, true)) {
@@ -2061,10 +2117,32 @@ class SellingVoucherDateRangeController extends Controller
                         return back()->withInput()->with('error', 'Invalid return date.');
                     }
                 }
+                $itemSubId = (int) ($item->item_subcategory_id ?? 0);
+                $reduction = (float) ($item->return_quantity ?? 0) - $returnQty;
+                if ($itemSubId > 0 && $reduction != 0 && $itemReport->store_id) {
+                    $storeType = $itemReport->store_type === 'sub_store' ? 'sub_store' : 'store';
+                    $storeKey = $storeType . ':' . (int) $itemReport->store_id;
+                    $availableMaps[$storeKey] ??= AvailableQuantityService::availableQuantitiesForStore($storeType, (int) $itemReport->store_id, true);
+                    $returnReductions[$storeKey][$itemSubId]['qty'] = ($returnReductions[$storeKey][$itemSubId]['qty'] ?? 0) + $reduction;
+                    $returnReductions[$storeKey][$itemSubId]['name'] = $item->item_name ?: ('Item #' . $itemSubId);
+                }
                 $item->update([
                     'return_quantity' => $returnQty,
                     'return_date' => $returnDate,
                 ]);
+            }
+            $shortfalls = [];
+            foreach ($returnReductions as $storeKey => $reductions) {
+                array_push($shortfalls, ...AvailableQuantityService::returnReductionShortfalls($availableMaps[$storeKey], $reductions));
+            }
+            if ($shortfalls !== []) {
+                DB::rollBack();
+                $message = implode(' ', $shortfalls);
+                if ($request->wantsJson() || $request->ajax()) {
+                    return response()->json(['success' => false, 'message' => $message], 422);
+                }
+
+                return back()->withInput()->with('error', $message);
             }
             DB::commit();
             self::bumpSellingVoucherDateRangeListingCacheEpoch();
