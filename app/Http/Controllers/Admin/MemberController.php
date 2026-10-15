@@ -56,7 +56,7 @@ use Spatie\Permission\Models\Role;
  *     F-012..F-040 belong to it.
  *   - A second, shorter review run during development used its own F-001..F-011 plus
  *     R-001..R-004. Its F-001 is the confused-deputy RBAC escalation, its F-006 the
- *     payroll read-then-write. Every "R-00x" citation is unambiguously from this one.
+ *     payroll read-then-write. Evheeery "R-00x" citation is unambiguously from this one.
  *
  * Where the two cannot be told apart from the ID alone, the surrounding comment states
  * the defect in words — read that, not the number. Neither report is authority for what
