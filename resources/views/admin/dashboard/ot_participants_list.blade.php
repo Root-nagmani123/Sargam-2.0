@@ -104,6 +104,10 @@
     $activeStatus = ($filters['status'] ?? 'active') === 'archive' ? 'archive' : 'active';
     // Cadre or House. The page shows ONE Course Group Mapping pair at a time.
     $activeView = ($filters['view'] ?? 'cadre') === 'house' ? 'house' : 'cadre';
+    // Which group types this viewer's role reaches — a view (and its columns)
+    // outside it is not offered at all.
+    $typeScope = $typeScope ?? ['cadre' => true, 'house' => true];
+    $hiddenGroupKeys = $hiddenGroupKeys ?? [];
 @endphp
 <div class="container-fluid ot-list-page">
     <x-breadcrum title="OT/ Participants List" :showBack="true" :items="[
@@ -152,16 +156,22 @@
 
          Switching is a full reload, like the Active/Archived tabs and the Course
          filter: which filters exist at all is rendered server-side. --}}
+    @if (! empty($typeScope['cadre']) || ! empty($typeScope['house']))
     <div class="d-flex flex-wrap align-items-center gap-2 mb-3 ot-view-toggle" role="group" aria-label="Group view">
+        @if (! empty($typeScope['cadre']))
         <button type="button" class="btn ot-view-btn {{ $activeView === 'cadre' ? 'active' : '' }}"
             data-view="cadre" aria-pressed="{{ $activeView === 'cadre' ? 'true' : 'false' }}">
             <i class="bi bi-geo-alt-fill" aria-hidden="true"></i><span>Cadre</span>
         </button>
+        @endif
+        @if (! empty($typeScope['house']))
         <button type="button" class="btn ot-view-btn {{ $activeView === 'house' ? 'active' : '' }}"
             data-view="house" aria-pressed="{{ $activeView === 'house' ? 'true' : 'false' }}">
             <i class="bi bi-house-door-fill" aria-hidden="true"></i><span>House</span>
         </button>
+        @endif
     </div>
+    @endif
 
     <div class="card border-0 shadow-sm overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
@@ -271,10 +281,9 @@
                                     <th>Email</th>
                                     <th>Mobile No</th>
                                     <th>User Name</th>
-                                    <th>Cadre</th>
-                                    <th>Cadre Counsellor</th>
-                                    <th>House Group Faculty</th>
-                                    <th>House Group</th>
+                                    @foreach ($groupColumns as $gc)
+                                        <th>{{ $gc[1] }}</th>
+                                    @endforeach
                                     <th>MDO Duty</th>
                                     <th>Duty Type</th>
                                     <th>Medical Exemption</th>
@@ -404,15 +413,17 @@
         let COUNSELLORS_BY_CADRE = @json($counsellorsByCadre ?? new stdClass);
         let FACULTY_BY_HOUSE_GROUP = @json($facultyByHouseGroup ?? new stdClass);
         const LOCKED_COLUMNS = [0, 1, 2]; // S.No, OT Code, Name — frozen & always visible
-        // Which mapping pair belongs to which view. Indexes track the <thead>
-        // order: 6 Cadre · 7 Cadre Counsellor · 8 House Group Faculty · 9 House Group.
         const GROUP_VIEW = @json($activeView ?? 'cadre');
-        const VIEW_COLUMNS = { cadre: [6, 7], house: [8, 9] };
-        // Never rendered, never offered in the Columns panel — the server also
-        // sends them blank, so there is nothing to reveal. The ACTIVE pair needs no
-        // constant: it is simply absent from DEFAULT_HIDDEN_COLUMNS, so hiding it by
-        // hand stays a saved choice like any other column's.
-        const OTHER_VIEW_COLUMNS = GROUP_VIEW === 'house' ? VIEW_COLUMNS.cadre : VIEW_COLUMNS.house;
+        // The four Course Group Mapping columns (thead indexes 6–9), in this view's
+        // order — the active view's pair first. Each entry is [data key, title, width].
+        const GROUP_COLUMNS = @json($groupColumns);
+        // Group columns outside the viewer's role (a cadre counsellor has no House
+        // pair, a house faculty no Cadre pair). The server sends them blank; here
+        // they are always hidden and never offered in the Columns panel.
+        const HIDDEN_GROUP_KEYS = @json($hiddenGroupKeys);
+        const ROLE_HIDDEN_COLUMNS = GROUP_COLUMNS
+            .map((c, i) => HIDDEN_GROUP_KEYS.indexOf(c[0]) !== -1 ? 6 + i : -1)
+            .filter(i => i !== -1);
         // Index tracks the <thead> order above — bump it when a column is inserted before it.
         const DUTY_TYPE_COL = 11; // "Duty Type" — only meaningful for a single-day filter
         let dt = null;
@@ -519,10 +530,7 @@
                 { data: 'email', name: 'email' },
                 { data: 'mobile', name: 'mobile' },
                 { data: 'user_name', name: 'user_name' },
-                { data: 'cadre', name: 'cadre' },
-                { data: 'counsellor', name: 'counsellor' },
-                { data: 'house_faculty', name: 'house_faculty' },
-                { data: 'house', name: 'house' },
+                ...GROUP_COLUMNS.map(c => ({ data: c[0], name: c[0] })),
                 { data: 'duty_count', name: 'duty_count', orderable: false, searchable: false },
                 { data: 'duty_type', name: 'duty_type', orderable: false, searchable: false },
                 { data: 'medical', name: 'medical', orderable: false, searchable: false },
@@ -723,10 +731,9 @@
             { title: 'Email', data: 'email', w: 14 },
             { title: 'Mobile No', data: 'mobile', w: 8 },
             { title: 'User Name', data: 'user_name', w: 10 },
-            { title: 'Cadre', data: 'cadre', w: 8 },
-            { title: 'Cadre Counsellor', data: 'counsellor', w: 10 },
-            { title: 'House Group Faculty', data: 'house_faculty', w: 10 },
-            { title: 'House Group', data: 'house', w: 8 },
+            // Index-aligned with the table; role-hidden columns are skipped because
+            // they are never visible there.
+            ...GROUP_COLUMNS.map(c => ({ title: c[1], data: c[0], w: c[2] })),
             { title: 'MDO Duty', data: 'duty_count', w: 6 },
             { title: 'Duty Type', data: 'duty_type', w: 8 },
             { title: 'Medical Exemption', data: 'medical', w: 7 },
@@ -965,14 +972,15 @@
         // default (showing it is the point of the view) and the other view's pair is
         // force-hidden, so a v6 list — which hid all four mapping columns — must not
         // survive as a saved preference.
-        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v7';
+        // v8: both views show all four mapping columns, ordered per view, so index
+        // 6–9 means a different column in each view — the preference is kept per view.
+        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v8:' + GROUP_VIEW;
         // What the page opens with: the frozen identity columns plus the counts
         // the list exists for. The contact / mapping columns are one click away in
         // Column Visibility, so a viewer who wants them turns them on — and that
         // choice is then saved and wins over this default for good.
         //   3 Email · 4 Mobile No · 5 User Name
-        // The active view's mapping pair (6/7 for Cadre, 8/9 for House) is NOT in
-        // here — the view exists to show it.
+        // The four mapping columns (6–9) are NOT in here — both views show them.
         const DEFAULT_HIDDEN_COLUMNS = [3, 4, 5];
         function otGetHiddenCols() {
             try {
@@ -989,18 +997,17 @@
         function setupOtColumns() {
             if (!dt) { return; }
             const singleDay = isSingleDayFilter();
-            // The other view's columns are not a stored preference — they are off
-            // because of the view, so they must not be written back as a choice the
-            // viewer made (switching views would then keep them hidden).
+            // Role-hidden columns are not a stored preference — they are off because
+            // of the role, so they are never written back as the viewer's choice.
             const hidden = otGetHiddenCols()
                 .filter(idx => LOCKED_COLUMNS.indexOf(idx) === -1)
-                .filter(idx => OTHER_VIEW_COLUMNS.indexOf(idx) === -1);
+                .filter(idx => ROLE_HIDDEN_COLUMNS.indexOf(idx) === -1);
             otPersistHiddenCols(hidden);
             dt.columns().every(function() {
                 const idx = this.index();
                 if (LOCKED_COLUMNS.indexOf(idx) !== -1) { this.visible(true, false); return; }
-                // Belongs to the view we are not on — always hidden.
-                if (OTHER_VIEW_COLUMNS.indexOf(idx) !== -1) { this.visible(false, false); return; }
+                // Outside the viewer's role — always hidden.
+                if (ROLE_HIDDEN_COLUMNS.indexOf(idx) !== -1) { this.visible(false, false); return; }
                 // Duty Type is forced hidden unless a single day is filtered.
                 if (idx === DUTY_TYPE_COL) { this.visible(singleDay && hidden.indexOf(idx) === -1, false); return; }
                 this.visible(hidden.indexOf(idx) === -1, false);
@@ -1014,8 +1021,8 @@
                 const idx = this.index();
                 const title = $(this.header()).text().replace(/\s+/g, ' ').trim();
                 if (!title) { return; }
-                // The other view's mapping columns are not on offer at all.
-                if (OTHER_VIEW_COLUMNS.indexOf(idx) !== -1) { return; }
+                // Out-of-role group columns are not on offer at all.
+                if (ROLE_HIDDEN_COLUMNS.indexOf(idx) !== -1) { return; }
                 const isLocked = LOCKED_COLUMNS.indexOf(idx) !== -1;
                 // Duty Type toggle is disabled (and unchecked) unless a single day is filtered.
                 const dutyLocked = (idx === DUTY_TYPE_COL) && !singleDay;

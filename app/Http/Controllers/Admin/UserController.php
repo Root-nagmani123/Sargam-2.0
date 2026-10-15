@@ -1611,7 +1611,7 @@ class UserController extends Controller
      *
      * @return array{cadre: \Illuminate\Support\Collection, houseGroup: \Illuminate\Support\Collection, counsellorsByCadre: array}
      */
-    private function otParticipantsFilterOptions(Request $request, $students): array
+    private function otParticipantsFilterOptions(Request $request, $students, ?array $typeScope = null): array
     {
         // A copy of this request with some filters cleared. Only the query bag
         // matters — applyDashboardStudentListFilters() reads inputs, nothing else.
@@ -1633,7 +1633,7 @@ class UserController extends Controller
 
         // Which of the two pairs this viewer gets at all — see the helper. An
         // out-of-scope pair is returned empty, which is what hides it in the blade.
-        $typeScope = $this->otParticipantsGroupTypeScope(
+        $typeScope ??= $this->otParticipantsGroupTypeScope(
             $this->participantCourseScope($this->participantCoursePks($forCadre->concat($forHouseGroup)))
         );
 
@@ -1666,6 +1666,7 @@ class UserController extends Controller
                     $this->participantCoursePks($forHouseGroup)
                 )
                 : [],
+            'typeScope' => $typeScope,
         ];
     }
 
@@ -1682,10 +1683,17 @@ class UserController extends Controller
      * group, was being offered a House Group filter because his 43 OTs happen to
      * sit in another faculty's house.
      *
-     * A viewer who is NOT scoped by their own groups — Super Admin / training
-     * admin, or the coordinator of a course in view — oversees the whole roster,
-     * so they get every pair the course's mapping supports (both, on a course
-     * mapped with counsellor AND house groups).
+     * Super Admin / training admins oversee the whole roster and get both pairs.
+     * Every faculty — a course coordinator included — gets only the group types
+     * they are themselves mapped to. Coordinating Phase-II-2024 (which has House
+     * Groups) gave Anupam Talwar, mapped only as a Counsellor, a House view full
+     * of N/A on the Archived tab.
+     *
+     * Their mappings on the courses in view decide it. When those carry no
+     * Counsellor / House mapping at all (a coordinator mapped only to a
+     * "Leadership Module" group there), their mappings on any course are used
+     * instead. A faculty with no Counsellor or House mapping anywhere gets
+     * neither pair.
      *
      * @param  array<int, string>  $inViewCoursePks  the courses the rows come from
      * @return array{cadre: bool, house: bool}
@@ -1703,41 +1711,35 @@ class UserController extends Controller
             return $both;
         }
 
-        // Coordinator of a course in view: the whole course's mapping is theirs.
-        $coordinated = $this->getCoordinatorCourseIds((int) $facultyPk)
-            ->map(fn ($v) => (string) $v)->all();
-        foreach ($inViewCoursePks as $pk) {
-            if (in_array((string) $pk, $coordinated, true)) {
-                return $both;
-            }
+        // THIS faculty's own group mappings decide it — coordinating a course
+        // does not hand over the course's other group types.
+        $counsellorTypes = array_map(fn ($v) => (string) $v, $this->counsellorGroupTypePks());
+        $houseTypes = array_map(fn ($v) => (string) $v, $this->houseGroupTypePks());
+
+        $scopeFor = function (array $coursePks) use ($facultyPk, $counsellorTypes, $houseTypes) {
+            $ownTypes = DB::table('group_type_master_course_master_map')
+                ->where('facility_id', $facultyPk)
+                ->where('active_inactive', 1)
+                ->when(! empty($coursePks), fn ($q) => $q->whereIn('course_name', $coursePks))
+                ->pluck('type_name')
+                ->map(fn ($v) => (string) $v)
+                ->unique()
+                ->all();
+
+            return [
+                'cadre' => ! empty(array_intersect($ownTypes, $counsellorTypes)),
+                'house' => ! empty(array_intersect($ownTypes, $houseTypes)),
+            ];
+        };
+
+        $scope = $scopeFor($inViewCoursePks);
+        if (! $scope['cadre'] && ! $scope['house'] && ! empty($inViewCoursePks)) {
+            // No Counsellor / House mapping on the courses in view — fall back to
+            // what this faculty is mapped as on any course.
+            $scope = $scopeFor([]);
         }
 
-        // Otherwise the rows are here because of THIS faculty's own group
-        // mappings, so only those group types get a filter.
-        $ownTypes = DB::table('group_type_master_course_master_map')
-            ->where('facility_id', $facultyPk)
-            ->where('active_inactive', 1)
-            ->when(! empty($inViewCoursePks), fn ($q) => $q->whereIn('course_name', $inViewCoursePks))
-            ->pluck('type_name')
-            ->map(fn ($v) => (string) $v)
-            ->unique()
-            ->all();
-
-        if (empty($ownTypes)) {
-            // Nothing to narrow by (no rows, or a scope this rule does not cover) —
-            // leave the filters alone rather than stripping them.
-            return $both;
-        }
-
-        $owns = fn (array $typePks) => ! empty(array_intersect(
-            $ownTypes,
-            array_map(fn ($v) => (string) $v, $typePks)
-        ));
-
-        return [
-            'cadre' => $owns($this->counsellorGroupTypePks()),
-            'house' => $owns($this->houseGroupTypePks()),
-        ];
+        return $scope;
     }
 
     /**
@@ -1748,9 +1750,84 @@ class UserController extends Controller
      * the toggle under the Active/Archived tabs. Cadre is the default, so a bare
      * URL and every link that predates the toggle keep working.
      */
-    private function otParticipantsGroupView(Request $request): string
+    private function otParticipantsGroupView(Request $request, ?array $typeScope = null): string
     {
-        return $request->input('view') === 'house' ? 'house' : 'cadre';
+        $view = $request->input('view') === 'house' ? 'house' : 'cadre';
+
+        // A viewer whose role reaches only the OTHER group type (a house faculty on
+        // the default Cadre view) is moved to the view they actually have data for.
+        $other = $view === 'house' ? 'cadre' : 'house';
+        if ($typeScope !== null && empty($typeScope[$view]) && ! empty($typeScope[$other])) {
+            return $other;
+        }
+
+        return $view;
+    }
+
+    /**
+     * Which group types this viewer's ROLE reaches on the OT participants page —
+     * otParticipantsGroupTypeScope() over every course in view, before any
+     * Cadre / House filter narrows the rows. Decides the view, the filters and
+     * which of the four group columns carry data, so all three agree.
+     *
+     * @return array{cadre: bool, house: bool}
+     */
+    private function otParticipantsViewerTypeScope(Request $request, $students): array
+    {
+        $rows = $this->otParticipantsRowsFor($this->otParticipantsWithoutGroupFilters($request), $students);
+
+        return $this->otParticipantsGroupTypeScope(
+            $this->participantCourseScope($this->participantCoursePks($rows))
+        );
+    }
+
+    /**
+     * The request with all four group filters (and the view) removed.
+     */
+    private function otParticipantsWithoutGroupFilters(Request $request): Request
+    {
+        $params = $request->query();
+        foreach (['cadre', 'counsellor_faculty', 'house_group', 'house_faculty', 'view'] as $key) {
+            unset($params[$key]);
+        }
+
+        return Request::create($request->url(), 'GET', $params);
+    }
+
+    /**
+     * The group-column data keys this viewer's role does NOT reach. Those columns
+     * are sent blank, hidden on screen, kept out of the Columns panel and left out
+     * of every export — a cadre counsellor sees no House data and vice versa.
+     *
+     * @param  array{cadre: bool, house: bool}  $typeScope
+     * @return array<int, string>
+     */
+    private function otParticipantsHiddenGroupKeys(array $typeScope): array
+    {
+        return array_merge(
+            empty($typeScope['cadre']) ? ['cadre', 'counsellor'] : [],
+            empty($typeScope['house']) ? ['house', 'house_faculty'] : []
+        );
+    }
+
+    /**
+     * The four Course Group Mapping columns, in the order the given view shows
+     * them: the active view's pair first, the other pair after it. The toggle
+     * decides which pair leads and which filters are offered; the viewer's ROLE
+     * decides which pairs carry data (see otParticipantsHiddenGroupKeys()).
+     *
+     * Each entry is [data key, heading, PDF width]. The table <thead>, the
+     * DataTable columns, server-side sorting and the exports all read this, so
+     * they stay aligned in both views.
+     *
+     * @return array<int, array{0: string, 1: string, 2: int}>
+     */
+    private function otParticipantsGroupColumns(string $view): array
+    {
+        $cadre = [['cadre', 'Cadre', 8], ['counsellor', 'Cadre Counsellor', 10]];
+        $house = [['house', 'House Group', 9], ['house_faculty', 'House Group Faculty', 11]];
+
+        return $view === 'house' ? [...$house, ...$cadre] : [...$cadre, ...$house];
     }
 
     /**
@@ -1765,9 +1842,10 @@ class UserController extends Controller
      * Everything else (course, dates, session, participant, status, search,
      * paging) is preserved, so this is safe to use for the whole request.
      */
-    private function otParticipantsViewScopedRequest(Request $request): Request
+    private function otParticipantsViewScopedRequest(Request $request, ?string $view = null): Request
     {
-        $drop = $this->otParticipantsGroupView($request) === 'house'
+        $view ??= $this->otParticipantsGroupView($request);
+        $drop = $view === 'house'
             ? ['cadre', 'counsellor_faculty']
             : ['house_group', 'house_faculty'];
 
@@ -1775,6 +1853,8 @@ class UserController extends Controller
         foreach ($drop as $key) {
             unset($params[$key]);
         }
+        // Pinned, so everything downstream reads the view the role resolved to.
+        $params['view'] = $view;
 
         return Request::create($request->url(), 'GET', $params);
     }
@@ -1807,11 +1887,14 @@ class UserController extends Controller
         // stripped — see otParticipantsViewScopedRequest(). Everything below reads
         // $viewRequest, never $request, so a stale filter from the view the viewer
         // is not on can neither narrow the roster nor change the total.
-        $groupView = $this->otParticipantsGroupView($request);
-        $viewRequest = $this->otParticipantsViewScopedRequest($request);
-
-        $payload = $this->resolveDashboardStudentListPayload($viewRequest, false, true);
+        // The payload reads no group filter, so it is resolved first; the viewer's
+        // role scope then decides the view (see otParticipantsGroupView()).
+        $payload = $this->resolveDashboardStudentListPayload($this->otParticipantsWithoutGroupFilters($request), false, true);
         $availableCourses = $payload['availableCourses'];
+
+        $typeScope = $this->otParticipantsViewerTypeScope($request, $payload['students']);
+        $groupView = $this->otParticipantsGroupView($request, $typeScope);
+        $viewRequest = $this->otParticipantsViewScopedRequest($request, $groupView);
 
         $participants = $this->otParticipantsRowsFor($viewRequest, $payload['students']);
         $counsellorFaculty = (string) $viewRequest->input('counsellor_faculty', '');
@@ -1830,7 +1913,7 @@ class UserController extends Controller
         // Cadre / Cadre Counsellor / House Group options, each scoped to the rows
         // reachable with that dropdown's own filter cleared — so an option can
         // never be offered that would return nothing.
-        $filterOptions = $this->otParticipantsFilterOptions($viewRequest, $payload['students']);
+        $filterOptions = $this->otParticipantsFilterOptions($viewRequest, $payload['students'], $typeScope);
 
         // ajax() reads a header, so that check stays on the original request; the
         // response itself is built from the scoped one.
@@ -1906,10 +1989,14 @@ class UserController extends Controller
                 ->values();
         }
 
+        $groupColumns = $this->otParticipantsGroupColumns($groupView);
+        $hiddenGroupKeys = $this->otParticipantsHiddenGroupKeys($typeScope);
+
         return view('admin.dashboard.ot_participants_list', compact(
             'availableCourses', 'courseOptions', 'filters', 'cadreOptions',
             'houseGroupOptions', 'sessionOptions', 'participantOptions',
-            'counsellorsByCadre', 'facultyByHouseGroup'
+            'counsellorsByCadre', 'facultyByHouseGroup', 'groupColumns',
+            'typeScope', 'hiddenGroupKeys'
         ));
     }
 
@@ -3239,12 +3326,14 @@ class UserController extends Controller
             'to_date' => ['nullable', 'date'],
         ]);
 
-        // The report follows the view the viewer is on, so a Cadre-view download
-        // carries the Cadre pair of columns and no House data at all.
-        $groupView = $this->otParticipantsGroupView($request);
-        $viewRequest = $this->otParticipantsViewScopedRequest($request);
+        // The report follows the view the viewer is on: its filters, and which
+        // group pair leads the columns (all four are always included).
+        // Role scope resolved exactly as the list page does it.
+        $payload = $this->resolveDashboardStudentListPayload($this->otParticipantsWithoutGroupFilters($request), false, true);
+        $typeScope = $this->otParticipantsViewerTypeScope($request, $payload['students']);
+        $groupView = $this->otParticipantsGroupView($request, $typeScope);
+        $viewRequest = $this->otParticipantsViewScopedRequest($request, $groupView);
 
-        $payload = $this->resolveDashboardStudentListPayload($viewRequest, false, true);
         $rows = $this->otParticipantsRowsFor($viewRequest, $payload['students']);
 
         $rowMeta = $this->otParticipantsRowMeta(
@@ -3256,7 +3345,7 @@ class UserController extends Controller
         // The search box narrows the export exactly as it narrows the table.
         $rows = $this->otParticipantsApplySearch($viewRequest, $rows, $rowMeta);
 
-        $exportData = $this->otParticipantsExportData($rows, $rowMeta, $groupView);
+        $exportData = $this->otParticipantsExportData($rows, $rowMeta, $groupView, $this->otParticipantsHiddenGroupKeys($typeScope));
 
         $timestamp = now()->format('Ymd_His');
         $fileBase = "ot_participants_{$timestamp}";
@@ -3335,8 +3424,16 @@ class UserController extends Controller
      *
      * @return array{headings: array<int, string>, rows: array<int, array<int, string>>, widths: array<int, int>}
      */
-    private function otParticipantsExportData($rows, array $rowMeta, string $groupView = 'cadre'): array
+    private function otParticipantsExportData($rows, array $rowMeta, string $groupView = 'cadre', array $hiddenGroupKeys = []): array
     {
+        // The group columns the viewer's role reaches, the active view's pair
+        // first — headings and row cells both come from this list, so they cannot
+        // drift apart.
+        $groupColumns = array_values(array_filter(
+            $this->otParticipantsGroupColumns($groupView),
+            fn ($c) => ! in_array($c[0], $hiddenGroupKeys, true)
+        ));
+
         // Heading, then the relative width it gets in the PDF. Text columns need
         // the room; the count columns hold two characters and stay narrow.
         $columns = [
@@ -3346,10 +3443,7 @@ class UserController extends Controller
             ['Email', 17],
             ['Mobile No', 8],
             ['User Name', 10],
-            ['Cadre', 8],
-            ['Cadre Counsellor', 10],
-            ['House Group Faculty', 11],
-            ['House Group', 9],
+            ...array_map(fn ($c) => [$c[1], $c[2]], $groupColumns),
             ['MDO Duty', 5],
             ['Duty Type', 7],
             ['Medical Exemption', 6],
@@ -3359,16 +3453,6 @@ class UserController extends Controller
             ['Discipline Memo', 5],
             ['Comments/ Feedbacks', 5],
         ];
-        // Keep only the active view's group pair: Cadre / Cadre Counsellor (6, 7)
-        // or House Group Faculty / House Group (8, 9). Headings, widths and every
-        // row cell are dropped through the SAME $strip, so the three stay aligned
-        // — a mismatch here would shift every column after it in the PDF.
-        $dropColumns = $groupView === 'house' ? [6, 7] : [8, 9];
-        $strip = static fn (array $cells) => array_values(
-            array_diff_key($cells, array_flip($dropColumns))
-        );
-
-        $columns = $strip($columns);
         $headings = array_column($columns, 0);
         $widths = array_column($columns, 1);
 
@@ -3389,17 +3473,21 @@ class UserController extends Controller
             $meta = $rowMeta[$p->student_master_pk] ?? [];
             $name = $s->display_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''));
 
-            $out[] = $strip([
+            $group = [
+                'cadre' => (string) ($p->cadre_name ?: ($s->cadre->cadre_name ?? 'N/A')),
+                'counsellor' => (string) ($p->counsellor_name ?: 'N/A'),
+                'house' => (string) ($p->house_group ?: 'N/A'),
+                'house_faculty' => (string) ($p->house_faculty_name ?: 'N/A'),
+            ];
+
+            $out[] = [
                 $index + 1,
                 (string) ($s->generated_OT_code ?: 'N/A'),
                 (string) ($name ?: 'N/A'),
                 (string) ($s->email ?: 'N/A'),
                 (string) ($s->contact_no ?: 'N/A'),
                 (string) ($s->user_id ?: 'N/A'),
-                (string) ($p->cadre_name ?: ($s->cadre->cadre_name ?? 'N/A')),
-                (string) ($p->counsellor_name ?: 'N/A'),
-                (string) ($p->house_faculty_name ?: 'N/A'),
-                (string) ($p->house_group ?: 'N/A'),
+                ...array_map(fn ($c) => $group[$c[0]], $groupColumns),
                 $count($meta['duty_count'] ?? 0),
                 (string) ($meta['duty_type'] ?: '-'),
                 $count($meta['medical'] ?? 0),
@@ -3408,7 +3496,7 @@ class UserController extends Controller
                 $count($meta['notice_memo'] ?? 0),
                 $count($meta['discipline_memo'] ?? 0),
                 $count($commentCounts[(int) $p->student_master_pk] ?? 0),
-            ]);
+            ];
         }
 
         return ['headings' => $headings, 'rows' => $out, 'widths' => $widths];
@@ -3521,18 +3609,18 @@ class UserController extends Controller
         $recordsTotal = $totalParticipants;
         $recordsFiltered = $rows->count();
 
-        // Only the active view's pair of columns carries data. The blade also hides
-        // the other two, but blanking them here is what makes the separation real:
-        // un-hiding a column from the Columns panel, or reading the raw JSON, still
-        // shows no House data in a Cadre view.
-        $isCadreView = $this->otParticipantsGroupView($request) === 'cadre';
-
-        // Sorting (S.No / OT Code / Name / Email / Cadre / House).
-        // Column indexes must track the <thead> order in ot_participants_list.blade.php.
-        $columnMap = [
-            1 => 'ot_code', 2 => 'name', 3 => 'email', 4 => 'mobile', 5 => 'user_name',
-            6 => 'cadre', 7 => 'counsellor', 8 => 'house_faculty', 9 => 'house',
-        ];
+        // Sorting (S.No / OT Code / Name / Email / the four group columns).
+        // Column indexes must track the <thead> order in ot_participants_list.blade.php;
+        // indexes 6–9 are the group columns, whose order depends on the view.
+        $columnMap = [1 => 'ot_code', 2 => 'name', 3 => 'email', 4 => 'mobile', 5 => 'user_name'];
+        foreach ($this->otParticipantsGroupColumns($this->otParticipantsGroupView($request)) as $i => $c) {
+            $columnMap[6 + $i] = $c[0];
+        }
+        // Out-of-role group columns carry no data (and so cannot be sorted on).
+        $hiddenGroupKeys = isset($filterOptions['typeScope'])
+            ? $this->otParticipantsHiddenGroupKeys($filterOptions['typeScope'])
+            : [];
+        $columnMap = array_filter($columnMap, fn ($k) => ! in_array($k, $hiddenGroupKeys, true));
         $orderCol = (int) $request->input('order.0.column', 0);
         $orderDir = strtolower((string) $request->input('order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
         $sortKey = $columnMap[$orderCol] ?? null;
@@ -3590,24 +3678,25 @@ class UserController extends Controller
             $detailUrl = route('admin.dashboard.students.detail', encrypt($s->pk));
             $name = $s->display_name ?? trim(($s->first_name ?? '').' '.($s->last_name ?? ''));
 
-            $data[] = [
+            $row = [
                 's_no' => $start + $idx + 1,
                 'ot_code' => e($s->generated_OT_code ?? 'N/A'),
                 'name' => '<a href="'.e($detailUrl).'" class="sl-count">'.e($name).'</a>',
                 'email' => e($s->email ?? 'N/A'),
                 'mobile' => e($s->contact_no ?: 'N/A'),
                 'user_name' => e($s->user_id ?: 'N/A'),
-                // Cadre view only — see $isCadreView above.
-                'cadre' => $isCadreView ? e($p->cadre_name ?: ($s->cadre->cadre_name ?? 'N/A')) : '',
+                // Both pairs are sent in both views (the blade orders them so the
+                // active view's pair comes first); a pair outside the viewer's
+                // role is blanked below.
+                'cadre' => e($p->cadre_name ?: ($s->cadre->cadre_name ?? 'N/A')),
                 // The faculty on the same Course Group Mapping row as the cadre
                 // (counsellor group) — i.e. this participant's cadre counsellor.
-                'counsellor' => $isCadreView ? e($p->counsellor_name ?: 'N/A') : '',
-                // House view only. The faculty on the same Course Group Mapping row
-                // as the house group.
-                'house_faculty' => $isCadreView ? '' : e($p->house_faculty_name ?: 'N/A'),
+                'counsellor' => e($p->counsellor_name ?: 'N/A'),
+                // The faculty on the same Course Group Mapping row as the house group.
+                'house_faculty' => e($p->house_faculty_name ?: 'N/A'),
                 // House GROUP (Course Group Mapping) — the full group name
                 // ("Nanda Devi"), not the hostel room code ("GANG-116").
-                'house' => $isCadreView ? '' : e($p->house_group ?: 'N/A'),
+                'house' => e($p->house_group ?: 'N/A'),
                 'duty_count' => $this->otCountCell($meta['duty_count'], $detailUrl.'?section=dutiesSection'.$linkDateQs),
                 'duty_type' => e($meta['duty_type'] ?: '-'),
                 'medical' => $this->otCountCell($meta['medical'], $detailUrl.'?section=medicalExceptionsSection'.$linkDateQs),
@@ -3629,6 +3718,11 @@ class UserController extends Controller
                     .'<i class="bi bi-chat-left-text" aria-hidden="true"></i>'
                     .'<span>Add Comment/ Feedback</span></button>',
             ];
+            // Blank, not just hidden — the raw JSON carries no out-of-role data.
+            foreach ($hiddenGroupKeys as $key) {
+                $row[$key] = '';
+            }
+            $data[] = $row;
         }
 
         return response()->json([
