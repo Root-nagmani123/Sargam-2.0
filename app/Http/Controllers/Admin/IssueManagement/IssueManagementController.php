@@ -1267,15 +1267,18 @@ class IssueManagementController extends Controller
         $rows = $this->escalationMatrixRows($categoryId);
 
         $requested = ($requested === null || $requested === '') ? null : (string) $requested;
-        if ($requested !== null && $this->eligibleNodalOfficers($rows, 1, $excludedIds)->contains($requested)) {
-            return $requested;
-        }
 
         foreach ([1, 2, 3] as $level) {
             $eligible = $this->eligibleNodalOfficers($rows, $level, $excludedIds);
-            if ($eligible->isNotEmpty()) {
-                return $eligible->first();
+            if ($eligible->isEmpty()) {
+                continue;
             }
+            // getNodalEmployees() offers this level's officer(s) once no
+            // higher level is eligible; honour the one actually offered.
+            if ($requested !== null && $eligible->contains($requested)) {
+                return $requested;
+            }
+            return $eligible->first();
         }
 
         return null;
@@ -1812,21 +1815,23 @@ class IssueManagementController extends Controller
             'description' => 'required|string|max:1000',
         ]);
 
-        // The nodal officer is decided server-side (resolveNodalOfficer()).
-        // Same category: a different Level 1 officer may be picked, but never
-        // the complainant / logger; anything else keeps the current officer.
-        // New category: the matrix decides, as in store().
+        // The nodal officer is decided server-side (resolveNodalOfficer()),
+        // the same resolution getNodalEmployees() used to offer it, so a
+        // fallback (Level 2/3) selection is honoured instead of silently
+        // discarded. Same category: a different eligible officer may be
+        // picked, but never the complainant / logger. New category: the
+        // matrix decides, as in store().
         $excludedIds = $this->employeeIdsFor($issue->created_by, $issue->issue_logger, Auth::user()->user_id ?? null);
         if ((int) $request->issue_category_id === (int) $issue->issue_category_master_pk) {
             $requested = (string) $request->nodal_employee_id;
-            $levelOne = $this->eligibleNodalOfficers($this->escalationMatrixRows($request->issue_category_id), 1, $excludedIds);
             if ($requested !== '' && $requested === User::resolveEmployeePk($issue->employee_master_pk)) {
                 // The form offers the current officer under their pk (edit());
                 // picking them again keeps the stored key, pk_old or not.
                 $nodalEmployeePk = $issue->employee_master_pk;
             } else {
-                $nodalEmployeePk = ($requested !== '' && $levelOne->contains($requested))
-                    ? $requested
+                $resolved = $this->resolveNodalOfficer($request->issue_category_id, $request->nodal_employee_id, $excludedIds);
+                $nodalEmployeePk = ($resolved !== null && $resolved === $requested)
+                    ? $resolved
                     : $issue->employee_master_pk;
             }
         } else {
