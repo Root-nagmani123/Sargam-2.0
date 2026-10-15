@@ -1991,8 +1991,10 @@ class UserController extends Controller
                     ->where('scgm.student_master_pk', $studentPk);
             }
 
+            $roleVariant = hasRole('Student-OT') ? ':ot' : ':base';
+
             return (int) FeedbackReportCache::remember(
-                'ot_pending_feedback_count_' . $studentPk,
+                'ot_pending_feedback_count_' . $studentPk . $roleVariant,
                 FeedbackReportCache::TTL_STATS,
                 fn () => $pendingQuery->selectRaw('COUNT(DISTINCT t.pk, f.pk) AS pending_count')
                     ->value('pending_count') ?? 0
