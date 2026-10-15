@@ -74,6 +74,18 @@
         <div class="card-body">
             <div class="bg-light rounded-3 p-3 mb-4">
                 <form method="GET" action="{{ route('admin.notice.index') }}">
+                    {{-- The sidebar reaches this page as ?menu=NNN; a GET filter submit
+                         would otherwise drop it and the menu would lose its highlight. --}}
+                    {{-- Scalar only: an array (?menu[]= / ?course_id[]= / ?department_id[]=)
+                         hit e() / the string casts below and returned 500 (PR #334 F-025). --}}
+                    @php
+                        $menuFilter = is_scalar(request('menu')) ? (string) request('menu') : '';
+                        $courseFilter = is_scalar(request('course_id')) ? (string) request('course_id') : '';
+                        $departmentFilter = is_scalar(request('department_id')) ? (string) request('department_id') : '';
+                    @endphp
+                    @if($menuFilter !== '')
+                    <input type="hidden" name="menu" value="{{ $menuFilter }}">
+                    @endif
                     <div class="row g-3 align-items-end">
                         <div class="col-12 col-sm-6 col-md">
                             <label class="form-label fw-semibold mb-1">Notice Type</label>
@@ -88,17 +100,70 @@
                             </select>
                         </div>
 
+                        {{-- Every comparison below is strict on strings. With loose ==,
+                             an unset filter (null) equals the department whose pk is 0
+                             — the real "NIAR" row — so NIAR was pre-selected on page
+                             load and "All" could never win. --}}
                         <div class="col-12 col-sm-6 col-md">
                             <label class="form-label fw-semibold mb-1">Course</label>
                             <select name="course_id" class="form-select form-select-sm js-choice"
                                 onchange="this.form.submit()">
                                 <option value="">All</option>
+                                <option value="{{ $allTargets }}" {{ $courseFilter === $allTargets ? 'selected' : '' }}>
+                                    All courses (not course-specific)
+                                </option>
                                 @foreach($courses as $c)
-                                <option value="{{ $c->id }}" {{ request('course_id') == $c->pk ? 'selected' : '' }}>
+                                <option value="{{ $c->pk }}" {{ $courseFilter === (string) $c->pk ? 'selected' : '' }}>
                                     {{ $c->course_name }}
                                 </option>
                                 @endforeach
                             </select>
+                        </div>
+
+                        <div class="col-12 col-sm-6 col-md">
+                            <label class="form-label fw-semibold mb-1">Department</label>
+                            <select name="department_id" class="form-select form-select-sm js-choice"
+                                onchange="this.form.submit()">
+                                <option value="">All</option>
+                                {{-- Finds the notices the Department column shows as
+                                     "All departments". They carry no department rows,
+                                     so no ordinary value could ever match them. --}}
+                                <option value="{{ $allTargets }}" {{ $departmentFilter === $allTargets ? 'selected' : '' }}>
+                                    All departments (not department-specific)
+                                </option>
+                                @foreach($departments as $d)
+                                <option value="{{ $d->pk }}" {{ $departmentFilter === (string) $d->pk ? 'selected' : '' }}>
+                                    {{ $d->department_name }}
+                                </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-sm-6 col-md">
+                            {{-- The year on its own never said which of the three date
+                                 columns it applied to, so the date column is picked
+                                 here rather than assumed. --}}
+                            <label class="form-label fw-semibold mb-1">Year of</label>
+                            <div class="d-flex gap-1">
+                                <select name="year_field" class="form-select form-select-sm"
+                                    aria-label="Which date the year applies to"
+                                    onchange="this.form.submit()">
+                                    @foreach($yearFields as $key => $column)
+                                    <option value="{{ $key }}" {{ (is_string(request('year_field')) ? request('year_field') : 'display') === (string) $key ? 'selected' : '' }}>
+                                        {{ ucfirst($key) }} Date
+                                    </option>
+                                    @endforeach
+                                </select>
+                                <select name="year" class="form-select form-select-sm"
+                                    aria-label="Year" onchange="this.form.submit()">
+                                    <option value="">All</option>
+                                    @foreach($years as $y)
+                                    <option value="{{ $y }}" {{ (is_scalar(request('year')) ? (string) request('year') : '') === (string) $y ? 'selected' : '' }}>
+                                        {{ $y }}
+                                    </option>
+                                    @endforeach
+                                </select>
+                            </div>
                         </div>
 
                         <div class="col-12 col-sm-6 col-md">
@@ -115,7 +180,7 @@
                             <label class="form-label fw-semibold mb-1">Search</label>
                             <div class="input-group input-group-sm">
                                 <input type="text" name="search" class="form-control"
-                                    value="{{ request('search') }}" placeholder="Title, type, course, creator...">
+                                    value="{{ is_scalar(request('search')) ? request('search') : '' }}" placeholder="Title, type, course, creator...">
                                 <button type="submit" class="btn btn-primary" aria-label="Search">
                                     <i class="material-icons material-symbols-rounded fs-6 lh-1"
                                         aria-hidden="true">search</i>
@@ -124,7 +189,7 @@
                         </div>
 
                         <div class="col-12 col-md-auto d-flex align-items-end gap-2">
-                            <a href="{{ route('admin.notice.index') }}"
+                            <a href="{{ route('admin.notice.index', request('menu') ? ['menu' => request('menu')] : []) }}"
                                 class="btn btn-sm btn-outline-secondary" title="Reset Filters">
                                 Reset
                             </a>
@@ -143,6 +208,8 @@
                                     'title' => 'Notice Title',
                                     'type' => 'Notice Type',
                                     'course' => 'Course Name',
+                                    'department' => 'Department',
+                                    'audience' => 'Target Audience',
                                     'created_by' => 'Created By',
                                     'created_date' => 'Created Date',
                                     'display_date' => 'Display Date',
@@ -174,6 +241,8 @@
                             <th scope="col" class="col-title">Notice Title</th>
                             <th scope="col" class="col-type">Notice Type</th>
                             <th scope="col" class="col-course">Course Name</th>
+                            <th scope="col" class="col-department">Department</th>
+                            <th scope="col" class="col-audience">Target Audience</th>
                             <th scope="col" class="col-created_by">Created By</th>
                             <th scope="col" class="col-created_date">Created Date</th>
                             <th scope="col" class="col-display_date">Display Date</th>
@@ -200,13 +269,46 @@
                                     {{ $n->notice_type }}
                                 </span>
                             </td>
-                            <td class="col-course">{{ $n->course->course_name ?? 'N/A' }}</td>
+                            {{-- course_label / department_label read the audience map,
+                                 so a multi-course or multi-department notice lists all
+                                 of them and an empty selection reads "All ...". --}}
+                            <td class="col-course">
+                                @if($n->course_label)
+                                <span class="{{ $n->courses->isEmpty() ? 'text-muted' : '' }}">{{ $n->course_label }}</span>
+                                @else
+                                N/A
+                                @endif
+                            </td>
+                            <td class="col-department">
+                                @if($n->department_label)
+                                <span class="{{ $n->departments->isEmpty() ? 'text-muted' : '' }}">{{ $n->department_label }}</span>
+                                @else
+                                N/A
+                                @endif
+                            </td>
+                            <td class="col-audience">
+                                <span class="badge rounded-1 bg-primary-subtle text-primary">
+                                    {{ $n->target_audience }}
+                                </span>
+                                @if($n->audience_mode === \App\Models\NoticeNotification::MODE_GROUP)
+                                <span class="d-block small text-muted mt-1">
+                                    {{ $n->group_labels->isEmpty() ? 'Group' : $n->group_labels->implode(', ') }}
+                                </span>
+                                @elseif($n->audience_mode === \App\Models\NoticeNotification::MODE_INDIVIDUAL)
+                                <span class="d-block small text-muted mt-1">
+                                    Individual · {{ $n->individual_count }} selected
+                                </span>
+                                @endif
+                            </td>
                             <td class="col-created_by">{{ $n->user->first_name }} {{ $n->user->last_name }}</td>
-                            <td class="col-created_date">{{ \Carbon\Carbon::parse($n->created_date)->format('d-m-Y') }}
+                            {{-- created_at, not created_date: this table has no
+                                 created_date column, so Carbon::parse(null) was
+                                 returning "now" and every row showed today. --}}
+                            <td class="col-created_date">{{ $n->created_at ? \Carbon\Carbon::parse($n->created_at)->format('d-m-Y') : '—' }}
                             </td>
-                            <td class="col-display_date">{{ \Carbon\Carbon::parse($n->display_date)->format('d-m-Y') }}
+                            <td class="col-display_date">{{ $n->display_date ? \Carbon\Carbon::parse($n->display_date)->format('d-m-Y') : '—' }}
                             </td>
-                            <td class="col-expiry_date">{{ \Carbon\Carbon::parse($n->expiry_date)->format('d-m-Y') }}
+                            <td class="col-expiry_date">{{ $n->expiry_date ? \Carbon\Carbon::parse($n->expiry_date)->format('d-m-Y') : '—' }}
                             </td>
 
                             <td class="text-center col-status">

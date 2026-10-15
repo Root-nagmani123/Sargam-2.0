@@ -40,6 +40,50 @@ class FcForm extends Model
         return $this->belongsTo(CourseMaster::class, 'course_master_pk', 'pk');
     }
 
+    /**
+     * Forms that may be picked for an FC bulk SMS/Email send: the form is active, and it
+     * is either unlinked from a course or linked to one that is still running.
+     *
+     * "Still running" is CourseMaster::scopeActiveRunning()'s definition, not a second
+     * one: active_inactive = 1 AND end_date >= today. That matters because this scope
+     * gates a *paid* SMS + email run, so the set of forms eligible for a send must not
+     * be wider than the set of courses the rest of the app calls running.
+     *
+     * A null end_date is therefore NOT selectable. CourseMaster::scopeArchived() counts
+     * it as archived and is documented as the exact complement of activeRunning(), so
+     * admitting it here would put a course in both buckets. (Checked against the live
+     * table before tightening this: 0 of 146 rows have a null end_date, and 0 rows are
+     * disabled with a future or null end_date, so neither clause changes the current
+     * picker - both guard against future data rather than filtering today's.)
+     *
+     * Kept in one place so the picker, the request validation and the send-side resolver
+     * cannot drift apart. The course half is scopeOnRunningCourse() below, which the
+     * Dynamic Forms admin list uses too; the is_active filter is this scope's own, since
+     * that list deliberately shows disabled forms so they can be edited.
+     */
+    public function scopeSelectableForBulkSend($query)
+    {
+        return $query->where('is_active', true)->onRunningCourse();
+    }
+
+    /**
+     * Forms whose linked course is still running - or that are linked to no course.
+     *
+     * The single definition of "still running" for fc_forms, shared by the bulk-send
+     * scope above and FormManagementController::formsIndexQuery(). It defers to
+     * CourseMaster::scopeActiveRunning() (active_inactive = 1 AND end_date >= today)
+     * rather than restating it, so the rule cannot be changed in one place only.
+     *
+     * A form with no linked course is always included: it has no lifecycle to be past.
+     */
+    public function scopeOnRunningCourse($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('course_master_pk')
+                ->orWhereHas('courseMaster', fn ($c) => $c->activeRunning());
+        });
+    }
+
     public function steps(): HasMany
     {
         return $this->hasMany(FcFormStep::class, 'form_id')->orderBy('step_number');

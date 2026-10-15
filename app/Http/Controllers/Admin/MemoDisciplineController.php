@@ -9,6 +9,7 @@ use App\Models\CourseMaster;
 use App\Models\MemoDiscipline;
 use App\Models\DisciplineMaster;
 use App\Models\StudentMaster;
+use App\Services\Discipline\OtMarksDeductedService;
 use App\Services\NotificationService;
 use App\Services\NotificationReceiverService;
 use App\Exports\DisciplineMemoExport;
@@ -20,6 +21,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use App\Support\PdfPageNumbers;
 
 class MemoDisciplineController extends Controller
 {
@@ -175,6 +177,34 @@ class MemoDisciplineController extends Controller
         'sessions',
         'venues'
     ));
+}
+
+/**
+ * Officer Trainee view: every mark deducted from the signed-in OT, from BOTH
+ * registers — Discipline Memos and Memo/Notices — on one page.
+ *
+ * This is what the dashboard's "Total Marks Deducted in Discipline" card opens,
+ * and it reads the same {@see OtMarksDeductedService} the card counts through,
+ * so the tile and the rows cannot disagree.
+ */
+public function otMarksDeducted(OtMarksDeductedService $marks)
+{
+    // user_id is a student_master.pk only for an Officer Trainee login
+    // (user_category 'S'); for staff and faculty it is an employee / faculty pk
+    // that can equal some student's pk. Refuse rather than read that student's
+    // memos.
+    abort_unless(auth_student_master_pk() !== null, 403); // the one trainee identity rule (PR #334 F-074)
+
+    $studentPk = (int) Auth::user()->user_id;
+
+    $rows = $marks->rowsFor($studentPk);
+
+    return view('admin.memo_discipline.ot_marks_deducted', [
+        'rows' => $rows,
+        'disciplineTotal' => (float) $rows->where('type', 'Discipline Memo')->sum('marks'),
+        'memoNoticeTotal' => (float) $rows->whereIn('type', ['Memo', 'Notice'])->sum('marks'),
+        'total' => (float) $rows->sum('marks'),
+    ]);
 }
 
 /**
@@ -462,12 +492,17 @@ public function exportPdf(Request $request)
         ->setOptions([
             'defaultFont' => 'DejaVu Sans',
             'isHtml5ParserEnabled' => true,
-            'isRemoteEnabled' => true,
-            'isPhpEnabled' => true,
+            'isRemoteEnabled' => false,
+            // Never true: isPhpEnabled makes the renderer a PHP execution
+            // context for the whole view, so any raw block that later
+            // appears in an export blade would execute. Page numbers are
+            // stamped on the canvas after render instead - see
+            // PdfPageNumbers.
+            'isPhpEnabled' => false,
             'dpi' => 96,
         ]);
 
-    return $pdf->download('send-discipline-memo-' . now()->format('Y-m-d_His') . '.pdf');
+    return PdfPageNumbers::stamp($pdf, 18, 20, [0.4, 0.4, 0.4])->download('send-discipline-memo-' . now()->format('Y-m-d_His') . '.pdf');
 }
 
 /**
@@ -558,7 +593,7 @@ public function exportPdfZip(Request $request)
             ->setOptions([
                 'defaultFont' => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => true,
+                'isRemoteEnabled' => false,
                 'dpi' => 96,
             ])
             ->output();

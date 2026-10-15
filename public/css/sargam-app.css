@@ -47,6 +47,9 @@
     /* --- Brand (mirror theme; do NOT redefine --bs-*) ------------- */
     --ds-primary: var(--bs-primary, #004a93);
     --ds-secondary: #b12923;
+    /* Comma-separated channels, for rgba() tints of the brand red.
+       --bs-primary-rgb already ships the same thing for the blue. */
+    --ds-secondary-rgb: 177, 41, 35;
     --ds-ink: #1f2937;          /* primary text */
     --ds-ink-muted: #667085;    /* secondary text */
     --ds-line: #e5e7eb;         /* hairline borders */

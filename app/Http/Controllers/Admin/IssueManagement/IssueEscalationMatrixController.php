@@ -17,6 +17,7 @@ use App\Support\ExportCsvHeader;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\{DB, Auth};
+use App\Support\PdfPageNumbers;
 
 class IssueEscalationMatrixController extends Controller
 {
@@ -451,7 +452,7 @@ class IssueEscalationMatrixController extends Controller
         }
 
         if ($format === 'pdf') {
-            return Pdf::loadView('admin.issue_management.escalation_matrix.export_pdf', [
+            $pdf = Pdf::loadView('admin.issue_management.escalation_matrix.export_pdf', [
                 'columns' => $columns,
                 'rows' => $lines,
                 'search' => $search,
@@ -461,9 +462,15 @@ class IssueEscalationMatrixController extends Controller
                 ->setOptions([
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    'isPhpEnabled' => true,
-                ])
-                ->download('EscalationMatrix_' . $stamp . '.pdf');
+                    // Never true: isPhpEnabled makes the renderer a PHP
+                    // execution context for the whole view, so any raw
+                    // block that later appears in an export blade would
+                    // execute. Page numbers are stamped on the canvas
+                    // after render instead - see PdfPageNumbers.
+                    'isPhpEnabled' => false,
+                ]);
+
+            return PdfPageNumbers::stamp($pdf)->download('EscalationMatrix_' . $stamp . '.pdf');
         }
 
         $filename = 'EscalationMatrix_' . $stamp . '.csv';

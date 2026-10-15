@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Admin\Member;
 
+use App\Models\UserRoleMaster;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreMemberStep3Request extends FormRequest
 {
@@ -24,8 +26,13 @@ class StoreMemberStep3Request extends FormRequest
     public function rules()
     {
         return [
-            'userrole' => ['required', 'array'], // you may replace with: exists:roles,id if it's from DB
-            // 'styled_max_checkbox' => ['required', 'array', 'min:1', 'max:2'], // max 2 checkboxes allowed
+            'userrole' => ['required', 'array'],
+            // A pk that does not exist at all is rejected here. A pk that exists but was
+            // deactivated while the form was open is NOT rejected — that failed the whole
+            // save over one stale checkbox (PR #319 re-review F-045). It is still never
+            // assigned: MemberController::withoutInactiveRoles() drops it and the response
+            // says so, which keeps F-025's guarantee that only active roles are granted.
+            'userrole.*' => ['integer', Rule::exists((new UserRoleMaster())->getTable(), 'pk')],
         ];
     }
 
@@ -33,8 +40,8 @@ class StoreMemberStep3Request extends FormRequest
     {
         return [
             'userrole.required' => 'Please select a user role.',
-            // 'styled_max_checkbox.required' => 'Please select at least one role option.',
-            // 'styled_max_checkbox.max' => 'You can select up to 2 role options only.',
+            'userrole.*.integer' => 'Invalid role selected.',
+            'userrole.*.exists' => 'Invalid role selected.',
         ];
     }
 }

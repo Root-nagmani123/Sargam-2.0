@@ -23,15 +23,15 @@ class LogSafeTest extends TestCase
     public static function controlCharacterProvider(): array
     {
         return [
-            'line feed'        => ["\n"],
-            'carriage return'  => ["\r"],
-            'CRLF'             => ["\r\n"],
-            'tab'              => ["\t"],
-            'null byte'        => ["\0"],
-            'vertical tab'     => ["\v"],
-            'form feed'        => ["\f"],
-            'escape'           => ["\x1B"],
-            'delete'           => ["\x7F"],
+            'line feed' => ["\n"],
+            'carriage return' => ["\r"],
+            'CRLF' => ["\r\n"],
+            'tab' => ["\t"],
+            'null byte' => ["\0"],
+            'vertical tab' => ["\v"],
+            'form feed' => ["\f"],
+            'escape' => ["\x1B"],
+            'delete' => ["\x7F"],
         ];
     }
 
@@ -40,7 +40,7 @@ class LogSafeTest extends TestCase
      */
     public function test_it_removes_every_control_character(string $control): void
     {
-        $forged = 'searched' . $control . '[2026-09-15 10:00:00] production.INFO: Master grid export';
+        $forged = 'searched'.$control.'[2026-09-15 10:00:00] production.INFO: Master grid export';
 
         $clean = LogSafe::text($forged);
 
@@ -56,7 +56,7 @@ class LogSafeTest extends TestCase
     {
         // The exact payload from the review: ?q=x%0A<a plausible record>
         $payload = "x\n[2026-09-15 10:00:00] production.INFO: Master grid export "
-            . '{"actor":42,"slug":"Faculty","format":"excel","rows":668}';
+            .'{"actor":42,"slug":"Faculty","format":"excel","rows":668}';
 
         $clean = LogSafe::text($payload);
 
@@ -106,9 +106,9 @@ class LogSafeTest extends TestCase
     public static function formatCharacterProvider(): array
     {
         return [
-            'ZWJ conjunct'   => ["\u{0915}\u{094D}\u{200D}\u{0937}"],
-            'ZWNJ'           => ["\u{0915}\u{094D}\u{200C}\u{0937}"],
-            'plain Hindi'    => ["\u{0939}\u{093F}\u{0928}\u{094D}\u{0926}\u{0940}"],
+            'ZWJ conjunct' => ["\u{0915}\u{094D}\u{200D}\u{0937}"],
+            'ZWNJ' => ["\u{0915}\u{094D}\u{200C}\u{0937}"],
+            'plain Hindi' => ["\u{0939}\u{093F}\u{0928}\u{094D}\u{0926}\u{0940}"],
         ];
     }
 
@@ -121,7 +121,7 @@ class LogSafeTest extends TestCase
     public function test_context_sanitises_every_value_including_nested_arrays(): void
     {
         $context = LogSafe::context([
-            'actor'  => 7,
+            'actor' => 7,
             'filter' => "Name: a\nforged",
             'nested' => ['table' => "venue\r\nmaster"],
         ]);
