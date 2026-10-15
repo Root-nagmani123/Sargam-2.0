@@ -100,6 +100,12 @@ class IssueNodalOfficerTamperingTest extends TestCase
         parent::tearDown();
     }
 
+    /**
+     * A non-admin login that can sign in. An actor who cannot sign in is
+     * dropped by eligibleNodalOfficers()'s sign-in filter before the
+     * complainant / logger exclusion is consulted, so the self-nomination
+     * tests would pass without that exclusion.
+     */
     private function employeeActor(): User
     {
         $user = User::query()
@@ -109,11 +115,16 @@ class IssueNodalOfficerTamperingTest extends TestCase
                 ->from('model_has_roles')
                 ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
                 ->whereIn('roles.name', ['Super Admin', 'SuperAdmin', 'Admin']))
-            ->first();
+            ->orderBy('pk')
+            ->limit(50)
+            ->get()
+            ->first(fn (User $u) => User::employeeCanSignIn($u->user_id));
 
         if (! $user) {
-            $this->markTestSkipped('No non-admin user_credentials row mapped to employee_master.');
+            $this->markTestSkipped('No non-admin login mapped to employee_master that can sign in.');
         }
+
+        $this->assertTrue(User::employeeCanSignIn($user->user_id), 'fixture: the actor cannot sign in');
 
         return $user;
     }
