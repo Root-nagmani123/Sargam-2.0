@@ -4,7 +4,7 @@
 @endphp
 @extends('admin.layouts.master')
 
-@section('title', $pageTitle . ' - Sargam | Lal Bahadur')
+@section('title', $pageTitle)
 
 @section('setup_content')
     <div class="container-fluid px-2 px-sm-3 px-md-4 pb-4 pb-lg-5 pending-feedback-page">

@@ -79,21 +79,14 @@ class AttendanceController extends Controller
             // Get courses based on attendance records for the logged-in user
             $userId = auth()->user()->user_id;
             
-            // Filter courses for Internal Faculty based on CC/ACC assignment
-            if (hasRole('Internal Faculty')) {
+            // Faculty logins see only courses they are CC or ACC of (PR #335 F-008 rule 1)
+            if (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Faculty')) {
                 // Get faculty PK from user_id
-                $facultyPk = FacultyMaster::where('employee_master_pk', $userId)->value('pk');
-                
+                $facultyPk = FacultyMaster::where(login_faculty_key_column(), $userId)->value('pk');
+
                 if ($facultyPk) {
-                    // Get course IDs where faculty is CC or ACC
-                    $coordinatorCourseIds = CourseCordinatorMaster::where(function($query) use ($facultyPk) {
-                        $query->where('Coordinator_name', $facultyPk)
-                              ->orWhere('Assistant_Coordinator_name', $facultyPk);
-                    })
-                    ->pluck('courses_master_pk')
-                    ->unique()
-                    ->toArray();
-                    
+                    $coordinatorCourseIds = CourseCordinatorMaster::courseIdsForFaculty((int) $facultyPk);
+
                     if (!empty($coordinatorCourseIds)) {
                         $courseMasters = CourseMaster::whereIn('course_master.pk', $coordinatorCourseIds)
                             ->where('course_master.active_inactive', 1)
@@ -484,30 +477,25 @@ class AttendanceController extends Controller
     }
 
     /**
-     * Internal Faculty only ever see courses they coordinate (CC or ACC). Applied
-     * to the grid, the export and the filter-option lists from one place, so the
-     * panel can never offer a group or faculty from a course they can't open.
+     * Faculty, Internal Faculty and Guest Faculty logins only ever see courses
+     * they coordinate (CC or ACC) - PR #335 F-008 rule 1. Applied to the grid, the
+     * export and the filter-option lists from one place, so the panel can never
+     * offer a group or faculty from a course they can't open.
      */
     private function applyInternalFacultyCourseScope($query): void
     {
-        if (!hasRole('Internal Faculty')) {
+        if (!hasRole('Internal Faculty') && !hasRole('Guest Faculty') && !hasRole('Faculty')) {
             return;
         }
 
-        $facultyPk = FacultyMaster::where('employee_master_pk', auth()->user()->user_id)->value('pk');
+        $facultyPk = FacultyMaster::where(login_faculty_key_column(), auth()->user()->user_id)->value('pk');
 
         if (!$facultyPk) {
             $query->whereRaw('1 = 0');
             return;
         }
 
-        $coordinatorCourseIds = CourseCordinatorMaster::where(function ($q) use ($facultyPk) {
-            $q->where('Coordinator_name', $facultyPk)
-              ->orWhere('Assistant_Coordinator_name', $facultyPk);
-        })
-        ->pluck('courses_master_pk')
-        ->unique()
-        ->toArray();
+        $coordinatorCourseIds = CourseCordinatorMaster::courseIdsForFaculty((int) $facultyPk);
 
         if (empty($coordinatorCourseIds)) {
             $query->whereRaw('1 = 0');

@@ -3210,10 +3210,10 @@ class FeedbackController extends Controller
 
             if (
                 ! $this->isFacultySessionFeedbackReport()
-                && (hasRole('Internal Faculty') || hasRole('Guest Faculty'))
+                && (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Faculty'))
             ) {
                 $facultyPk = (Auth::user()->user_id);
-                $query->where('fm.employee_master_pk', $facultyPk);
+                $query->where('fm.'.login_faculty_key_column(), $facultyPk);
             }
 
             // Order by. tf.pk is a deterministic tie-break: date + faculty name + student
@@ -3444,10 +3444,10 @@ class FeedbackController extends Controller
             // Apply faculty role restriction (same as feedbackDetails display)
             if (
                 ! $this->isFacultySessionFeedbackReport()
-                && (hasRole('Internal Faculty') || hasRole('Guest Faculty'))
+                && (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Faculty'))
             ) {
                 $facultyPk = (Auth::user()->user_id);
-                $query->where('fm.employee_master_pk', $facultyPk);
+                $query->where('fm.'.login_faculty_key_column(), $facultyPk);
             }
 
             // Order by

@@ -4,6 +4,13 @@
     $printedOn = $printedOn ?? now()->format('d-m-Y H:i');
     $reportTitle = $reportTitle ?? 'PT Exemption Master Report';
     $logo = $logo ?? null;
+    // Columns the grid was showing (keys of PtExemptionMasterExport::COLUMNS).
+    $allColumns = \App\Exports\PtExemptionMasterExport::COLUMNS;
+    $columns = !empty($columns) ? $columns : array_keys($allColumns);
+    $colClass = [
+        'sno' => 'col-sno', 'course' => 'col-course', 'effective_from' => 'col-date',
+        'pt_timing' => 'col-timing', 'gender' => 'col-gender', 'days' => 'col-count', 'status' => 'col-status',
+    ];
 @endphp
 <!doctype html>
 <html lang="en">
@@ -112,33 +119,26 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th class="col-sno">S. No.</th>
-                <th class="col-course">Course</th>
-                <th class="col-date">Effective From</th>
-                <th class="col-timing">PT Timing</th>
-                <th class="col-gender">Gender</th>
-                <th class="col-count">PT Exemption Count (Days)</th>
-                <th class="col-status">Status</th>
+                @foreach($columns as $key)
+                    <th class="{{ $colClass[$key] }}">{{ $allColumns[$key][0] }}</th>
+                @endforeach
             </tr>
         </thead>
         <tbody>
             @forelse($rows as $index => $row)
-                @php
-                    $cutoffTime = $row->course->pt_start_time ?? $row->apply_cutoff_time;
-                    $isActive = (int) $row->active_inactive === 1;
-                @endphp
                 <tr>
-                    <td class="col-sno">{{ $index + 1 }}</td>
-                    <td class="col-course">{{ $row->course->course_name ?? 'N/A' }}</td>
-                    <td class="col-date">{{ $row->effective_from ? $row->effective_from->format('d-m-Y') : 'N/A' }}</td>
-                    <td class="col-timing">{{ blank($cutoffTime) ? 'N/A' : \Carbon\Carbon::parse($cutoffTime)->format('h:i A') }}</td>
-                    <td class="col-gender">{{ $row->gender }}</td>
-                    <td class="col-count">{{ number_format((float) $row->exemption_days, 1) }} Days</td>
-                    <td class="col-status"><span class="badge badge-{{ $isActive ? 'active' : 'inactive' }}">{{ $isActive ? 'Active' : 'Inactive' }}</span></td>
+                    @foreach($columns as $key)
+                        @if($key === 'status')
+                            @php $isActive = (int) $row->active_inactive === 1; @endphp
+                            <td class="col-status"><span class="badge badge-{{ $isActive ? 'active' : 'inactive' }}">{{ $isActive ? 'Active' : 'Inactive' }}</span></td>
+                        @else
+                            <td class="{{ $colClass[$key] }}">{{ \App\Exports\PtExemptionMasterExport::cellValue($key, $row, $index + 1) }}</td>
+                        @endif
+                    @endforeach
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" style="text-align:center;">No PT exemption configuration found.</td>
+                    <td colspan="{{ count($columns) }}" style="text-align:center;">No PT exemption configuration found.</td>
                 </tr>
             @endforelse
         </tbody>

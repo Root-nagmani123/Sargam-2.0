@@ -1169,6 +1169,103 @@ function is_faculty_portal_user(): bool
 }
 
 /**
+ * Lower-case name words of 3+ letters, without honorifics, for comparing a
+ * person's name with a faculty_master.full_name.
+ *
+ * @return string[]
+ */
+function faculty_name_tokens(string $name): array
+{
+    $stop = ['shri', 'smt', 'sri', 'mrs', 'miss', 'prof', 'kumari'];
+    $words = preg_split('/[^a-z]+/', strtolower($name), -1, PREG_SPLIT_NO_EMPTY);
+
+    return array_values(array_diff(array_filter($words, fn ($w) => strlen($w) >= 3), $stop));
+}
+
+/**
+ * The faculty_master row a person's mobile or email identifies, or null.
+ *
+ * Contact data holds placeholders ("0", "2303", "1234512345", "LBSNAA@nic.in")
+ * shared by unrelated rows, so a contact only identifies a faculty when all
+ * three hold: it is a real value (10+ digits, not one repeated digit / a valid
+ * email address), exactly one faculty_master row carries it, and that row's
+ * full_name shares a name with $names. Otherwise null, never a guess.
+ *
+ * @param  string[]  $names  the person's first / last name
+ */
+function faculty_pk_by_contact(?string $mobile, ?string $email, array $names): ?int
+{
+    $wanted = faculty_name_tokens(implode(' ', $names));
+    if ($wanted === []) {
+        return null;
+    }
+
+    foreach (faculty_rows_by_contact($mobile, $email) as $row) {
+        if (array_intersect(faculty_name_tokens((string) $row->full_name), $wanted) !== []) {
+            return (int) $row->pk;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * The faculty_master rows a real contact identifies on its own (no name check):
+ * for the mobile, then the email, the one row carrying it when exactly one does.
+ * Real means 10+ digits and not one repeated digit, or a valid email address.
+ *
+ * @return \App\Models\FacultyMaster[]
+ */
+function faculty_rows_by_contact(?string $mobile, ?string $email): array
+{
+    $candidates = [];
+
+    $mobile = trim((string) $mobile);
+    $digits = preg_replace('/\D+/', '', $mobile);
+    if (strlen($digits) >= 10 && ! preg_match('/^(\d)\1+$/', $digits)) {
+        $candidates[] = \App\Models\FacultyMaster::where('mobile_no', $mobile)->limit(2)->get(['pk', 'full_name', 'employee_master_pk']);
+    }
+
+    $email = trim((string) $email);
+    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $candidates[] = \App\Models\FacultyMaster::where(function ($q) use ($email) {
+            $q->where('email_id', $email)->orWhere('alternate_email_id', $email);
+        })->limit(2)->get(['pk', 'full_name', 'employee_master_pk']);
+    }
+
+    $rows = [];
+    foreach ($candidates as $found) {
+        if ($found->count() === 1) {
+            $rows[] = $found[0];
+        }
+    }
+
+    return $rows;
+}
+
+/**
+ * The faculty_master column that holds the logged-in user's user_id. A faculty
+ * login (user_category F) stores faculty_master.pk itself; every other login
+ * stores an employee pk, linked through faculty_master.employee_master_pk.
+ * Neither falls back to the other.
+ */
+function login_faculty_key_column(): string
+{
+    return (Auth::user()->user_category ?? null) === 'F' ? 'pk' : 'employee_master_pk';
+}
+
+/**
+ * old($key, $default) as a string for a form to re-select. A field posted as
+ * name[]=x comes back as an array, and (string) on it is a 500: use the default.
+ */
+function old_string(string $key, $default = ''): string
+{
+    $value = old($key, $default);
+
+    return is_scalar($value) ? (string) $value : (string) $default;
+}
+
+/**
  * Resolve faculty_master.pk for the authenticated user.
  *
  * Mapping used across the app:
@@ -1216,21 +1313,16 @@ function get_auth_faculty_master_pk(): ?int
         }
     }
 
-    // 4) Match faculty by login mobile / email (guest faculty without employee link)
-    if (! empty($user->mobile_no)) {
-        $pk = \App\Models\FacultyMaster::where('mobile_no', $user->mobile_no)->value('pk');
-        if ($pk) {
-            return (int) $pk;
-        }
+    // 4) Match faculty by login mobile / email (guest faculty without employee link),
+    //    only when the contact is real, unique and the names agree (faculty_pk_by_contact).
+    $names = [(string) ($user->first_name ?? ''), (string) ($user->last_name ?? '')];
+    if (trim(implode('', $names)) === '') {
+        $employee = \Illuminate\Support\Facades\DB::table('employee_master')->where('pk', $userId)->first(['first_name', 'last_name']);
+        $names = [(string) ($employee->first_name ?? ''), (string) ($employee->last_name ?? '')];
     }
-
-    if (! empty($user->user_name)) {
-        $pk = \App\Models\FacultyMaster::where('email_id', $user->user_name)
-            ->orWhere('alternate_email_id', $user->user_name)
-            ->value('pk');
-        if ($pk) {
-            return (int) $pk;
-        }
+    $pk = faculty_pk_by_contact($user->mobile_no, $user->user_name, $names);
+    if ($pk) {
+        return $pk;
     }
 
     // 5) Legacy alignment with CalendarController::feedbackList & coordinator rows using user_id as faculty pk
@@ -1494,32 +1586,28 @@ function provision_faculty_profile_from_employee_user(): ?int
     $mobile = trim((string) ($user->mobile_no ?: $employee->mobile ?? ''));
     $email = trim((string) ($employee->email ?? ''));
 
-    // Link existing faculty that was never tied to this employee
-    $existingQuery = \App\Models\FacultyMaster::query()->whereNull('employee_master_pk');
-
-    if ($mobile !== '') {
-        $linked = (clone $existingQuery)->where('mobile_no', $mobile)->first();
-        if ($linked) {
-            $linked->update(['employee_master_pk' => $employeePk]);
-
-            return (int) $linked->pk;
-        }
-    }
-
-    if ($email !== '') {
-        $linked = (clone $existingQuery)->where('email_id', $email)
-            ->orWhere('alternate_email_id', $email)
-            ->first();
-        if ($linked && empty($linked->employee_master_pk)) {
-            $linked->update(['employee_master_pk' => $employeePk]);
-
-            return (int) $linked->pk;
-        }
+    // Link an existing faculty that was never tied to an employee — only one the
+    // contact identifies beyond doubt (faculty_pk_by_contact). Placeholder
+    // contacts ("0", "2303") used to tie this employee to an unrelated faculty.
+    $contactPk = faculty_pk_by_contact($mobile, $email, [(string) ($employee->first_name ?? ''), (string) ($employee->last_name ?? '')]);
+    if ($contactPk
+        && \App\Models\FacultyMaster::where('pk', $contactPk)->whereNull('employee_master_pk')
+            ->update(['employee_master_pk' => $employeePk]) === 1) {
+        return $contactPk;
     }
 
     // Already linked elsewhere
     if (\App\Models\FacultyMaster::where('employee_master_pk', $employeePk)->exists()) {
         return (int) \App\Models\FacultyMaster::where('employee_master_pk', $employeePk)->value('pk');
+    }
+
+    // The contact names an unlinked faculty whose name did not match (e.g. "Prem V R"
+    // / "Premkumar VR"): likely the same person, so creating a row would duplicate
+    // them. Leave the link to an administrator (PR #335 review F-013).
+    foreach (faculty_rows_by_contact($mobile, $email) as $row) {
+        if (empty($row->employee_master_pk)) {
+            return null;
+        }
     }
 
     $facultyType = hasRole('Guest Faculty') ? 2 : 1;
