@@ -40,4 +40,70 @@ class UserRoleMaster extends Model
             ->filter(fn ($row) => isset($roleKeys[RoleNames::normalize((string) $row->user_role_display_name)]))
             ->pluck('user_role_display_name', 'pk');
     }
+
+    /**
+     * Make sure the Role Assignment step has an option for this role, using the same
+     * name rule as getUserRoleList() and the sync migration. Returns the existing
+     * option when one already matches, so it never creates a duplicate.
+     */
+    public static function ensureOptionForRole(string $roleName): self
+    {
+        $key = RoleNames::normalize($roleName);
+
+        $existing = self::where(function ($query) {
+                $query->where('active_inactive', 1)
+                    ->orWhereNull('active_inactive');
+            })
+            ->get()
+            ->first(fn ($row) => RoleNames::normalize((string) $row->user_role_display_name) === $key);
+
+        if ($existing) {
+            return $existing;
+        }
+
+        $option = new self();
+        $option->forceFill([
+            'user_role_name' => $roleName,
+            'user_role_display_name' => $roleName,
+            'active_inactive' => 1,
+            'created_date' => now(),
+            'updated_date' => now(),
+        ])->save();
+
+        return $option;
+    }
+
+    /**
+     * Keep the Role Assignment option in step when a role is renamed, so employees
+     * already mapped to it keep it under the new name.
+     */
+    public static function renameOptionForRole(string $oldName, string $newName): void
+    {
+        $oldKey = RoleNames::normalize($oldName);
+        $newKey = RoleNames::normalize($newName);
+
+        $rows = self::where(function ($query) {
+                $query->where('active_inactive', 1)
+                    ->orWhereNull('active_inactive');
+            })
+            ->get();
+
+        $old = $rows->first(fn ($row) => RoleNames::normalize((string) $row->user_role_display_name) === $oldKey);
+        $newExists = $oldKey !== $newKey
+            && $rows->contains(fn ($row) => RoleNames::normalize((string) $row->user_role_display_name) === $newKey);
+
+        if ($old && ! $newExists) {
+            $old->forceFill([
+                'user_role_display_name' => $newName,
+                'user_role_name' => RoleNames::normalize((string) $old->user_role_name) === $oldKey
+                    ? $newName
+                    : $old->user_role_name,
+                'updated_date' => now(),
+            ])->save();
+
+            return;
+        }
+
+        self::ensureOptionForRole($newName);
+    }
 }

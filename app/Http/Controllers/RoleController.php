@@ -10,6 +10,7 @@ use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Models\SidebarMenu\SidebarCategory;
 use App\Models\DashboardCard;
+use App\Models\UserRoleMaster;
 use App\Exports\BrandedGridExport;
 use App\Support\ExportCsvHeader;
 use App\Support\PdfPageNumbers;
@@ -217,12 +218,17 @@ class RoleController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:roles,name',
+            // 100, not 255: the Role Assignment option is stored in
+            // user_role_master, whose name columns are varchar(100).
+            'name' => 'required|string|max:100|unique:roles,name',
         ]);
 
-        Role::create([
-            'name' => $validated['name']
-        ]);
+        // The Role Assignment step reads user_role_master, so a role created here
+        // gets its option in the same transaction.
+        DB::transaction(function () use ($validated) {
+            Role::create(['name' => $validated['name']]);
+            UserRoleMaster::ensureOptionForRole($validated['name']);
+        });
 
         return redirect()->back()->with('success', 'Role created successfully.');
     }
@@ -368,12 +374,19 @@ class RoleController extends Controller
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:roles,name,'.$id,
+            'name' => 'required|string|max:100|unique:roles,name,'.$id,
         ]);
 
-        Role::where('id', $id)->update([
-            'name' => $validated['name']
-        ]);
+        $oldName = Role::whereKey($id)->value('name');
+
+        DB::transaction(function () use ($id, $validated, $oldName) {
+            Role::where('id', $id)->update(['name' => $validated['name']]);
+
+            if ($oldName !== null) {
+                UserRoleMaster::renameOptionForRole($oldName, $validated['name']);
+            }
+        });
+
         return redirect()->back()->with('success', 'Role updated successfully.');
     }
 
