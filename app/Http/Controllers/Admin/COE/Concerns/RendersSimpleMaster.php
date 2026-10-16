@@ -36,11 +36,19 @@ trait RendersSimpleMaster
         // The dialog may ask for fields in a different order than the grid shows them
         // (a parent select first). Every key must appear exactly once.
         $config['formOrder'] = $config['formOrder'] ?? $keys;
-        $rows = Collection::make($rows)->values()->map(fn (array $r, int $i) => [
-            'pk' => $i + 1,
-            'values' => array_combine($keys, array_slice($r, 0, count($keys))),
-            'active' => (bool) end($r),
-        ]);
+        $rows = Collection::make($rows)->values();
+
+        // A DB-backed master (see 'endpoints' below) passes rows already shaped as
+        // {pk, values, active} with a real (encrypted) pk; a design-first master
+        // passes a flat value list per row and gets the old 1..n fake pk.
+        $isPrebuilt = $rows->isNotEmpty() && is_array($rows->first()) && array_key_exists('values', $rows->first());
+        if (! $isPrebuilt) {
+            $rows = $rows->map(fn (array $r, int $i) => [
+                'pk' => $i + 1,
+                'values' => array_combine($keys, array_slice($r, 0, count($keys))),
+                'active' => (bool) end($r),
+            ]);
+        }
 
         // Filter options come from the rows themselves, so a filter can't offer
         // a value the grid doesn't have (numbers sort numerically).

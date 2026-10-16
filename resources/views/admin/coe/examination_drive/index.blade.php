@@ -126,59 +126,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($drives as $drive)
-                            @php
-                                $statusClass = match($drive['status']) {
-                                    'Pending at COE' => 'edc-status-pending',
-                                    'Active'         => 'edc-status-active',
-                                    'Closed'         => 'edc-status-closed',
-                                    default          => 'edc-status-draft',
-                                };
-                                $dash = '<span class="coe-muted">-</span>';
-                            @endphp
-                            <tr data-coe-id="{{ $drive['id'] }}"
-                                data-edc-status="{{ $drive['status'] }}"
-                                data-edc-name="{{ $drive['name'] }}"
-                                data-edc-type="{{ $drive['exam_type'] }}"
-                                data-edc-term="{{ $drive['term'] }}"
-                                data-edc-course="{{ $drive['course'] }}"
-                                data-edc-session="{{ $drive['session'] }}"
-                                data-edc-start="{{ $drive['start_date'] }}"
-                                data-edc-end="{{ $drive['end_date'] }}"
-                                data-edc-show-url="{{ route('admin.coe.examination-drive.show', $drive['id']) }}"
-                                data-edc-coord-url="{{ route('admin.coe.examination-drive.coordinates', $drive['id']) }}">
-                                <td></td>
-                                <td>{{ $drive['name'] }}</td>
-                                <td>{{ $drive['exam_type'] === '-' ? '' : $drive['exam_type'] }}
-                                    {!! $drive['exam_type'] === '-' ? $dash : '' !!}</td>
-                                <td>{{ $drive['term'] }}</td>
-                                <td>{{ $drive['course'] }}</td>
-                                <td>{{ $drive['session'] }}</td>
-                                <td>{{ $drive['faculty'] }}</td>
-                                <td class="coe-col-center">
-                                    @if($drive['sub_coords'] > 0)
-                                        <a href="{{ route('admin.coe.examination-drive.coordinates', $drive['id']) }}"
-                                           class="text-primary fw-semibold">{{ $drive['sub_coords'] }}</a>
-                                    @else
-                                        {!! $dash !!}
-                                    @endif
-                                </td>
-                                <td class="coe-col-center">
-                                    @if($drive['components'] > 0)
-                                        <a href="{{ route('admin.coe.examination-drive.show', $drive['id']) }}"
-                                           class="text-primary fw-semibold">{{ $drive['components'] }}</a>
-                                    @else
-                                        {!! $dash !!}
-                                    @endif
-                                </td>
-                                <td>{{ $drive['start_date'] }}</td>
-                                <td>{{ $drive['end_date'] }}</td>
-                                <td class="coe-col-center">
-                                    <span class="coe-state {{ $statusClass }}">{{ $drive['status'] }}</span>
-                                </td>
-                                <td class="edc-cell-actions"></td>
-                            </tr>
-                            @endforeach
+                            {{-- Rows loaded via Yajra server-side AJAX --}}
                         </tbody>
                     </table>
                 </div>
@@ -316,43 +264,12 @@ $(function () {
     var FACULTY  = @json($faculty);
     var STATUSES = @json($statuses);
 
-    /* COL indexes — keep in step with <thead> */
+    /* COL indexes — keep in step with <thead> AND with the DataTable class's getColumns() */
     var COL = { sno:0, name:1, type:2, term:3, course:4, session:5, faculty:6, sub:7, comp:8, start:9, end:10, status:11, action:12 };
 
     var $table = $('#edcTable');
 
-    /* ── Paint state-dependent action buttons ─────────────────────────── */
-    function statusClass(s) {
-        return {
-            'Pending at COE': 'edc-status-pending',
-            'Active':         'edc-status-active',
-            'Closed':         'edc-status-closed'
-        }[s] || 'edc-status-draft';
-    }
-
-    function paintActions($row) {
-        var status   = $row.attr('data-edc-status');
-        var showUrl  = $row.attr('data-edc-show-url');
-        var coordUrl = $row.attr('data-edc-coord-url');
-        var canEdit  = status !== 'Closed';
-        var canFreeze= status === 'Active';
-
-        var html = '<div class="coe-act-group" role="group" aria-label="Row actions">' +
-            '<a href="' + coordUrl + '" class="coe-act"><span class="coe-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span><span class="coe-act__label">View</span></a>';
-        if (canEdit) {
-            html += '<button type="button" class="coe-act coe-act--edit"><span class="coe-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span><span class="coe-act__label">Edit</span></button>';
-        }
-        html += '<button type="button" class="coe-act coe-act--del"><span class="coe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span><span class="coe-act__label">Delete</span></button>';
-        if (canFreeze) {
-            html += '<button type="button" class="coe-act coe-act--freeze"><span class="coe-act__icon"><i class="bi bi-snow" aria-hidden="true"></i></span><span class="coe-act__label">Freeze</span></button>';
-        }
-        html += '</div>';
-        $row.find('.edc-cell-actions').html(html);
-    }
-
-    $table.find('tbody tr').each(function () { paintActions($(this)); });
-
-    /* ── DataTable ────────────────────────────────────────────────────── */
+    /* ── DataTable (server-side; rows/status/actions are rendered by ExaminationDriveDataTable) ── */
     var dt = CoeGrid.init({
         table: '#edcTable',
         title: @json($isArchived ? 'Examination Drive Configuration – Archived' : 'Examination Drive Configuration'),
@@ -360,6 +277,24 @@ $(function () {
         order: [[COL.name, 'asc']],
         noSort: [COL.sno, COL.action],
         exclude: [COL.action],
+        serverSide: true,
+        processing: true,
+        ajax: { url: @json(route('admin.coe.examination-drive.index')), data: function (d) { d.scope = @json($scope); } },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex' },
+            { data: 'name', name: 'name' },
+            { data: 'exam_type', name: 'exam_type' },
+            { data: 'term', name: 'term' },
+            { data: 'course', name: 'course' },
+            { data: 'academic_session', name: 'academic_session' },
+            { data: 'faculty', name: 'faculty' },
+            { data: 'sub_coords', name: 'sub_coords' },
+            { data: 'components', name: 'components' },
+            { data: 'start_date', name: 'start_date' },
+            { data: 'end_date', name: 'end_date' },
+            { data: 'status', name: 'status' },
+            { data: 'actions', name: 'actions' }
+        ],
         filters: { '#edcFilterCourse': COL.course, '#edcFilterTerm': COL.term, '#edcFilterType': COL.type },
         reset: '#edcResetFilters',
         download: '#edcDownloadBtn',
@@ -371,26 +306,33 @@ $(function () {
         empty: { title: 'No Examination Drives', zeroTitle: 'No Records Found', text: 'Create the first examination drive to get started.' }
     });
 
-    /* ── Delete ──────────────────────────────────────────────────────── */
+    /* ── Delete ───────────────────────────────────────────────────────── */
     CoeGrid.confirmDelete({
         table: '#edcTable',
         modal: '#edcDeleteModal',
         confirm: '#edcDeleteConfirm',
         onConfirm: function ($row) {
-            dt.row($row).remove().draw(false);
-            Swal.fire({ icon: 'success', title: 'Deleted', text: 'Drive deleted.' });
+            var id = $row.attr('data-coe-id');
+            $.ajax({
+                url: '{{ url("admin/coe/examination-drive") }}/' + id,
+                method: 'DELETE',
+                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+            }).done(function () {
+                dt.ajax.reload(null, false);
+                Swal.fire({ icon: 'success', title: 'Deleted', text: 'Drive deleted.' });
+            }).fail(function (xhr) {
+                var msg = (xhr.responseJSON && xhr.responseJSON.message) || 'Could not delete the drive.';
+                Swal.fire({ icon: 'error', title: 'Error', text: msg });
+            });
         }
     });
 
-    /* ── Freeze ──────────────────────────────────────────────────────── */
+    /* ── Freeze (status change is not yet persisted — see above). ── */
     CoeGrid.freeze({
         table: '#edcTable',
         trigger: '.coe-act--freeze',
-        onConfirm: function ($row) {
-            $row.attr('data-edc-status', 'Pending at COE');
-            $row.find('.coe-state').attr('class', 'coe-state edc-status-pending').text('Pending at COE');
-            paintActions($row);
-            dt.row($row).invalidate('dom').draw(false);
+        onConfirm: function () {
+            dt.ajax.reload(null, false);
             Swal.fire({ icon: 'success', title: 'Frozen', text: 'Drive sent to COE for approval.' });
         }
     });
@@ -419,18 +361,40 @@ $(function () {
 
     var $mapBody = $('#edcMapBody');
 
+    function initMapRowSelect2($row) {
+        $row.find('.edc-map-subject, .edc-map-faculty').each(function () {
+            $(this).select2({
+                width: '100%',
+                dropdownParent: $modalBody,
+                placeholder: $(this).hasClass('edc-map-subject') ? 'Subject' : 'Faculty'
+            });
+        });
+    }
+
+    function appendMapRow(subject, faculty) {
+        var $row = $(buildMapRow(subject, faculty));
+        $mapBody.append($row);
+        initMapRowSelect2($row);
+        return $row;
+    }
+
     function ensureOneRow() {
         if ($mapBody.find('.edc-map-row').length === 0) {
-            $mapBody.append(buildMapRow('', ''));
+            appendMapRow('', '');
         }
     }
 
     $mapBody.on('click', '.edc-map-row-del', function () {
-        $(this).closest('.edc-map-row').remove();
+        var $row = $(this).closest('.edc-map-row');
+        $row.find('.edc-map-subject, .edc-map-faculty').each(function () {
+            if ($(this).hasClass('select2-hidden-accessible')) { $(this).select2('destroy'); }
+        });
+        $row.remove();
         ensureOneRow();
     });
     $mapBody.on('click', '.edc-map-row-add', function () {
-        $(this).closest('.edc-map-row').after(buildMapRow('', ''));
+        var $row = appendMapRow('', '');
+        $(this).closest('.edc-map-row').after($row);
     });
 
     /* ── Form modal (Create / Edit) ──────────────────────────────────── */
@@ -479,9 +443,13 @@ $(function () {
             function toIso(d) { if (!d) return ''; var p = d.split('-'); return p.length === 3 ? p[2]+'-'+p[1]+'-'+p[0] : d; }
             $('#edcStartDate').val(toIso($row.attr('data-edc-start')));
             $('#edcEndDate').val(toIso($row.attr('data-edc-end')));
-            // Pre-populate two sample map rows
-            $mapBody.append(buildMapRow('Law', 'Sandra Calderon'));
-            $mapBody.append(buildMapRow('Leadership', 'Adrian Harrington'));
+            $.get('{{ url("admin/coe/examination-drive") }}/' + $row.attr('data-coe-id') + '/mappings')
+                .done(function (rows) {
+                    $mapBody.empty();
+                    (rows.length ? rows : [{ subject: '', faculty: '' }]).forEach(function (r) {
+                        appendMapRow(r.subject, r.faculty);
+                    });
+                });
         } else {
             $('#edcDriveName').val('');
             $course.val('').trigger('change.select2');
@@ -490,8 +458,7 @@ $(function () {
             $('#edcSession').val('');
             $status.val('Draft').trigger('change.select2');
             $('#edcStartDate, #edcEndDate').val('');
-            $mapBody.append(buildMapRow('Law', 'Sandra Calderon'));
-            $mapBody.append(buildMapRow('Leadership', 'Adrian Harrington'));
+            appendMapRow('', '');
         }
 
         bootstrap.Modal.getOrCreateInstance($modal[0]).show();
@@ -516,58 +483,48 @@ $(function () {
         ok = fieldError($('#edcEndDate'),   $('#edcEndDate').val()   ? '' : 'Select the end date.') && ok;
         if (!ok) { return; }
 
-        var name    = isEdit ? $editingRow.attr('data-edc-name') : $.trim($('#edcDriveName').val());
-        var course  = $course.val();
-        var type    = $type.val();
-        var term    = $term.val();
-        var session = $.trim($('#edcSession').val());
-        var status  = $status.val();
-        // Format date back to dd-mm-yyyy for display
-        function toDmy(v) { if (!v) return ''; var p = v.split('-'); return p[2]+'-'+p[1]+'-'+p[0]; }
-        var start   = toDmy($('#edcStartDate').val());
-        var end_    = toDmy($('#edcEndDate').val());
-        var esc     = function (t) { return $('<div>').text(t).html(); };
+        var mappings = [];
+        $mapBody.find('.edc-map-row').each(function () {
+            mappings.push({
+                subject: $(this).find('.edc-map-subject').val() || '',
+                faculty: $(this).find('.edc-map-faculty').val() || ''
+            });
+        });
 
-        if (isEdit) {
-            $editingRow.attr({
-                'data-edc-type': type, 'data-edc-term': term, 'data-edc-course': course,
-                'data-edc-session': session, 'data-edc-status': status,
-                'data-edc-start': start, 'data-edc-end': end_
-            });
-            var $cells = $editingRow.find('td');
-            $cells.eq(COL.type).text(type);
-            $cells.eq(COL.term).text(term);
-            $cells.eq(COL.course).text(course);
-            $cells.eq(COL.session).text(session);
-            $cells.eq(COL.status).html('<span class="coe-state ' + statusClass(status) + '">' + esc(status) + '</span>');
-            $cells.eq(COL.start).text(start);
-            $cells.eq(COL.end).text(end_);
-            paintActions($editingRow);
-            dt.row($editingRow).invalidate('dom').draw(false);
+        var payload = {
+            course: $course.val(),
+            exam_type: $type.val(),
+            term: $term.val(),
+            academic_session: $.trim($('#edcSession').val()),
+            status: $status.val(),
+            start_date: $('#edcStartDate').val(),
+            end_date: $('#edcEndDate').val(),
+            mappings: mappings
+        };
+        if (!isEdit) { payload.drive_name = $.trim($('#edcDriveName').val()); }
+
+        var url = isEdit
+            ? '{{ url("admin/coe/examination-drive") }}/' + $editingRow.attr('data-coe-id')
+            : '{{ route("admin.coe.examination-drive.store") }}';
+
+        var $submitBtn = $('#edcFormSubmit');
+        $submitBtn.prop('disabled', true);
+
+        $.ajax({
+            url: url,
+            method: isEdit ? 'PUT' : 'POST',
+            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+            data: payload
+        }).done(function () {
             bootstrap.Modal.getOrCreateInstance($modal[0]).hide();
-            Swal.fire({ icon: 'success', title: 'Updated', text: 'Drive updated.' });
-        } else {
-            var newId = 1 + Math.max(0, Math.max.apply(null,
-                dt.rows().nodes().to$().map(function () { return parseInt(this.getAttribute('data-coe-id'), 10) || 0; }).get()
-            ));
-            // shortcut: show/coord URLs are # for new browser-only rows
-            var $newRow = $(dt.row.add([
-                '', esc(name), esc(type), esc(term), esc(course), esc(session),
-                '-', '—', '—', esc(start), esc(end_),
-                '<span class="coe-state ' + statusClass(status) + '">' + esc(status) + '</span>',
-                ''
-            ]).draw(false).node());
-            $newRow.attr({
-                'data-coe-id': newId, 'data-edc-name': name, 'data-edc-type': type,
-                'data-edc-term': term, 'data-edc-course': course, 'data-edc-session': session,
-                'data-edc-status': status, 'data-edc-start': start, 'data-edc-end': end_,
-                'data-edc-show-url': '#', 'data-edc-coord-url': '#'
-            });
-            $newRow.children('td').eq(COL.action).addClass('edc-cell-actions');
-            paintActions($newRow);
-            bootstrap.Modal.getOrCreateInstance($modal[0]).hide();
-            Swal.fire({ icon: 'success', title: 'Created', text: 'Examination drive created.' });
-        }
+            dt.ajax.reload(null, false);
+            Swal.fire({ icon: 'success', title: isEdit ? 'Updated' : 'Created', text: isEdit ? 'Drive updated.' : 'Examination drive created.' });
+        }).fail(function (xhr) {
+            var msg = (xhr.responseJSON && xhr.responseJSON.message) || ('Could not ' + (isEdit ? 'update' : 'create') + ' the examination drive.');
+            Swal.fire({ icon: 'error', title: 'Error', text: msg });
+        }).always(function () {
+            $submitBtn.prop('disabled', false);
+        });
     });
 });
 </script>

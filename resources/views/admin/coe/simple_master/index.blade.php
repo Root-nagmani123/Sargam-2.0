@@ -229,7 +229,7 @@
 {{-- Built first: the json directive splits its argument on commas, so an inline
      array literal breaks it. (Don't write the at-php directive name in a Blade
      comment either — php blocks are extracted before comments are stripped.) --}}
-@php $masterJs = \Illuminate\Support\Arr::except($master, ['rows']); @endphp
+@php $masterJs = \Illuminate\Support\Arr::except($master, ['rows']) + ['csrfToken' => csrf_token()]; @endphp
 <script>
 $(function () {
     CoeGrid.simpleMaster(@json($masterJs));

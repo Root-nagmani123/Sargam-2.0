@@ -56,7 +56,15 @@
         var exclude = o.exclude || [];
         var empty = o.empty || {};
 
-        var dt = $table.DataTable({
+        // Server-side mode (CoeGrid.simpleMasterServerSide): the caller supplies
+        // its own ajax/columns/serverSide/processing/createdRow instead of
+        // reading rows already in the DOM.
+        var serverOpts = {};
+        ['ajax', 'columns', 'serverSide', 'processing', 'createdRow'].forEach(function (k) {
+            if (o[k] !== undefined) { serverOpts[k] = o[k]; }
+        });
+
+        var dt = $table.DataTable($.extend({
             order: o.order || [],
             // Every column stays on the row (Status + Action included); the
             // .table-responsive wrapper scrolls sideways on narrow screens instead.
@@ -66,7 +74,7 @@
                 emptyTable: emptyState('bi-file-earmark-text', empty.title || 'No Question Papers', empty.text || 'Nothing to show yet.'),
                 zeroRecords: emptyState('bi-search', empty.zeroTitle || 'No Records Found', 'Nothing matches the filters applied.')
             }
-        });
+        }, serverOpts));
 
         // S. No. follows the visible order, not the server order.
         // snoCol: false = the grid has no running-number column.
@@ -477,9 +485,13 @@
      *   CoeGrid.simpleMaster({ title, entity, prefix, colvisKey, labels, sno, filters, fields });
      *   (the keys are documented at the top of simple_master/index.blade.php)
      *
-     * DESIGN PREVIEW: no backend on this branch, so every change is made in the
-     * browser only. The real endpoints (feature/coe_module Admin\Master\*MasterController)
-     * take <field> + active_inactive; POST first and redraw from the response.
+     * cfg.endpoints = { store, destroy, toggle } (destroy/toggle contain the
+     * literal placeholder "__ID__") switches the page from the design-preview,
+     * browser-only mock to real AJAX against the Laravel backend: create/update
+     * POST cfg.endpoints.store and redraw the row from the JSON response,
+     * delete/toggle call their own endpoint, 422 validation errors are mapped
+     * back onto the field that caused them. With no cfg.endpoints, behaviour is
+     * unchanged (every other COE master is still sample data, in-browser only).
      */
     function simpleMaster(cfg) {
         var P = '#' + cfg.prefix;
@@ -489,9 +501,17 @@
         var off = cfg.sno.show ? 1 : 0;                   // columns before the first field
         var COL = { status: off + fields.length, action: off + fields.length + 1 };
         var byKey = {};
-        fields.forEach(function (f, i) { f.col = off + i; byKey[f.key] = f; });
+        var byName = {};
+        fields.forEach(function (f, i) { f.col = off + i; byKey[f.key] = f; byName[f.name] = f; });
         var formFields = (cfg.formOrder || []).map(function (k) { return byKey[k]; });
         var $table = $(P + 'Table');
+        var endpoints = cfg.endpoints || null;
+
+        function ajax(opts) {
+            return $.ajax($.extend({
+                headers: { 'X-CSRF-TOKEN': cfg.csrfToken || '' }
+            }, opts));
+        }
 
         /* Status badge + actions — the ONE place each state is drawn. */
         function paintState($row) {
@@ -556,11 +576,29 @@
         confirmStatus({
             table: P + 'Table',
             onConfirm: function ($row, makeActive) {
-                $row.attr('data-coe-active', makeActive ? '1' : '0');
-                paintState($row);
-                redraw($row);
-                Swal.fire({ icon: 'success', title: 'Success',
-                    text: cfg.entity + ' ' + (makeActive ? 'activated.' : 'deactivated.') });
+                if (!endpoints) {
+                    $row.attr('data-coe-active', makeActive ? '1' : '0');
+                    paintState($row);
+                    redraw($row);
+                    Swal.fire({ icon: 'success', title: 'Success',
+                        text: cfg.entity + ' ' + (makeActive ? 'activated.' : 'deactivated.') });
+                    return;
+                }
+
+                ajax({
+                    url: endpoints.toggle.replace('__ID__', encodeURIComponent($row.attr('data-coe-id'))),
+                    method: 'PATCH',
+                    data: { active: makeActive ? 1 : 0 }
+                }).done(function () {
+                    $row.attr('data-coe-active', makeActive ? '1' : '0');
+                    paintState($row);
+                    redraw($row);
+                    Swal.fire({ icon: 'success', title: 'Success',
+                        text: cfg.entity + ' ' + (makeActive ? 'activated.' : 'deactivated.') });
+                }).fail(function (xhr) {
+                    Swal.fire({ icon: 'error', title: 'Error',
+                        text: (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong.' });
+                });
             }
         });
 
@@ -569,8 +607,22 @@
             modal: P + 'DeleteModal',
             confirm: P + 'DeleteConfirm',
             onConfirm: function ($row) {
-                dt.row($row).remove().draw(false);
-                Swal.fire({ icon: 'success', title: 'Success', text: cfg.entity + ' deleted.' });
+                if (!endpoints) {
+                    dt.row($row).remove().draw(false);
+                    Swal.fire({ icon: 'success', title: 'Success', text: cfg.entity + ' deleted.' });
+                    return;
+                }
+
+                ajax({
+                    url: endpoints.destroy.replace('__ID__', encodeURIComponent($row.attr('data-coe-id'))),
+                    method: 'DELETE'
+                }).done(function (res) {
+                    dt.row($row).remove().draw(false);
+                    Swal.fire({ icon: 'success', title: 'Success', text: (res && res.message) || cfg.entity + ' deleted.' });
+                }).fail(function (xhr) {
+                    Swal.fire({ icon: 'error', title: 'Error',
+                        text: (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong.' });
+                });
             }
         });
 
@@ -653,6 +705,9 @@
 
         // Same rules as the backend: required, length / range, unique (case-insensitive).
         // uniqueWith scopes uniqueness: a floor name only has to be unique within its building.
+        // Skipped in endpoint mode: the server is the single source of truth for
+        // uniqueness (full table, not just the current page), and returns its own
+        // 422 if this value collides — checking the DOM here would also miss it.
         function validate(f, value, values) {
             var label = f.label.toLowerCase();
             if (value === '') {
@@ -669,7 +724,7 @@
                 return '';
             }
             if (f.type !== 'select' && f.max && value.length > f.max) { return 'Use at most ' + f.max + ' characters.'; }
-            if (f.unique) {
+            if (f.unique && !endpoints) {
                 var scope = f.uniqueWith || [];
                 var taken = dt.rows().nodes().to$().filter(function () {
                     var $r = $(this);
@@ -685,6 +740,68 @@
             return '';
         }
 
+        /* Paint one row's cells from a {values, active} payload shaped like the
+           server's row (values keyed by field key, as returned by store()). */
+        function paintRow($row, data) {
+            fields.forEach(function (f) {
+                var v = data.values[f.key] != null ? data.values[f.key] : '';
+                var $c = cell($row, f).text(v);
+                if (f.type === 'number') { $c.attr('data-order', v || 0); }
+            });
+            $row.attr('data-coe-active', data.active ? '1' : '0');
+            paintState($row);
+            redraw($row);
+        }
+
+        function newRowNode(id) {
+            var blank = [];
+            for (var i = 0; i <= COL.action; i++) { blank.push(''); }
+            var $row = $(dt.row.add(blank).draw(false).node()).attr('data-coe-id', id);
+            var $cells = $row.children('td');
+            fields.forEach(function (f) {
+                $cells.eq(f.col).addClass('coe-cell-' + f.key + (f.align === 'center' ? ' coe-col-center' : ''));
+            });
+            $cells.eq(COL.status).addClass('coe-col-center coe-cell-status');
+            $cells.eq(COL.action).addClass('coe-cell-actions');
+            return $row;
+        }
+
+        function submitViaAjax(values) {
+            var wasEdit = !!$editing;
+            var payload = { active_inactive: $status.val() === '1' ? 1 : 0 };
+            fields.forEach(function (f) { payload[f.name] = values[f.key]; });
+            if (wasEdit) { payload.pk = $editing.attr('data-coe-id'); }
+
+            $(P + 'Submit').prop('disabled', true);
+            ajax({ url: endpoints.store, method: 'POST', data: payload })
+                .done(function (res) {
+                    var $row = wasEdit ? $editing : newRowNode(res.row.pk);
+                    $row.attr('data-coe-id', res.row.pk);
+                    paintRow($row, res.row);
+                    formModal.hide();
+                    Swal.fire({ icon: 'success', title: 'Success', text: res.message || (cfg.entity + (wasEdit ? ' updated.' : ' created.')) });
+                })
+                .fail(function (xhr) {
+                    if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                        var errors = xhr.responseJSON.errors;
+                        var firstBad = null;
+                        Object.keys(errors).forEach(function (name) {
+                            var f = byName[name];
+                            if (!f) { return; }
+                            fieldError(f, errors[name][0]);
+                            firstBad = firstBad || f;
+                        });
+                        if (firstBad) {
+                            if (firstBad.type === 'select') { input(firstBad).select2('open'); } else { input(firstBad).trigger('focus'); }
+                        }
+                        return;
+                    }
+                    Swal.fire({ icon: 'error', title: 'Error',
+                        text: (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong.' });
+                })
+                .always(function () { $(P + 'Submit').prop('disabled', false); });
+        }
+
         $(P + 'Form').on('submit', function (e) {
             e.preventDefault();
             var values = {}, firstBad = null;
@@ -697,21 +814,15 @@
                 return;
             }
 
+            if (endpoints) { submitViaAjax(values); return; }
+
             var active = $status.val() === '1';
             var $row = $editing;
             if (!$row) {
                 var id = 1 + Math.max(0, Math.max.apply(null, dt.rows().nodes().to$().map(function () {
                     return parseInt(this.getAttribute('data-coe-id'), 10) || 0;
                 }).get()));
-                var blank = [];
-                for (var i = 0; i <= COL.action; i++) { blank.push(''); }
-                $row = $(dt.row.add(blank).draw(false).node()).attr('data-coe-id', id);
-                var $cells = $row.children('td');
-                fields.forEach(function (f) {
-                    $cells.eq(f.col).addClass('coe-cell-' + f.key + (f.align === 'center' ? ' coe-col-center' : ''));
-                });
-                $cells.eq(COL.status).addClass('coe-col-center coe-cell-status');
-                $cells.eq(COL.action).addClass('coe-cell-actions');
+                $row = newRowNode(id);
             }
 
             fields.forEach(function (f) {
@@ -733,8 +844,201 @@
         return dt;
     }
 
+    /**
+     * Server-side ("Yajra") variant of simpleMaster() — same markup/CSS and
+     * modals (resources/views/admin/coe/examination_type|term/index.blade.php),
+     * but rows come from cfg.endpoints.list (a Yajra DataTable::render()
+     * route) instead of a server-rendered <tbody>. Every row already carries
+     * data-coe-id/data-coe-active via Yajra's setRowAttr (DT_RowAttr), and the
+     * status/action cell markup is rendered server-side identically to
+     * paintState() below, so a reload always matches the client's own repaint.
+     *
+     *   CoeGrid.simpleMasterServerSide({ title, entity, prefix, colvisKey,
+     *       labels, fields, formOrder, endpoints: {list, store, toggle, destroy},
+     *       csrfToken });
+     */
+    function simpleMasterServerSide(cfg) {
+        var P = '#' + cfg.prefix;
+        var fields = cfg.fields;
+        var L = cfg.labels;
+        var noun = cfg.entity.toLowerCase();
+        var COL = { sno: 0, status: 1 + fields.length, action: 2 + fields.length };
+        var byKey = {};
+        var byName = {};
+        fields.forEach(function (f, i) { f.col = 1 + i; byKey[f.key] = f; byName[f.name] = f; });
+        var formFields = (cfg.formOrder || []).map(function (k) { return byKey[k]; });
+        var $table = $(P + 'Table');
+        var endpoints = cfg.endpoints;
+
+        function ajax(opts) {
+            return $.ajax($.extend({ headers: { 'X-CSRF-TOKEN': cfg.csrfToken || '' } }, opts));
+        }
+
+        var columns = [{ data: 'DT_RowIndex', orderable: false, searchable: false, className: 'coe-col-sno' }];
+        fields.forEach(function (f) {
+            columns.push({ data: f.name, name: f.name, className: 'coe-cell-' + f.key });
+        });
+        columns.push({ data: 'status', orderable: false, searchable: false, className: 'coe-col-center coe-cell-status' });
+        columns.push({ data: 'actions', orderable: false, searchable: false, className: 'coe-cell-actions' });
+
+        var dt = init({
+            table: P + 'Table',
+            title: cfg.title,
+            serverSide: true,
+            processing: true,
+            ajax: endpoints.list,
+            columns: columns,
+            order: [],
+            noSort: [COL.sno, COL.status, COL.action],
+            exclude: [COL.action],
+            reset: P + 'ResetFilters',
+            download: P + 'DownloadBtn',
+            print: P + 'PrintBtn',
+            searchToggle: P + 'SearchToggle',
+            searchSlot: P + 'DtSearch',
+            colvisGrid: P + 'ColumnToggleGrid',
+            colvisKey: cfg.colvisKey,
+            empty: { title: 'No ' + cfg.entity + ' Records', zeroTitle: 'No ' + cfg.entity + ' Records Found',
+                     text: 'Create the first ' + noun + ' to get started.' }
+        });
+
+        function reload() { dt.ajax.reload(null, false); }
+
+        confirmStatus({
+            table: P + 'Table',
+            onConfirm: function ($row, makeActive) {
+                ajax({
+                    url: endpoints.toggle.replace('__ID__', encodeURIComponent($row.attr('data-coe-id'))),
+                    method: 'PATCH',
+                    data: { active: makeActive ? 1 : 0 }
+                }).done(function () {
+                    reload();
+                    Swal.fire({ icon: 'success', title: 'Success',
+                        text: cfg.entity + ' ' + (makeActive ? 'activated.' : 'deactivated.') });
+                }).fail(function (xhr) {
+                    Swal.fire({ icon: 'error', title: 'Error',
+                        text: (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong.' });
+                });
+            }
+        });
+
+        confirmDelete({
+            table: P + 'Table',
+            modal: P + 'DeleteModal',
+            confirm: P + 'DeleteConfirm',
+            onConfirm: function ($row) {
+                ajax({
+                    url: endpoints.destroy.replace('__ID__', encodeURIComponent($row.attr('data-coe-id'))),
+                    method: 'DELETE'
+                }).done(function (res) {
+                    reload();
+                    Swal.fire({ icon: 'success', title: 'Success', text: (res && res.message) || cfg.entity + ' deleted.' });
+                }).fail(function (xhr) {
+                    Swal.fire({ icon: 'error', title: 'Error',
+                        text: (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong.' });
+                });
+            }
+        });
+
+        /* Create / Edit */
+        var formModal = bootstrap.Modal.getOrCreateInstance(document.querySelector(P + 'FormModal'));
+        var $status = $(P + 'Status');
+        var $editing = null;
+
+        function input(f) { return $(P + 'Field_' + f.key); }
+        function cell($row, f) { return $row.find('.coe-cell-' + f.key); }
+        function cellText($row, f) { return cell($row, f).text().trim(); }
+
+        $status.select2({ width: '100%', dropdownParent: $(P + 'FormModal .modal-body') });
+
+        function fieldError(f, msg) {
+            var $in = input(f), $wrap = $in.parent();
+            $wrap.find('.coe-field-error').remove();
+            $in.toggleClass('is-invalid', !!msg);
+            if (msg) { $('<div class="coe-field-error"></div>').text(msg).appendTo($wrap); }
+            return !msg;
+        }
+
+        function clearErrors() { fields.forEach(function (f) { fieldError(f, ''); }); }
+
+        function readValue(f) { return $.trim(input(f).val() || '').replace(/\s+/g, ' '); }
+
+        function openForm($row) {
+            $editing = $row;
+            var isEdit = !!$row;
+            $(P + 'FormModalLabel').text(isEdit ? L.editTitle : L.createTitle);
+            $(P + 'Submit').text(isEdit ? L.editSubmit : L.createSubmit);
+            formFields.forEach(function (f) { input(f).val(isEdit ? cellText($row, f) : ''); });
+            $status.val(isEdit ? $row.attr('data-coe-active') : '1').trigger('change.select2');
+            clearErrors();
+            formModal.show();
+        }
+
+        $(P + 'CreateBtn').on('click', function () { openForm(null); });
+        $table.on('click', '.coe-act--edit', function () { openForm($(this).closest('tr')); });
+        $(P + 'FormModal').on('shown.bs.modal', function () { input(formFields[0]).trigger('focus'); });
+        fields.forEach(function (f) {
+            input(f).on('input change', function () { if ($.trim(this.value || '') !== '') { fieldError(f, ''); } });
+        });
+
+        function validate(f, value) {
+            var label = f.label.toLowerCase();
+            if (value === '') { return f.required ? 'Enter the ' + label + '.' : ''; }
+            if (f.max && value.length > f.max) { return 'Use at most ' + f.max + ' characters.'; }
+            return '';
+        }
+
+        function submitViaAjax(values) {
+            var wasEdit = !!$editing;
+            var payload = { active_inactive: $status.val() === '1' ? 1 : 0 };
+            fields.forEach(function (f) { payload[f.name] = values[f.key]; });
+            if (wasEdit) { payload.pk = $editing.attr('data-coe-id'); }
+
+            $(P + 'Submit').prop('disabled', true);
+            ajax({ url: endpoints.store, method: 'POST', data: payload })
+                .done(function (res) {
+                    reload();
+                    formModal.hide();
+                    Swal.fire({ icon: 'success', title: 'Success', text: res.message || (cfg.entity + (wasEdit ? ' updated.' : ' created.')) });
+                })
+                .fail(function (xhr) {
+                    if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                        var errors = xhr.responseJSON.errors;
+                        var firstBad = null;
+                        Object.keys(errors).forEach(function (name) {
+                            var f = byName[name];
+                            if (!f) { return; }
+                            fieldError(f, errors[name][0]);
+                            firstBad = firstBad || f;
+                        });
+                        if (firstBad) { input(firstBad).trigger('focus'); }
+                        return;
+                    }
+                    Swal.fire({ icon: 'error', title: 'Error',
+                        text: (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong.' });
+                })
+                .always(function () { $(P + 'Submit').prop('disabled', false); });
+        }
+
+        $(P + 'Form').on('submit', function (e) {
+            e.preventDefault();
+            var values = {}, firstBad = null;
+            fields.forEach(function (f) { values[f.key] = readValue(f); });
+            formFields.forEach(function (f) {
+                if (!fieldError(f, validate(f, values[f.key])) && !firstBad) { firstBad = f; }
+            });
+            if (firstBad) { input(firstBad).trigger('focus'); return; }
+            submitViaAjax(values);
+        });
+
+        $(P + 'FormModal').on('hidden.bs.modal', function () { $editing = null; clearErrors(); });
+
+        return dt;
+    }
+
     window.CoeGrid = {
         simpleMaster: simpleMaster,
+        simpleMasterServerSide: simpleMasterServerSide,
         confirmStatus: confirmStatus, init: init, upload: upload, dropzone: dropzone, freeze: freeze, confirmDelete: confirmDelete,
         confirm: confirmDelete };
 })(window, jQuery);

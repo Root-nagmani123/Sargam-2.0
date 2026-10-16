@@ -3,6 +3,8 @@
 @section('title', 'Examination Drive Configuration')
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
+<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
 <link rel="stylesheet" href="{{ asset('css/coe-admin.css') }}?v={{ @filemtime(public_path('css/coe-admin.css')) ?: time() }}">
 <style>
 .edc-status-pending-faculty { background:#fff3cd;color:#856404; }
@@ -111,31 +113,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($drives as $drive)
-                            <tr>
-                                <td></td>
-                                <td>{{ $drive['name'] }}</td>
-                                <td>{{ $drive['exam_type'] === '-' ? '—' : $drive['exam_type'] }}</td>
-                                <td>{{ $drive['term'] }}</td>
-                                <td>{{ $drive['course'] }}</td>
-                                <td>{{ $drive['session'] }}</td>
-                                <td>{{ $drive['faculty'] }}</td>
-                                <td class="coe-col-center">{{ $drive['sub_coords'] ?: '—' }}</td>
-                                <td class="coe-col-center">{{ $drive['components'] ?: '—' }}</td>
-                                <td>{{ $drive['start_date'] }}</td>
-                                <td>{{ $drive['end_date'] }}</td>
-                                <td class="coe-col-center">
-                                    <span class="coe-state edc-status-pending-faculty">Pending at Faculty</span>
-                                </td>
-                                <td>
-                                    <a href="{{ route('admin.coe.faculty-examination-drive.setup', $drive['id']) }}"
-                                       class="edc-setup-link" title="Complete Setup">
-                                        <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                                        <span>Complete<br>Setup</span>
-                                    </a>
-                                </td>
-                            </tr>
-                            @endforeach
+                            {{-- Rows loaded via Yajra server-side AJAX --}}
                         </tbody>
                     </table>
                 </div>
@@ -176,6 +154,24 @@ $(function () {
         order: [[1, 'asc']],
         noSort: [0, 12],
         exclude: [12],
+        serverSide: true,
+        processing: true,
+        ajax: { url: @json(route('admin.coe.faculty-examination-drive.index')), data: function (d) { d.scope = @json($scope); } },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex' },
+            { data: 'name', name: 'name' },
+            { data: 'exam_type', name: 'exam_type' },
+            { data: 'term', name: 'term' },
+            { data: 'course', name: 'course' },
+            { data: 'academic_session', name: 'academic_session' },
+            { data: 'faculty', name: 'faculty' },
+            { data: 'sub_coords', name: 'sub_coords' },
+            { data: 'components', name: 'components' },
+            { data: 'start_date', name: 'start_date' },
+            { data: 'end_date', name: 'end_date' },
+            { data: 'status', name: 'status' },
+            { data: 'actions', name: 'actions' }
+        ],
         filters: { '#fedcFilterCourse': 4, '#fedcFilterTerm': 3, '#fedcFilterType': 2 },
         reset: '#fedcResetFilters',
         download: '#fedcDownloadBtn',

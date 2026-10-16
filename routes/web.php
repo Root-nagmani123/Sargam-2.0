@@ -2001,8 +2001,28 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
     // COE -> Master Data
     Route::get('examination-type', [\App\Http\Controllers\Admin\COE\ExaminationTypeController::class, 'index'])
         ->name('examination-type.index');
+    Route::post('examination-type', [\App\Http\Controllers\Admin\COE\ExaminationTypeController::class, 'store'])
+        ->name('examination-type.store');
+    Route::patch('examination-type/{id}/toggle-status', [\App\Http\Controllers\Admin\COE\ExaminationTypeController::class, 'toggleStatus'])
+        ->name('examination-type.toggle-status');
+    Route::delete('examination-type/{id}', [\App\Http\Controllers\Admin\COE\ExaminationTypeController::class, 'destroy'])
+        ->name('examination-type.destroy');
     Route::get('examination-term', [\App\Http\Controllers\Admin\COE\ExaminationTermController::class, 'index'])
         ->name('examination-term.index');
+    Route::post('examination-term', [\App\Http\Controllers\Admin\COE\ExaminationTermController::class, 'store'])
+        ->name('examination-term.store');
+    Route::patch('examination-term/{id}/toggle-status', [\App\Http\Controllers\Admin\COE\ExaminationTermController::class, 'toggleStatus'])
+        ->name('examination-term.toggle-status');
+    Route::delete('examination-term/{id}', [\App\Http\Controllers\Admin\COE\ExaminationTermController::class, 'destroy'])
+        ->name('examination-term.destroy');
+    Route::get('component-master', [\App\Http\Controllers\Admin\COE\ComponentMasterController::class, 'index'])
+        ->name('component-master.index');
+    Route::post('component-master', [\App\Http\Controllers\Admin\COE\ComponentMasterController::class, 'store'])
+        ->name('component-master.store');
+    Route::delete('component-master/{id}', [\App\Http\Controllers\Admin\COE\ComponentMasterController::class, 'destroy'])
+        ->name('component-master.destroy');
+    Route::patch('component-master/{id}/toggle-status', [\App\Http\Controllers\Admin\COE\ComponentMasterController::class, 'toggleStatus'])
+        ->name('component-master.toggle-status');
     Route::get('building', [\App\Http\Controllers\Admin\COE\BuildingController::class, 'index'])
         ->name('building.index');
     Route::get('floor', [\App\Http\Controllers\Admin\COE\FloorController::class, 'index'])
@@ -2030,6 +2050,18 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->whereNumber('id')->name('venue-allocation.edit');
     Route::get('examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'index'])
         ->name('examination-drive.index');
+    Route::post('examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'store'])
+        ->name('examination-drive.store');
+    Route::put('examination-drive/{id}', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'update'])
+        ->whereNumber('id')->name('examination-drive.update');
+    Route::delete('examination-drive/{id}', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'destroy'])
+        ->whereNumber('id')->name('examination-drive.destroy');
+    Route::get('examination-drive/{id}/mappings', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'mappings'])
+        ->whereNumber('id')->name('examination-drive.mappings');
+    Route::put('examination-drive/{id}/components', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'saveComponents'])
+        ->whereNumber('id')->name('examination-drive.components.save');
+    Route::put('examination-drive/{id}/components/assign-faculty', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'assignFaculty'])
+        ->whereNumber('id')->name('examination-drive.components.assign-faculty');
     Route::get('examination-drive/{id}', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'show'])
         ->whereNumber('id')->name('examination-drive.show');
     Route::get('examination-drive/{id}/coordinates', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'coordinates'])

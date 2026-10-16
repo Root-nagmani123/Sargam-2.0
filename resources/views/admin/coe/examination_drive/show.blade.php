@@ -3,52 +3,98 @@
 @section('title', 'Map Faculty – ' . $drive['name'])
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
-<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
 <link rel="stylesheet" href="{{ asset('css/coe-admin.css') }}?v={{ @filemtime(public_path('css/coe-admin.css')) ?: time() }}">
 <style>
-.edc-info-bar        { background:var(--ds-surface-2);border:1px solid var(--ds-line);border-radius:8px;padding:14px 20px;margin-bottom:24px;display:flex;flex-wrap:wrap;gap:20px; }
-.edc-info-item       { display:flex;flex-direction:column;gap:2px; }
-.edc-info-label      { font-size:11px;font-weight:600;color:var(--ds-ink-muted);text-transform:uppercase;letter-spacing:.5px; }
-.edc-info-value      { font-size:13px;font-weight:600;color:var(--ds-ink); }
+/* Same layout as faculty Complete Setup (faculty_setup.blade.php). */
+.edc-toolbar        { display:flex;justify-content:flex-end;gap:12px;margin-bottom:18px; }
+.edc-tool-btn       { display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border:0;border-radius:8px;
+                      background:#fff;color:var(--ds-brand);font-size:15px;font-weight:500;box-shadow:0 1px 2px rgba(16,24,40,.06); }
+.edc-tool-btn:hover { background:var(--ds-surface-2); }
+/* Info card */
+.edc-info-bar       { background:#fff;border-radius:12px;padding:24px 30px;margin-bottom:22px;
+                      display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:20px; }
+.edc-info-item      { display:flex;flex-direction:column;gap:6px;min-width:0; }
+.edc-info-label     { font-size:13px;color:var(--ds-ink-muted);text-transform:uppercase;letter-spacing:.3px; }
+.edc-info-value     { font-size:17px;font-weight:600;color:var(--ds-ink);overflow-wrap:anywhere; }
+@media (max-width: 1199.98px) { .edc-info-bar { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (max-width: 767.98px)  { .edc-info-bar { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 /* Component table */
-.edc-comp-table      { width:100%;border-collapse:collapse; }
-.edc-comp-table th   { padding:10px 12px;background:var(--ds-surface-2);font-size:12px;font-weight:700;color:var(--ds-ink-muted);border-bottom:2px solid var(--ds-line);white-space:nowrap; }
-.edc-comp-table td   { padding:8px 8px;border-bottom:1px solid var(--ds-line);vertical-align:middle;font-size:13px; }
-.edc-comp-table tr:last-child td { border-bottom:none; }
-.edc-spin            { width:80px; }
-.edc-row-btn         { background:transparent;border:1.5px solid currentColor;border-radius:50%;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;line-height:1;padding:0; }
-.edc-row-del         { color:#dc3545; }
-.edc-row-del:hover   { background:#dc3545;color:#fff; }
-.edc-row-add         { color:#004384; }
-.edc-row-add:hover   { background:#004384;color:#fff; }
+.edc-comp-table     { width:100%;border-collapse:separate;border-spacing:0;min-width:1080px;table-layout:fixed; }
+.edc-comp-table thead th { padding:10px 8px;background:var(--ds-surface-2);font-size:14px;font-weight:500;line-height:1.2;
+                      color:var(--ds-ink);white-space:normal;vertical-align:middle; }
+.edc-comp-table thead th:first-child { padding-left:14px;border-radius:10px 0 0 0; }
+.edc-comp-table thead th:last-child  { padding-right:12px;border-radius:0 10px 0 0; }
+.edc-comp-table thead th .bi { margin-left:4px;font-size:12px;color:var(--ds-ink-muted); }
+.edc-comp-table tbody td { padding:12px 5px;border-bottom:1px solid var(--ds-line);vertical-align:middle; }
+.edc-comp-table tbody td:first-child { padding-left:12px; }
+.edc-comp-table tbody td:last-child  { padding-right:12px; }
+.edc-comp-table .form-control,
+.edc-comp-table .form-select { height:40px;font-size:14px;border-color:var(--ds-line);border-radius:6px;color:var(--ds-ink); }
+.edc-comp-table .form-select  { padding-left:12px;padding-right:30px;background-position:right 10px center;text-overflow:ellipsis; }
+.edc-comp-table input[type=number] { padding:6px 8px 6px 12px; }
+.edc-comp-table input[type=date]   { padding:6px 6px 6px 10px; }
+.edc-comp-table .form-select:disabled { background-color:var(--ds-surface-2);color:var(--ds-ink); }
+/* Row buttons: red minus on every row, blue plus only on the last */
+.edc-row-del, .edc-row-add { width:36px;height:36px;border:none;border-radius:6px;color:#fff;font-size:18px;
+                      display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0; }
+.edc-row-del        { background:#e5141a; }
+.edc-row-add        { background:#004a93; }
+.edc-row-del:hover  { background:#b80f14; }
+.edc-row-add:hover  { background:#003670; }
+.edc-comp-row:not(:last-child) .edc-row-add { visibility:hidden; }
+.edc-actions        { display:flex;justify-content:flex-end;gap:10px; }
+/* Total weightage bar */
+.edc-total-row td   { background:#e5ecfb;padding:14px 8px;font-size:15px;color:var(--ds-ink); }
+.edc-total-row td:first-child { border-radius:0 0 0 10px; }
+.edc-total-row td:last-child  { border-radius:0 0 10px 0; }
+.edc-footer         { display:flex;justify-content:flex-end;gap:16px;margin-top:28px; }
+.edc-footer .btn    { min-width:116px;height:48px;font-size:17px; }
+@media print {
+    .edc-toolbar, .edc-footer, .edc-actions { display:none !important; }
+}
 </style>
 @endpush
 
 @section('setup_content')
+@php
+    // Faculty Setup page uses the same rule: system-sourced rows have no faculty.
+    $systemSources = ['Sargam', 'Sargam 2.0'];
+@endphp
 <div class="container-fluid coe-page">
     <x-breadcrum title="Edit Map Faculty to Examination Drive" :showBack="true"
                  :backUrl="route('admin.coe.examination-drive.index')"
-                 :items="['Setup', 'COE', 'Examination Management', 'Examination Drive', 'Map Faculty']">
-    </x-breadcrum>
+                 :items="['Setup', 'COE', 'Examination Management', 'Examination Drive', 'Map Faculty']" />
 
-    {{-- Drive info bar --}}
+    <div class="edc-toolbar">
+        <button type="button" class="edc-tool-btn" id="edcDownload">
+            <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+        </button>
+        <button type="button" class="edc-tool-btn" id="edcPrint">
+            <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
+        </button>
+    </div>
+
+    {{-- Drive info card --}}
     <div class="edc-info-bar">
         <div class="edc-info-item">
             <span class="edc-info-label">Drive Name</span>
             <span class="edc-info-value">{{ $drive['name'] }}</span>
         </div>
         <div class="edc-info-item">
-            <span class="edc-info-label">Course</span>
-            <span class="edc-info-value">{{ $drive['course'] }}</span>
-        </div>
-        <div class="edc-info-item">
-            <span class="edc-info-label">Term</span>
+            <span class="edc-info-label">Term Name</span>
             <span class="edc-info-value">{{ $drive['term'] }}</span>
         </div>
         <div class="edc-info-item">
-            <span class="edc-info-label">Session</span>
+            <span class="edc-info-label">Course Name</span>
+            <span class="edc-info-value">{{ $drive['course'] }}</span>
+        </div>
+        <div class="edc-info-item">
+            <span class="edc-info-label">Academic Session</span>
             <span class="edc-info-value">{{ $drive['session'] }}</span>
+        </div>
+        <div class="edc-info-item">
+            <span class="edc-info-label">Subject</span>
+            <span class="edc-info-value">{{ implode(', ', $drive['subjects']) ?: '—' }}</span>
         </div>
         <div class="edc-info-item">
             <span class="edc-info-label">Status</span>
@@ -58,73 +104,82 @@
 
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <h6 class="fw-bold mb-0" style="font-size:15px">Component Mapping</h6>
-                <button type="button" class="btn coe-btn coe-btn-primary coe-btn--narrow" id="edcSaveMap">
-                    <i class="bi bi-floppy" aria-hidden="true"></i> Save
-                </button>
-            </div>
             <div class="table-responsive">
                 <table class="edc-comp-table" id="edcCompTable">
                     <thead>
                         <tr>
-                            <th style="width:14%">COMPONENTS</th>
-                            <th style="width:9%">MAX MARKS</th>
-                            <th style="width:9%">PASSING MARKS</th>
-                            <th style="width:11%">SOURCE</th>
-                            <th style="width:16%">FACULTY</th>
-                            <th style="width:9%">WEIGHTAGE (%)</th>
-                            <th style="width:11%">EXAM DATE</th>
-                            <th style="width:11%">EXAM TYPE</th>
-                            <th style="width:10%">ACTION</th>
+                            <th style="width:15%">Components<i class="bi bi-chevron-expand"></i></th>
+                            <th style="width:8%">Max Marks<i class="bi bi-chevron-expand"></i></th>
+                            <th style="width:8%">Passing Marks<i class="bi bi-chevron-expand"></i></th>
+                            <th style="width:11%">Source</th>
+                            <th style="width:17%">Faculty</th>
+                            <th style="width:8%">Weightage %<i class="bi bi-chevron-expand"></i></th>
+                            <th style="width:13%">Exam Date</th>
+                            <th style="width:11%">Exam Type</th>
+                            <th style="width:9%" class="text-end">Action</th>
                         </tr>
                     </thead>
                     <tbody id="edcCompBody">
                         @foreach ($drive['component_rows'] as $row)
+                        @php($systemSource = in_array($row['source'], $systemSources, true))
                         <tr class="edc-comp-row" data-component="{{ $row['component'] }}">
                             <td>
-                                <select class="form-select form-select-sm edc-sel-component">
+                                <select class="form-select edc-sel-component">
                                     <option value="">Component</option>
                                     @foreach ($components as $c)
                                     <option value="{{ $c }}" @if($c === $row['component']) selected @endif>{{ $c }}</option>
                                     @endforeach
                                 </select>
                             </td>
-                            <td><input type="number" class="form-control form-control-sm edc-spin" min="0" max="1000" value="{{ $row['max_marks'] }}"></td>
-                            <td><input type="number" class="form-control form-control-sm edc-spin" min="0" max="1000" step="0.01" value="{{ $row['passing_marks'] }}"></td>
+                            <td><input type="number" class="form-control edc-max" min="0" max="1000" step="0.01" value="{{ $row['max_marks'] }}"></td>
+                            <td><input type="number" class="form-control edc-pass" min="0" max="1000" step="0.01" value="{{ $row['passing_marks'] }}"></td>
                             <td>
-                                <select class="form-select form-select-sm edc-sel-source">
+                                <select class="form-select edc-sel-source">
                                     @foreach ($sources as $s)
                                     <option value="{{ $s }}" @if($s === $row['source']) selected @endif>{{ $s }}</option>
                                     @endforeach
                                 </select>
                             </td>
                             <td>
-                                <select class="form-select form-select-sm edc-sel-faculty">
+                                <select class="form-select edc-sel-faculty" @disabled($systemSource)>
                                     <option value="">Faculty</option>
                                     @foreach ($faculty as $f)
-                                    <option value="{{ $f }}" @if($f === $row['faculty']) selected @endif>{{ $f }}</option>
+                                    <option value="{{ $f }}" @if(! $systemSource && $f === $row['faculty']) selected @endif>{{ $f }}</option>
                                     @endforeach
-                                    <option value="Sargam 2.0" @if($row['faculty'] === 'Sargam 2.0') selected @endif>Sargam 2.0</option>
+                                    <option value="Sargam 2.0" @if($systemSource) selected @endif>Sargam 2.0</option>
                                 </select>
                             </td>
-                            <td><input type="number" class="form-control form-control-sm edc-spin" min="0" max="100" step="0.01" value="{{ $row['weightage'] }}"></td>
-                            <td><input type="date" class="form-control form-control-sm" value="{{ \Carbon\Carbon::createFromFormat('d/m/Y', $row['exam_date'])->format('Y-m-d') }}"></td>
+                            <td><input type="number" class="form-control edc-weightage" min="0" max="100" step="0.01" value="{{ $row['weightage'] }}"></td>
+                            <td><input type="date" class="form-control edc-exam-date" value="{{ \Carbon\Carbon::createFromFormat('d/m/Y', $row['exam_date'])->format('Y-m-d') }}"></td>
                             <td>
-                                <select class="form-select form-select-sm">
+                                <select class="form-select edc-sel-mode">
                                     @foreach ($examModes as $m)
                                     <option value="{{ $m }}" @if($m === $row['exam_type']) selected @endif>{{ $m }}</option>
                                     @endforeach
                                 </select>
                             </td>
                             <td>
-                                <button type="button" class="edc-row-btn edc-row-del me-1" aria-label="Remove row"><i class="bi bi-dash" aria-hidden="true"></i></button>
-                                <button type="button" class="edc-row-btn edc-row-add" aria-label="Add row"><i class="bi bi-plus" aria-hidden="true"></i></button>
+                                <div class="edc-actions">
+                                    <button type="button" class="edc-row-del" aria-label="Remove row"><i class="bi bi-dash" aria-hidden="true"></i></button>
+                                    <button type="button" class="edc-row-add" aria-label="Add row"><i class="bi bi-plus" aria-hidden="true"></i></button>
+                                </div>
                             </td>
                         </tr>
                         @endforeach
                     </tbody>
+                    <tfoot>
+                        <tr class="edc-total-row">
+                            <td colspan="5" class="text-end pe-4">Total Weightage:</td>
+                            <td id="edcTotalWeightage" class="ps-3">{{ array_sum(array_column($drive['component_rows'], 'weightage')) }}</td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tfoot>
                 </table>
+            </div>
+
+            <div class="edc-footer">
+                <a href="{{ route('admin.coe.examination-drive.index') }}" class="btn coe-btn coe-btn-cancel">Cancel</a>
+                <button type="button" class="btn coe-btn coe-btn-primary" id="edcSaveMap">Save</button>
             </div>
         </div>
     </div>
@@ -140,58 +195,119 @@ $(function () {
     var SOURCES    = @json($sources);
     var FACULTY    = @json($faculty);
     var EXAM_MODES = @json($examModes);
+    var SYSTEM_SOURCES = @json($systemSources);
 
     var $body = $('#edcCompBody');
 
-    function componentOptions(sel) {
-        return '<option value="">Component</option>' + COMPONENTS.map(function (c) {
-            return '<option value="' + c + '"' + (c === sel ? ' selected' : '') + '>' + c + '</option>';
-        }).join('');
-    }
-    function sourceOptions(sel) {
-        return SOURCES.map(function (s) {
-            return '<option value="' + s + '"' + (s === sel ? ' selected' : '') + '>' + s + '</option>';
+    function esc(v) { return $('<div>').text(v == null ? '' : v).html(); }
+    function options(list, sel) {
+        return list.map(function (v) {
+            return '<option value="' + esc(v) + '"' + (v === sel ? ' selected' : '') + '>' + esc(v) + '</option>';
         }).join('');
     }
     function facultyOptions(sel) {
-        var opts = '<option value="">Faculty</option>' + FACULTY.map(function (f) {
-            return '<option value="' + f + '"' + (f === sel ? ' selected' : '') + '>' + f + '</option>';
-        }).join('');
-        opts += '<option value="Sargam 2.0"' + (sel === 'Sargam 2.0' ? ' selected' : '') + '>Sargam 2.0</option>';
-        return opts;
-    }
-    function modeOptions(sel) {
-        return EXAM_MODES.map(function (m) {
-            return '<option value="' + m + '"' + (m === sel ? ' selected' : '') + '>' + m + '</option>';
-        }).join('');
+        return '<option value="">Faculty</option>' + options(FACULTY, sel) +
+            '<option value="Sargam 2.0"' + (sel === 'Sargam 2.0' ? ' selected' : '') + '>Sargam 2.0</option>';
     }
 
-    function buildRow(data) {
-        data = data || {};
+    function buildRow() {
         return '<tr class="edc-comp-row">' +
-            '<td><select class="form-select form-select-sm edc-sel-component">' + componentOptions(data.component || '') + '</select></td>' +
-            '<td><input type="number" class="form-control form-control-sm edc-spin" min="0" max="1000" value="' + (data.max || 100) + '"></td>' +
-            '<td><input type="number" class="form-control form-control-sm edc-spin" min="0" max="1000" step="0.01" value="' + (data.pass || 40) + '"></td>' +
-            '<td><select class="form-select form-select-sm edc-sel-source">' + sourceOptions(data.source || SOURCES[0]) + '</select></td>' +
-            '<td><select class="form-select form-select-sm edc-sel-faculty">' + facultyOptions(data.faculty || '') + '</select></td>' +
-            '<td><input type="number" class="form-control form-control-sm edc-spin" min="0" max="100" step="0.01" value="' + (data.weightage || 0) + '"></td>' +
-            '<td><input type="date" class="form-control form-control-sm" value=""></td>' +
-            '<td><select class="form-select form-select-sm">' + modeOptions(data.mode || EXAM_MODES[0]) + '</select></td>' +
-            '<td><button type="button" class="edc-row-btn edc-row-del me-1" aria-label="Remove row"><i class="bi bi-dash" aria-hidden="true"></i></button>' +
-            '<button type="button" class="edc-row-btn edc-row-add" aria-label="Add row"><i class="bi bi-plus" aria-hidden="true"></i></button></td>' +
-            '</tr>';
+            '<td><select class="form-select edc-sel-component"><option value="">Component</option>' + options(COMPONENTS, '') + '</select></td>' +
+            '<td><input type="number" class="form-control edc-max" min="0" max="1000" step="0.01" value="100"></td>' +
+            '<td><input type="number" class="form-control edc-pass" min="0" max="1000" step="0.01" value="40"></td>' +
+            '<td><select class="form-select edc-sel-source">' + options(SOURCES, SOURCES[0]) + '</select></td>' +
+            '<td><select class="form-select edc-sel-faculty">' + facultyOptions('') + '</select></td>' +
+            '<td><input type="number" class="form-control edc-weightage" min="0" max="100" step="0.01" value="0"></td>' +
+            '<td><input type="date" class="form-control edc-exam-date" value=""></td>' +
+            '<td><select class="form-select edc-sel-mode">' + options(EXAM_MODES, EXAM_MODES[0]) + '</select></td>' +
+            '<td><div class="edc-actions">' +
+            '<button type="button" class="edc-row-del" aria-label="Remove row"><i class="bi bi-dash" aria-hidden="true"></i></button>' +
+            '<button type="button" class="edc-row-add" aria-label="Add row"><i class="bi bi-plus" aria-hidden="true"></i></button>' +
+            '</div></td></tr>';
     }
+
+    /* Total Weightage, live */
+    function recalcTotal() {
+        var total = 0;
+        $body.find('.edc-weightage').each(function () { total += parseFloat($(this).val()) || 0; });
+        $('#edcTotalWeightage').text(total % 1 === 0 ? total : total.toFixed(2));
+    }
+    $body.on('input', '.edc-weightage', recalcTotal);
 
     $body.on('click', '.edc-row-del', function () {
-        var $rows = $body.find('.edc-comp-row');
-        if ($rows.length > 1) { $(this).closest('.edc-comp-row').remove(); }
+        if ($body.find('.edc-comp-row').length > 1) {
+            $(this).closest('.edc-comp-row').remove();
+            recalcTotal();
+        }
     });
     $body.on('click', '.edc-row-add', function () {
         $(this).closest('.edc-comp-row').after(buildRow());
     });
 
+    /* A system-sourced component (Sargam / Sargam 2.0) has no faculty. */
+    $body.on('change', '.edc-sel-source', function () {
+        var system = SYSTEM_SOURCES.indexOf($(this).val()) !== -1;
+        var $fac = $(this).closest('.edc-comp-row').find('.edc-sel-faculty');
+        if (system) {
+            $fac.val('Sargam 2.0').prop('disabled', true);
+        } else if ($fac.prop('disabled')) {
+            $fac.prop('disabled', false).val('');
+        }
+    });
+
+    if ($body.find('.edc-comp-row').length === 0) {
+        $body.append(buildRow());
+        recalcTotal();
+    }
+
+    function collectRows() {
+        var rows = [];
+        $body.find('.edc-comp-row').each(function () {
+            var $r = $(this);
+            rows.push({
+                component: $r.find('.edc-sel-component').val(),
+                max_marks: $r.find('.edc-max').val(),
+                passing_marks: $r.find('.edc-pass').val(),
+                source: $r.find('.edc-sel-source').val(),
+                faculty: $r.find('.edc-sel-faculty').val(),
+                weightage: $r.find('.edc-weightage').val(),
+                exam_date: $r.find('.edc-exam-date').val(),
+                exam_type: $r.find('.edc-sel-mode').val()
+            });
+        });
+        return rows;
+    }
+
+    /* Save. Sub-coordinators and OT codes are not sent from this page, so the
+       server keeps the ones faculty set on Complete Setup. */
     $('#edcSaveMap').on('click', function () {
-        Swal.fire({ icon: 'success', title: 'Saved', text: 'Component mapping saved.' });
+        $.ajax({
+            url: '{{ url("admin/coe/examination-drive") }}/{{ (int) $drive["id"] }}/components',
+            method: 'PUT',
+            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+            data: { rows: collectRows() }
+        }).done(function () {
+            Swal.fire({ icon: 'success', title: 'Saved', text: 'Component mapping saved.' });
+        }).fail(function (xhr) {
+            Swal.fire({ icon: 'error', title: 'Error', text: (xhr.responseJSON && xhr.responseJSON.message) || 'Could not save component mapping.' });
+        });
+    });
+
+    $('#edcPrint').on('click', function () { window.print(); });
+
+    /* Download: CSV of the table as currently shown. */
+    $('#edcDownload').on('click', function () {
+        var cell = function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
+        var lines = [['Component', 'Max Marks', 'Passing Marks', 'Source', 'Faculty', 'Weightage %', 'Exam Date', 'Exam Type'].map(cell).join(',')];
+        collectRows().forEach(function (r) {
+            lines.push([r.component, r.max_marks, r.passing_marks, r.source, r.faculty, r.weightage, r.exam_date, r.exam_type].map(cell).join(','));
+        });
+        var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = @json('map-faculty-drive-' . $drive['id'] . '.csv');
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
     });
 });
 </script>
