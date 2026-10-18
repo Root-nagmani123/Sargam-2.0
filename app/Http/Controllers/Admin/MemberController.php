@@ -13,6 +13,7 @@ use App\Http\Requests\Admin\Member\StoreMemberStep2Request;
 use App\Http\Requests\Admin\Member\StoreMemberStep3Request;
 use App\Http\Requests\Admin\Member\StoreMemberStep4Request;
 use App\Http\Requests\Admin\Member\StoreMemberStep5Request;
+use App\Http\Requests\Admin\Member\StoreMemberStep6Request;
 use App\Models\AppellationMaster;
 use App\Models\City;
 use App\Models\Country;
@@ -22,18 +23,46 @@ use App\Models\EmployeeGroupMaster;
 use App\Models\EmployeeMaster;
 use App\Models\EmployeeRoleMapping;
 use App\Models\EmployeeTypeMaster;
+use App\Models\PayrollSalaryMaster;
 use App\Models\State;
+use App\Models\User;
 use App\Models\UserCredential;
+use App\Models\UserRoleMaster;
 use App\Support\LogSafe;
+use App\Support\RoleNames;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
+use Spatie\Permission\Models\Role;
 
+/**
+ * NOTE ON THE "PR #319 review, F-0xx" CITATIONS IN THIS FILE.
+ *
+ * Two separate reviews of PR #319 exist, and their finding numbers COLLIDE. A comment
+ * here reading "PR #319 review, F-006" therefore points at two different defects
+ * depending on which report the reader is holding. Raised by the independent review as
+ * F-040; recorded here rather than left for the next reader to trip over.
+ *
+ *   - The long-running series (rounds 1-9, F-001..F-040) is the one kept in the review
+ *     workspace. Its F-001 is the missing employee_category_master table, its F-006 the
+ *     role-sync near-duplicates. Citations naming a round ("round 4 (F-028)") and all of
+ *     F-012..F-040 belong to it.
+ *   - A second, shorter review run during development used its own F-001..F-011 plus
+ *     R-001..R-004. Its F-001 is the confused-deputy RBAC escalation, its F-006 the
+ *     payroll read-then-write. Every "R-00x" citation is unambiguously from this one.
+ *
+ * Where the two cannot be told apart from the ID alone, the surrounding comment states
+ * the defect in words — read that, not the number. Neither report is authority for what
+ * this code does: the comments below are descriptions to verify, not evidence
+ * (agent-operating-rules.md 9.3 rank 1).
+ */
 class MemberController extends Controller
 {
     use ExportsBrandedGrid;
@@ -119,6 +148,7 @@ class MemberController extends Controller
 
     private function mapStep4Data(Request $request): array
     {
+
         $address = [
             'current_address' => $request->address,
             'country_master_pk' => $request->country,
@@ -180,13 +210,659 @@ class MemberController extends Controller
 
     private function mapStep5Data(Request $request, ?string $profilePicture, ?string $additionalDocUpload): array
     {
-        return [
+        $data = [
             'residence_no' => $request->residencenumber,
             'home_town_details' => $request->homeaddress,
             'other_miscellaneous_fields' => $request->miscellaneous ?? null,
-            'additional_doc_upload' => $additionalDocUpload,
-            'profile_picture' => $profilePicture,
         ];
+
+        // Only a newly uploaded file replaces the stored path. Writing the null that "no
+        // upload this time" produces wiped the existing photo and document on every edit
+        // (PR #319 re-review follow-up); there is no remove control, so null never means
+        // "delete". On create the columns are simply left at their default.
+        if ($additionalDocUpload !== null) {
+            $data['additional_doc_upload'] = $additionalDocUpload;
+        }
+
+        if ($profilePicture !== null) {
+            $data['profile_picture'] = $profilePicture;
+        }
+
+        return $data;
+    }
+
+    /** Request keys Step 6 posts — the same five mapStep6Data() reads. */
+    private const STEP6_FIELDS = ['gradepay', 'employeecategory', 'basicpay', 'bankname', 'accountno'];
+
+    /** Wizard steps whose values only an administrator can save: Role Assignment and Employee Grade Pay. */
+    private const ADMIN_ONLY_STEPS = [3, 6];
+
+    /**
+     * Step 6 ("Employee Grade Pay") does NOT belong on employee_master — it's saved separately
+     * to payroll_salary_master by saveStep6PayrollData().
+     *
+     * If the admin left the entire step untouched, this returns [] and
+     * saveStep6PayrollData() skips writing anything — this table is also read by the Estate
+     * module (house eligibility joins on salary_grade_pk), so a member who never uses this
+     * step should not get an empty payroll row created for them.
+     *
+     * If at least one field was filled in, all five keys are returned together, with any
+     * field the admin explicitly left blank mapped to null rather than dropped — otherwise a
+     * value the admin deliberately cleared would silently keep its old value on update()
+     * instead of being cleared (see PR #319 review, F-010).
+     */
+    private function mapStep6Data(Request $request): array
+    {
+        $raw = [
+            'salary_grade_pk' => $request->gradepay,
+            'employee_category_master_pk' => $request->employeecategory,
+            'basic_pay' => $request->basicpay,
+            'bank_name' => $request->bankname,
+            'account_no' => $request->accountno,
+        ];
+
+        $hasAnyValue = collect($raw)->contains(fn ($value) => $value !== null && $value !== '');
+
+        if (! $hasAnyValue) {
+            return [];
+        }
+
+        return array_map(fn ($value) => $value === '' ? null : $value, $raw);
+    }
+
+    /**
+     * Upserts payroll_salary_master for the given employee, keyed on employee_master_pk.
+     * Only touches the five columns this wizard owns (see mapStep6Data()) — this table is
+     * also read by the Estate module (house eligibility joins on salary_grade_pk), so an
+     * existing row's other columns (net_salary, tds, etc., not exposed on this wizard) must
+     * survive untouched.
+     */
+    private function saveStep6PayrollData(int $employeeMasterPk, Request $request): ?string
+    {
+        // PR #319 review round 2 (F-011). update() deliberately permits a non-admin to
+        // write their OWN employee record, so the self-service profile form keeps
+        // working (see authorizeMemberRecord()). That lane was gated against the role
+        // mappings and NOT against payroll, so an ordinary employee could POST
+        // gradepay/basicpay for their own emp_id and have it stored: an executed probe
+        // wrote basic_pay = 999999.99 and salary_grade_pk = the highest grade in
+        // salary_grade_master, on the table the Estate module joins for house
+        // eligibility. Whether a field appears on the self-service form is irrelevant —
+        // update() accepts it from the request body regardless of what the UI draws, so
+        // the check belongs here rather than in the view.
+        //
+        // Gated on the same predicate as the other administrative member actions. If
+        // bank_name/account_no are later judged to be legitimately employee-editable,
+        // split mapStep6Data() and gate only the payroll-determining subset
+        // (salary_grade_pk, basic_pay, employee_category_master_pk) — that is a product
+        // decision and is deliberately not made here.
+        //
+        // PR #319 re-review F-072: refusing silently told a non-admin who had filled in
+        // Step 6 that their pay/bank details were saved. The edit wizard no longer offers
+        // those inputs to a non-admin, so this only fires for a stale page or a crafted
+        // POST — and then it says so.
+        if (! $this->actingUserCanManageMembers()) {
+            return $request->hasAny(self::STEP6_FIELDS)
+                ? 'Employee Grade Pay (Step 6) was NOT saved: payroll details can only be changed by an administrator. '
+                    . 'The rest of the record was saved.'
+                : null;
+        }
+
+        // PR #319 review round 2 (F-003). The code below depends on schema this PR also
+        // ships: payroll_salary_master.basic_pay and .employee_category_master_pk, plus
+        // AUTO_INCREMENT on the primary key. Without them the insert fails with
+        // SQLSTATE 1364, and because store()/update() wrap every write in one
+        // transaction that failure is TOTAL — the member is not created at all,
+        // including Steps 1-5, which have nothing to do with the new schema. Degrading
+        // Step 6 is strictly better than losing the whole save during a window where
+        // code is deployed ahead of `php artisan migrate`.
+        //
+        // The correct deploy order is still migrate-then-deploy; this guard bounds the
+        // damage if that order is not held, it does not replace it.
+        //
+        // PR #319 review round 3 (R-003): the refusal used to be silent — an
+        // administrator who filled Step 6 during a deploy window got "success" and lost
+        // the data, which is the same defect shape R-001 records for the ambiguous
+        // credential branch. Both refusals now return their reason to the caller.
+        if (! $this->step6SchemaIsReady()) {
+            Log::warning('Member wizard: Step 6 payroll data skipped — the step-6 schema is not present on this environment. Run php artisan migrate.', [
+                'employee_master_pk' => $employeeMasterPk,
+            ]);
+
+            if ($this->mapStep6Data($request) === []) {
+                // Nothing was entered on Step 6, so nothing was lost — no need to alarm.
+                return null;
+            }
+
+            return 'Employee Grade Pay (Step 6) was NOT saved: this environment is missing the '
+                . 'payroll schema that step needs. The rest of the member record was saved. '
+                . 'Ask the release owner to run the pending database migrations.';
+        }
+
+        $data = $this->mapStep6Data($request);
+
+        if (empty($data)) {
+            // PR #319 re-review F-042: mapStep6Data() cannot tell "Step 6 never touched"
+            // apart from "every field deliberately blanked" -- both submit as all-empty.
+            // If a payroll row already exists for this employee, treat an all-blank
+            // submission as a deliberate clear and null the five columns this wizard
+            // owns; if no row exists yet, there is genuinely nothing to clear, so this
+            // remains a no-op exactly as before.
+            //
+            // PR #319 re-review F-066: "all blank" and "not submitted" are different
+            // things. The self-service profile page never renders Step 6 but posts to
+            // the same update(), so its requests carry none of these keys — that is not
+            // a clear, and treating it as one wiped the payroll row on every profile
+            // save by a Super Admin. Only a request that actually carries the Step 6
+            // fields (the wizard posts them, blank or not) may clear.
+            if (! $request->hasAny(self::STEP6_FIELDS)) {
+                return null;
+            }
+
+            $existingKey = $this->payrollEmployeeKey($employeeMasterPk);
+
+            if (PayrollSalaryMaster::where('employee_master_pk', $existingKey)->exists()) {
+                PayrollSalaryMaster::where('employee_master_pk', $existingKey)->update([
+                    'salary_grade_pk' => null,
+                    'employee_category_master_pk' => null,
+                    'basic_pay' => null,
+                    'bank_name' => null,
+                    'account_no' => null,
+                ]);
+            }
+
+            return null;
+        }
+
+        // updateOrCreate rather than first()-then-update-or-create: the two-statement
+        // form is a read-then-write with no lock, so two concurrent saves for the same
+        // employee could both read "no row" and both insert (independent review of
+        // PR #319, F-006). The unique index added by 2026_09_22_000002 is what actually
+        // enforces one payroll row per employee; this is the matching code shape.
+        // Keyed through payrollEmployeeKey(), not by the raw employee_master.pk — see that
+        // method. Keying by pk matched no existing row on any measured environment
+        // (F-037), so every save created an orphan the Estate module could not read.
+        //
+        // PR #319 re-review F-043: updateOrCreate() is itself a read-then-write, not an
+        // atomic upsert, so the unique index above can still lose the exact race it
+        // exists to prevent — both concurrent calls read "no row", both attempt an
+        // INSERT, and the second's throws (SQLSTATE 23000). Every other refusal in this
+        // method degrades into a $saveWarnings message rather than failing the whole
+        // save; this one previously propagated to store()/update()'s generic
+        // catch (\Throwable $e), rolling back the entire transaction — not just Step 6 —
+        // for a condition this method's own unique index was added to make safe to
+        // retry. Only the duplicate-key case is caught; any other QueryException is a
+        // real failure and still propagates.
+        try {
+            PayrollSalaryMaster::updateOrCreate(
+                ['employee_master_pk' => $this->payrollEmployeeKey($employeeMasterPk)],
+                $data
+            );
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ((string) $e->getCode() !== '23000') {
+                throw $e;
+            }
+
+            Log::warning('Member wizard: Step 6 payroll save lost a concurrent-save race on the unique index.', [
+                'employee_master_pk' => $employeeMasterPk,
+            ]);
+
+            return 'Employee Grade Pay (Step 6) was NOT saved: another save for this employee completed '
+                . 'at the same moment. The rest of the member record was saved. Please re-open this '
+                . 'member and re-enter the payroll details if they are still needed.';
+        }
+
+        return null;
+    }
+
+    /**
+     * The key `payroll_salary_master.employee_master_pk` actually holds for an employee.
+     *
+     * Independent review of PR #319, F-037. Despite its name, that column does NOT hold
+     * employee_master.pk on this data. Measured on saragam_live: of 892 payroll rows,
+     * 876 match an employee_master.pk_old and **0** match a pk, and the two ranges do not
+     * overlap (payroll keys run from 1,001,235,060 upward; employee pks are 10001-11838).
+     * employee_master.pk_old is populated on 1826 of 1831 rows and equals pk on none.
+     *
+     * This is not a guess about intent — the downstream consumer says so in its own code.
+     * EstateController::estateEmployeePkColumn() returns 'pk_old' whenever that column
+     * exists, and the comment above its payroll join reads "payroll_salary_master may
+     * still reference employee_master.pk_old, so we keep a separate column for joins"
+     * (EstateController.php:939). Estate joins this table for house eligibility.
+     *
+     * So Step 6, keying by pk, read nothing for every existing employee and wrote an
+     * orphan row Estate would never find. This resolver mirrors Estate's convention.
+     *
+     * RESIDUAL, deliberately not decided here: 5 employees on this database have a NULL
+     * pk_old (the newest rows, and any member this wizard creates). For them there is no
+     * legacy key, so their payroll row is keyed by pk — which Estate's pk_old join will
+     * not match. Whether those employees should get a pk_old, or Estate should widen its
+     * join, is an Estate/payroll domain decision and is raised as a human action rather
+     * than settled in this controller.
+     */
+    private function payrollEmployeeKey(int $employeeMasterPk): int
+    {
+        // Memoised per process, same reasoning as step6SchemaIsReady() (PR #319 re-review
+        // F-069): this is called on request paths, and an unmemoised hasColumn() is a
+        // schema-introspection query per call.
+        static $hasPkOld = null;
+
+        if ($hasPkOld === null) {
+            $hasPkOld = Schema::hasColumn('employee_master', 'pk_old');
+        }
+
+        if (! $hasPkOld) {
+            return $employeeMasterPk;
+        }
+
+        $pkOld = EmployeeMaster::where('pk', $employeeMasterPk)->value('pk_old');
+
+        return ($pkOld === null || (int) $pkOld === 0) ? $employeeMasterPk : (int) $pkOld;
+    }
+
+    /**
+     * Whether the schema Step 6 writes and renders is present on this environment.
+     *
+     * PR #319 review round 2 (F-003). Resolved once per request and memoised: this is a
+     * request-path call, and AUTO-07 exists precisely to stop information_schema reads
+     * happening per row. Three objects are checked because three separate migrations
+     * supply them, and a half-applied deploy can leave any subset present.
+     *
+     * PR #319 review round 3 (R-004) — the assumption this static encodes, stated so a
+     * later reader does not have to infer it: the cache is per PROCESS, not per request.
+     * Under PHP-FPM (how this application is deployed) a process serves one request at a
+     * time, so the two are the same thing and this is correct. Under a long-running
+     * worker — Laravel Octane, or a queue worker doing member writes — the answer would
+     * outlive the migration that changes it, and a freshly-migrated environment would
+     * keep reporting the schema as absent until the worker restarted. If Octane is ever
+     * adopted, move this to a request-scoped container binding.
+     */
+    private function step6SchemaIsReady(): bool
+    {
+        static $ready = null;
+
+        if ($ready !== null) {
+            return $ready;
+        }
+
+        return $ready = Schema::hasTable('employee_category_master')
+            && Schema::hasColumn('payroll_salary_master', 'basic_pay')
+            && Schema::hasColumn('payroll_salary_master', 'employee_category_master_pk');
+    }
+
+    /**
+     * Whether the acting user may administer OTHER members through this wizard.
+     *
+     * Every member/* and admin/setup/member/* route carries only the generic `auth`
+     * middleware — there is no permission:/role: middleware or policy layer in this
+     * app to hook into — so without a check in the controller any authenticated
+     * account could post an arbitrary emp_id and rewrite another employee's record.
+     * That was demonstrated end to end: a zero-role account posted member/update for
+     * a different employee and got HTTP 200 back with the victim's name changed.
+     *
+     * Gated on the same hasRole('Super Admin') convention the rest of this codebase
+     * uses for admin-only actions. Checked against the live data before choosing it:
+     * every member/employee permission row (employee, employee_master, member_index,
+     * employee_type, employee_group) is held by Super Admin and by no other role, so
+     * this matches the access model the permission table already describes rather
+     * than narrowing it.
+     */
+    private function actingUserCanManageMembers(): bool
+    {
+        return hasRole('Super Admin');
+    }
+
+    /**
+     * Whether this credential row is the only one for its employee.
+     *
+     * Returns false when the employee owns two or more user_credentials rows, because
+     * ->first() then picked one of them arbitrarily and there is no way to tell from
+     * here which login the administrator intended. Reconciling the duplicates is a DBA
+     * task; until it is done, this is the condition that keeps RBAC off the wrong row.
+     */
+    private function memberCredentialIsUnambiguous(int $userCredentialPk): bool
+    {
+        $employeeMasterPk = UserCredential::where('pk', $userCredentialPk)->value('user_id');
+
+        // No employee link means no user_id lookup happened, so nothing was resolved
+        // ambiguously — the caller was handed this exact credential row. Only a row
+        // reached THROUGH user_id can be the wrong one of several.
+        if ($employeeMasterPk === null) {
+            return true;
+        }
+
+        return UserCredential::where('user_id', $employeeMasterPk)->count() === 1;
+    }
+
+    /**
+     * PR #319 review round 2 (F-018): granting real Spatie roles from this
+     * screen must be restricted to actors already privileged enough to grant
+     * roles elsewhere. Gated using the `hasRole('Super Admin')` convention
+     * already used throughout this codebase for admin-only checks, since
+     * there is no `permission:`/`role:` middleware or policy layer in use
+     * anywhere in this app to hook into instead. Every member/* and
+     * admin/setup/member/* route carries only the generic `auth` middleware,
+     * so without this check any authenticated member could grant themselves
+     * roles like "Super Admin" simply by ticking them on their own edit form.
+     *
+     * PR #319 review round 4 (F-028): UserController::assignRoleSave() — the
+     * dedicated Role & Permission > Users screen this method's docblock below
+     * points to as "the same mechanism" — had no authorization check of its
+     * own at all until this same round, meaning it was not actually a valid
+     * precedent for "already gated" when this method was first written. It
+     * now carries the equivalent `hasRole('Super Admin')` gate directly.
+     *
+     * PR #319 re-review F-057: this used to be its own `return hasRole('Super Admin');`,
+     * byte-for-byte identical to actingUserCanManageMembers() with nothing enforcing the
+     * two stayed in step. "Manage RBAC roles" and "manage members" are the same decision
+     * on this codebase today (see that method's own docblock for the live-data check
+     * backing it) — delegating here makes that explicit instead of accidental, and a
+     * future widening/narrowing of one cannot silently diverge from the other.
+     *
+     * hasRole('Super Admin') already checks both 'Super Admin' and 'SuperAdmin'
+     * internally (see app/helpers.php). 'Admin' and 'Super-Admin' were dropped
+     * (PR #319 review, F-029): neither is aliased by hasRole(), so both were
+     * permanently false against the real `roles` table, but would have silently
+     * widened this gate's authority the moment either name was ever created for
+     * an unrelated purpose — several existing roles already contain "Admin".
+     */
+    private function actingUserCanManageRbacRoles(): bool
+    {
+        return $this->actingUserCanManageMembers();
+    }
+
+    /**
+     * Drop ticked role options that are no longer active, and say which ones.
+     *
+     * Validation only rejects pks that do not exist; an option deactivated while the
+     * form was open reaches here and is skipped rather than failing the whole save
+     * (PR #319 re-review F-045). Only active options are ever assigned, as before (F-025).
+     *
+     * On an update the member may already hold a role that has since been deactivated;
+     * update() only rewrites mappings for ACTIVE roles, so that mapping is left in place
+     * and the message says the role was not changed rather than "not assigned" (F-075).
+     * A selection where every role is inactive never reaches here: the validator refuses
+     * it first (see rejectOnlyInactiveRoles()).
+     *
+     * @return array{0: array, 1: ?string} [roles to assign, warning or null]
+     */
+    private function withoutInactiveRoles(array $roles, bool $isUpdate = false): array
+    {
+        $activeRoles = UserRoleMaster::getUserRoleList();
+
+        $kept = [];
+        $dropped = [];
+
+        foreach ($roles as $role) {
+            if ($role === null || $role === '') {
+                continue;
+            }
+
+            if ($activeRoles->has((int) $role)) {
+                $kept[] = $role;
+            } else {
+                $dropped[] = (int) $role;
+            }
+        }
+
+        if ($dropped === []) {
+            return [$kept, null];
+        }
+
+        $names = UserRoleMaster::whereIn('pk', $dropped)->pluck('user_role_display_name')->all();
+        $one = count($names) === 1;
+
+        return [$kept, implode(', ', $names)
+            . ($one ? ' is no longer an active role and ' : ' are no longer active roles and ')
+            . ($isUpdate ? ($one ? 'was not changed.' : 'were not changed.') : ($one ? 'was not assigned.' : 'were not assigned.'))
+            . ' The rest of the record was saved.'];
+    }
+
+    /**
+     * Validator hook: refuse a role selection in which EVERY ticked role is inactive.
+     *
+     * withoutInactiveRoles() would drop them all and leave the member with no role,
+     * which 'userrole' => required exists to prevent (PR #319 re-review F-075). Runs as
+     * part of validation, so the refusal happens before any upload or database write.
+     */
+    private function rejectOnlyInactiveRoles(\Illuminate\Validation\Validator $validator, Request $request): void
+    {
+        $roles = array_filter(
+            (array) $request->input('userrole', []),
+            fn ($role) => $role !== null && $role !== ''
+        );
+
+        if ($roles === []) {
+            return;
+        }
+
+        $activeRoles = UserRoleMaster::getUserRoleList();
+
+        foreach ($roles as $role) {
+            if ($activeRoles->has((int) $role)) {
+                return;
+            }
+        }
+
+        $validator->errors()->add('userrole', 'The selected role is no longer active. Please choose an active role.');
+    }
+
+    /**
+     * One batch insert instead of N round-trips (PR #319 re-review F-049),
+     * extracted so store()/update() can't drift from each other (F-065).
+     */
+    private function syncEmployeeRoleMappings(int $userCredentialPk, array $roles): void
+    {
+        EmployeeRoleMapping::insert(array_map(fn ($role) => [
+            'user_credentials_pk' => $userCredentialPk,
+            'user_role_master_pk' => $role,
+        ], $roles));
+    }
+
+    /**
+     * Step 3 ("Role Assignment")'s checkboxes are drawn from user_role_master
+     * (UserRoleMaster::getUserRoleList()), which is a mix of real Spatie roles
+     * (kept in sync with the `roles` table — see
+     * 2026_09_10_000001_sync_user_role_master_with_roles) and plain HR tags
+     * that have no corresponding permission role at all (e.g. "Internal
+     * Faculty", "Staff"). Previously, checking a role here only wrote to
+     * employee_role_mapping and never touched Spatie RBAC, so it looked like
+     * it granted access without actually doing so (PR #319 review, F-007).
+     *
+     * This grants/revokes real Spatie roles for exactly the subset of
+     * user_role_master options that correspond to a real `roles` row — no
+     * more, no less — using $user->syncRoles(), the same mechanism
+     * UserController::assignRoleSave() already uses for the dedicated
+     * Role & Permission > Users screen.
+     *
+     * PR #319 review round 2 (F-019): the sync migration now mirrors almost
+     * every real role into user_role_master, so "preserve whatever this
+     * screen doesn't offer" (the v2 approach) preserves almost nothing —
+     * saving a member with only "Doctor" ticked silently stripped every other
+     * Spatie role the member held, including ones granted via the Users
+     * screen. Instead of deriving "preserve" from the *offered* set, this
+     * derives "revoke" from what THIS WIZARD itself previously granted for
+     * this member — read from employee_role_mapping, which only ever holds
+     * rows this screen wrote — via $previouslySelectedUserRoleMasterPks. A
+     * role is only ever removed here if the wizard granted it last time and
+     * it's unchecked now; a role assigned any other way is never touched,
+     * regardless of how many roles this screen happens to offer a checkbox
+     * for.
+     */
+    private function syncSpatieRolesFromWizardSelection(
+        int $userCredentialPk,
+        array $selectedUserRoleMasterPks,
+        array $previouslySelectedUserRoleMasterPks = []
+    ): ?string {
+        if (! $this->actingUserCanManageRbacRoles()) {
+            return null;
+        }
+
+        $spatieRoleNames = Role::pluck('name')->all();
+
+        if (empty($spatieRoleNames)) {
+            return null;
+        }
+
+        $newNames = UserRoleMaster::whereIn('pk', $selectedUserRoleMasterPks)
+            ->pluck('user_role_display_name')
+            ->all();
+        $oldNames = empty($previouslySelectedUserRoleMasterPks)
+            ? []
+            : UserRoleMaster::whereIn('pk', $previouslySelectedUserRoleMasterPks)
+                ->pluck('user_role_display_name')
+                ->all();
+
+        [$newSpatieRoles, $blockedSelections] = $this->classifyRoleSelection($newNames, $spatieRoleNames);
+        [$oldSpatieRoles, $previouslyBlocked] = $this->classifyRoleSelection($oldNames, $spatieRoleNames);
+
+        // PR #319 review round 3, R-002 follow-through. Blocking Super Admin in
+        // classifyRoleSelection() re-created, for that one option, exactly the defect
+        // F-005 was raised about: tick the box, see "success", get no permission, with
+        // nothing to distinguish that from a working grant. The block is deliberate this
+        // time, so the administrator is told instead of left to discover it.
+        //
+        // The employee_role_mapping row is still written by the caller — the option can
+        // legitimately be an HR tag as well as an RBAC name, and this method has no
+        // business deciding that. Only the RBAC half is refused, and only that is
+        // reported.
+        $blockedWarning = $blockedSelections === [] ? null
+            : 'No permissions were granted for ' . implode(', ', $blockedSelections) . ': that role '
+            . 'is not grantable from the Member wizard. It is assigned from Role & Permission > Users. '
+            . 'The rest of the member record was saved.';
+
+        // A blocked option that was ticked before and is not now. The block filters these
+        // out of BOTH sets above, so unticking one is a no-op — correct, but it has to
+        // announce itself, and the check needs the member's CURRENT roles to know whether
+        // it mattered. That is why this cannot short-circuit below on empty role sets:
+        // when the only thing the administrator changed was a blocked option, both sets
+        // are empty and the early return would swallow the warning.
+        $blockedUnticked = array_diff($previouslyBlocked, $blockedSelections);
+
+        if (empty($newSpatieRoles) && empty($oldSpatieRoles) && $blockedUnticked === []) {
+            return $blockedWarning;
+        }
+
+        // user_credentials.user_id is NOT unique — it carries only the non-unique index
+        // idx_user_id, and on the live data 611 user_id values are held by more than one
+        // row, 207 of them belonging to a real employee_master record, spanning 1223
+        // credential rows of which 603 already hold at least one Spatie role. The caller
+        // resolves the member's login with ->first(), so for those members it hands over
+        // an arbitrary one of several. Granting or revoking real permissions on a login
+        // the administrator did not mean to touch is worse than not acting: refuse, and
+        // leave a trace naming the member so it can be reconciled.
+        //
+        // PR #319 review round 2 (F-002 residual): refusing silently was still wrong —
+        // the administrator ticked a role, saw "Member successfully updated", and nothing
+        // happened, for a measured 207 employees. The refusal is now returned to the
+        // caller so the response can say so out loud.
+        if (! $this->memberCredentialIsUnambiguous($userCredentialPk)) {
+            Log::warning('Member wizard: skipped Spatie role sync — employee has more than one user_credentials row.', [
+                'user_credentials_pk' => $userCredentialPk,
+            ]);
+
+            return 'Role permissions were NOT changed: this employee has more than one login account, '
+                . 'so the wizard cannot tell which one you meant. The rest of the member record was saved. '
+                . 'Ask the DBA to reconcile the duplicate user_credentials rows for this employee.'
+                . ($blockedWarning ? ' ' . $blockedWarning : '');
+        }
+
+        $user = User::find($userCredentialPk);
+
+        if (! $user) {
+            return $blockedWarning;
+        }
+
+        $currentRoleNames = $user->getRoleNames()->all();
+
+        // The block is symmetric by construction: classifyRoleSelection() filters
+        // blocked roles out of BOTH the new and the old selection, so a blocked role can
+        // never enter $toAdd and never enter $toRemove. Refusing to revoke is the right
+        // half of "this screen does not manage Super Admin" — but doing it silently is
+        // the same defect as refusing to grant silently. An administrator who UNTICKS a
+        // blocked role a member actually holds sees success and the role stays.
+        //
+        // Only warn when it would have mattered: the option was ticked before, is not
+        // now, and the member really does still hold the role. Warning on every save of
+        // a Super Admin would be noise. ($blockedUnticked was computed above, before the
+        // early return, so this case can actually be reached.)
+        //
+        // Matched on the same separator-free key as the block itself (PR #319 re-review
+        // F-050): the space-collapsing key missed an unticked "SuperAdmin" option on a
+        // member holding "Super Admin", so the refusal went unreported.
+        $heldBlockKeys = array_flip(array_map([RoleNames::class, 'blockKey'], $currentRoleNames));
+        $stillHeld = array_values(array_filter(
+            $blockedUnticked,
+            fn ($displayName) => isset($heldBlockKeys[RoleNames::blockKey($displayName)])
+        ));
+
+        if ($stillHeld !== []) {
+            $blockedWarning = trim(($blockedWarning ?? '') . ' '
+                . implode(', ', array_unique($stillHeld)) . ' was NOT removed: that role is not '
+                . 'managed from the Member wizard. Remove it from Role & Permission > Users.');
+        }
+
+        // Only unchecking a role this same screen previously granted removes it.
+        $toRemove = array_diff($oldSpatieRoles, $newSpatieRoles);
+        $toAdd = array_diff($newSpatieRoles, $currentRoleNames);
+
+        $finalRoleNames = array_values(array_unique(array_merge(
+            array_diff($currentRoleNames, $toRemove),
+            $toAdd
+        )));
+
+        $user->syncRoles($finalRoleNames);
+
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+        return $blockedWarning;
+    }
+
+    /**
+     * Split ticked user_role_master options into the real `roles` they grant and the
+     * options this screen refuses, in one pass over each list (PR #319 re-review F-050).
+     *
+     * Grants are matched on RoleNames::normalize() — the same key the role-sync migration
+     * uses — because an exact string match missed "Super-Admin" against "Super Admin" and
+     * reported success while granting nothing (F-005). The grant side returns the
+     * canonical `roles` name, which is what syncRoles() needs.
+     *
+     * Refusals are matched on RoleNames::blockKey(), which drops separators so every
+     * spelling of a not-grantable role is caught (F-039), and return the option's own
+     * spelling so the warning names the checkbox the administrator clicked.
+     *
+     * @return array{0: string[], 1: string[]} [grantable `roles` names, refused option names]
+     */
+    private function classifyRoleSelection(array $displayNames, array $spatieRoleNames): array
+    {
+        $grantableByKey = [];
+        $blockedKeys = [];
+
+        foreach ($spatieRoleNames as $spatieRoleName) {
+            if (RoleNames::isNotGrantableFromMemberWizard($spatieRoleName)) {
+                $blockedKeys[RoleNames::blockKey($spatieRoleName)] = true;
+            } else {
+                $grantableByKey[RoleNames::normalize($spatieRoleName)] = $spatieRoleName;
+            }
+        }
+
+        $grantable = [];
+        $blocked = [];
+
+        foreach ($displayNames as $displayName) {
+            if (isset($blockedKeys[RoleNames::blockKey($displayName)])) {
+                $blocked[] = $displayName;
+
+                continue;
+            }
+
+            $key = RoleNames::normalize($displayName);
+
+            if (isset($grantableByKey[$key])) {
+                $grantable[] = $grantableByKey[$key];
+            }
+        }
+
+        return [array_values(array_unique($grantable)), array_values(array_unique($blocked))];
     }
 
     /**
@@ -218,8 +894,12 @@ class MemberController extends Controller
         // Provide user resolver (for authorize() method)
         $formRequest->setUserResolver(fn () => $request->user());
 
-        // Run authorization logic
-        if (! $formRequest->authorize()) {
+        // PR #319 review (F-003): $formRequest->authorize() can never return false — every
+        // StoreMemberStep*Request::authorize() returns true unconditionally — so this branch
+        // was structurally unreachable and gated nothing. This endpoint backs the CREATE
+        // wizard (no member id yet), which is never self-service (see store()), so the real
+        // check is the same admin-only gate store() uses.
+        if (! $this->actingUserCanManageMembers()) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
@@ -243,17 +923,6 @@ class MemberController extends Controller
     }
 
     /**
-     * Merge rules()/messages() from all 5 step requests into one combined validator,
-     * since the final submit carries every step's fields at once.
-     */
-    /**
-     * The same object-level decision EnsureMemberRecordAccess makes, for the
-     * routes that carry the member's key in the request body instead of the URL.
-     *
-     * One rule, resolved through one method, so the middleware and the
-     * controller cannot come to different answers about who may touch a record.
-     */
-    /**
      * The same decision EnsureMemberRecordAccess makes, from the same method.
      *
      * It used to be a copy of the rule rather than a call to it - `user_id`
@@ -264,6 +933,19 @@ class MemberController extends Controller
      * F-024 tightened the rule (user_category = 'E' plus a contact proof, see
      * that class), and this now inherits the change instead of needing the same
      * edit made twice.
+     *
+     * Why the user_category check matters (independent review of PR #319, F-038,
+     * carried forward from the now-deleted authorizeMemberWrite() this method
+     * replaced): user_credentials.user_id is scoped per user_category, not a
+     * universal employee_master.pk. Measured on the live database: 328 logins that
+     * are NOT employee accounts (327 NULL-category, 1 'S') carry a user_id equal to
+     * some unrelated employee's pk, so each would pass an "it's my own record"
+     * test built on user_id alone. Reproduced end to end on testsargam6: a trainee
+     * login renamed employee 11056, and another rewrote employee 11058's own
+     * user_credentials row. store() creates employee logins with user_category 'E'
+     * and 'user_id' => $employee->pk, which is the only category in which the two
+     * are the same namespace — see F-052 in UserController::assignRoleSave() for
+     * the same gap class resurfacing on a different write path.
      */
     private function authorizeMemberRecord($memberPk): void
     {
@@ -278,7 +960,17 @@ class MemberController extends Controller
         );
     }
 
-    private function combinedMemberRules(): array
+    /**
+     * Merge rules()/messages() from all 6 step requests into one combined validator,
+     * since the final submit carries every step's fields at once.
+     *
+     * $requireUserRole is false for a caller who can't manage RBAC roles (the
+     * self-service profile form, which never renders the Role Assignment step) —
+     * their role-mapping write is already a no-op (see actingUserCanManageRbacRoles()
+     * gate in update()), so requiring the field would block a save over a control
+     * they were never shown (F-001).
+     */
+    private function combinedMemberRules(bool $requireUserRole = true): array
     {
         $requestClasses = [
             StoreMemberStep1Request::class,
@@ -286,6 +978,7 @@ class MemberController extends Controller
             StoreMemberStep3Request::class,
             StoreMemberStep4Request::class,
             StoreMemberStep5Request::class,
+            StoreMemberStep6Request::class,
         ];
 
         $rules = [];
@@ -296,14 +989,23 @@ class MemberController extends Controller
             $messages = array_merge($messages, $instance->messages());
         }
 
+        if (!$requireUserRole) {
+            $rules['userrole'] = ['nullable', 'array'];
+        }
+
         return [$rules, $messages];
     }
 
     public function store(Request $request)
     {
+        // Creating a member is never a self-service action — there is no "own record" to
+        // scope it to — so this is admin-only, unlike update().
+        abort_unless($this->actingUserCanManageMembers(), 403);
+
         [$rules, $messages] = $this->combinedMemberRules();
 
         $validator = Validator::make($request->all(), $rules, $messages);
+        $validator->after(fn ($validator) => $this->rejectOnlyInactiveRoles($validator, $request));
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
@@ -317,6 +1019,18 @@ class MemberController extends Controller
         if ($request->hasFile('additionaldocument')) {
             $additional_doc_upload = $request->file('additionaldocument')->store('members', 'public');
         }
+
+        // employee_master, payroll_salary_master, user_credentials and the role mappings
+        // are four tables written together for one member — wrapped in a transaction so a
+        // failure partway through (e.g. Step 6 hitting a bad value) rolls back the whole
+        // thing instead of leaving a member with no login credential and no roles.
+        // Same reasoning as update(): a refusal inside the save has to reach the response
+        // rather than be swallowed (PR #319 review round 3, R-003). Two refusals can fire
+        // here: the missing-schema one for Step 6, and a ticked role this wizard will not
+        // grant (Super Admin) — PR #319 re-review F-068, which this path used to discard.
+        // A member being created cannot yet have two logins, so the ambiguous-credential
+        // refusal cannot.
+        $saveWarnings = [];
 
         // The unique rules above run in a separate statement from the insert, so
         // two submits that arrive together can both pass them and both create a
@@ -332,47 +1046,57 @@ class MemberController extends Controller
         // intended business key. Both are open human actions.
         $duplicate = null;
 
-        DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload, &$duplicate) {
-            if (EmployeeMaster::where('emp_id', $request->id)->lockForUpdate()->exists()) {
-                $duplicate = ['id' => ['This employee ID already exists']];
+        try {
+            DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload, &$saveWarnings, &$duplicate) {
+                if (EmployeeMaster::where('emp_id', $request->id)->lockForUpdate()->exists()) {
+                    $duplicate = ['id' => ['This employee ID already exists']];
 
-                return;
-            }
-
-            if (UserCredential::where('user_name', $request->userid)->lockForUpdate()->exists()) {
-                $duplicate = ['userid' => ['This user ID already exists']];
-
-                return;
-            }
-
-            $employee = EmployeeMaster::create(array_merge(
-                $this->mapStep1Data($request),
-                $this->mapStep2Data($request),
-                $this->mapStep4Data($request),
-                $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
-            ));
-
-            $userCredential = UserCredential::create([
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
-                'email_id' => $request->personalemail,
-                'mobile_no' => $request->mnumber,
-                'reg_date' => now(),
-                'user_id' => $employee->pk,
-                'user_name' => $request->userid,
-                'user_category' => 'E',
-            ]);
-
-            if ($userCredential) {
-                $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
-                foreach ($roles as $role) {
-                    EmployeeRoleMapping::create([
-                        'user_credentials_pk' => $userCredential->pk,
-                        'user_role_master_pk' => $role,
-                    ]);
+                    return;
                 }
-            }
-        });
+
+                if (UserCredential::where('user_name', $request->userid)->lockForUpdate()->exists()) {
+                    $duplicate = ['userid' => ['This user ID already exists']];
+
+                    return;
+                }
+
+                $employee = EmployeeMaster::create(array_merge(
+                    $this->mapStep1Data($request),
+                    $this->mapStep2Data($request),
+                    $this->mapStep4Data($request),
+                    $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
+                ));
+
+                $saveWarnings[] = $this->saveStep6PayrollData($employee->pk, $request);
+
+                $userCredential = UserCredential::create([
+                    'first_name' => $request->first_name,
+                    'last_name' => $request->last_name,
+                    'email_id' => $request->personalemail,
+                    'mobile_no' => $request->mnumber,
+                    'reg_date' => now(),
+                    'user_id' => $employee->pk,
+                    'user_name' => $request->userid,
+                    'user_category' => 'E'
+                ]);
+
+                if ($userCredential) {
+                    $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
+                    [$roles, $saveWarnings[]] = $this->withoutInactiveRoles($roles);
+
+                    // PR #319 re-review F-065: shared with update() so the two paths can't drift.
+                    $this->syncEmployeeRoleMappings($userCredential->pk, $roles);
+
+                    $saveWarnings[] = $this->syncSpatieRolesFromWizardSelection($userCredential->pk, $roles);
+                }
+            });
+        } catch (\Throwable $e) {
+            // The upload happens before the transaction opens (the file has to exist on
+            // disk before its path can be written to employee_master), so a rollback here
+            // doesn't clean it up on its own — do it here instead (PR #319 review, F-024).
+            $this->deleteUploadedMemberFiles($profile_picture, $additional_doc_upload);
+            throw $e;
+        }
 
         // Same shape the validator returns, so the wizard renders it in the same
         // place as any other field error rather than as an unexplained failure.
@@ -384,14 +1108,37 @@ class MemberController extends Controller
             // leave a profile picture and an identity document on the PUBLIC
             // disk with nothing pointing at them - unreferenced personal
             // documents, accumulating one pair per refused re-submit.
-            Storage::disk('public')->delete(array_filter([$profile_picture, $additional_doc_upload]));
+            $this->deleteUploadedMemberFiles($profile_picture, $additional_doc_upload);
 
             return response()->json(['errors' => $duplicate], 422);
         }
 
         MemberDataTable::bumpListingCacheEpoch();
 
+        $saveWarnings = array_values(array_filter($saveWarnings));
+
+        if ($saveWarnings !== []) {
+            return response()->json([
+                'message'  => 'Member successfully created',
+                'warning'  => implode(' ', $saveWarnings),
+                'warnings' => $saveWarnings,
+            ]);
+        }
+
         return response()->json(['message' => 'Member successfully created']);
+    }
+
+    /**
+     * Best-effort cleanup for files already written to the `public` disk before a
+     * store()/update() transaction that ended up failing (PR #319 review, F-024).
+     */
+    private function deleteUploadedMemberFiles(?string $profilePicture, ?string $additionalDocument): void
+    {
+        foreach ([$profilePicture, $additionalDocument] as $path) {
+            if ($path) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($path);
+            }
+        }
     }
 
     public function update(Request $request)
@@ -402,11 +1149,41 @@ class MemberController extends Controller
         // middleware cannot see it - without this check, gating the read path
         // while leaving this open would let any authenticated account rewrite
         // any member's record, which is the larger half of the same hole.
+        //
+        // Supersedes the old authorizeMemberWrite() Super-Admin-only gate: this
+        // delegates to EnsureMemberRecordAccess (see authorizeMemberRecord() above),
+        // whose bypass — EnsureMemberPiiAccess::grantsAccess() — is a strict superset
+        // of Super Admin (it also admits a holder of the member_pii_read permission),
+        // and whose own-record check is the same rule authorizeMemberWrite() had.
+        // Keeping both would have meant a PII-permission holder who is not Super
+        // Admin passes this gate but fails the old one for a record they don't own.
         $this->authorizeMemberRecord($request->emp_id);
 
-        [$rules, $messages] = $this->combinedMemberRules();
+        // emp_id arrives in the request body (a hidden input on both the wizard and the
+        // self-service profile form) and was previously neither validated nor authorised,
+        // so any authenticated account could rewrite any employee's record. Authorised
+        // above so a non-admin can only write their own record; validated here so an
+        // unknown id is a 422 rather than a fatal on find()->update().
+        $validator = Validator::make(
+            $request->all(),
+            ['emp_id' => ['required', 'integer', 'exists:employee_master,pk']],
+            ['emp_id.required' => 'The member to update was not identified.',
+             'emp_id.exists'   => 'The member to update does not exist.']
+        );
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        [$rules, $messages] = $this->combinedMemberRules($this->actingUserCanManageRbacRoles());
 
         $validator = Validator::make($request->all(), $rules, $messages);
+
+        // Only for an actor whose role selection is actually saved; a non-admin's
+        // 'userrole' is ignored by update() (F-001), so it must not block their save.
+        if ($this->actingUserCanManageRbacRoles()) {
+            $validator->after(fn ($validator) => $this->rejectOnlyInactiveRoles($validator, $request));
+        }
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
@@ -422,40 +1199,210 @@ class MemberController extends Controller
             $additional_doc_upload = $request->file('additionaldocument')->store('members', 'public');
         }
 
-        EmployeeMaster::find($request->emp_id)->update(array_merge(
-            $this->mapStep1Data($request),
-            $this->mapStep2Data($request),
-            $this->mapStep4Data($request),
-            $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
-        ));
+        // Set inside the transaction, read after it. Bound by reference so the refusal
+        // reason survives back out to the response (PR #319 review round 2, F-002).
+        // PR #319 review round 3 (R-001/R-003): a save can now refuse more than one thing
+        // — RBAC for an ambiguous member, and Step 6 when its schema is missing — so the
+        // reasons are collected rather than overwritten, and every one of them reaches
+        // the response.
+        $saveWarnings = [];
 
-        UserCredential::updateOrCreate(
-            ['user_id' => $request->emp_id], // Search condition
-            [
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
-                'email_id' => $request->personalemail,
-                'mobile_no' => $request->mnumber,
-                'user_name' => $request->userid,
-                'user_category' => 'E',
-            ]
-        );
-        $userCredential = UserCredential::where('user_id', $request->emp_id)->first();
+        // PR #319 re-review F-051: store()'s equivalent lockForUpdate() recheck runs
+        // inside its transaction because the FormRequest-level uniqueness rule is a
+        // separate, unlocked SELECT that two concurrent requests can both pass. update()
+        // had the same gap for a changed Employee ID (and, for an admin, a changed login
+        // user_name): two concurrent edits converging on the same new value could both
+        // pass validation and both write, since employee_master.emp_id/user_credentials
+        // .user_name carry no unique DB constraint either. Mirrors store()'s guard and
+        // response shape exactly.
+        $duplicate = null;
 
-        if ($userCredential) {
-            $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
+        // Same reasoning as store(): one transaction across employee_master,
+        // payroll_salary_master, user_credentials and the role mappings.
+        try {
+            DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload, &$saveWarnings, &$duplicate) {
+            // Excludes the row being edited itself, so an unchanged emp_id never
+            // collides with its own current value.
+            if (EmployeeMaster::where('emp_id', $request->id)->where('pk', '!=', $request->emp_id)->lockForUpdate()->exists()) {
+                $duplicate = ['id' => ['This employee ID already exists']];
 
-            EmployeeRoleMapping::where('user_credentials_pk', $userCredential->pk)->delete();
-
-            foreach ($roles as $role) {
-                EmployeeRoleMapping::create([
-                    'user_credentials_pk' => $userCredential->pk,
-                    'user_role_master_pk' => $role,
-                ]);
+                return;
             }
+
+            // PR #319 re-review round 6 (F-064): this whole block — resolving which
+            // credential row 'this one' is, and for an admin, rechecking the new
+            // user_name for a collision — is pure reads, moved up here BEFORE any write
+            // runs in this transaction. It used to sit after EmployeeMaster::update()
+            // and saveStep6PayrollData() below; returning from this closure on a
+            // detected duplicate does not throw, so DB::transaction() committed those
+            // two writes before the 422 was ever reported — a partial save reported as
+            // a failure, exactly the shape F-051 itself was fixing for emp_id. Moving
+            // the check earlier, not wrapping it in its own rollback, is the fix: it
+            // must run before the first write, not undo writes after the fact.
+            //
+            // PR #319 review round 2 (F-002 residual). This was
+            // UserCredential::updateOrCreate(['user_id' => $emp_id], ...) followed by a
+            // separate where('user_id')->first() lookup. Both matched on user_id, which
+            // carries only the NON-UNIQUE index idx_user_id — 611 duplicate groups on the
+            // live data, 207 of them a real employee. So the profile fields could be
+            // written to one credential row while the role work was done against another,
+            // and updateOrCreate picked its row by a different ordering than first() did.
+            //
+            // Resolving the row ONCE, deterministically, and then writing through that
+            // instance removes the divergence: whatever row is chosen, every write in this
+            // request goes to the same one. orderBy('pk') makes the choice stable across
+            // saves rather than left to the storage engine. It still does not make the
+            // choice CORRECT for a member with duplicates — only a unique constraint on
+            // user_credentials.user_id can do that, which needs the DBA to reconcile the
+            // duplicates first — which is why syncSpatieRolesFromWizardSelection() refuses
+            // to touch RBAC for an ambiguous member and now says so in the response.
+            // Independent review of PR #319, F-038 (second half). An administrator may
+            // rewrite the member's login; a self-service actor may only touch their OWN
+            // credential row, and may not rename the login at all.
+            //
+            // Two things were wrong before. The row was always resolved by
+            // where('user_id', emp_id)->first(), so a self-service save wrote to whichever
+            // row that lookup returned rather than to the actor's own — on the measured
+            // data that is a DIFFERENT person's login for the colliding accounts. And
+            // user_name was always in the payload, so the same save could rename a login.
+            // Both were demonstrated: a trainee rewrote employee 11058's user_name and
+            // email_id to attacker-chosen values.
+            $actingAsAdmin = $this->actingUserCanManageMembers();
+
+            $credentialAttributes = [
+                'first_name' => $request->first_name,
+                'last_name'  => $request->last_name,
+                'email_id'   => $request->personalemail,
+                'mobile_no'  => $request->mnumber,
+            ];
+
+            if ($actingAsAdmin) {
+                // Only an administrator may set the login name or (re)assert the category.
+                $credentialAttributes['user_name']     = $request->userid;
+                $credentialAttributes['user_category'] = 'E';
+
+                $userCredential = UserCredential::where('user_id', $request->emp_id)
+                    ->orderBy('pk')
+                    ->first();
+
+                // Same recheck as emp_id above, for the login name an admin can rename
+                // here. Excludes the row being edited itself (if one exists yet — on a
+                // credential-less member being given a login for the first time,
+                // $userCredential is null and every match is a real collision).
+                $userNameQuery = UserCredential::where('user_name', $request->userid)->lockForUpdate();
+                if ($userCredential) {
+                    $userNameQuery->where('pk', '!=', $userCredential->pk);
+                }
+                if ($userNameQuery->exists()) {
+                    $duplicate = ['userid' => ['This user ID already exists']];
+
+                    return;
+                }
+            } elseif (EnsureMemberRecordAccess::ownsMemberRecord($request->emp_id)) {
+                // Self-service: the actor's own row, by primary key. ownsMemberRecord()
+                // establishes that this actor is an 'E' login whose user_id is this
+                // employee, so there is no lookup to get wrong.
+                $userCredential = UserCredential::find(Auth::id());
+            } else {
+                // PR #319 re-review F-078: authorizeMemberRecord() also admits a holder of
+                // member_pii_read who is not Super Admin, for a record they do NOT own.
+                // Resolving Auth::id() here wrote the edited member's name, email and
+                // mobile onto the actor's own login. Such an actor may not rewrite another
+                // member's login either (that is an administrator action, above), so no
+                // credential row is touched and the response says so.
+                $userCredential = null;
+                $saveWarnings[] = 'Login account details (name, email, mobile) were not changed: '
+                    .'only an administrator or the member themself can update them. '
+                    .'The rest of the record was saved.';
+            }
+
+            EmployeeMaster::find($request->emp_id)->update(array_merge(
+                $this->mapStep1Data($request),
+                $this->mapStep2Data($request),
+                $this->mapStep4Data($request),
+                $this->mapStep5Data($request, $profile_picture, $additional_doc_upload)
+            ));
+
+            $saveWarnings[] = $this->saveStep6PayrollData((int) $request->emp_id, $request);
+
+            if ($userCredential) {
+                $userCredential->update($credentialAttributes);
+            } elseif ($actingAsAdmin) {
+                $userCredential = UserCredential::create(
+                    $credentialAttributes + ['user_id' => $request->emp_id]
+                );
+            }
+
+            // Role mappings are only rewritten by an actor entitled to manage roles.
+            // employee_role_mapping is what the edit form pre-checks Step 3 from, and what
+            // syncSpatieRolesFromWizardSelection() reads back as "this wizard granted it
+            // last time" — so an unprivileged write here is not a cosmetic tag, it is
+            // state a later privileged save converts into a real Spatie grant. Demonstrated
+            // end to end: an attacker-seeded mapping row became a live Spatie role the next
+            // time a Super Admin saved that member for an unrelated reason. Skipping the
+            // block leaves existing mappings untouched rather than clearing them.
+            if ($userCredential && $this->actingUserCanManageRbacRoles()) {
+                $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
+                [$roles, $saveWarnings[]] = $this->withoutInactiveRoles($roles, true);
+
+                // Only replace mappings for roles that were actually offered as a
+                // checkbox (getUserRoleList() — active roles only). A member holding a
+                // role that's since been deactivated has no checkbox for it and can't
+                // post it back, so deleting *every* mapping here would silently strip
+                // that role as a side effect of saving unrelated fields (PR #319
+                // review, F-008). Leaving it untouched preserves it until someone
+                // deliberately reassigns the member's roles while it's active again.
+                $offeredRoleIds = \App\Models\UserRoleMaster::getUserRoleList()->keys()->all();
+
+                // Captured before the delete below so syncSpatieRolesFromWizardSelection()
+                // can tell "this wizard granted it last time" apart from "granted some
+                // other way" (PR #319 review, F-019) — employee_role_mapping is the only
+                // durable record of what this screen itself previously selected.
+                $previouslySelectedRoleIds = EmployeeRoleMapping::where('user_credentials_pk', $userCredential->pk)
+                    ->whereIn('user_role_master_pk', $offeredRoleIds)
+                    ->pluck('user_role_master_pk')
+                    ->all();
+
+                EmployeeRoleMapping::where('user_credentials_pk', $userCredential->pk)
+                    ->whereIn('user_role_master_pk', $offeredRoleIds)
+                    ->delete();
+
+                // PR #319 re-review F-065: shared with store() so the two paths can't drift.
+                $this->syncEmployeeRoleMappings($userCredential->pk, $roles);
+
+                $saveWarnings[] = $this->syncSpatieRolesFromWizardSelection($userCredential->pk, $roles, $previouslySelectedRoleIds);
+            }
+            });
+        } catch (\Throwable $e) {
+            $this->deleteUploadedMemberFiles($profile_picture, $additional_doc_upload);
+            throw $e;
+        }
+
+        // Same shape store() returns, so the wizard renders it in the same place as any
+        // other field error (F-051).
+        if ($duplicate !== null) {
+            $this->deleteUploadedMemberFiles($profile_picture, $additional_doc_upload);
+
+            return response()->json(['errors' => $duplicate], 422);
         }
 
         MemberDataTable::bumpListingCacheEpoch();
+
+        // PR #319 review round 2 (F-002 residual) and round 3 (R-001/R-003): when part of
+        // the save is refused — RBAC for an employee with more than one login, or Step 6
+        // on an environment missing its schema — say so. Reporting plain success while
+        // silently doing nothing is what made those defects invisible to administrators.
+        // The wizard's success handler renders this (edit.blade.php); a warning that only
+        // exists in the response body is not a fix.
+        $saveWarnings = array_values(array_filter($saveWarnings));
+
+        if ($saveWarnings !== []) {
+            return response()->json([
+                'message'  => 'Member successfully updated',
+                'warning'  => implode(' ', $saveWarnings),
+                'warnings' => $saveWarnings,
+            ]);
+        }
 
         return response()->json(['message' => 'Member successfully updated']);
     }
@@ -465,8 +1412,38 @@ class MemberController extends Controller
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')
             ->toArray();
+        // Only step 6 ("Employee Grade Pay") actually renders these options — querying
+        // them for every other step was pure overhead (PR #319 review, F-001 residual/F-023).
+        [$gradePayOptions, $employeeCategoryOptions] = ((int) $step === 6)
+            ? $this->step6DropdownOptions()
+            : [[], []];
 
-        return view("admin.member.steps.step{$step}", compact('appellationMasterList'));
+        return view("admin.member.steps.step{$step}", compact('appellationMasterList', 'gradePayOptions', 'employeeCategoryOptions'));
+    }
+
+    /**
+     * Dropdown sources for Step 6 ("Employee Grade Pay"): salary_grade_master and
+     * employee_category_master. Neither table has an active/inactive flag, so all rows are listed.
+     */
+    private function step6DropdownOptions(): array
+    {
+        // PR #319 review round 2 (F-003). employee_category_master is created by a
+        // migration this same PR ships. On an environment where the code is deployed
+        // ahead of `php artisan migrate`, the pluck() below raises SQLSTATE 42S02 and
+        // Step 6 returns a 500 rather than rendering. Returning empty option lists lets
+        // the step draw with empty dropdowns, which is a visible, self-explanatory
+        // degradation instead of a broken screen — and keeps the failure contained to
+        // Step 6 rather than to the wizard.
+        if (! $this->step6SchemaIsReady()) {
+            Log::warning('Member wizard: Step 6 dropdowns are empty — the step-6 schema is not present on this environment. Run php artisan migrate.');
+
+            return [[], []];
+        }
+
+        $gradePayOptions = \App\Models\SalaryGrade::all()->pluck('display_label_text', 'pk')->toArray();
+        $employeeCategoryOptions = \App\Models\EmployeeCategoryMaster::pluck('category', 'pk')->toArray();
+
+        return [$gradePayOptions, $employeeCategoryOptions];
     }
 
     public function show($id)
@@ -628,18 +1605,51 @@ class MemberController extends Controller
             ->pluck('appettation_name', 'pk')
             ->toArray();
 
-        return view('admin.member.edit_profile', compact('member', 'appellationMasterList'));
+        // Whether the Role Assignment tab is shown comes from the SAME predicate update()
+        // uses to decide whether role changes are saved and combinedMemberRules() uses to
+        // require 'userrole' — not a separate hasRole() in the view that could drift from
+        // it (PR #319 re-review F-046).
+        $canManageRoles = $this->actingUserCanManageRbacRoles();
+
+        return view('admin.member.edit_profile', compact('member', 'appellationMasterList', 'canManageRoles'));
     }
 
     public function editStep($step, $id)
     {
+        // This is the endpoint both the admin 6-step wizard and the self-service
+        // profile page fetch step content from — previously missing any check
+        // entirely. Without it, any authenticated account could request
+        // /member/edit-step/{step}/{id} for an id that is not their own and read
+        // that employee's data, including step 3's Role Assignment checkbox state
+        // (independent review of PR #319; closed independently on main too, via
+        // authorizeMemberRecord() — see that method's docblock).
         $this->authorizeMemberRecord($id);
+
         $member = EmployeeMaster::findOrFail($id);
+
+        // PR #319 re-review F-072: Role Assignment (3) and Employee Grade Pay (6) are
+        // administrator-only on save — update() skips the role block and
+        // saveStep6PayrollData() refuses for anyone else — so a non-admin editing their own
+        // record must not be handed inputs whose values would be discarded. Same rule
+        // edit_profile.blade.php already applies by not listing those steps.
+        if (in_array((int) $step, self::ADMIN_ONLY_STEPS, true) && ! $this->actingUserCanManageMembers()) {
+            return view('admin.member.edit_steps.admin_only', ['step' => (int) $step]);
+        }
+
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')
             ->toArray();
+        [$gradePayOptions, $employeeCategoryOptions] = ((int) $step === 6)
+            ? $this->step6DropdownOptions()
+            : [[], []];
+        // Same key as the write path (F-037). Reading by the raw pk showed a blank grade
+        // for every existing employee, because no live payroll row is keyed that way.
+        // Only step 6 renders it (PR #319 re-review F-069), so the other steps skip the read.
+        $payrollSalary = ((int) $step === 6)
+            ? PayrollSalaryMaster::where('employee_master_pk', $this->payrollEmployeeKey((int) $id))->first()
+            : null;
 
-        return view("admin.member.edit_steps.step{$step}", compact('member', 'appellationMasterList'));
+        return view("admin.member.edit_steps.step{$step}", compact('member', 'appellationMasterList', 'gradePayOptions', 'employeeCategoryOptions', 'payrollSalary'));
     }
 
     public function updateValidateStep(Request $request, $step, $id)
@@ -649,6 +1659,13 @@ class MemberController extends Controller
         // answers "does this row exist / would this write be accepted" for
         // whichever pk it is handed.
         $this->authorizeMemberRecord($id);
+
+        // F-072: a non-admin is shown a notice, not inputs, on these steps (see editStep()),
+        // so there is nothing of theirs to validate — and Step 3's required 'userrole' would
+        // otherwise block them from ever reaching Finish.
+        if (in_array((int) $step, self::ADMIN_ONLY_STEPS, true) && ! $this->actingUserCanManageMembers()) {
+            return response()->json(['message' => "Step $step validated."], 200);
+        }
 
         $request->merge(['emp_id' => $id]);
 
@@ -672,9 +1689,14 @@ class MemberController extends Controller
         // Resolve the user (for authorize())
         $formRequest->setUserResolver(fn () => $request->user());
 
-        // Run authorization
-        if (! $formRequest->authorize()) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+        // PR #319 review (F-003): same dead branch as validateStep() — every step request's
+        // authorize() returns true unconditionally. This endpoint backs the EDIT wizard (both
+        // admin edit and self-service profile edit, both carrying an $id), so the real check
+        // is the same one update()/editStep()/editProfile() use: authorizeMemberRecord().
+        try {
+            $this->authorizeMemberRecord($id);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            return response()->json(['error' => 'Unauthorized'], $e->getStatusCode());
         }
 
         // Run validation with rules & messages from FormRequest
@@ -892,6 +1914,10 @@ class MemberController extends Controller
 
     public function toggleStatus(Request $request, $id)
     {
+        // Activating or deactivating a member is an administrative action on someone
+        // else's record, so it is admin-only rather than self-scoped.
+        abort_unless($this->actingUserCanManageMembers(), 403);
+
         try {
             // Find the member
             $member = EmployeeMaster::findOrFail($id);
@@ -944,6 +1970,9 @@ class MemberController extends Controller
 
     public function destroy($id)
     {
+        // Deleting a member is administrative, never self-service.
+        abort_unless($this->actingUserCanManageMembers(), 403);
+
         try {
             $memberId = decrypt($id);
             $member = EmployeeMaster::findOrFail($memberId);

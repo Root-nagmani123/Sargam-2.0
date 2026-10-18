@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Assign Role - Sargam | Lal Bahadur')
+@section('title', 'Assign Role')
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/users-assign-role-admin.css') }}?v={{ @filemtime(public_path('css/users-assign-role-admin.css')) ?: time() }}">

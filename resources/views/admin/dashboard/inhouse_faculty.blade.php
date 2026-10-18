@@ -10,8 +10,7 @@
     'cardClass'    => 'inhouse-faculty-card',
     'pageTitle'    => 'Inhouse Faculty',
     'exportTitle'  => 'Inhouse Faculty',
-    'badgeClass'   => 'badge-inhouse',
-    'badgeLabel'   => 'Inhouse',
+    'exportUrl'    => route('admin.dashboard.inhouse_faculty.export'),
     'emptyMessage' => 'No inhouse faculty found',
 ])
 @endsection

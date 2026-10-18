@@ -1,133 +1,85 @@
 @extends('admin.layouts.master')
 
-@section('title', 'State - Sargam | Lal Bahadur')
+@section('title', 'State List')
+
+@push('styles')
+@include('admin.layouts.partials.select2-assets')
+<link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
+@endpush
 
 @section('setup_content')
-<div class="container-fluid">
-    <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
-                            <h4>State</h4>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-end mb-3">
-                                <div class="d-flex align-items-center gap-2">
+<div class="container-fluid mst-page">
+    <x-breadcrum title="State List" :showBack="false">
+        <a href="{{ route('master.state.create') }}" data-mst-modal-form
+           class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Add State</span>
+        </a>
+    </x-breadcrum>
 
-                                    <!-- Add New Button -->
-                                    <a href="{{route('master.state.create')}}"
-                                        class="btn btn-primary px-3 py-2 rounded-3 shadow-sm">
-                                        <i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 20px; vertical-align: middle;">add</i>
-                                        Add New State
-                                    </a>
+    <x-session_message />
 
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="table-responsive">
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
 
-                        <table class="table w-100 text-nowrap">
-                            <thead>
-                                <!-- start row -->
-                                <tr>
-                                    <th class="col">S.No.</th>
-                                    <th class="col">State Name</th>
-                                    <th class="col">Action</th>
-                                    <th class="col">Status</th>
-                                </tr>
-                                <!-- end row -->
-                            </thead>
-                            <tbody>
-                                @foreach($states as $key => $state)
-                                <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
-                                    <td>{{ $states->firstItem() + $key }}</td>
-                                    <td>
-                                        {{ $state->state_name }}
-                                    </td>
-                                    <td>
-                                        <div class="form-check form-switch d-inline-block">
-                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                data-table="state_master" data-column="active_inactive"
-                                                data-id="{{ $state->pk }}"
-                                                {{ $state->active_inactive == 1 ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-                                    <td>
-                                       <div class="d-inline-flex align-items-center gap-2"
-     role="group"
-     aria-label="State actions">
-
-    <!-- Edit -->
-    <a href="{{ route('master.state.edit', $state->pk) }}"
-       class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
-       aria-label="Edit state">
-        <span class="material-symbols-rounded fs-6" aria-hidden="true">edit</span>
-        <span class="d-none d-md-inline">Edit</span>
-    </a>
-
-    <!-- Delete -->
-    @if($state->active_inactive == 1)
-        <button type="button"
-                class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
-                disabled
-                aria-disabled="true"
-                title="Cannot delete active state">
-            <span class="material-symbols-rounded fs-6" aria-hidden="true">delete</span>
-            <span class="d-none d-md-inline">Delete</span>
-        </button>
-    @else
-        <form action="{{ route('master.state.delete', $state->pk) }}"
-              method="POST"
-              class="d-inline"
-              onsubmit="return confirm('Are you sure you want to delete this?');">
-            @csrf
-            @method('DELETE')
-
-            <button type="submit"
-                    class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
-                    aria-label="Delete state">
-                <span class="material-symbols-rounded fs-6" aria-hidden="true">delete</span>
-                <span class="d-none d-md-inline">Delete</span>
-            </button>
-        </form>
-    @endif
-
-</div>
-
-                                    </td>
-
-                                </tr>
-                                @endforeach
-                            </tbody>
-
-                        </table>
-                        <!-- Pagination -->
-                        <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-
-                            <div class="text-muted small mb-2">
-                                Showing {{ $states->firstItem() }}
-                                to {{ $states->lastItem() }}
-                                of {{ $states->total() }} items
-                            </div>
-
-                            <div>
-                                {{ $states->links('vendor.pagination.custom') }}
-                            </div>
-
-                        </div>
-
-                    </div>
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns"
+                            data-bs-toggle="modal" data-bs-target="#stmColumnVisibilityModal"
+                            title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div class="programme-dt-search" data-dt-search-for="state-master-table"></div>
                 </div>
             </div>
-            <!-- end Zero Configuration -->
+
+            {{-- Server-side grid (StateMasterDataTable): search, sorting, page size and
+                 paging run on the whole table. Search, pager and "Showing N of M
+                 items" are moved into these slots by datatable-global-ui.js. --}}
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
+                </div>
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                     data-dt-footer-for="state-master-table"></div>
+            </div>
+
         </div>
     </div>
 </div>
 
+<!-- Column Visibility -->
+<div class="modal fade" id="stmColumnVisibilityModal" tabindex="-1"
+     aria-labelledby="stmColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-3 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="stmColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3 mst-colvis-grid" id="stmColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
+
+@push('scripts')
+{!! $dataTable->scripts() !!}
+<script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
+<script>
+    $(function () {
+        MstAdmin.columnVisibility({
+            table: '#state-master-table',
+            grid: '#stmColumnToggleGrid',
+            storageKey: 'sargam.stateMaster.hiddenCols.{{ auth()->id() ?? 'guest' }}'
+        });
+    });
+</script>
+@endpush

@@ -307,6 +307,27 @@ class GroupMappingController extends Controller
      */
     function store(Request $request)
     {
+        // Course scope, as the grid, the exports and the student writes already
+        // apply (register L-53): without it any signed-in account could create or
+        // rename any course's groups - and group names print on the calendar.
+        // Checked before the try below, which would turn a 403 into a 500.
+        $existingCourse = null;
+        if ($request->pk) {
+            try {
+                $existingCourse = GroupTypeMasterCourseMasterMap::whereKey(decrypt($request->pk))->value('course_name');
+            } catch (\Exception $e) {
+                $existingCourse = null;
+            }
+        }
+        if (! $this->courseWithinRoleScope($request->course_id)
+            || ($request->pk && ! $this->courseWithinRoleScope($existingCourse))) {
+            $message = 'You do not have access to the selected course.';
+
+            return $request->expectsJson()
+                ? response()->json(['status' => 'error', 'message' => $message], 403)
+                : redirect()->back()->with('error', $message)->withInput();
+        }
+
         try {
             $request->validate([
                 'course_id' => 'required|string|max:255',

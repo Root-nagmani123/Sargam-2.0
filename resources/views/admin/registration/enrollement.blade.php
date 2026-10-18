@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Enrollment - Sargam | Lal Bahadur')
+@section('title', 'Enrollment')
 
 @section('setup_content')
     @include('admin.partials.choices-bootstrap5')
