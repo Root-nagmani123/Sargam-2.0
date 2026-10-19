@@ -1563,6 +1563,25 @@ class UserController extends Controller
         }
         $participants = collect(array_values($byStudent));
 
+        // A scoped faculty (see otParticipantsScopedFacultyPk()) sees only the
+        // students in THEIR OWN groups of the view's type: in the Cadre view the
+        // Counsellor Groups they are mapped to, in the House view their House
+        // Groups. Coordinating the course does not widen it — Kranthi Kumar Pati,
+        // coordinator of Phase-II-2024 and counsellor of four cadres, was listing
+        // Rajesh Meena's Bihar students. Only applied when the request carries a
+        // view: otParticipantsViewerTypeScope() reads the unscoped roster.
+        $ownFacultyPk = $request->has('view') ? $this->otParticipantsScopedFacultyPk() : null;
+        if ($ownFacultyPk) {
+            $studentPks = $participants->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all();
+            $coursePks = $this->participantCoursePks($participants);
+            $own = $this->otParticipantsGroupView($request) === 'house'
+                ? $this->studentPksForHouseFaculty($ownFacultyPk, $studentPks, $coursePks)
+                : $this->studentPksForCounsellorFaculty($ownFacultyPk, $studentPks, $coursePks);
+            $participants = $participants
+                ->filter(fn ($p) => isset($own[(int) $p->student_master_pk]))
+                ->values();
+        }
+
         // Cadre Counsellor filter (the dependent dropdown beside Cadre). Resolved
         // from the group-map tables rather than the row objects — this page's
         // payload is loaded without group mappings.
@@ -1702,12 +1721,8 @@ class UserController extends Controller
     {
         $both = ['cadre' => true, 'house' => true];
 
-        $facultyPk = get_auth_faculty_master_pk();
-        if (! $facultyPk
-            || hasRole('Super Admin') || hasRole('Admin') || hasRole('PA')
-            || hasRole('Training Induction Admin')
-            || hasRole('Training MCTP Admin')
-            || hasRole('Training IST')) {
+        $facultyPk = $this->otParticipantsScopedFacultyPk();
+        if (! $facultyPk) {
             return $both;
         }
 
@@ -1740,6 +1755,28 @@ class UserController extends Controller
         }
 
         return $scope;
+    }
+
+    /**
+     * The faculty whose OWN Course Group Mapping scopes the OT participants page,
+     * or null for a viewer who oversees the whole roster (Super Admin, Admin, PA,
+     * the training admins, or a login with no faculty record).
+     *
+     * A course coordinator is NOT exempt: they too see the Cadre / House data of
+     * their own groups only.
+     */
+    private function otParticipantsScopedFacultyPk(): ?int
+    {
+        $facultyPk = get_auth_faculty_master_pk();
+        if (! $facultyPk
+            || hasRole('Super Admin') || hasRole('Admin') || hasRole('PA')
+            || hasRole('Training Induction Admin')
+            || hasRole('Training MCTP Admin')
+            || hasRole('Training IST')) {
+            return null;
+        }
+
+        return (int) $facultyPk;
     }
 
     /**
@@ -5303,19 +5340,40 @@ class UserController extends Controller
         // courses, which the columns deliberately ignore; reading them here made
         // the card claim 1901 OTs "in cadre" where the page showed 1857 filled
         // cells. Distinct students, so an OT on two courses still counts once.
+        // A scoped faculty counts only the OTs in their OWN Counsellor / House
+        // groups — the same rows the OT participants page lists for them in the
+        // Cadre and House views (see otParticipantsRowsFor()).
+        $ownFacultyPk = $this->otParticipantsScopedFacultyPk();
+        $ownCounselled = $ownHoused = null;
+        if ($ownFacultyPk) {
+            $rosterCoursePks = [];
+            foreach ($rosterRows as $m) {
+                if (! empty($m->student_master_pk) && ! empty($m->course_master_pk)) {
+                    $rosterCoursePks[(int) $m->student_master_pk][(string) $m->course_master_pk] = (string) $m->course_master_pk;
+                }
+            }
+            $rosterCoursePks = array_map('array_values', $rosterCoursePks);
+            $ownCounselled = $this->studentPksForCounsellorFaculty($ownFacultyPk, $rosterStudentPks, $rosterCoursePks);
+            $ownHoused = $this->studentPksForHouseFaculty($ownFacultyPk, $rosterStudentPks, $rosterCoursePks);
+        }
+
         $counts = [
             'total' => $distinct($rosterRows),
             // Small print on the "OT/ Participants Details" card — see above.
-            'cadre_students' => $distinct(
-                collect($rosterRows)->filter(
-                    fn ($m) => trim((string) $this->participantCadreFor($m, $rosterCadres)) !== ''
-                )
-            ),
-            'house_students' => $distinct(
-                collect($rosterRows)->filter(
-                    fn ($m) => ! empty($this->participantGroupEntriesFor($m, $rosterHouseRows))
-                )
-            ),
+            'cadre_students' => $ownCounselled !== null
+                ? count($ownCounselled)
+                : $distinct(
+                    collect($rosterRows)->filter(
+                        fn ($m) => trim((string) $this->participantCadreFor($m, $rosterCadres)) !== ''
+                    )
+                ),
+            'house_students' => $ownHoused !== null
+                ? count($ownHoused)
+                : $distinct(
+                    collect($rosterRows)->filter(
+                        fn ($m) => ! empty($this->participantGroupEntriesFor($m, $rosterHouseRows))
+                    )
+                ),
             // Session marks, matching the tab counters and the listing each card
             // opens — see the note above on why these are not headcounts.
             'present_today' => collect($presentStudents)->count(),
