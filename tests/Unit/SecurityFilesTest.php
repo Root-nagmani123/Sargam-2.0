@@ -150,6 +150,19 @@ class SecurityFilesTest extends TestCase
         $this->assertNull(SecurityFiles::locate(SecurityFiles::forRow('security_dup_other_id_apply', $row, 'service_ext')));
     }
 
+    public function test_case_differences_between_db_and_disk_resolve_to_the_on_disk_name(): void
+    {
+        // Archive from a Windows server: DB says LBR00367/amlesh.jpg, disk has lbr00367/Amlesh.jpg.
+        // On Windows is_file() already ignores case; this exercises the Linux fallback directly.
+        $this->plant('security', 'DuplicateCardRequest/lbr00367/Amlesh.jpg');
+        $method = new \ReflectionMethod(SecurityFiles::class, 'caseInsensitivePath');
+        $method->setAccessible(true);
+
+        $this->assertSame('DuplicateCardRequest/lbr00367/Amlesh.jpg', $method->invoke(null, 'security', 'DuplicateCardRequest/LBR00367/amlesh.jpg'));
+        $this->assertNull($method->invoke(null, 'security', 'DuplicateCardRequest/LBR00367/other.jpg'));
+        $this->assertNull($method->invoke(null, 'security', 'DuplicateCardRequest/LBR00367'), 'a folder is not a file');
+    }
+
     public function test_folders_follow_the_legacy_layout_and_are_reused_on_edit(): void
     {
         $this->assertSame('DuplicateCardRequest/CCL00003', SecurityFiles::folder('duplicate', ' CCL00003 '));

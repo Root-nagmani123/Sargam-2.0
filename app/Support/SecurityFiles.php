@@ -48,7 +48,7 @@ class SecurityFiles
         'name_change_doc' => 'idcard/dup_docs',
     ];
 
-    /** @var array<string, bool> per-request existence memo */
+    /** @var array<string, string|false> per-request memo: ref => ref as on disk, false = missing */
     private static array $exists = [];
 
     public static function disk(): Filesystem
@@ -195,7 +195,7 @@ class SecurityFiles
             return null;
         }
         if (self::parseRef($value) !== null) {
-            return self::refExists($value) ? $value : null;
+            return self::existingRef($value);
         }
 
         $path = self::normalisePath($value);
@@ -214,8 +214,8 @@ class SecurityFiles
         }
 
         foreach ($candidates as $ref) {
-            if (self::refExists($ref)) {
-                return $ref;
+            if (($found = self::existingRef($ref)) !== null) {
+                return $found;
             }
         }
 
@@ -316,17 +316,68 @@ class SecurityFiles
         return null;
     }
 
-    private static function refExists(string $ref): bool
+    /**
+     * The ref as it exists on disk, or null. When the exact spelling is missing, each path
+     * segment is matched ignoring case: the archive comes from a Windows server, where
+     * DB values and folder/file names disagree on case for thousands of rows ("LBR00367" vs
+     * folder "lbr00367", "amlesh.jpg" vs "Amlesh.jpg"). On a case-sensitive (Linux) disk
+     * they would otherwise all be missing; on Windows the exact check already succeeds.
+     */
+    private static function existingRef(string $ref): ?string
     {
         if (array_key_exists($ref, self::$exists)) {
-            return self::$exists[$ref];
+            return self::$exists[$ref] ?: null;
         }
         if (count(self::$exists) >= 5000) {
             self::$exists = [];
         }
         $absolute = self::refToAbsolute($ref);
+        $found = null;
+        if ($absolute !== null && is_file($absolute)) {
+            $found = $ref;
+        } elseif ($absolute !== null && ($parsed = self::parseRef($ref)) !== null) {
+            $path = self::caseInsensitivePath($parsed[0], $parsed[1]);
+            $found = $path === null ? null : strstr($ref, ':', true) . ':' . $path;
+        }
+        self::$exists[$ref] = $found ?? false;
 
-        return self::$exists[$ref] = $absolute !== null && is_file($absolute);
+        return $found;
+    }
+
+    /** @var array<string, array<string, string>> directory => [lower-cased entry => entry] */
+    private static array $dirListings = [];
+
+    /** $path with each segment spelled as on disk (case-insensitive match), or null. */
+    private static function caseInsensitivePath(string $disk, string $path): ?string
+    {
+        $dir = rtrim((string) config("filesystems.disks.{$disk}.root"), '/\\');
+        $actual = [];
+        $segments = explode('/', $path);
+        foreach ($segments as $i => $segment) {
+            if (! isset(self::$dirListings[$dir])) {
+                if (count(self::$dirListings) >= 2000) {
+                    self::$dirListings = [];
+                }
+                $entries = is_dir($dir) ? (@scandir($dir) ?: []) : [];
+                self::$dirListings[$dir] = [];
+                foreach ($entries as $entry) {
+                    if ($entry !== '.' && $entry !== '..') {
+                        self::$dirListings[$dir][mb_strtolower($entry)] ??= $entry;
+                    }
+                }
+            }
+            $match = self::$dirListings[$dir][mb_strtolower($segment)] ?? null;
+            if ($match === null) {
+                return null;
+            }
+            $actual[] = $match;
+            $dir .= DIRECTORY_SEPARATOR . $match;
+            if ($i === count($segments) - 1 && ! is_file($dir)) {
+                return null;
+            }
+        }
+
+        return implode('/', $actual);
     }
 
     /** Forward slashes, no leading "/" or "storage/", no "." / ".." segments; null if unsafe. */
