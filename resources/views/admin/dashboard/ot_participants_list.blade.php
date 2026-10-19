@@ -452,10 +452,6 @@
         // The four Course Group Mapping columns (thead indexes 6–9), in this view's
         // order — the active view's pair first. Each entry is [data key, title, width].
         const GROUP_COLUMNS = @json($groupColumns);
-        // Compulsory: all four mapping columns are always visible, in both views
-        // and for every role — shown checked and disabled in the Columns panel.
-        const GROUP_COLUMN_IDXS = GROUP_COLUMNS.map((c, i) => 6 + i);
-        const ALWAYS_VISIBLE_COLUMNS = LOCKED_COLUMNS.concat(GROUP_COLUMN_IDXS);
         // Index tracks the <thead> order above — bump it when a column is inserted before it.
         const DUTY_TYPE_COL = 11; // "Duty Type" — only meaningful for a single-day filter
         let dt = null;
@@ -1006,14 +1002,17 @@
         // survive as a saved preference.
         // v8: both views show all four mapping columns, ordered per view, so index
         // 6–9 means a different column in each view — the preference is kept per view.
-        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v8:' + GROUP_VIEW;
+        // v9: the four mapping columns joined the default-hidden set below, so v8
+        // lists (which showed them) must not survive as a saved preference.
+        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v9:' + GROUP_VIEW;
         // What the page opens with: the frozen identity columns plus the counts
         // the list exists for. The contact / mapping columns are one click away in
         // Column Visibility, so a viewer who wants them turns them on — and that
         // choice is then saved and wins over this default for good.
         //   3 Email · 4 Mobile No · 5 User Name
-        // The four mapping columns (6–9) are NOT in here — both views show them.
-        const DEFAULT_HIDDEN_COLUMNS = [3, 4, 5];
+        //   6–9 Cadre · Cadre Counsellor · House Group · House Group Faculty
+        //       (in this view's order — see GROUP_COLUMNS)
+        const DEFAULT_HIDDEN_COLUMNS = [3, 4, 5, 6, 7, 8, 9];
         function otGetHiddenCols() {
             try {
                 const raw = localStorage.getItem(otColStorageKey);
@@ -1029,14 +1028,12 @@
         function setupOtColumns() {
             if (!dt) { return; }
             const singleDay = isSingleDayFilter();
-            // Always-visible columns cannot be a saved "hidden" choice — this also
-            // clears any older preference that hid a mapping column.
             const hidden = otGetHiddenCols()
-                .filter(idx => ALWAYS_VISIBLE_COLUMNS.indexOf(idx) === -1);
+                .filter(idx => LOCKED_COLUMNS.indexOf(idx) === -1);
             otPersistHiddenCols(hidden);
             dt.columns().every(function() {
                 const idx = this.index();
-                if (ALWAYS_VISIBLE_COLUMNS.indexOf(idx) !== -1) { this.visible(true, false); return; }
+                if (LOCKED_COLUMNS.indexOf(idx) !== -1) { this.visible(true, false); return; }
                 // Duty Type is forced hidden unless a single day is filtered.
                 if (idx === DUTY_TYPE_COL) { this.visible(singleDay && hidden.indexOf(idx) === -1, false); return; }
                 this.visible(hidden.indexOf(idx) === -1, false);
@@ -1050,7 +1047,7 @@
                 const idx = this.index();
                 const title = $(this.header()).text().replace(/\s+/g, ' ').trim();
                 if (!title) { return; }
-                const isLocked = ALWAYS_VISIBLE_COLUMNS.indexOf(idx) !== -1;
+                const isLocked = LOCKED_COLUMNS.indexOf(idx) !== -1;
                 // Duty Type toggle is disabled (and unchecked) unless a single day is filtered.
                 const dutyLocked = (idx === DUTY_TYPE_COL) && !singleDay;
                 const inputId = 'otcolvis_' + idx;
