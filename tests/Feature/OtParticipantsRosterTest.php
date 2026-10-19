@@ -103,12 +103,51 @@ class OtParticipantsRosterTest extends TestCase
 
         $grid = $this->invokePrivate('otParticipantsDataTableResponse', $request, $rows, $rowMeta, $rows->count(), [])
             ->getData(true)['data'][0];
-        $export = $this->invokePrivate('otParticipantsExportData', $rows, $rowMeta, false)['rows'][0];
+        $export = $this->exportCells($rows, $rowMeta, 'cadre');
 
         $this->assertSame('AGMUT', $grid['cadre']);
         $this->assertSame('Nanda Devi', $grid['house']);
-        $this->assertSame($export[6], $grid['cadre']);
-        $this->assertSame($export[9], $grid['house']);
+        $this->assertSame($export['Cadre'], $grid['cadre']);
+        $this->assertSame($export['House Group'], $grid['house']);
+    }
+
+    public function test_grid_and_export_show_the_same_house_group_on_the_house_view(): void
+    {
+        // The shape facultyGroupRows() builds: the house group is on
+        // house_group_name only (PR #339 F-003 wrote N/A for it in the export).
+        $students = collect([$this->row(990000001, [], [
+            'house_group_name' => 'Nanda Devi',
+        ])]);
+        $request = Request::create('/', 'GET', ['draw' => 1, 'start' => 0, 'length' => 10, 'view' => 'house_group']);
+
+        $rows = $this->invokePrivate('otParticipantsRowsFor', $request, $students);
+        $rowMeta = [990000001 => [
+            'duty_count' => 0, 'duty_type' => '-', 'medical' => 0, 'pt' => 0,
+            'stationed' => 0, 'notice_memo' => 0, 'discipline_memo' => 0,
+        ]];
+
+        $grid = $this->invokePrivate('otParticipantsDataTableResponse', $request, $rows, $rowMeta, $rows->count(), [])
+            ->getData(true)['data'][0];
+        $export = $this->exportCells($rows, $rowMeta, 'house');
+
+        $this->assertSame('Nanda Devi', $grid['house']);
+        $this->assertSame($grid['house'], $export['House Group']);
+        $this->assertSame($grid['cadre'], $export['Cadre']);
+        $this->assertSame($grid['counsellor'], $export['Cadre Counsellor']);
+        $this->assertSame($grid['house_faculty'], $export['House Group Faculty']);
+    }
+
+    /**
+     * The first exported row keyed by heading, so the assertions do not depend
+     * on which group pair the view puts first.
+     *
+     * @return array<string, string>
+     */
+    private function exportCells($rows, array $rowMeta, string $groupView): array
+    {
+        $export = $this->invokePrivate('otParticipantsExportData', $rows, $rowMeta, $groupView);
+
+        return array_combine($export['headings'], array_map('strval', $export['rows'][0]));
     }
 
     public function test_the_cadre_filter_and_the_cadre_column_agree(): void

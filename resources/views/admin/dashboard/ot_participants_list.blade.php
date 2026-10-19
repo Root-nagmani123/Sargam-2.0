@@ -103,7 +103,11 @@
     $filters = $filters ?? [];
     $activeStatus = ($filters['status'] ?? 'active') === 'archive' ? 'archive' : 'active';
     // Cadre or House. The page shows ONE Course Group Mapping pair at a time.
-    $activeView = ($filters['view'] ?? 'cadre') === 'house' ? 'house' : 'cadre';
+    // $filters['view'] is the URL value: 'cadre', 'house_group' (the toggle's
+    // House view) or 'house' (the House Wise Details card) — both of the last
+    // two are the House group view.
+    $viewParam = (string) ($filters['view'] ?? 'cadre');
+    $activeView = in_array($viewParam, ['house', 'house_group'], true) ? 'house' : 'cadre';
     // Which group types this viewer's role reaches — a view (and its columns)
     // outside it is not offered at all.
     $typeScope = $typeScope ?? ['cadre' => true, 'house' => true];
@@ -171,7 +175,7 @@
             <i class="bi bi-geo-alt-fill" aria-hidden="true"></i><span>Cadre</span>
         </button>
         <button type="button" class="btn ot-view-btn {{ $activeView === 'house' ? 'active' : '' }}"
-            data-view="house" aria-pressed="{{ $activeView === 'house' ? 'true' : 'false' }}">
+            data-view="house_group" aria-pressed="{{ $activeView === 'house' ? 'true' : 'false' }}">
             <i class="bi bi-house-door-fill" aria-hidden="true"></i><span>House</span>
         </button>
     </div>
@@ -419,16 +423,17 @@
     $(function() {
         const baseUrl = "{{ route('admin.dashboard.ot-participants') }}";
         const GROUP_VIEW = @json($activeView);
+        const VIEW_PARAM = @json($viewParam);
         function go(key, value) {
             const p = new URLSearchParams(window.location.search);
             p.set(key, value);
-            if (key === 'status') { p.set('view', GROUP_VIEW); p.delete('course_id'); }
+            if (key === 'status') { p.set('view', VIEW_PARAM); p.delete('course_id'); }
             ['cadre', 'counsellor_faculty', 'house_group', 'house_faculty'].forEach(k => p.delete(k));
             window.location.href = baseUrl + '?' + p.toString();
         }
         $('.ot-view-toggle .ot-view-btn[data-view]').on('click', function() {
             const v = $(this).data('view');
-            if (v !== GROUP_VIEW) { go('view', v); }
+            if ((v === 'cadre' ? 'cadre' : 'house') !== GROUP_VIEW) { go('view', v); }
         });
         $('.programme-status-tabs .programme-status-pill[data-status]').on('click', function() {
             if (!$(this).hasClass('active')) { go('status', $(this).data('status')); }
@@ -473,9 +478,18 @@
         let FACULTY_BY_HOUSE_GROUP = @json($facultyByHouseGroup ?? new stdClass);
         const LOCKED_COLUMNS = [0, 1, 2]; // S.No, OT Code, Name — frozen & always visible
         const GROUP_VIEW = @json($activeView ?? 'cadre');
+        // The URL value of the view (see $viewParam) — what every reload carries.
+        const VIEW_PARAM = @json($viewParam);
+        // The dashboard card views, decided server-side.
+        const IS_COUNSELLEE_VIEW = @json((bool) ($isCounselleeView ?? false));
         // The four Course Group Mapping columns (thead indexes 6–9), in this view's
         // order — the active view's pair first. Each entry is [data key, title, width].
         const GROUP_COLUMNS = @json($groupColumns);
+        // The table index of a group column in this view (6–9).
+        function groupColumnIndex(key) {
+            const i = GROUP_COLUMNS.findIndex(c => c[0] === key);
+            return 6 + Math.max(i, 0);
+        }
         // Index tracks the <thead> order above — bump it when a column is inserted before it.
         const DUTY_TYPE_COL = 11; // "Duty Type" — only meaningful for a single-day filter
         let dt = null;
@@ -501,11 +515,11 @@
         function getFilterState() {
             return {
                 status: currentStatus,
-                // Decides which mapping pair the server resolves and returns.
-                view: GROUP_VIEW,
                 course_id: $('#courseFilter').val() || '',
                 cadre: $('#cadreFilter').val() || '',
                 house: $('#houseFilter').val() || '',
+                // Decides which mapping pair the server resolves and returns, and
+                // keeps a dashboard card's scope.
                 view: (filters.view || '').toString(),
                 // Only meaningful alongside a cadre — cleared with it below.
                 counsellor_faculty: $('#counsellorFacultyFilter').val() || '',
@@ -563,8 +577,8 @@
             // The House Wise Details card opens this list with ?sort=house, so it
             // lands grouped by house (col 9) instead of by serial number; the My
             // Counsellees card lands grouped by cadre (col 6).
-            order: (filters.sort === 'house') ? [[9, 'asc']]
-                : (filters.view === 'counsellees') ? [[6, 'asc']] : [[0, 'asc']],
+            order: (filters.sort === 'house') ? [[groupColumnIndex('house'), 'asc']]
+                : IS_COUNSELLEE_VIEW ? [[groupColumnIndex('cadre'), 'asc']] : [[0, 'asc']],
             language: { emptyTable: 'Data not found.' },
             responsive: false,
             autoWidth: false,
@@ -609,7 +623,7 @@
         /* ── Cadre / House view toggle (full reload — the filters are server-rendered) ── */
         $('.ot-view-toggle .ot-view-btn[data-view]').on('click', function() {
             const v = $(this).data('view');
-            if (v === GROUP_VIEW) { return; }
+            if ((v === 'cadre' ? 'cadre' : 'house') === GROUP_VIEW) { return; }
             const p = new URLSearchParams(window.location.search);
             p.set('view', v);
             // The group selections belong to the view being left; carrying them
@@ -624,7 +638,7 @@
             if (st === currentStatus) { return; }
             const p = new URLSearchParams(window.location.search);
             p.set('status', st);
-            p.set('view', GROUP_VIEW); // stay in the view the viewer is on
+            p.set('view', VIEW_PARAM); // stay in the view the viewer is on
             p.delete('course_id'); // the course list differs per status
             window.location.href = baseUrl + (p.toString() ? '?' + p.toString() : '');
         });
@@ -639,7 +653,7 @@
         $('#courseFilter').on('change', function() {
             const p = new URLSearchParams(window.location.search);
             p.set('status', currentStatus);
-            p.set('view', GROUP_VIEW); // a course change does not leave the view
+            p.set('view', VIEW_PARAM); // a course change does not leave the view
             if (this.value) { p.set('course_id', this.value); } else { p.delete('course_id'); }
             ['cadre', 'counsellor_faculty', 'house_group', 'house_faculty'].forEach(k => p.delete(k));
             window.location.href = baseUrl + (p.toString() ? '?' + p.toString() : '');
@@ -1051,7 +1065,7 @@
         // list opens sorted by (index 6, the first group column; see GROUP_COLUMNS).
         // Not saved, so the general preference is left alone. The House view forces
         // nothing: House Group starts unticked like the other mapping columns.
-        const VIEW_FORCED_COLUMNS = filters.view === 'counsellees' ? [6] : [];
+        const VIEW_FORCED_COLUMNS = IS_COUNSELLEE_VIEW ? [groupColumnIndex('cadre')] : [];
         function otGetHiddenCols() {
             try {
                 const raw = localStorage.getItem(otColStorageKey);
