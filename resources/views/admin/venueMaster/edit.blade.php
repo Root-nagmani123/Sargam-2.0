@@ -1,66 +1,76 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Edit Venue Master - Sargam | Lal Bahadur')
+@section('title', 'Edit Venue Master')
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
+@endpush
 
 @section('setup_content')
+<div class="container-fluid mst-page">
+    <x-breadcrum title="Edit Venue" />
+    <x-session_message />
 
-<div class="container-fluid">
-    <!-- start Vertical Steps Example -->
-    <x-breadcrum title="Edit Venue Master" />
-    <div class="card" >
-        <div class="card-body">
-            <h4 class="card-title mb-3">Edit Venue-Master</h4>
-            <hr>
-            <form action="{{ route('Venue-Master.update', $venue->venue_id) }}" method="POST">
-                @csrf
-                @method('PUT')
+    {{-- Form root: the index opens this same form in a modal
+         (public/js/master-admin.js openFormModal). Keep form-specific JS in
+         the x-mst-form-init block inside it, bound to elements under root. --}}
+    <div data-mst-form-root data-mst-form-title="Edit Venue">
+        <form action="{{ route('Venue-Master.update', $venue->venue_id) }}" method="POST">
+            @csrf
+            @method('PUT')
 
-                <div class="row">
-                    <div class="col-6">
-                        <div class="mb-3">
-                            <label for="venue_name" class="form-label">Venue Name</label>
-                            <input type="text" class="form-control @error('venue_name') is-invalid @enderror"
-                                id="venue_name" name="venue_name" value="{{ old('venue_name', $venue->venue_name) }}"
-                                required>
+            <div class="card mst-form-card">
+                <div class="card-body">
+                    <h2 class="mst-form-section-title h6">Venue Details</h2>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="venue_name" class="mst-form-label d-block">
+                                Venue Name <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <input type="text" id="venue_name" name="venue_name"
+                                   class="form-control mst-control @error('venue_name') is-invalid @enderror"
+                                   value="{{ old('venue_name', $venue->venue_name) }}" maxlength="255"
+                                   required aria-required="true">
                             @error('venue_name')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                                <span class="mst-field-error">{{ $message }}</span>
                             @enderror
                         </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="mb-3">
-                            <label for="venue_short_name" class="form-label">Short Name</label>
-                            <input type="text" class="form-control @error('venue_short_name') is-invalid @enderror"
-                                id="venue_short_name" name="venue_short_name"
-                                value="{{ old('venue_short_name', $venue->venue_short_name) }}" required>
+
+                        <div class="col-md-6">
+                            <label for="venue_short_name" class="mst-form-label d-block">
+                                Short Name <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <input type="text" id="venue_short_name" name="venue_short_name"
+                                   class="form-control mst-control @error('venue_short_name') is-invalid @enderror"
+                                   value="{{ old('venue_short_name', $venue->venue_short_name) }}" maxlength="100"
+                                   required aria-required="true">
                             @error('venue_short_name')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                                <span class="mst-field-error">{{ $message }}</span>
                             @enderror
                         </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="mb-3">
-                            <label for="description" class="form-label">Description</label>
-                            <textarea class="form-control @error('description') is-invalid @enderror" id="description"
-                                name="description" rows="3">{{ old('description', $venue->description) }}</textarea>
+
+                        <div class="col-12">
+                            <label for="description" class="mst-form-label d-block">Description</label>
+                            <textarea id="description" name="description" rows="3"
+                                      class="form-control mst-control @error('description') is-invalid @enderror">{{ old('description', $venue->description) }}</textarea>
                             @error('description')
-                            <div class="invalid-feedback">{{ $message }}</div>
+                                <span class="mst-field-error">{{ $message }}</span>
                             @enderror
                         </div>
                     </div>
-                </div>
-                <hr>
-                 <div class="mb-3 text-end gap-3">
-                    <button type="submit" class="btn btn-primary">Update</button>
-                    <a href="{{ route('Venue-Master.index') }}" class="btn btn-secondary">Back</a>
-                </div>
-            </form>
 
-        </div>
+                    <div class="mst-form-footer">
+                        <a href="{{ route('Venue-Master.index') }}" class="btn mst-btn-cancel px-4">Cancel</a>
+                        <button type="submit" class="btn mst-btn-submit px-4">Update</button>
+                    </div>
+                </div>
+            </div>
+        </form>
     </div>
-
-    <!-- end Vertical Steps Example -->
 </div>
-
-
 @endsection
+
+@push('scripts')
+<script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
+@endpush

@@ -6,6 +6,9 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
@@ -332,6 +335,113 @@ class ToggleStatusEndpointTest extends TestCase
      * would break the functional roles (Estate, Mess-Admin, IST and the rest)
      * that maintain their own module's reference data today.
      */
+    /**
+     * PR #335 review F-002 (trap 29): the seven location / class-session /
+     * stream / venue grids rebuilt by PR #335 post here. Each table now needs
+     * its screen's menu permission (Super Admin always passes), so a signed-in
+     * account without it is refused and the row is not written.
+     *
+     * @dataProvider screenGatedTables
+     */
+    public function test_a_screen_gated_table_is_refused_to_an_account_without_its_permission(string $table, string $idColumn): void
+    {
+        $actor = $this->actor();
+        $this->assertFalse($this->isAdministrator($actor), 'this test needs a NON-administrator actor; the fixture user has changed');
+
+        $row = DB::table($table)->orderBy($idColumn)->first([$idColumn, 'active_inactive']);
+        if (! $row) {
+            $this->markTestSkipped("no {$table} row to target");
+        }
+
+        $this->actingAs($actor)->withSession(['user_roles' => ['Employee']])
+            ->post('/admin/toggle-status', [
+                'table' => $table, 'column' => 'active_inactive', 'id_column' => $idColumn,
+                'id' => $row->{$idColumn}, 'status' => (int) $row->active_inactive === 1 ? 0 : 1,
+            ])
+            ->assertStatus(403);
+
+        $this->assertSame((int) $row->active_inactive, (int) DB::table($table)->where($idColumn, $row->{$idColumn})->value('active_inactive'));
+
+        $this->actingAs($this->administrator())->withSession(['user_roles' => ['Super Admin']])
+            ->post('/admin/toggle-status', [
+                'table' => $table, 'column' => 'active_inactive', 'id_column' => $idColumn,
+                'id' => $row->{$idColumn}, 'status' => (int) $row->active_inactive === 1 ? 0 : 1,
+            ])
+            ->assertOk();
+
+        $this->assertNotSame((int) $row->active_inactive, (int) DB::table($table)->where($idColumn, $row->{$idColumn})->value('active_inactive'));
+    }
+
+    /**
+     * PR #335 F-002 (trap 29), the other half: a non-administrator granted one
+     * screen's permission through a role, as the Roles screen grants it, still
+     * toggles that table, and is still refused on another gated table.
+     *
+     * @dataProvider screenPermissions
+     */
+    public function test_a_holder_of_the_screen_permission_toggles_that_table_and_no_other(string $table, string $idColumn, string $permission, string $otherTable): void
+    {
+        if (! Permission::where('name', $permission)->where('guard_name', 'web')->exists()) {
+            $this->markTestSkipped("no '{$permission}' permission in this database");
+        }
+
+        $holder = User::find(DB::table('user_credentials')->insertGetId([
+            'user_name' => 'zz.toggle.'.$permission, 'user_id' => 0, 'user_category' => 'E',
+        ]));
+        $holder->assignRole(Role::create(['name' => 'Zz toggle '.$permission, 'guard_name' => 'web'])->givePermissionTo($permission));
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->assertFalse($this->isAdministrator($holder->fresh()));
+
+        $post = function (string $table, string $idColumn) use ($holder) {
+            $row = DB::table($table)->orderBy($idColumn)->first([$idColumn, 'active_inactive']);
+            if (! $row) {
+                $this->markTestSkipped("no {$table} row to target");
+            }
+            $response = $this->actingAs($holder->fresh())->withSession(['user_roles' => ['Zz toggle']])
+                ->post('/admin/toggle-status', [
+                    'table' => $table, 'column' => 'active_inactive', 'id_column' => $idColumn,
+                    'id' => $row->{$idColumn}, 'status' => (int) $row->active_inactive === 1 ? 0 : 1,
+                ]);
+
+            return [$response, (int) $row->active_inactive, (int) DB::table($table)->where($idColumn, $row->{$idColumn})->value('active_inactive')];
+        };
+
+        [$response, $before, $after] = $post($table, $idColumn);
+        $response->assertOk();
+        $this->assertNotSame($before, $after, "a holder of '{$permission}' must still toggle {$table}");
+
+        [$response, $before, $after] = $post($otherTable, $otherTable === 'venue_master' ? 'venue_id' : 'pk');
+        $response->assertStatus(403);
+        $this->assertSame($before, $after, "'{$permission}' must not open {$otherTable}");
+    }
+
+    /** table, its key column, the screen permission that gates it, and another gated table it must not open. */
+    public static function screenPermissions(): array
+    {
+        return [
+            'country' => ['country_master', 'pk', 'country', 'venue_master'],
+            'state' => ['state_master', 'pk', 'state', 'country_master'],
+            'district' => ['state_district_mapping', 'pk', 'district', 'country_master'],
+            'city' => ['city_master', 'pk', 'city', 'country_master'],
+            'class session' => ['class_session_master', 'pk', 'class_session_master', 'country_master'],
+            'stream' => ['stream_master', 'pk', 'stream', 'country_master'],
+            'venue' => ['venue_master', 'venue_id', 'venue_master', 'country_master'],
+        ];
+    }
+
+    public static function screenGatedTables(): array
+    {
+        return [
+            'country' => ['country_master', 'pk'],
+            'state' => ['state_master', 'pk'],
+            'district' => ['state_district_mapping', 'pk'],
+            'city' => ['city_master', 'pk'],
+            'class session' => ['class_session_master', 'pk'],
+            'stream' => ['stream_master', 'pk'],
+            'venue' => ['venue_master', 'venue_id'],
+        ];
+    }
+
     public function test_an_ordinary_master_is_still_open_to_a_non_administrator(): void
     {
         $row = DB::table('faculty_expertise_master')->orderBy('pk')->first();

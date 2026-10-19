@@ -19,7 +19,7 @@ class DesignationMaster extends Model
     }
     public static function getDesignationList()
     {
-        $designationList = self::active()->select('pk', 'designation_name')->get();
+        $designationList = self::active()->select('pk', 'designation_name')->orderBy('designation_name')->get();
         return $designationList->toArray();
     }
 }

@@ -53,7 +53,7 @@ class FcAdminSmsController extends Controller
         // validator rejects form_id 0), so this is a display fix, not a send fix.
         $counts = $selectedFormId > 0
             ? $bulk->previewCounts($selectedFormId)
-            : ['b1' => 0, 'b2' => 0, 'b3' => 0, 'programme' => 'No active form', 'last_date' => '—'];
+            : ['b1' => 0, 'b2' => 0, 'b3' => 0, 'programme' => 'No active course', 'last_date' => '—'];
 
         return view('admin.fc-sms.index', [
             'preview' => [

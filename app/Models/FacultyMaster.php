@@ -19,6 +19,29 @@ class FacultyMaster extends Model
         'joining_date' => 'date',
     ];
 
+    private static ?bool $hasAbbreviation = null;
+
+    /**
+     * Whether migration 2026_09_22_090000 has added faculty_master.abbreviation.
+     * Faculty saves and the timetable PDFs read and write it only when it has,
+     * so a release that runs that migration late degrades instead of failing.
+     */
+    public static function hasAbbreviationColumn(): bool
+    {
+        return self::$hasAbbreviation ??= \Illuminate\Support\Facades\Schema::hasColumn('faculty_master', 'abbreviation');
+    }
+
+    /**
+     * The abbreviation column for a select list - "f.abbreviation" with a table
+     * alias - or NULL under the same name while the column does not exist yet.
+     */
+    public static function abbreviationSelect(string $alias = '')
+    {
+        return self::hasAbbreviationColumn()
+            ? ($alias !== '' ? $alias . '.abbreviation' : 'abbreviation')
+            : \Illuminate\Support\Facades\DB::raw('NULL as abbreviation');
+    }
+
     public function facultyQualificationMap()
     {
         return $this->hasMany(FacultyQualificationMap::class, 'faculty_master_pk', 'pk');

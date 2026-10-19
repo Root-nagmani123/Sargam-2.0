@@ -22,6 +22,12 @@
         </td>
     </tr>
 
+    <tr>
+        <td colspan="16" style="text-align:center; font-style:italic;">
+            Note: Opening, Sale and Closing are valued at the running average buying price: each purchase updates the average, and each sale is valued at the average on its date (not the selling price). Purchase value uses the buying price of this period, including tax.
+        </td>
+    </tr>
+
     {{-- Blank row --}}
     <tr><td colspan="16"></td></tr>
 

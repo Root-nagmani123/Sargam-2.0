@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Area of Expertise - Sargam | Lal Bahadur')
+@section('title', 'Area of Expertise')
 
 @section('setup_content')
 <div class="container-fluid">

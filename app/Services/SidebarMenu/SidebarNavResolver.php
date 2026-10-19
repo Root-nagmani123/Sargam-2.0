@@ -153,8 +153,8 @@ class SidebarNavResolver
         static $memo = [];
 
         $memoKey = $path.'|'.$routeName
-            .'|'.(string) request()->get('menu')
-            .'|'.(string) request()->get('category');
+            .'|'.self::scalarQuery('menu')
+            .'|'.self::scalarQuery('category');
 
         if (array_key_exists($memoKey, $memo)) {
             return $memo[$memoKey];
@@ -179,7 +179,7 @@ class SidebarNavResolver
         // routes shared by more than one menu (e.g. two different menu items that
         // both point to "calendar"), so the menu the user actually clicked — and
         // its tab/group — is selected, not just the first menu that matches the URL.
-        $requestMenuId = request()->get('menu');
+        $requestMenuId = self::scalarQuery('menu');
         if ($requestMenuId) {
             $menu = self::menuById($requestMenuId);
             if ($menu) {
@@ -187,7 +187,7 @@ class SidebarNavResolver
             }
         }
 
-        $requestCategoryId = request()->get('category');
+        $requestCategoryId = self::scalarQuery('category');
         if ($requestCategoryId) {
             $category = self::categoryById($requestCategoryId);
             if ($category) {
@@ -840,5 +840,13 @@ class SidebarNavResolver
             'material-management' => 'material_management_content',
             default => 'content',
         };
+    }
+
+    /** ?menu / ?category as a string; '' for a missing or array value (menu[]=x was a 500 on every page). */
+    public static function scalarQuery(string $key): string
+    {
+        $value = request()->get($key);
+
+        return is_scalar($value) ? (string) $value : '';
     }
 }

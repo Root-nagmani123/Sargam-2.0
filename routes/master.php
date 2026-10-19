@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\Master\MDODutyTypeController;
 use App\Http\Controllers\Admin\Master\MedicalCaseMasterController;
 use App\Http\Controllers\Admin\Master\MemoConclusionMasterController;
 use App\Http\Controllers\Admin\Master\MemoTypeMasterController;
+use App\Http\Middleware\EnsureMenuPermission;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('master')->name('master.')->middleware('auth')->group(function () {
@@ -105,7 +106,9 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
             Route::post('/updatestatus', 'updateStatus')->name('updatestatus');
         });
 
-    Route::prefix('mdo')->name('mdo_duty_type.')->controller(MDODutyTypeController::class)->group(function () {
+    // Duty types drive the MDO / Escort exemption rules: only Super Admin or the
+    // holders of the screen's permission may open or change them.
+    Route::prefix('mdo')->name('mdo_duty_type.')->middleware(EnsureMenuPermission::class.':duty_type')->controller(MDODutyTypeController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
@@ -246,7 +249,10 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
         Route::get('/create', 'create')->name('create');
         Route::post('store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::get('/export', 'export')->name('export');
+        // Grid exports: one query, one column list, four formats (ExportsMasterGrid).
+        // {format} optional so the old /export link still downloads (.xlsx).
+        Route::get('/export/{format?}', 'export')->name('export')
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
         Route::delete('/destroy/{id}', 'destroy')->name('destroy');
         // Route::get('/get-building', 'getBuilding')->name('get.building');
     });
@@ -257,7 +263,10 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
         Route::get('/create', 'create')->name('create');
         Route::post('store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::get('/export', 'export')->name('export');
+        // Grid exports: one query, one column list, four formats (ExportsMasterGrid).
+        // {format} optional so the old /export link still downloads (.xlsx).
+        Route::get('/export/{format?}', 'export')->name('export')
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
         Route::delete('/destroy/{id}', 'destroy')->name('destroy');
     });
 

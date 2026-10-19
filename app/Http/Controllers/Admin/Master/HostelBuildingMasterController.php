@@ -3,15 +3,18 @@
 namespace App\Http\Controllers\Admin\Master;
 
 use App\DataTables\Master\BuildingMasterDataTable;
-use App\Exports\BuildingMasterExport;
+use App\Http\Controllers\Concerns\ExportsMasterGrid;
 use App\Http\Controllers\Controller;
 use App\Models\BuildingMaster;
 // use App\Models\HostelBuildingMaster;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class HostelBuildingMasterController extends Controller
 {
+    use ExportsMasterGrid;
+
     protected $buildingType;
 
     public function __construct()
@@ -78,13 +81,96 @@ class HostelBuildingMasterController extends Controller
         return view('admin.master.hostel_building.create', compact('hostelBuildingMaster'), ['buildingType' => $this->buildingType]);
     }
 
-    public function export()
+    /*
+     * Export - CSV | Excel | PDF | Print   (rendering lives in ExportsMasterGrid)
+     *
+     * Keys are what the index page sends as ?cols= (HB_EXPORT_COLUMN_KEYS there);
+     * only the columns the grid is showing are exported.
+     */
+    private function exportColumnDefs(): array
     {
-        try {
-            return \Excel::download(new BuildingMasterExport, 'building_master.xlsx');
-        } catch (\Exception $e) {
-            return redirect()->route('master.hostel.building.index')->with('error', 'Error exporting data: '.$e->getMessage());
+        return [
+            'sno' => [
+                'heading' => 'S. No.',
+                'width'   => '8%',
+                'align'   => 'center',
+                'value'   => fn ($row, int $index) => $index + 1,
+            ],
+            'building_name' => [
+                'heading' => 'Building Name',
+                'width'   => '32%',
+                'align'   => 'left',
+                'value'   => fn ($row) => $row->building_name ?? '-',
+            ],
+            'no_of_floors' => [
+                'heading' => 'No. of Floors',
+                'width'   => '14%',
+                'align'   => 'center',
+                'value'   => fn ($row) => $row->no_of_floors ?? '-',
+            ],
+            'no_of_rooms' => [
+                'heading' => 'No. of Rooms',
+                'width'   => '14%',
+                'align'   => 'center',
+                'value'   => fn ($row) => $row->no_of_rooms ?? '-',
+            ],
+            'building_type' => [
+                'heading' => 'Building Type',
+                'width'   => '18%',
+                'align'   => 'left',
+                'value'   => fn ($row) => $row->building_type ?? '-',
+            ],
+            'status' => [
+                'heading' => 'Status',
+                'width'   => '14%',
+                'align'   => 'center',
+                'value'   => fn ($row) => ((int) $row->active_inactive === 1) ? 'Active' : 'Inactive',
+            ],
+        ];
+    }
+
+    /**
+     * The grid's own query, minus paging: BuildingMasterDataTable::query()
+     * ordering plus the search the grid is showing. Yajra searches the four
+     * Column::make() columns, word by word (multi_term): every word must match
+     * at least one of them — reproduced here so the export is the screen.
+     */
+    private function exportQuery(string $search): Builder
+    {
+        $query = BuildingMaster::query();
+
+        foreach (preg_split('/\s+/', $search, -1, PREG_SPLIT_NO_EMPTY) as $term) {
+            $like = '%' . $term . '%';
+            $query->where(function ($q) use ($like) {
+                $q->where('building_name', 'like', $like)
+                    ->orWhere('no_of_floors', 'like', $like)
+                    ->orWhere('no_of_rooms', 'like', $like)
+                    ->orWhere('building_type', 'like', $like);
+            });
         }
+
+        return $query->latest('pk');
+    }
+
+    public function export(Request $request, string $format = 'excel')
+    {
+        $format = strtolower($format);
+        abort_unless(in_array($format, self::$exportFormats, true), 404);
+
+        $q = $request->query('q', '');
+        $search = is_string($q) ? trim($q) : '';
+        $rows = $this->exportQuery($search)->get();
+
+        return $this->renderMasterExport(
+            $format,
+            $rows,
+            $this->resolveExportColumns($request, $this->exportColumnDefs()),
+            'Building Master',
+            'BuildingMaster',
+            $search !== '' ? 'Search: ' . $search : null,
+            'No buildings to export',
+            'landscape'
+        );
     }
 
     public function destroy($id)

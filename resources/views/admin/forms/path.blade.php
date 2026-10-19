@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Path Page - Sargam | Lal Bahadur')
+@section('title', 'Path Page')
 
 @push('styles')
 <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
