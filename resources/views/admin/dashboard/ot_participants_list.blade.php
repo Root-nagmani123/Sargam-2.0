@@ -107,7 +107,6 @@
     // Which group types this viewer's role reaches — a view (and its columns)
     // outside it is not offered at all.
     $typeScope = $typeScope ?? ['cadre' => true, 'house' => true];
-    $hiddenGroupKeys = $hiddenGroupKeys ?? [];
     // Both view buttons are always offered. Opening the one this viewer's role
     // does not reach shows a "not available" notice in place of the list.
     $viewAvailable = ! empty($typeScope[$activeView]);
@@ -453,13 +452,10 @@
         // The four Course Group Mapping columns (thead indexes 6–9), in this view's
         // order — the active view's pair first. Each entry is [data key, title, width].
         const GROUP_COLUMNS = @json($groupColumns);
-        // Group columns outside the viewer's role (a cadre counsellor has no House
-        // pair, a house faculty no Cadre pair). The server sends them blank; here
-        // they are always hidden and never offered in the Columns panel.
-        const HIDDEN_GROUP_KEYS = @json($hiddenGroupKeys);
-        const ROLE_HIDDEN_COLUMNS = GROUP_COLUMNS
-            .map((c, i) => HIDDEN_GROUP_KEYS.indexOf(c[0]) !== -1 ? 6 + i : -1)
-            .filter(i => i !== -1);
+        // Compulsory: all four mapping columns are always visible, in both views
+        // and for every role — shown checked and disabled in the Columns panel.
+        const GROUP_COLUMN_IDXS = GROUP_COLUMNS.map((c, i) => 6 + i);
+        const ALWAYS_VISIBLE_COLUMNS = LOCKED_COLUMNS.concat(GROUP_COLUMN_IDXS);
         // Index tracks the <thead> order above — bump it when a column is inserted before it.
         const DUTY_TYPE_COL = 11; // "Duty Type" — only meaningful for a single-day filter
         let dt = null;
@@ -1033,17 +1029,14 @@
         function setupOtColumns() {
             if (!dt) { return; }
             const singleDay = isSingleDayFilter();
-            // Role-hidden columns are not a stored preference — they are off because
-            // of the role, so they are never written back as the viewer's choice.
+            // Always-visible columns cannot be a saved "hidden" choice — this also
+            // clears any older preference that hid a mapping column.
             const hidden = otGetHiddenCols()
-                .filter(idx => LOCKED_COLUMNS.indexOf(idx) === -1)
-                .filter(idx => ROLE_HIDDEN_COLUMNS.indexOf(idx) === -1);
+                .filter(idx => ALWAYS_VISIBLE_COLUMNS.indexOf(idx) === -1);
             otPersistHiddenCols(hidden);
             dt.columns().every(function() {
                 const idx = this.index();
-                if (LOCKED_COLUMNS.indexOf(idx) !== -1) { this.visible(true, false); return; }
-                // Outside the viewer's role — always hidden.
-                if (ROLE_HIDDEN_COLUMNS.indexOf(idx) !== -1) { this.visible(false, false); return; }
+                if (ALWAYS_VISIBLE_COLUMNS.indexOf(idx) !== -1) { this.visible(true, false); return; }
                 // Duty Type is forced hidden unless a single day is filtered.
                 if (idx === DUTY_TYPE_COL) { this.visible(singleDay && hidden.indexOf(idx) === -1, false); return; }
                 this.visible(hidden.indexOf(idx) === -1, false);
@@ -1057,9 +1050,7 @@
                 const idx = this.index();
                 const title = $(this.header()).text().replace(/\s+/g, ' ').trim();
                 if (!title) { return; }
-                // Out-of-role group columns are not on offer at all.
-                if (ROLE_HIDDEN_COLUMNS.indexOf(idx) !== -1) { return; }
-                const isLocked = LOCKED_COLUMNS.indexOf(idx) !== -1;
+                const isLocked = ALWAYS_VISIBLE_COLUMNS.indexOf(idx) !== -1;
                 // Duty Type toggle is disabled (and unchecked) unless a single day is filtered.
                 const dutyLocked = (idx === DUTY_TYPE_COL) && !singleDay;
                 const inputId = 'otcolvis_' + idx;

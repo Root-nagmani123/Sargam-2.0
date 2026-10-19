@@ -1832,26 +1832,10 @@ class UserController extends Controller
     }
 
     /**
-     * The group-column data keys this viewer's role does NOT reach. Those columns
-     * are sent blank, hidden on screen, kept out of the Columns panel and left out
-     * of every export — a cadre counsellor sees no House data and vice versa.
-     *
-     * @param  array{cadre: bool, house: bool}  $typeScope
-     * @return array<int, string>
-     */
-    private function otParticipantsHiddenGroupKeys(array $typeScope): array
-    {
-        return array_merge(
-            empty($typeScope['cadre']) ? ['cadre', 'counsellor'] : [],
-            empty($typeScope['house']) ? ['house', 'house_faculty'] : []
-        );
-    }
-
-    /**
      * The four Course Group Mapping columns, in the order the given view shows
      * them: the active view's pair first, the other pair after it. The toggle
      * decides which pair leads and which filters are offered; the viewer's ROLE
-     * decides which pairs carry data (see otParticipantsHiddenGroupKeys()).
+     * decides which rows are listed; all four columns are always shown.
      *
      * Each entry is [data key, heading, PDF width]. The table <thead>, the
      * DataTable columns, server-side sorting and the exports all read this, so
@@ -2032,13 +2016,11 @@ class UserController extends Controller
         }
 
         $groupColumns = $this->otParticipantsGroupColumns($groupView);
-        $hiddenGroupKeys = $this->otParticipantsHiddenGroupKeys($typeScope);
-
         return view('admin.dashboard.ot_participants_list', compact(
             'availableCourses', 'courseOptions', 'filters', 'cadreOptions',
             'houseGroupOptions', 'sessionOptions', 'participantOptions',
             'counsellorsByCadre', 'facultyByHouseGroup', 'groupColumns',
-            'typeScope', 'hiddenGroupKeys'
+            'typeScope'
         ));
     }
 
@@ -3387,7 +3369,7 @@ class UserController extends Controller
         // The search box narrows the export exactly as it narrows the table.
         $rows = $this->otParticipantsApplySearch($viewRequest, $rows, $rowMeta);
 
-        $exportData = $this->otParticipantsExportData($rows, $rowMeta, $groupView, $this->otParticipantsHiddenGroupKeys($typeScope));
+        $exportData = $this->otParticipantsExportData($rows, $rowMeta, $groupView);
 
         $timestamp = now()->format('Ymd_His');
         $fileBase = "ot_participants_{$timestamp}";
@@ -3466,15 +3448,11 @@ class UserController extends Controller
      *
      * @return array{headings: array<int, string>, rows: array<int, array<int, string>>, widths: array<int, int>}
      */
-    private function otParticipantsExportData($rows, array $rowMeta, string $groupView = 'cadre', array $hiddenGroupKeys = []): array
+    private function otParticipantsExportData($rows, array $rowMeta, string $groupView = 'cadre'): array
     {
-        // The group columns the viewer's role reaches, the active view's pair
-        // first — headings and row cells both come from this list, so they cannot
-        // drift apart.
-        $groupColumns = array_values(array_filter(
-            $this->otParticipantsGroupColumns($groupView),
-            fn ($c) => ! in_array($c[0], $hiddenGroupKeys, true)
-        ));
+        // All four group columns, the active view's pair first — headings and
+        // row cells both come from this list, so they cannot drift apart.
+        $groupColumns = $this->otParticipantsGroupColumns($groupView);
 
         // Heading, then the relative width it gets in the PDF. Text columns need
         // the room; the count columns hold two characters and stay narrow.
@@ -3658,11 +3636,6 @@ class UserController extends Controller
         foreach ($this->otParticipantsGroupColumns($this->otParticipantsGroupView($request)) as $i => $c) {
             $columnMap[6 + $i] = $c[0];
         }
-        // Out-of-role group columns carry no data (and so cannot be sorted on).
-        $hiddenGroupKeys = isset($filterOptions['typeScope'])
-            ? $this->otParticipantsHiddenGroupKeys($filterOptions['typeScope'])
-            : [];
-        $columnMap = array_filter($columnMap, fn ($k) => ! in_array($k, $hiddenGroupKeys, true));
         $orderCol = (int) $request->input('order.0.column', 0);
         $orderDir = strtolower((string) $request->input('order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
         $sortKey = $columnMap[$orderCol] ?? null;
@@ -3727,9 +3700,8 @@ class UserController extends Controller
                 'email' => e($s->email ?? 'N/A'),
                 'mobile' => e($s->contact_no ?: 'N/A'),
                 'user_name' => e($s->user_id ?: 'N/A'),
-                // Both pairs are sent in both views (the blade orders them so the
-                // active view's pair comes first); a pair outside the viewer's
-                // role is blanked below.
+                // All four are always sent; the blade orders them so the active
+                // view's pair comes first.
                 'cadre' => e($p->cadre_name ?: ($s->cadre->cadre_name ?? 'N/A')),
                 // The faculty on the same Course Group Mapping row as the cadre
                 // (counsellor group) — i.e. this participant's cadre counsellor.
@@ -3760,10 +3732,6 @@ class UserController extends Controller
                     .'<i class="bi bi-chat-left-text" aria-hidden="true"></i>'
                     .'<span>Add Comment/ Feedback</span></button>',
             ];
-            // Blank, not just hidden — the raw JSON carries no out-of-role data.
-            foreach ($hiddenGroupKeys as $key) {
-                $row[$key] = '';
-            }
             $data[] = $row;
         }
 
