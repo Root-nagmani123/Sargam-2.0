@@ -1047,11 +1047,11 @@
         //   6–9 Cadre · Cadre Counsellor · House Group · House Group Faculty
         //       (in this view's order — see GROUP_COLUMNS)
         const DEFAULT_HIDDEN_COLUMNS = [3, 4, 5, 6, 7, 8, 9];
-        // The column each card view is about is always shown there — it is what
-        // the list opens sorted by: Cadre on My Counsellees, House Group on House
-        // Wise Details. Both sit at index 6, the first group column of their view
-        // (see GROUP_COLUMNS). Not saved, so the general preference is left alone.
-        const VIEW_FORCED_COLUMNS = (filters.view === 'counsellees' || filters.view === 'house') ? [6] : [];
+        // Cadre is always shown on the My Counsellees card view — it is what that
+        // list opens sorted by (index 6, the first group column; see GROUP_COLUMNS).
+        // Not saved, so the general preference is left alone. The House view forces
+        // nothing: House Group starts unticked like the other mapping columns.
+        const VIEW_FORCED_COLUMNS = filters.view === 'counsellees' ? [6] : [];
         function otGetHiddenCols() {
             try {
                 const raw = localStorage.getItem(otColStorageKey);
