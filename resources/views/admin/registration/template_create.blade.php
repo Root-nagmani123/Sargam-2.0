@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Create Form - Sargam | Lal Bahadur')
+@section('title', 'Create Form')
 
 @section('setup_content')
 

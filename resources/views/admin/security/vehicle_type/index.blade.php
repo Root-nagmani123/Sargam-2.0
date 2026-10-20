@@ -53,7 +53,7 @@
                                 </td>
                                 <td>
                                     <div class="form-check form-switch d-inline-block">
-                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                        <input class="form-check-input vehicle-type-status-toggle" type="checkbox" role="switch"
                                             data-url="{{ route('admin.security.vehicle_type.toggle.status', encrypt($vt->pk)) }}"
                                             {{ $vt->active_inactive == 1 ? 'checked' : '' }}>
                                     </div>
@@ -97,7 +97,7 @@ $(document).ready(function() {
     });
 
     // Status toggle
-    $('.status-toggle').on('change', function() {
+    $('.vehicle-type-status-toggle').on('change', function() {
         const url = $(this).data('url');
         $.post(url, {
             _token: '{{ csrf_token() }}'

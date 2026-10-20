@@ -3584,14 +3584,17 @@ class CalendarManager {
         document.getElementById('nextWeekBtn')?.addEventListener('click', () => this.navigateWeek(1));
         document.getElementById('currentWeekBtn')?.addEventListener('click', () => this.navigateWeek(0));
 
+        // The event form's fields are not all rendered for every user (a trainee's page
+        // has no faculty picker), so each binding is optional; one missing field used to
+        // throw and leave every binding after it unattached.
         // Form submission
-        document.getElementById('eventForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
+        document.getElementById('eventForm')?.addEventListener('submit', (e) => this.handleFormSubmit(e));
 
         // Dynamic field dependencies
-        document.getElementById('Course_name').addEventListener('change', () => this.loadGroupTypes());
-        document.getElementById('subject_module').addEventListener('change', () => this.loadSubjectNames());
-        document.getElementById('faculty').addEventListener('change', () => this.updateFacultyType());
-        document.getElementById('faculty_type').addEventListener('change', () => this.updateCheckboxState());
+        document.getElementById('Course_name')?.addEventListener('change', () => this.loadGroupTypes());
+        document.getElementById('subject_module')?.addEventListener('change', () => this.loadSubjectNames());
+        document.getElementById('faculty')?.addEventListener('change', () => this.updateFacultyType());
+        document.getElementById('faculty_type')?.addEventListener('change', () => this.updateCheckboxState());
 
         // Shift type toggles
         document.querySelectorAll('input[name="shift_type"]').forEach(radio => {
@@ -3599,12 +3602,12 @@ class CalendarManager {
         });
 
         // Full day checkbox
-        document.getElementById('fullDayCheckbox').addEventListener('change', (e) => {
+        document.getElementById('fullDayCheckbox')?.addEventListener('change', (e) => {
             this.toggleFullDayFields(e.target.checked);
         });
 
         // Feedback checkbox
-        document.getElementById('feedback_checkbox').addEventListener('change', () => {
+        document.getElementById('feedback_checkbox')?.addEventListener('change', () => {
             this.toggleFeedbackDependencies();
         });
 

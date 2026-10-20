@@ -1,0 +1,122 @@
+<?php
+
+namespace Tests\Feature;
+
+use Illuminate\Cache\FileStore;
+use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Log;
+use Tests\TestCase;
+
+/**
+ * cache:prune-expired-files must delete exactly what FileStore would already discard.
+ *
+ * Runs against a throwaway directory configured as the only file store, so the real cache
+ * is never touched. Entries are written through FileStore itself, so the test follows the
+ * framework's own on-disk format rather than a copy of it.
+ */
+class PruneExpiredFileCacheTest extends TestCase
+{
+    private string $dir;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->dir = sys_get_temp_dir() . '/prune-cache-test-' . uniqid('', true);
+        mkdir($this->dir, 0777, true);
+        config(['cache.stores' => ['file' => ['driver' => 'file', 'path' => $this->dir]]]);
+    }
+
+    protected function tearDown(): void
+    {
+        (new Filesystem())->deleteDirectory($this->dir);
+
+        parent::tearDown();
+    }
+
+    public function test_only_expired_entries_are_deleted(): void
+    {
+        $store = new FileStore(new Filesystem(), $this->dir);
+        $store->put('live', 'still valid', 600);
+        $store->forever('forever', 'never expires');
+        $store->put('expired', 'old generation', 600);
+
+        // Age the "expired" entry the same way time passing would: rewrite its expiry header.
+        $expiredPath = $this->pathFor($store, 'expired');
+        file_put_contents($expiredPath, (string) (time() - 5) . substr(file_get_contents($expiredPath), 10));
+
+        // A file that is not a cache entry at all must survive.
+        file_put_contents($this->dir . '/not-a-cache-entry.txt', 'hello');
+
+        // 4 files: live, forever, expired, and the non-entry. Only the expired one is removed,
+        // and the summary must count the delete that actually happened.
+        $this->artisan('cache:prune-expired-files')
+            ->expectsOutput('file: 4 file(s) scanned, 1 expired: 1 deleted, 0 rewritten since the scan and kept, 0 already removed, 0 could not be deleted')
+            ->assertExitCode(0);
+
+        $this->assertFileDoesNotExist($expiredPath);
+        $this->assertSame('still valid', $store->get('live'));
+        $this->assertSame('never expires', $store->get('forever'));
+        $this->assertFileExists($this->dir . '/not-a-cache-entry.txt');
+    }
+
+    public function test_dry_run_deletes_nothing(): void
+    {
+        $store = new FileStore(new Filesystem(), $this->dir);
+        $store->put('expired', 'old generation', 600);
+        $path = $this->pathFor($store, 'expired');
+        file_put_contents($path, (string) (time() - 5) . substr(file_get_contents($path), 10));
+
+        $this->artisan('cache:prune-expired-files', ['--dry-run' => true])
+            ->expectsOutput('file: 1 file(s) scanned, 1 expired (dry run, nothing deleted)')
+            ->assertExitCode(0);
+
+        $this->assertFileExists($path);
+    }
+
+    /**
+     * An expired file that cannot be deleted must be counted, logged, and fail the exit code:
+     * under the scheduler the output goes to /dev/null, so the log and exit code are the only
+     * signals. Both the entry and its directory are made read-only: on POSIX a read-only directory
+     * blocks unlink (what a cron user without write access to directories PHP-FPM created looks
+     * like), on Windows a read-only file does, and each is harmless on the other platform.
+     */
+    public function test_an_undeletable_expired_entry_is_reported_as_a_failure(): void
+    {
+        if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+            $this->markTestSkipped('root can unlink from a read-only directory');
+        }
+
+        $store = new FileStore(new Filesystem(), $this->dir);
+        $store->put('expired', 'old generation', 600);
+        $path = $this->pathFor($store, 'expired');
+        file_put_contents($path, (string) (time() - 5) . substr(file_get_contents($path), 10));
+
+        Log::shouldReceive('warning')
+            ->once()
+            ->with('cache:prune-expired-files could not delete expired cache files', \Mockery::on(
+                fn ($context) => $context['store'] === 'file' && $context['failed'] === 1
+            ));
+
+        chmod($path, 0444);
+        chmod(dirname($path), 0555);
+        try {
+            $this->artisan('cache:prune-expired-files')
+                ->expectsOutput('file: 1 file(s) scanned, 1 expired: 0 deleted, 0 rewritten since the scan and kept, 0 already removed, 1 could not be deleted')
+                ->assertExitCode(1);
+        } finally {
+            chmod(dirname($path), 0777);
+            chmod($path, 0666);
+        }
+
+        $this->assertFileExists($path);
+    }
+
+    private function pathFor(FileStore $store, string $key): string
+    {
+        $method = new \ReflectionMethod($store, 'path');
+        $method->setAccessible(true);
+
+        return $method->invoke($store, $key);
+    }
+}

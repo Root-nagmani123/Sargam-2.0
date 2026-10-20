@@ -1,0 +1,631 @@
+/*
+ * Member module (admin) — the add/edit wizard and the member detail view.
+ *
+ * Shared by admin/member/create.blade.php, edit.blade.php, show.blade.php and
+ * the step partials the wizard loads over AJAX, so it lives in a file rather
+ * than an inline <style> — see docs/new-design-index-page.md "Where the CSS
+ * lives" and the <module>-<audience>.css naming rule in §7.
+ *
+ * Roots — every page carries .member-admin-page, plus one of:
+ *   .member-form-page   create / edit (the wizard)
+ *   .member-view-page   show (the detail view)
+ * Anything both pages use is scoped to .member-admin-page so it can't go
+ * one-root-blind (the trap documented in new-design-index-page.md §3d).
+ *
+ * The .wizard/.steps/.content/.actions selectors belong to jQuery Steps, whose
+ * base skin ships in admin_assets/css/styles.css; this file loads after it via
+ * @push('styles'), so the overrides win on cascade order without !important.
+ * Tokens come from public/css/sargam-app.css (docs/design.md).
+ */
+
+.member-admin-page,
+.member-form-page {
+    --mbrw-done: #16a34a;
+    --mbrw-line: var(--ds-line, #e5e7eb);
+    --mbrw-label: #344054;
+    --mbrw-muted: #98a2b3;
+    --mbrw-control-border: #d0d5dd;
+    --mbrw-card-radius: 10px;
+}
+
+/* ── Layout: rail on the left, one card (content + actions) on the right ───── */
+
+.member-form-page .wizard {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    grid-template-rows: 1fr auto;
+    column-gap: var(--ds-space-5, 2rem);
+    overflow: visible;
+}
+
+.member-form-page .wizard > .steps {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    display: block;
+    float: none;
+    width: auto;
+    padding-top: var(--ds-space-2, 0.5rem);
+}
+
+/* .content and .actions are siblings in the plugin's markup; they are stacked
+   into one column and share a border so they read as a single card. */
+.member-form-page .wizard > .content {
+    grid-column: 2;
+    grid-row: 1;
+    display: block;
+    float: none;
+    width: auto;
+    margin: 0;
+    background: var(--ds-surface, #fff);
+    border: 1px solid var(--mbrw-line);
+    border-bottom: 0;
+    border-radius: var(--mbrw-card-radius) var(--mbrw-card-radius) 0 0;
+    padding: var(--ds-space-4, 1.5rem) var(--ds-space-4, 1.5rem) 0;
+    overflow: visible;
+    min-height: 0;
+}
+
+.member-form-page .wizard > .content > .body {
+    float: none;
+    position: relative;
+    width: 100%;
+    height: auto;
+    padding: 0;
+}
+
+/* The plugin's own step heading is already shown by the rail. */
+.member-form-page .wizard > .content > .title {
+    display: none;
+}
+
+.member-form-page .wizard > .actions {
+    grid-column: 2;
+    grid-row: 2;
+    display: block;
+    float: none;
+    width: auto;
+    margin: 0;
+    background: var(--ds-surface, #fff);
+    border: 1px solid var(--mbrw-line);
+    border-top: 0;
+    border-radius: 0 0 var(--mbrw-card-radius) var(--mbrw-card-radius);
+    padding: 0 var(--ds-space-4, 1.5rem) var(--ds-space-4, 1.5rem);
+    text-align: right;
+}
+
+/* The plugin renders its own Previous/Next/Finish list. The page supplies the
+   Cancel + Next pair instead (see .mbrw-actions), and drives the plugin through
+   its API, so the generated list is hidden rather than restyled. */
+.member-form-page .wizard > .actions > ul {
+    display: none;
+}
+
+/* ── The step rail ─────────────────────────────────────────────────────────── */
+
+.member-form-page .wizard > .steps > ul > li {
+    position: relative;
+    float: none;
+    width: 100%;
+    padding-bottom: var(--ds-space-4, 1.5rem);
+}
+
+.member-form-page .wizard > .steps > ul > li:last-child {
+    padding-bottom: 0;
+}
+
+/* Connector between one circle and the next. */
+.member-form-page .wizard > .steps > ul > li:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: 13px;
+    top: 26px;
+    bottom: 2px;
+    width: 1px;
+    background: var(--mbrw-line);
+}
+
+.member-form-page .wizard > .steps > ul > li.done:not(:last-child)::before {
+    background: var(--mbrw-done);
+}
+
+.member-form-page .wizard > .steps a,
+.member-form-page .wizard > .steps a:hover,
+.member-form-page .wizard > .steps a:active {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2, 0.5rem);
+    width: auto;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    color: var(--ds-ink, #1f2937);
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.2;
+    cursor: pointer;
+}
+
+/* jQuery Steps prints "1." in a <span class="number">; it becomes the circle. */
+.member-form-page .wizard > .steps a .number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 27px;
+    width: 27px;
+    height: 27px;
+    border-radius: 999px;
+    border: 1px solid var(--mbrw-control-border);
+    background: var(--ds-surface, #fff);
+    color: var(--mbrw-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    /* The plugin's label is "1." — the dot is clipped, the digit is re-drawn
+       centred, so the circle never shows stray punctuation. */
+    text-indent: -9999px;
+    overflow: hidden;
+}
+
+.member-form-page .wizard > .steps a .number::after {
+    content: attr(data-step);
+    text-indent: 0;
+    float: left;
+    width: 100%;
+    text-align: center;
+}
+
+.member-form-page .wizard > .steps .current a,
+.member-form-page .wizard > .steps .current a:active {
+    background: transparent;
+    color: var(--ds-ink, #1f2937);
+    font-weight: 600;
+    cursor: default;
+}
+
+.member-form-page .wizard > .steps .current a .number {
+    border-color: var(--mbrw-done);
+    color: var(--mbrw-done);
+}
+
+.member-form-page .wizard > .steps .done a,
+.member-form-page .wizard > .steps .done a:hover,
+.member-form-page .wizard > .steps .done a:active {
+    background: transparent;
+    color: var(--ds-ink, #1f2937);
+}
+
+.member-form-page .wizard > .steps .done a .number {
+    border-color: var(--mbrw-done);
+    background: var(--mbrw-done);
+    color: #fff;
+}
+
+/* Completed steps show a tick instead of their number. */
+.member-form-page .wizard > .steps .done a .number::after {
+    content: "\2713";
+    font-size: 0.8125rem;
+    font-weight: 700;
+}
+
+.member-form-page .wizard > .steps .disabled a,
+.member-form-page .wizard > .steps .disabled a:hover,
+.member-form-page .wizard > .steps .disabled a:active {
+    background: transparent;
+    color: #667085;
+    cursor: default;
+}
+
+.member-form-page .wizard > .steps .error a .number {
+    border-color: var(--bs-danger, #b12923);
+    background: var(--bs-danger, #b12923);
+    color: #fff;
+}
+
+.member-form-page .wizard > .steps a:focus-visible {
+    outline: 0;
+    box-shadow: var(--ds-focus-ring, 0 0 0 0.2rem rgba(0, 67, 132, 0.2));
+    border-radius: var(--ds-radius, 4px);
+}
+
+/* ── Form fields inside the card ───────────────────────────────────────────── */
+
+.member-form-page .wizard .form-label,
+.member-form-page .wizard .form-check-label {
+    color: var(--mbrw-label);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    margin-bottom: var(--ds-space-2, 0.5rem);
+}
+
+.member-form-page .wizard .form-label .text-danger {
+    margin-left: 1px;
+}
+
+.member-form-page .wizard .form-control,
+.member-form-page .wizard .form-select {
+    min-height: 2.75rem;
+    border-color: var(--mbrw-control-border);
+    border-radius: 8px;
+    color: var(--ds-ink, #1f2937);
+    font-size: 0.875rem;
+}
+
+.member-form-page .wizard .form-control::placeholder {
+    color: var(--mbrw-muted);
+}
+
+.member-form-page .wizard .form-control:focus,
+.member-form-page .wizard .form-select:focus {
+    border-color: var(--ds-primary, #004384);
+    box-shadow: var(--ds-focus-ring, 0 0 0 0.2rem rgba(0, 67, 132, 0.2));
+}
+
+.member-form-page .wizard textarea.form-control {
+    min-height: 6.5rem;
+}
+
+/* An unpicked <select> reads as a placeholder, like the inputs next to it. */
+.member-form-page .wizard .form-select.is-placeholder {
+    color: var(--mbrw-muted);
+}
+
+.member-form-page .wizard .form-control[type="file"] {
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+}
+
+/* ── Section headings ("Current Address", "Communication Details") ─────────── */
+
+.member-admin-page .mbrw-section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ds-space-3, 1rem);
+    margin: 0 0 var(--ds-space-3, 1rem);
+    padding-bottom: var(--ds-space-2, 0.5rem);
+    border-bottom: 1px solid var(--mbrw-line);
+}
+
+.member-admin-page .mbrw-section + .row {
+    margin-top: 0;
+}
+
+.member-admin-page .mbrw-section-title {
+    margin: 0;
+    color: var(--ds-ink, #1f2937);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.member-admin-page .mbrw-section-aside .form-check-label {
+    margin-bottom: 0;
+}
+
+.member-admin-page .mbrw-section:not(:first-child) {
+    margin-top: var(--ds-space-4, 1.5rem);
+}
+
+/* ── Role Assignment: checkbox chips ───────────────────────────────────────── */
+
+.member-form-page .mbrw-role-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: var(--ds-space-2, 0.5rem) var(--ds-space-3, 1rem);
+}
+
+.member-form-page .mbrw-role-chip {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2, 0.5rem);
+    margin: 0;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--mbrw-control-border);
+    border-radius: 8px;
+    background: var(--ds-surface, #fff);
+    color: var(--mbrw-label);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.member-form-page .mbrw-role-chip:hover {
+    border-color: var(--ds-primary, #004384);
+    background: rgba(0, 67, 132, 0.03);
+}
+
+.member-form-page .mbrw-role-chip .form-check-input {
+    flex: 0 0 auto;
+    margin: 0;
+    cursor: pointer;
+}
+
+.member-form-page .mbrw-role-chip:has(.form-check-input:checked) {
+    border-color: var(--ds-primary, #004384);
+    background: rgba(0, 67, 132, 0.05);
+}
+
+/* ── Footer actions (Cancel · Next / Add Employee) ─────────────────────────── */
+
+.member-form-page .mbrw-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--ds-space-3, 1rem);
+    padding-top: var(--ds-space-4, 1.5rem);
+}
+
+/* styles.css paints every `.wizard > .actions a` solid primary, so the Cancel
+   anchor is matched through .actions to out-specify it (element + 4 classes). */
+.member-form-page .wizard > .actions .mbrw-btn,
+.member-admin-page .mbrw-btn {
+    display: inline-block;
+    min-width: 118px;
+    min-height: 2.75rem;
+    padding: 0.5rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+    text-decoration: none;
+}
+
+.member-form-page .wizard > .actions a.mbrw-btn-cancel,
+.member-form-page .wizard > .actions a.mbrw-btn-cancel:hover,
+.member-form-page .wizard > .actions a.mbrw-btn-cancel:active,
+.member-admin-page .mbrw-btn-cancel {
+    border: 1px solid var(--ds-primary, #004384);
+    background: var(--ds-surface, #fff);
+    color: var(--ds-primary, #004384);
+}
+
+.member-form-page .wizard > .actions a.mbrw-btn-cancel:hover,
+.member-form-page .wizard > .actions a.mbrw-btn-cancel:focus,
+.member-admin-page .mbrw-btn-cancel:hover,
+.member-admin-page .mbrw-btn-cancel:focus {
+    background: rgba(0, 67, 132, 0.06);
+    color: var(--ds-primary, #004384);
+}
+
+.member-form-page .wizard > .actions .mbrw-btn-primary,
+.member-admin-page .mbrw-btn-primary {
+    border: 1px solid var(--ds-primary, #004384);
+    background: var(--ds-primary, #004384);
+    color: #fff;
+}
+
+.member-form-page .wizard > .actions .mbrw-btn-primary:hover,
+.member-form-page .wizard > .actions .mbrw-btn-primary:focus,
+.member-admin-page .mbrw-btn-primary:hover,
+.member-admin-page .mbrw-btn-primary:focus {
+    background: #003468;
+    border-color: #003468;
+    color: #fff;
+}
+
+.member-admin-page .mbrw-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* ══ Detail view (.member-view-page) ═══════════════════════════════════════════
+   Hero with the headline facts, then one card per group of fields, each a
+   label-over-value grid. Same card, rule and typography as the wizard so the
+   three member screens read as one module (new-design-index-page.md §3d). */
+
+.member-view-page .mbrw-card {
+    background: var(--ds-surface, #fff);
+    border: 1px solid var(--mbrw-line);
+    border-radius: var(--mbrw-card-radius);
+    padding: var(--ds-space-4, 1.5rem);
+    margin-bottom: var(--ds-space-4, 1.5rem);
+}
+
+.member-view-page .mbrw-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ds-space-3, 1rem) var(--ds-space-5, 2rem);
+    background: #f5f8fc;
+    border: 1px solid #e3ebf6;
+    border-radius: var(--mbrw-card-radius);
+    padding: var(--ds-space-4, 1.5rem);
+    margin-bottom: var(--ds-space-4, 1.5rem);
+}
+
+.member-view-page .mbrw-hero-main {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-3, 1rem);
+    min-width: 0;
+}
+
+.member-view-page .mbrw-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 56px;
+    width: 56px;
+    height: 56px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--ds-primary, #004384);
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.member-view-page .mbrw-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.member-view-page .mbrw-hero-name {
+    margin: 0;
+    color: var(--ds-ink, #1f2937);
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.member-view-page .mbrw-hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 0.75rem;
+    margin-top: 0.3rem;
+    color: #667085;
+    font-size: 0.8125rem;
+}
+
+/* The dot separators are decoration, so they are drawn rather than typed. */
+.member-view-page .mbrw-hero-meta > span + span::before {
+    content: "•";
+    margin-right: 0.75rem;
+    color: #c4cbd6;
+}
+
+/* Same soft badge as the Status column on the listing. */
+.member-view-page .status-pill {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.35rem 0.7rem;
+    letter-spacing: 0.01em;
+}
+
+.member-view-page .status-pill.bg-success-subtle {
+    color: #146c43;
+}
+
+.member-view-page .status-pill.bg-danger-subtle {
+    color: #b02a37;
+}
+
+.member-view-page .mbrw-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: var(--ds-space-3, 1rem) var(--ds-space-4, 1.5rem);
+}
+
+.member-view-page .mbrw-fact {
+    min-width: 0;
+}
+
+.member-view-page .mbrw-fact__label {
+    display: block;
+    margin-bottom: 0.2rem;
+    color: #667085;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.member-view-page .mbrw-fact__value {
+    color: var(--ds-ink, #1f2937);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.member-view-page .mbrw-fact__value.is-empty {
+    color: var(--mbrw-muted);
+    font-weight: 500;
+}
+
+/* A fact holding a long address gets the full row rather than one grid cell. */
+.member-view-page .mbrw-fact--wide {
+    grid-column: 1 / -1;
+}
+
+.member-view-page .mbrw-role-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ds-space-2, 0.5rem);
+}
+
+.member-view-page .mbrw-role-badge {
+    padding: 0.4rem 0.75rem;
+    border: 1px solid #cddcf0;
+    border-radius: 999px;
+    background: rgba(0, 67, 132, 0.05);
+    color: var(--ds-primary, #004384);
+    font-size: 0.8125rem;
+    font-weight: 500;
+}
+
+.member-view-page .mbrw-doc-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ds-space-3, 1rem);
+}
+
+.member-view-page .mbrw-btn-sm {
+    min-width: 0;
+    min-height: 2.25rem;
+    padding: 0.4rem 1rem;
+    font-size: 0.8125rem;
+}
+
+@media (max-width: 575.98px) {
+    .member-view-page .mbrw-hero {
+        align-items: flex-start;
+    }
+}
+
+/* ── Validation ────────────────────────────────────────────────────────────── */
+
+.member-form-page .wizard .form-control.is-invalid,
+.member-form-page .wizard .form-select.is-invalid {
+    border-color: var(--bs-danger, #b12923);
+}
+
+.member-form-page .wizard .text-danger {
+    font-size: 0.8125rem;
+}
+
+/* ── Responsive: rail collapses to a row above the card ────────────────────── */
+
+@media (max-width: 991.98px) {
+    .member-form-page .wizard {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: var(--ds-space-3, 1rem);
+    }
+
+    .member-form-page .wizard > .steps {
+        grid-column: 1;
+        grid-row: 1;
+        padding-top: 0;
+    }
+
+    .member-form-page .wizard > .content {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    .member-form-page .wizard > .actions {
+        grid-column: 1;
+        grid-row: 3;
+    }
+
+    .member-form-page .wizard > .steps > ul {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--ds-space-2, 0.5rem) var(--ds-space-4, 1.5rem);
+    }
+
+    .member-form-page .wizard > .steps > ul > li {
+        width: auto;
+        padding-bottom: 0;
+    }
+
+    .member-form-page .wizard > .steps > ul > li:not(:last-child)::before {
+        display: none;
+    }
+}

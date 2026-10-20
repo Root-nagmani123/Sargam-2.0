@@ -698,3 +698,736 @@
 .cru-view-toggle-pill .cru-view-toggle-btn:hover {
     transform: none !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Universal search (user end)  —  admin/course-repository/user/search.blade.php
+   The search-box block (.cru-search-box and friends) is deliberately NOT scoped to
+   the search page: the browse pages embed the same box as their entry point into it.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cru-search-page .cru-empty-icon {
+    background-color: #f1f5f9;
+    color: var(--cru-primary);
+}
+
+/* ── Search box ───────────────────────────────────────────────────────────── */
+.cru-search-hero {
+    background: linear-gradient(180deg, var(--cru-banner-from), var(--cru-banner-to));
+    border: 1px solid var(--cru-border) !important;
+}
+
+.cru-search-scope {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.8125rem;
+    color: #475569;
+}
+
+.cru-search-scope .bi {
+    color: var(--cru-primary);
+}
+
+.cru-search-scope-clear {
+    color: var(--cru-primary);
+    text-decoration: underline;
+}
+
+.cru-search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border: 1px solid var(--cru-border);
+    border-radius: 999px;
+    box-shadow: var(--cru-shadow);
+    transition: border-color var(--cru-transition), box-shadow var(--cru-transition);
+}
+
+.cru-search-box:focus-within {
+    border-color: var(--cru-primary-light);
+    box-shadow: 0 0 0 0.2rem rgba(91, 155, 213, 0.25);
+}
+
+.cru-search-box-icon {
+    position: absolute;
+    left: 1.1rem;
+    color: #94a3b8;
+    pointer-events: none;
+    font-size: 1.05rem;
+}
+
+.cru-search-input.form-control {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 0.75rem 0.75rem 0.75rem 2.85rem;
+    font-size: 1rem;
+    border-radius: 999px;
+    min-width: 0;
+}
+
+.cru-search-input.form-control:focus {
+    box-shadow: none;
+}
+
+/* The type=search clear affordance overlaps the submit button in some browsers. */
+.cru-search-input::-webkit-search-cancel-button {
+    margin-right: 0.25rem;
+}
+
+.cru-search-submit.btn {
+    flex: 0 0 auto;
+    margin: 0.3rem;
+    padding: 0.45rem 1.35rem;
+    border-radius: 999px;
+    background-color: var(--cru-primary);
+    border-color: var(--cru-primary);
+    color: #fff;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.cru-search-submit.btn:hover,
+.cru-search-submit.btn:focus {
+    background-color: var(--cru-primary-hover);
+    border-color: var(--cru-primary-hover);
+    color: #fff;
+}
+
+.cru-search-examples {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0.85rem 0 0;
+    font-size: 0.8125rem;
+    color: #64748b;
+}
+
+/* ── Suggestions ──────────────────────────────────────────────────────────── */
+.cru-suggest-list {
+    position: absolute;
+    z-index: 1060;
+    top: calc(100% + 0.35rem);
+    left: 0;
+    right: 0;
+    max-height: 21rem;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0.35rem;
+    list-style: none;
+    background: #fff;
+    border: 1px solid var(--cru-border);
+    border-radius: var(--cru-radius-lg);
+    box-shadow: var(--cru-shadow-hover);
+}
+
+.cru-suggest-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.5rem 0.7rem;
+    border-radius: var(--cru-radius);
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #1e293b;
+}
+
+.cru-suggest-item.active {
+    background-color: #eff6ff;
+    color: var(--cru-primary-hover);
+}
+
+.cru-suggest-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cru-suggest-type {
+    flex: 0 0 auto;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+    background: #f1f5f9;
+    border-radius: 999px;
+    padding: 0.1rem 0.5rem;
+}
+
+/* ── Type tabs ────────────────────────────────────────────────────────────── */
+.cru-search-controls {
+    border: 1px solid var(--cru-border) !important;
+    overflow: hidden;
+}
+
+.cru-search-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0.5rem 0.75rem 0;
+    border-bottom: 1px solid var(--cru-border);
+    background: #f8fafc;
+}
+
+.cru-search-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.9rem;
+    border-bottom: 2px solid transparent;
+    color: #475569;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.cru-search-tab:hover {
+    color: var(--cru-primary);
+}
+
+.cru-search-tab.active {
+    color: var(--cru-primary);
+    border-bottom-color: var(--cru-primary);
+}
+
+.cru-search-tab-count {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #475569;
+    background: #e2e8f0;
+    border-radius: 999px;
+    padding: 0.05rem 0.45rem;
+}
+
+.cru-search-tab.active .cru-search-tab-count {
+    color: #fff;
+    background: var(--cru-primary);
+}
+
+/* ── Refinements ──────────────────────────────────────────────────────────── */
+.cru-search-refine {
+    padding: 0.9rem 0.9rem 1rem;
+}
+
+.cru-refine-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: 0.75rem;
+    align-items: end;
+}
+
+.cru-refine-field-sm {
+    max-width: 12rem;
+}
+
+.cru-refine-field label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+}
+
+.cru-refine-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.cru-refine-apply {
+    white-space: nowrap;
+}
+
+/* ── Active-filter chips ──────────────────────────────────────────────────── */
+.cru-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0.85rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.cru-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.65rem;
+    border: 1px solid var(--cru-border);
+    border-radius: 999px;
+    background: #fff;
+    font-size: 0.8125rem;
+    color: #334155;
+    text-decoration: none;
+    line-height: 1.6;
+}
+
+.cru-chip-example:hover {
+    border-color: var(--cru-primary-light);
+    color: var(--cru-primary);
+}
+
+.cru-chip-active {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: var(--cru-primary-hover);
+}
+
+.cru-chip-key {
+    font-weight: 600;
+}
+
+.cru-chip-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.05rem;
+    height: 1.05rem;
+    border-radius: 50%;
+    color: inherit;
+    text-decoration: none;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.cru-chip-remove:hover {
+    background: rgba(0, 0, 0, 0.08);
+    color: inherit;
+}
+
+/* ── Section headers ──────────────────────────────────────────────────────── */
+.cru-search-section {
+    margin-bottom: 2rem;
+}
+
+.cru-section-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+}
+
+.cru-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.cru-section-count {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #475569;
+    background: #e2e8f0;
+    border-radius: 999px;
+    padding: 0.1rem 0.5rem;
+}
+
+.cru-section-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--cru-primary);
+    text-decoration: none;
+}
+
+.cru-section-more:hover {
+    color: var(--cru-primary-hover);
+    text-decoration: underline;
+}
+
+.cru-section-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.cru-tool-label {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.cru-tool-select.form-select {
+    width: auto;
+    min-width: 9rem;
+    border-radius: var(--cru-radius);
+}
+
+.cru-tool-select-sm.form-select {
+    min-width: 4.75rem;
+}
+
+/* ── Result list ──────────────────────────────────────────────────────────── */
+.cru-sr-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid var(--cru-border);
+    border-radius: var(--cru-radius-lg);
+    box-shadow: var(--cru-shadow);
+    overflow: hidden;
+}
+
+.cru-sr-item {
+    display: flex;
+    gap: 0.9rem;
+    padding: 1rem 1.1rem;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.cru-sr-item:last-child {
+    border-bottom: 0;
+}
+
+.cru-sr-item:hover {
+    background-color: #f8fafc;
+}
+
+.cru-sr-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--cru-radius);
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 1.15rem;
+}
+
+.cru-sr-icon-pdf { background: #fef2f2; color: #b91c1c; }
+.cru-sr-icon-slides { background: #fff7ed; color: #c2410c; }
+.cru-sr-icon-doc { background: #eff6ff; color: #1d4ed8; }
+.cru-sr-icon-sheet { background: #f0fdf4; color: #15803d; }
+.cru-sr-icon-image { background: #faf5ff; color: #7e22ce; }
+.cru-sr-icon-video { background: #fef2f2; color: #dc2626; }
+
+.cru-sr-body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.cru-sr-title {
+    margin: 0 0 0.15rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.cru-sr-title-link {
+    color: var(--cru-primary);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.cru-sr-title-link:hover {
+    color: var(--cru-primary-hover);
+    text-decoration: underline;
+}
+
+.cru-sr-topic {
+    margin: 0 0 0.4rem;
+    font-size: 0.8125rem;
+    color: #475569;
+    overflow-wrap: anywhere;
+}
+
+.cru-sr-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.9rem;
+    margin: 0 0 0.5rem;
+    padding: 0;
+    list-style: none;
+    font-size: 0.78125rem;
+    color: #64748b;
+}
+
+.cru-sr-meta li {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 0;
+}
+
+.cru-sr-meta .bi {
+    color: #94a3b8;
+}
+
+.cru-sr-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.cru-sr-trail {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+    font-size: 0.75rem;
+    color: #64748b;
+    text-decoration: none;
+}
+
+.cru-sr-trail span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cru-sr-trail:hover {
+    color: var(--cru-primary);
+    text-decoration: underline;
+}
+
+.cru-sr-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-left: auto;
+}
+
+.cru-sr-btn.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.65rem;
+    border: 1px solid var(--cru-border);
+    border-radius: var(--cru-radius);
+    background: #fff;
+    color: #334155;
+    font-size: 0.78125rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.cru-sr-btn.btn:hover {
+    border-color: var(--cru-primary-light);
+    color: var(--cru-primary);
+}
+
+.cru-sr-btn-video.btn:hover {
+    border-color: #fca5a5;
+    color: #dc2626;
+}
+
+.cru-sr-btn-primary.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background-color: var(--cru-primary);
+    border: 1px solid var(--cru-primary);
+    color: #fff;
+    font-weight: 600;
+}
+
+.cru-sr-btn-primary.btn:hover,
+.cru-sr-btn-primary.btn:focus {
+    background-color: var(--cru-primary-hover);
+    border-color: var(--cru-primary-hover);
+    color: #fff;
+}
+
+/* ── Category cards ───────────────────────────────────────────────────────── */
+.cru-cat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: 0.75rem;
+}
+
+.cru-cat-card {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid var(--cru-border);
+    border-radius: var(--cru-radius-lg);
+    box-shadow: var(--cru-shadow);
+    overflow: hidden;
+    transition: border-color var(--cru-transition), box-shadow var(--cru-transition);
+}
+
+.cru-cat-card:hover {
+    border-color: var(--cru-primary-light);
+    box-shadow: var(--cru-shadow-hover);
+}
+
+.cru-cat-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    flex: 1 1 auto;
+    padding: 0.85rem 0.9rem;
+    text-decoration: none;
+    color: inherit;
+}
+
+.cru-cat-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: var(--cru-radius);
+    background: #eff6ff;
+    color: var(--cru-primary);
+}
+
+.cru-cat-text {
+    min-width: 0;
+}
+
+.cru-cat-name {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #0f172a;
+    overflow-wrap: anywhere;
+}
+
+.cru-cat-main:hover .cru-cat-name {
+    color: var(--cru-primary);
+}
+
+.cru-cat-trail {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.75rem;
+    color: #64748b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cru-cat-trail-root {
+    font-style: italic;
+}
+
+.cru-cat-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.45rem 0.9rem;
+    border-top: 1px solid #eef2f7;
+    background: #f8fafc;
+    font-size: 0.75rem;
+}
+
+.cru-cat-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: #64748b;
+}
+
+.cru-cat-scope {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--cru-primary);
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.cru-cat-scope:hover {
+    color: var(--cru-primary-hover);
+    text-decoration: underline;
+}
+
+/* ── Pager ────────────────────────────────────────────────────────────────── */
+.cru-search-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.cru-pager-summary {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: #64748b;
+}
+
+.cru-search-pager .pagination {
+    margin-bottom: 0;
+}
+
+/* Laravel's Bootstrap paginator renders its own "Showing x to y" block; this page
+   states the same thing in cru-pager-summary, in its own wording. */
+.cru-search-pager .pagination-info,
+.cru-search-pager .d-none.d-sm-flex .small {
+    display: none !important;
+}
+
+/* ── Match highlighting ───────────────────────────────────────────────────── */
+mark.cru-hl {
+    padding: 0 0.1em;
+    border-radius: 0.15rem;
+    background-color: #fef08a;
+    color: inherit;
+}
+
+/* ── Narrow screens ───────────────────────────────────────────────────────── */
+@media (max-width: 575.98px) {
+    .cru-search-input.form-control {
+        font-size: 0.9375rem;
+        padding-left: 2.6rem;
+    }
+
+    .cru-sr-item {
+        padding: 0.85rem;
+    }
+
+    .cru-sr-icon {
+        width: 2.1rem;
+        height: 2.1rem;
+        font-size: 1rem;
+    }
+
+    .cru-sr-actions {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .cru-refine-field-sm {
+        max-width: none;
+    }
+}
+
+@media print {
+    .cru-search-hero,
+    .cru-search-controls,
+    .cru-section-tools,
+    .cru-sr-actions,
+    .cru-cat-scope {
+        display: none !important;
+    }
+}

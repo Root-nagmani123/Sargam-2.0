@@ -45,8 +45,8 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Store</label>
-                                <select name="store_id" class="form-select form-select-sm">
+                                <label class="form-label">Store <span class="text-danger">*</span></label>
+                                <select name="store_id" class="form-select form-select-sm" required>
                                     <option value="">Select Store</option>
                                     @foreach($stores as $store)
                                         <option value="{{ $store->id }}">{{ $store->store_name }}</option>
