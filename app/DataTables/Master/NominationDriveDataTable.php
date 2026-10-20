@@ -46,17 +46,19 @@ class NominationDriveDataTable extends DataTable
                     . '<i class="bi bi-pencil" aria-hidden="true"></i><span>Edit</span></button>';
 
                 // Each toggle is labelled with the action it performs, as in the
-                // design ("Disable Nomination Withdraw" when it is currently on).
+                // design ("Disable Nomination Withdraw" when it is currently on),
+                // and its icon previews that action: orange "off" toggle for
+                // Disable, green "on" toggle for Enable.
                 $withdrawBtn = '<button type="button" class="cs-action-btn nd-toggle-btn" aria-label="Toggle nomination withdraw"'
                     . ' data-id="' . $id . '" data-field="nomination_withdraw_status" data-next="' . ($withdraw ? 0 : 1) . '"'
                     . ' data-label="' . $label . '">'
-                    . '<i class="bi ' . ($withdraw ? 'bi-toggle-on nd-toggle-on' : 'bi-toggle-off nd-toggle-off') . '" aria-hidden="true"></i>'
+                    . '<i class="bi ' . ($withdraw ? 'bi-toggle-off nd-toggle-off' : 'bi-toggle-on nd-toggle-on') . '" aria-hidden="true"></i>'
                     . '<span>' . ($withdraw ? 'Disable' : 'Enable') . ' Nomination Withdraw</span></button>';
 
                 $acceptBtn = '<button type="button" class="cs-action-btn nd-toggle-btn" aria-label="Toggle nomination accept"'
                     . ' data-id="' . $id . '" data-field="nomination_accept_status" data-next="' . ($accept ? 0 : 1) . '"'
                     . ' data-label="' . $label . '">'
-                    . '<i class="bi ' . ($accept ? 'bi-toggle-on nd-toggle-on' : 'bi-toggle-off nd-toggle-off') . '" aria-hidden="true"></i>'
+                    . '<i class="bi ' . ($accept ? 'bi-toggle-off nd-toggle-off' : 'bi-toggle-on nd-toggle-on') . '" aria-hidden="true"></i>'
                     . '<span>' . ($accept ? 'Disable' : 'Enable') . ' Nomination Accept</span></button>';
 
                 $deleteBtn = '<button type="button" class="cs-action-btn cs-action-btn--danger nd-delete-btn" aria-label="Delete drive"'
@@ -139,7 +141,7 @@ JS)
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S. No.')->searchable(false)->orderable(false),
+            Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false),
             Column::make('drive_name')->title('Nomination Drive')->orderable(false)->addClass('nd-name-cell'),
             Column::make('course_name')->title('Course Name')->orderable(false),
             Column::make('start_date')->title('Start Date')->searchable(false)->orderable(false),

@@ -289,6 +289,7 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
             Route::get('/view/{id}', 'show')->name('show');
             Route::get('/view/{id}/export', 'exportNominees')->name('nominees.export');
             Route::get('/view/{id}/print', 'printNominees')->name('nominees.print');
+            Route::get('/view/{id}/nominators', 'nominators')->name('nominators');
             Route::post('/nomination/{id}/withdraw', 'withdrawNomination')->name('nomination.withdraw');
         });
 

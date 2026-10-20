@@ -276,6 +276,7 @@
     </div>
 </div>
 @include('admin.master.partials.club_society_select2')
+@include('admin.master.partials.club_society_confirm_delete')
 @endsection
 
 @push('scripts')
@@ -639,16 +640,7 @@
         $(document).on('click', TABLE_ID + ' .csrpm-delete-btn', function () {
             var $btn = $(this);
             var id   = $btn.data('id');
-            var name = $btn.data('label') || 'this mapping';
-
-            Swal.fire({
-                title: 'Are you sure?',
-                text: 'Remove every role mapped for ' + name + '? This cannot be undone.',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, delete it',
-                cancelButtonText: 'Cancel'
-            }).then(function (result) {
+            csConfirmDelete().then(function (result) {
                 if (!result.isConfirmed) { return; }
 
                 $btn.prop('disabled', true);

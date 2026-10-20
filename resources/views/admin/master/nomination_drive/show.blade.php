@@ -127,6 +127,32 @@
     </div>
 </div>
 
+<!-- No of Nominated By Modal -->
+<div class="modal fade" id="ndvNominatorsModal" tabindex="-1" aria-labelledby="ndvNominatorsLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 491px;">
+        <div class="modal-content rounded-3 border-0 shadow">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ndvNominatorsLabel">Nominated By</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table align-middle mb-0 programme-dt-table">
+                    <thead>
+                        <tr>
+                            <th>S. No.</th>
+                            <th class="text-end">Name</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ndvNominatorsBody"></tbody>
+                </table>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-danger rounded-1 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Column Visibility Modal -->
 <div class="modal fade" id="ndvColumnVisibilityModal" tabindex="-1" aria-labelledby="ndvColumnVisibilityLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -227,6 +253,55 @@
                 $grid.append($cell);
             });
         }
+
+        /* ---- No of Nominated By popup ---- */
+        var nominatorsUrl = "{{ route('master.nomination.drive.nominators', ['id' => $driveId]) }}";
+        var $nominatorsBody = $('#ndvNominatorsBody');
+
+        function nominatorsMessage(text) {
+            $nominatorsBody.empty().append(
+                $('<tr></tr>').append(
+                    $('<td colspan="2" class="text-center text-body-secondary py-3"></td>').text(text)
+                )
+            );
+        }
+
+        $(document).on('click', '.nd-nominators-link', function () {
+            var $btn = $(this);
+            var nominee = $btn.data('name');
+            $('#ndvNominatorsLabel').text(nominee ? 'Nominated By - ' + nominee : 'Nominated By');
+            nominatorsMessage('Loading...');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('ndvNominatorsModal')).show();
+
+            $.ajax({
+                url: nominatorsUrl,
+                type: 'GET',
+                data: {
+                    society: $btn.data('society'),
+                    role: $btn.data('role'),
+                    nominee: $btn.data('nominee')
+                },
+                headers: { 'Accept': 'application/json' },
+                success: function (res) {
+                    var names = (res && res.data) || [];
+                    if (!names.length) {
+                        nominatorsMessage('No nominations found.');
+                        return;
+                    }
+                    $nominatorsBody.empty();
+                    names.forEach(function (name, i) {
+                        $nominatorsBody.append(
+                            $('<tr></tr>')
+                                .append($('<td></td>').text(i + 1))
+                                .append($('<td class="text-end"></td>').text(name))
+                        );
+                    });
+                },
+                error: function (xhr) {
+                    nominatorsMessage((xhr.responseJSON && xhr.responseJSON.message) || 'Could not load the list.');
+                }
+            });
+        });
 
         /* ---- Withdraw a nomination ---- */
         var withdrawUrlTemplate = "{{ route('master.nomination.drive.nomination.withdraw', ['id' => '__ID__']) }}";

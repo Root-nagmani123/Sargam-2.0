@@ -2821,17 +2821,19 @@ body.custom-loaded {
 }
 
 /* ── Create Nomination Drive ── */
-/* Five actions per row, each icon-over-label — let them wrap rather than
-   force the table wider than the viewport. */
+/* Five actions per row, each icon-over-label, always on one line as in the
+   design: long labels wrap inside their own button instead of pushing buttons
+   to a second row. On narrow screens .table-responsive scrolls sideways. */
 .nd-page .nd-action-group {
-    flex-wrap: wrap;
-    gap: 0.85rem;
-    max-width: 21rem;
-    row-gap: 0.6rem;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
 }
 
 .nd-page .nd-action-group .cs-action-btn {
-    max-width: 6.5rem;
+    flex: 0 0 auto;
+    width: max-content;
+    max-width: 4.5rem;
+    white-space: normal;
     text-align: center;
 }
 
@@ -2944,16 +2946,19 @@ body.custom-loaded {
 }
 
 /* ── Create Election Drive ── */
-/* Six actions per row — wrap them rather than force the table off-screen. */
+/* Six actions per row, always on one line as in the design: "Publish Result"
+   and "Publish Election" wrap inside their own button instead of pushing
+   buttons to a second row. On narrow screens .table-responsive scrolls. */
 .ed-page .ed-action-group {
-    flex-wrap: wrap;
-    gap: 0.8rem;
-    max-width: 20rem;
-    row-gap: 0.6rem;
+    flex-wrap: nowrap;
+    gap: 0.75rem;
 }
 
 .ed-page .ed-action-group .cs-action-btn {
-    max-width: 5.5rem;
+    flex: 0 0 auto;
+    width: max-content;
+    max-width: 4.75rem;
+    white-space: normal;
     text-align: center;
 }
 
@@ -2961,11 +2966,13 @@ body.custom-loaded {
     line-height: 1.15;
 }
 
-.ed-action-green {
+/* Qualified with .cs-action-btn so it beats the shared blue
+   `.cs-master-page .cs-action-btn` colour. */
+.cs-master-page .cs-action-btn.ed-action-green {
     color: #12b76a;
 }
 
-.ed-action-green:hover {
+.cs-master-page .cs-action-btn.ed-action-green:hover {
     color: #027a48;
 }
 

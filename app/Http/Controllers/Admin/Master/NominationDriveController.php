@@ -279,6 +279,45 @@ class NominationDriveController extends Controller
         ]);
     }
 
+    /**
+     * Who nominated one nominee for one post, for the "No of Nominated By"
+     * popup on the drive's View screen. Uses the same grouping as nomineeRows()
+     * so the list length matches the count shown in the grid.
+     */
+    public function nominators(Request $request, $id)
+    {
+        try {
+            $drive = NominationDrive::findOrFail(decrypt($id));
+        } catch (\Throwable $e) {
+            return $this->failure($request, 'Nomination drive not found.', 404);
+        }
+
+        $validated = $request->validate([
+            'society' => ['required', 'integer'],
+            'role'    => ['required', 'integer'],
+            'nominee' => ['nullable', 'integer'],
+        ]);
+
+        $names = DB::table('nomination as n')
+            ->leftJoin('student_master as st', 'st.pk', '=', 'n.nominated_by_student_pk')
+            ->where('n.nomination_drive_pk', $drive->pk)
+            ->where('n.club_society_master_pk', $validated['society'])
+            ->where('n.club_society_role_master_pk', $validated['role'])
+            ->when(
+                isset($validated['nominee']),
+                fn ($q) => $q->where('n.nominee_student_pk', $validated['nominee']),
+                fn ($q) => $q->whereNull('n.nominee_student_pk')
+            )
+            ->select('n.nominated_by_student_pk', 'st.display_name')
+            ->distinct()
+            ->orderBy('st.display_name')
+            ->get()
+            ->map(fn ($row) => $row->display_name ?: '-')
+            ->values();
+
+        return response()->json(['status' => 'success', 'data' => $names]);
+    }
+
     /** Withdraw one nomination from the drive's View screen. */
     public function withdrawNomination(Request $request, $id)
     {
