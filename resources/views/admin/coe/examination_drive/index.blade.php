@@ -365,7 +365,7 @@ $(function () {
         $row.find('.edc-map-subject, .edc-map-faculty').each(function () {
             $(this).select2({
                 width: '100%',
-                dropdownParent: $modalBody,
+                dropdownParent: $modal,
                 placeholder: $(this).hasClass('edc-map-subject') ? 'Subject' : 'Faculty'
             });
         });
@@ -398,8 +398,10 @@ $(function () {
     });
 
     /* ── Form modal (Create / Edit) ──────────────────────────────────── */
+    /* Dropdowns attach to the modal, not the scrollable .modal-body: inside the
+       body, a select near the bottom (the mapping rows) opened its list past the
+       scroll edge and got clipped. Still inside the modal, so focus trap holds. */
     var $modal      = $('#edcFormModal');
-    var $modalBody  = $modal.find('.modal-body');
     var $editingRow = null;
 
     var $course  = $('#edcCourse');
@@ -407,7 +409,7 @@ $(function () {
     var $term    = $('#edcTerm');
     var $status  = $('#edcStatus');
     [$course, $type, $term, $status].forEach(function ($s) {
-        $s.select2({ width: '100%', dropdownParent: $modalBody });
+        $s.select2({ width: '100%', dropdownParent: $modal });
     });
 
     function fieldError($el, msg) {
