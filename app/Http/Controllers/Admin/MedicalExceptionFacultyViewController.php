@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\ExportsMasterGrid;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\FacultyMaster;
@@ -17,11 +20,128 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class MedicalExceptionFacultyViewController extends Controller
 {
+    use ExportsMasterGrid;
+
     /** menus.permission_name of this screen (menus row "Medical Exception Faculty"); the sidebar link checks it too. */
     public const ADMIN_PERMISSION = 'medical_exception_faculty';
 
 
     public function index(Request $request)
+    {
+        return view('admin.medical_exception.faculty_view', $this->viewData($request));
+    }
+
+    /**
+     * Export - CSV | Excel | PDF | Print (rendering lives in ExportsMasterGrid).
+     *
+     * Rows come from viewData(), the same builder (and the same access check)
+     * as the grid, so a download can never show more than the screen does.
+     */
+    public function export(Request $request, string $format = 'csv')
+    {
+        $format = strtolower($format);
+        abort_unless(in_array($format, self::$exportFormats, true), 404);
+
+        $payload = $this->viewData($request);
+        $search  = $request->query('q');
+        $search  = is_string($search) ? trim($search) : '';
+        $defs    = $this->exportColumnDefs();
+
+        return $this->renderMasterExport(
+            $format,
+            $this->filterLikeGrid(collect($payload['data']), $defs, $search),
+            $this->resolveExportColumns($request, $defs),
+            'Medical Exemption Faculty View',
+            'MedicalExemptionFacultyView',
+            $this->exportFilterLine($payload, $search),
+            'No medical exemption records to export',
+            'landscape'
+        );
+    }
+
+    /**
+     * Canonical export columns, in display order.
+     *
+     * Keys must match MEF_EXPORT_COLUMN_KEYS in faculty_view.blade.php. Values
+     * are formatted exactly as the grid renders them, so the ?q= filter matches
+     * what the user searched on screen.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function exportColumnDefs(): array
+    {
+        return [
+            'sno'              => ['heading' => 'S.No.', 'width' => '4%', 'align' => 'center', 'value' => fn ($row, int $index) => $index + 1],
+            'course'           => ['heading' => 'Course Name', 'width' => '12%', 'value' => fn ($row) => $row->course_name ?? 'N/A'],
+            'faculty'          => ['heading' => 'Faculty Name', 'width' => '10%', 'value' => fn ($row) => $row->faculty_name ?? 'N/A'],
+            'topics'           => ['heading' => 'Topics', 'width' => '16%', 'value' => fn ($row) => $row->topics ?? 'N/A'],
+            'student'          => ['heading' => 'Student Name', 'width' => '10%', 'value' => fn ($row) => $row->student_name ?? 'N/A'],
+            'date'             => ['heading' => 'Medical Exemption Date', 'width' => '7%', 'align' => 'center', 'value' => fn ($row) => self::formatDate($row->from_date, 'd-m-Y')],
+            'time'             => ['heading' => 'Medical Exemption Time', 'width' => '6%', 'align' => 'center', 'value' => fn ($row) => self::formatDate($row->from_date, 'h:i A')],
+            'ot_code'          => ['heading' => 'OT Code', 'width' => '7%', 'value' => fn ($row) => $row->ot_code ?? 'N/A'],
+            'application_type' => ['heading' => 'Application Type', 'width' => '10%', 'value' => fn ($row) => $row->application_type ?? 'N/A'],
+            'exemption_count'  => ['heading' => 'Exemption Count', 'width' => '6%', 'align' => 'center', 'value' => fn ($row) => $row->exemption_count ?? 0],
+            'submitted_on'     => ['heading' => 'Submitted On', 'width' => '12%', 'align' => 'center', 'value' => fn ($row) => self::formatDate($row->submitted_on, 'd-m-Y h:i A')],
+        ];
+    }
+
+    private static function formatDate($value, string $format): string
+    {
+        return $value ? Carbon::parse($value)->format($format) : 'N/A';
+    }
+
+    /**
+     * Apply the grid's client-side search to the export rows.
+     *
+     * Mirrors DataTables' default "smart" search: the term is split on spaces and
+     * every word must appear, case-insensitively, somewhere in the row's rendered
+     * text (S.No. is not searchable; the Document column renders "View" / "N/A").
+     */
+    private function filterLikeGrid(Collection $rows, array $defs, string $search): Collection
+    {
+        $words = preg_split('/\s+/u', mb_strtolower($search), -1, PREG_SPLIT_NO_EMPTY);
+
+        if ($words) {
+            unset($defs['sno']);
+            $rows = $rows->filter(function ($row) use ($defs, $words) {
+                $cells = array_map(fn ($col) => (string) $col['value']($row, 0), $defs);
+                $cells[] = $row->medical_document ? 'View' : 'N/A';
+                $haystack = mb_strtolower(implode('  ', $cells));
+
+                foreach ($words as $word) {
+                    if (! str_contains($haystack, $word)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+        }
+
+        return $rows->values();
+    }
+
+    /** The header band's "applied filters" line, or null when nothing narrowed the rows. */
+    private function exportFilterLine(array $payload, string $search): ?string
+    {
+        $parts = [];
+
+        if (! empty($payload['courseFilter'])) {
+            // Not from $payload['courses']: the admin dropdown lists running courses only.
+            $parts[] = 'Course: ' . (CourseMaster::where('pk', $payload['courseFilter'])->value('course_name') ?? $payload['courseFilter']);
+        }
+        if (! empty($payload['dateFromFilter'])) {
+            $parts[] = 'From: ' . self::formatDate($payload['dateFromFilter'], 'd-m-Y');
+        }
+        if ($search !== '') {
+            $parts[] = 'Search: ' . $search;
+        }
+
+        return $parts ? implode(' | ', $parts) : null;
+    }
+
+    /** Everything the page (and its export) shows, for the logged-in user. */
+    private function viewData(Request $request): array
     {
         $currentDate = now()->format('Y-m-d');
         
@@ -109,7 +229,7 @@ class MedicalExceptionFacultyViewController extends Controller
           ->get();
   }
 
-  return view('admin.medical_exception.faculty_view', compact('data', 'courses', 'courseFilter', 'dateFromFilter'));
+  return compact('data', 'courses', 'courseFilter', 'dateFromFilter');
 }        
 
 
@@ -396,7 +516,7 @@ class MedicalExceptionFacultyViewController extends Controller
             ['path' => $request->url(), 'pageName' => 'admin_students_page']
         );
 
-        return view('admin.medical_exception.faculty_view', [
+        return [
             'data' => $adminData, // Medical exceptions data for admin view
             'courses' => $allCourses, // Map allCourses to courses for dropdown
             'courseFilter' => $courseFilter,
@@ -407,7 +527,7 @@ class MedicalExceptionFacultyViewController extends Controller
             'facultyFilter' => $facultyFilter,
             'adminCoursePaginator' => $adminCoursePaginator,
             'adminStudentsPaginator' => $adminStudentsPaginator,
-        ]);
+        ];
     }
 }
 
