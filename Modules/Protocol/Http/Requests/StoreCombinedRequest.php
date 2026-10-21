@@ -35,7 +35,7 @@ class StoreCombinedRequest extends FormRequest
 
             'course_team_to_notify' => ['nullable', 'string', 'max:150'],
             'purpose' => ['required', 'string', 'max:150'],
-            'other_purpose' => ['required_if:purpose,Other', 'string', 'max:150'],
+            'other_purpose' => ['nullable','required_if:purpose,Other', 'string', 'max:150'],
             'escort_required' => ['required', 'in:yes,no'],
             'is_faculty' => ['nullable', 'boolean'],
 
