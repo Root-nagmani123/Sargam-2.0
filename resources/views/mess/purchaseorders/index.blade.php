@@ -457,6 +457,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 'tableId' => 'purchaseOrdersTable',
 'searchPlaceholder' => 'Search purchase orders...',
 'orderColumn' => 1,
+'orderDir' => 'desc',
 'actionColumnIndex' => 5,
 'infoLabel' => 'purchase orders',
 'serverSide' => true,

@@ -192,7 +192,8 @@ class PurchaseOrderController extends Controller
                 $paged->orderBy($table . '.po_date', $orderDir);
                 break;
             case 1:
-                $paged->orderBy($table . '.po_number', $orderDir);
+                // po_number is "PO/{id}/NM"; sorting it as text puts PO/999 after PO/1558, so sort by id.
+                $paged->orderBy($table . '.id', $orderDir);
                 break;
             case 2:
                 $paged->leftJoin('mess_vendors as po_sort_v', $table . '.vendor_id', '=', 'po_sort_v.id')
