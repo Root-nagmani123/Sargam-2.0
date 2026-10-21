@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin\Master;
 
 use App\DataTables\Master\ClubSocietyMasterDataTable;
 use App\Exports\ClubSocietyMasterExport;
+use App\Http\Controllers\Concerns\AuditsClubSocietyActions;
 use App\Http\Controllers\Controller;
 use App\Models\ClubSocietyMaster;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -19,6 +21,17 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class ClubSocietyMasterController extends Controller
 {
+    use AuditsClubSocietyActions;
+
+    /** Tables that reference a club/ society; any row there blocks its delete. */
+    private const DEPENDANTS = [
+        'club_society_programme_mapping'      => 'programme mappings',
+        'club_society_role_programme_mapping' => 'role programme mappings',
+        'nomination_drive_society'            => 'nomination drives',
+        'nomination'                          => 'nominations',
+        'election_drive_society'              => 'election drives',
+    ];
+
     public function index(ClubSocietyMasterDataTable $dataTable)
     {
         return $dataTable->render('admin.master.club_society.index');
@@ -68,6 +81,12 @@ class ClubSocietyMasterController extends Controller
 
         $clubSociety->save();
 
+        $this->auditClubSociety($pk ? 'club_society.update' : 'club_society.create', [
+            'club_society_master_pk' => $clubSociety->pk,
+            'club_society_name'      => $clubSociety->club_society_name,
+            'active_inactive'        => (int) $clubSociety->active_inactive,
+        ]);
+
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json(['status' => 'success', 'message' => $message]);
         }
@@ -83,7 +102,20 @@ class ClubSocietyMasterController extends Controller
             return $this->failure($request, 'Club/ Society not found.', 404);
         }
 
+        // No FKs: a hard delete would silently drop this club's results and
+        // officer bearers from every inner join (PR #340 F-005).
+        foreach (self::DEPENDANTS as $table => $label) {
+            if (DB::table($table)->where('club_society_master_pk', $clubSociety->pk)->exists()) {
+                return $this->failure($request, "This club/ society is used in {$label} and cannot be deleted.", 422);
+            }
+        }
+
         $clubSociety->delete();
+
+        $this->auditClubSociety('club_society.delete', [
+            'club_society_master_pk' => $clubSociety->pk,
+            'club_society_name'      => $clubSociety->club_society_name,
+        ]);
 
         $message = 'Club/ Society deleted successfully.';
 

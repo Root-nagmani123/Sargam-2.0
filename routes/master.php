@@ -250,8 +250,11 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
         Route::delete('/delete/{id}', 'destroy')->name('delete');
     });
 
+    // Club / Society screens: `auth` alone also admits OT trainees, so every group below
+    // is gated on the permission its own sidebar menu migration creates (PR #340 F-001).
+
     // Club / Society Master (Communications -> Club/ Society -> Define Club/ Society)
-    Route::prefix('club-society')->name('club.society.')->controller(ClubSocietyMasterController::class)->group(function () {
+    Route::prefix('club-society')->name('club.society.')->middleware(EnsureMenuPermission::class.':define_club_society')->controller(ClubSocietyMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/store', 'store')->name('store');
         Route::get('/export', 'export')->name('export');
@@ -260,7 +263,7 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
     });
 
     // Club / Society Role Master (Communications -> Club/ Society -> Define Club/ Society Role)
-    Route::prefix('club-society-role')->name('club.society.role.')->controller(ClubSocietyRoleMasterController::class)->group(function () {
+    Route::prefix('club-society-role')->name('club.society.role.')->middleware(EnsureMenuPermission::class.':define_club_society_role')->controller(ClubSocietyRoleMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('/store', 'store')->name('store');
         Route::get('/export', 'export')->name('export');
@@ -270,6 +273,7 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
 
     // Club / Society Programme Mapping (Communications -> Club/ Society)
     Route::prefix('club-society-programme-mapping')->name('club.society.programme.mapping.')
+        ->middleware(EnsureMenuPermission::class.':club_society_programme_mapping')
         ->controller(ClubSocietyProgrammeMappingController::class)->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/store', 'store')->name('store');
@@ -281,6 +285,7 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
 
     // Club / Society Role Programme Mapping (Communications -> Club/ Society)
     Route::prefix('club-society-role-programme-mapping')->name('club.society.role.programme.mapping.')
+        ->middleware(EnsureMenuPermission::class.':club_society_role_programme_mapping')
         ->controller(ClubSocietyRoleProgrammeMappingController::class)->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/store', 'store')->name('store');
@@ -292,6 +297,7 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
 
     // Nomination Drive (Communications -> Club/ Society)
     Route::prefix('nomination-drive')->name('nomination.drive.')
+        ->middleware(EnsureMenuPermission::class.':create_nomination_drive')
         ->controller(NominationDriveController::class)->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/store', 'store')->name('store');
@@ -311,6 +317,7 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
 
     // Election Drive (Communications -> Club/ Society)
     Route::prefix('election-drive')->name('election.drive.')
+        ->middleware(EnsureMenuPermission::class.':create_election_drive')
         ->controller(ElectionDriveController::class)->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/store', 'store')->name('store');
@@ -326,10 +333,12 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
             Route::get('/nominations/{id}/export', 'exportNominations')->name('nominations.export');
             Route::get('/nominations/{id}/print', 'printNominations')->name('nominations.print');
             Route::get('/result/{id}', 'showResult')->name('result');
+            Route::post('/result/{id}/draw-tie', 'drawTie')->name('result.draw.tie');
         });
 
     // Officer Bearers (Communications -> Club/ Society) — read-only listing
     Route::prefix('officer-bearers')->name('office.bearer.')
+        ->middleware(EnsureMenuPermission::class.':officer_bearers')
         ->controller(OfficeBearerController::class)->group(function () {
             Route::get('/', 'index')->name('index');
             Route::get('/export', 'export')->name('export');

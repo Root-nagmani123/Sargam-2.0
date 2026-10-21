@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -60,6 +61,17 @@ return new class extends Migration
 
     public function down(): void
     {
+        // up() skips a table that already exists, so this migration may not have
+        // created it. Never drop one that holds rows: check them all before the
+        // first drop so a refused rollback leaves nothing half-done (PR #340 F-008).
+        foreach (['election_drive_society', 'election_drive'] as $table) {
+            if (Schema::hasTable($table) && DB::table($table)->exists()) {
+                throw new \RuntimeException(
+                    "Refusing to roll back: table {$table} has rows. Back it up and empty it with the DBA first."
+                );
+            }
+        }
+
         Schema::dropIfExists('election_drive_society');
         Schema::dropIfExists('election_drive');
     }

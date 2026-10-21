@@ -9,7 +9,17 @@ class ElectionDrive extends Model
     protected $table = 'election_drive';
     protected $primaryKey = 'pk';
     public $timestamps = false;
-    protected $guarded = [];
+    // Status, publish and active flags are deliberately not mass-assignable:
+    // they are set explicitly by the controller actions that own them (PR #340 F-010).
+    protected $fillable = [
+        'election_drive_name',
+        'nomination_drive_pk',
+        'drive_date',
+        'start_time',
+        'end_time',
+        'same_date_for_all',
+        'same_time_for_all',
+    ];
 
     protected $casts = [
         'drive_date'              => 'date',

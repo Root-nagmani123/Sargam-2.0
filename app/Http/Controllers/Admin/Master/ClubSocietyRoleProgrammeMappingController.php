@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Master;
 
 use App\DataTables\Master\ClubSocietyRoleProgrammeMappingDataTable;
 use App\Exports\ClubSocietyRoleProgrammeMappingExport;
+use App\Http\Controllers\Concerns\AuditsClubSocietyActions;
 use App\Http\Controllers\Controller;
 use App\Models\ClubSocietyMaster;
 use App\Models\ClubSocietyRoleMaster;
@@ -23,6 +24,8 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class ClubSocietyRoleProgrammeMappingController extends Controller
 {
+    use AuditsClubSocietyActions;
+
     public function index(ClubSocietyRoleProgrammeMappingDataTable $dataTable)
     {
         return $dataTable->render('admin.master.club_society_role_programme_mapping.index', [
@@ -113,6 +116,12 @@ class ClubSocietyRoleProgrammeMappingController extends Controller
             }
         });
 
+        $this->auditClubSociety('role_programme_mapping.save', [
+            'course_master_pk'       => $coursePk,
+            'club_society_master_pk' => $clubPk,
+            'role_pks'               => $rolePks,
+        ]);
+
         $message = 'Club/ Society role programme mapping saved successfully.';
 
         if ($request->ajax() || $request->wantsJson()) {
@@ -176,6 +185,12 @@ class ClubSocietyRoleProgrammeMappingController extends Controller
         if (! $deleted) {
             return $this->failure($request, 'Mapping not found.', 404);
         }
+
+        $this->auditClubSociety('role_programme_mapping.delete', [
+            'course_master_pk'       => $coursePk,
+            'club_society_master_pk' => $clubPk,
+            'rows_deleted'           => $deleted,
+        ]);
 
         $message = 'Club/ Society role programme mapping deleted successfully.';
 

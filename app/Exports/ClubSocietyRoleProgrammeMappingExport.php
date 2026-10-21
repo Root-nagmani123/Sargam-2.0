@@ -3,11 +3,14 @@
 namespace App\Exports;
 
 use App\Http\Controllers\Admin\Master\ClubSocietyRoleProgrammeMappingController;
+use App\Support\Concerns\BindsExportCellsAsText;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\DefaultValueBinder;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -18,8 +21,11 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
  * same source rows as the print sheet, and both honour the Active/Archived pill
  * and the course filter that were on screen.
  */
-class ClubSocietyRoleProgrammeMappingExport implements FromCollection, WithHeadings, ShouldAutoSize, WithStyles, WithMapping
+class ClubSocietyRoleProgrammeMappingExport extends DefaultValueBinder implements FromCollection, WithHeadings, ShouldAutoSize, WithStyles, WithMapping, WithCustomValueBinder
 {
+    // Names are typed by users; bind text as TYPE_STRING so "=..." never becomes a live formula.
+    use BindsExportCellsAsText;
+
     private int $serial = 0;
 
     public function __construct(

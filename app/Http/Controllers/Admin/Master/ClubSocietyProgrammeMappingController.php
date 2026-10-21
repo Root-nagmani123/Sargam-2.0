@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Master;
 
 use App\DataTables\Master\ClubSocietyProgrammeMappingDataTable;
 use App\Exports\ClubSocietyProgrammeMappingExport;
+use App\Http\Controllers\Concerns\AuditsClubSocietyActions;
 use App\Http\Controllers\Controller;
 use App\Models\ClubSocietyMaster;
 use App\Models\ClubSocietyProgrammeMapping;
@@ -20,6 +21,8 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class ClubSocietyProgrammeMappingController extends Controller
 {
+    use AuditsClubSocietyActions;
+
     public function index(ClubSocietyProgrammeMappingDataTable $dataTable)
     {
         return $dataTable->render('admin.master.club_society_programme_mapping.index', [
@@ -60,6 +63,11 @@ class ClubSocietyProgrammeMappingController extends Controller
                 DB::table('club_society_programme_mapping')->insert($chunk);
             }
         });
+
+        $this->auditClubSociety($isEdit ? 'programme_mapping.update' : 'programme_mapping.create', [
+            'course_master_pk'        => $coursePk,
+            'club_society_master_pks' => $clubPks,
+        ]);
 
         $message = $isEdit
             ? 'Club/ Society programme mapping updated successfully.'
@@ -104,6 +112,11 @@ class ClubSocietyProgrammeMappingController extends Controller
         if (! $deleted) {
             return $this->failure($request, 'Mapping not found.', 404);
         }
+
+        $this->auditClubSociety('programme_mapping.delete', [
+            'course_master_pk' => (int) $coursePk,
+            'rows_deleted'     => $deleted,
+        ]);
 
         $message = 'Club/ Society programme mapping deleted successfully.';
 

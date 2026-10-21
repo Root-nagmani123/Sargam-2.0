@@ -60,11 +60,11 @@ class ElectionDriveDataTable extends DataTable
                     . '<i class="bi bi-play-fill" aria-hidden="true"></i>'
                     . '<span>' . ($isLive ? 'Unpublish' : 'Publish') . ' Election</span></button>';
 
-                // Results only exist once published — keep the action inert until then.
-                $viewResultBtn = $hasResult
+                // The result can be previewed (and a tie drawn) once the election is live.
+                $viewResultBtn = ($hasResult || $isLive)
                     ? '<a href="' . route('master.election.drive.result', ['id' => $id]) . '" class="cs-action-btn" aria-label="View result">'
                         . '<i class="bi bi-file-earmark-text" aria-hidden="true"></i><span>View Result</span></a>'
-                    : '<span class="cs-action-btn ed-action-disabled" aria-disabled="true" title="Publish the result first">'
+                    : '<span class="cs-action-btn ed-action-disabled" aria-disabled="true" title="Publish the election first">'
                         . '<i class="bi bi-file-earmark-text" aria-hidden="true"></i><span>View Result</span></span>';
 
                 $deleteBtn = '<button type="button" class="cs-action-btn cs-action-btn--danger ed-delete-btn" aria-label="Delete election drive"'

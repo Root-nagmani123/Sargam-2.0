@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Master;
 use App\DataTables\Master\NominationDriveDataTable;
 use App\Exports\NominationDriveExport;
 use App\Exports\NominationDriveNomineeExport;
+use App\Http\Controllers\Concerns\AuditsClubSocietyActions;
 use App\Http\Controllers\Controller;
 use App\Models\ClubSocietyMaster;
 use App\Models\ClubSocietyRoleMaster;
@@ -24,6 +25,8 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class NominationDriveController extends Controller
 {
+    use AuditsClubSocietyActions;
+
     public function index(NominationDriveDataTable $dataTable)
     {
         return $dataTable->render('admin.master.nomination_drive.index', [
@@ -126,11 +129,13 @@ class NominationDriveController extends Controller
             } else {
                 // New drives start accepting nominations and allowing withdrawal;
                 // both are switched per-row from the grid afterwards.
-                $drive = NominationDrive::create($payload + [
+                // forceFill: the status flags are not mass-assignable (F-010).
+                $drive = (new NominationDrive())->forceFill($payload + [
                     'nomination_accept_status'   => 1,
                     'nomination_withdraw_status' => 1,
                     'active_inactive'            => 1,
                 ]);
+                $drive->save();
             }
 
             // Replace the society/post set so unticking removes it.
@@ -164,6 +169,11 @@ class NominationDriveController extends Controller
 
             return $drive->pk;
         });
+
+        $this->auditClubSociety($pk ? 'nomination_drive.update' : 'nomination_drive.create', [
+            'nomination_drive_pk' => $drivePk,
+            'society_pks'         => $societyPks,
+        ]);
 
         $message = $pk ? 'Nomination drive updated successfully.' : 'Nomination drive created successfully.';
 
@@ -226,8 +236,16 @@ class NominationDriveController extends Controller
             return $this->failure($request, 'Nomination drive not found.', 404);
         }
 
+        $previous = (int) $drive->{$data['field']};
         $drive->{$data['field']} = (int) $data['value'] === 1 ? 1 : 0;
         $drive->save();
+
+        $this->auditClubSociety('nomination_drive.toggle', [
+            'nomination_drive_pk' => $drive->pk,
+            'field'               => $data['field'],
+            'from'                => $previous,
+            'to'                  => (int) $drive->{$data['field']},
+        ]);
 
         $label = $data['field'] === 'nomination_accept_status' ? 'Nomination accept' : 'Nomination withdraw';
         $state = (int) $data['value'] === 1 ? 'enabled' : 'disabled';
@@ -243,15 +261,29 @@ class NominationDriveController extends Controller
             return $this->failure($request, 'Nomination drive not found.', 404);
         }
 
-        DB::transaction(function () use ($drive) {
+        // An election drive hangs off this drive; deleting it would orphan the
+        // election (and still reserve its name), so refuse instead (PR #340 F-005).
+        if (DB::table('election_drive')->where('nomination_drive_pk', $drive->pk)->exists()) {
+            return $this->failure($request, 'This nomination drive has an election drive. Delete the election drive first.', 422);
+        }
+
+        $deletedNominations = DB::transaction(function () use ($drive) {
             $societyPks = DB::table('nomination_drive_society')
                 ->where('nomination_drive_pk', $drive->pk)->pluck('pk');
             DB::table('nomination_drive_society_post')
                 ->whereIn('nomination_drive_society_pk', $societyPks)->delete();
             DB::table('nomination_drive_society')->where('nomination_drive_pk', $drive->pk)->delete();
-            DB::table('nomination')->where('nomination_drive_pk', $drive->pk)->delete();
+            $count = DB::table('nomination')->where('nomination_drive_pk', $drive->pk)->delete();
             $drive->delete();
+
+            return $count;
         });
+
+        $this->auditClubSociety('nomination_drive.delete', [
+            'nomination_drive_pk' => $drive->pk,
+            'drive_name'          => $drive->drive_name,
+            'nominations_deleted' => $deletedNominations,
+        ]);
 
         $message = 'Nomination drive deleted successfully.';
 
@@ -318,7 +350,13 @@ class NominationDriveController extends Controller
         return response()->json(['status' => 'success', 'data' => $names]);
     }
 
-    /** Withdraw one nomination from the drive's View screen. */
+    /**
+     * Withdraw a nominee from one post, from the drive's View screen.
+     *
+     * The View line groups one row per nominator and posts MIN(pk); the withdrawal
+     * applies to every row of that (drive, society, post, nominee), or the other
+     * nominators' accepted rows would still count towards the result (PR #340 F-003).
+     */
     public function withdrawNomination(Request $request, $id)
     {
         try {
@@ -332,8 +370,22 @@ class NominationDriveController extends Controller
             return $this->failure($request, 'Withdrawal is disabled for this drive.', 422);
         }
 
-        $nomination->status = Nomination::STATUS_WITHDRAWN;
-        $nomination->save();
+        $withdrawn = Nomination::where('nomination_drive_pk', $nomination->nomination_drive_pk)
+            ->where('club_society_master_pk', $nomination->club_society_master_pk)
+            ->where('club_society_role_master_pk', $nomination->club_society_role_master_pk)
+            ->where('nominee_student_pk', $nomination->nominee_student_pk)
+            ->where('status', '!=', Nomination::STATUS_WITHDRAWN)
+            ->update(['status' => Nomination::STATUS_WITHDRAWN]);
+
+
+        $this->auditClubSociety('nomination.withdraw', [
+            'nomination_pk'               => $nomination->pk,
+            'nomination_drive_pk'         => $nomination->nomination_drive_pk,
+            'club_society_master_pk'      => $nomination->club_society_master_pk,
+            'club_society_role_master_pk' => $nomination->club_society_role_master_pk,
+            'nominee_student_pk'          => $nomination->nominee_student_pk,
+            'rows_withdrawn'              => $withdrawn,
+        ]);
 
         return response()->json(['status' => 'success', 'message' => 'Nomination withdrawn.']);
     }
@@ -369,7 +421,7 @@ class NominationDriveController extends Controller
                 DB::raw('COUNT(DISTINCT n.nominated_by_student_pk) as nominated_by_count'),
                 DB::raw('COALESCE(MAX(rpm.number_of_nomination), 0) as required_nomination'),
                 DB::raw('MIN(n.pk) as nomination_pk'),
-                DB::raw("MAX(n.status) as status"),
+                DB::raw(Nomination::statusPrecedenceSql('n.status') . ' as status'),
             ])
             ->groupBy(
                 'cs.club_society_name', 'r.club_society_role_name', 'st.display_name',

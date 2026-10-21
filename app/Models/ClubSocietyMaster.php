@@ -13,7 +13,11 @@ class ClubSocietyMaster extends Model
     /** created_date / updated_date are maintained by the database. */
     public $timestamps = false;
 
-    protected $guarded = [];
+    // Status, publish and active flags are deliberately not mass-assignable:
+    // they are set explicitly by the controller actions that own them (PR #340 F-010).
+    protected $fillable = [
+        'club_society_name',
+    ];
 
     public function scopeActive($query)
     {

@@ -44,6 +44,36 @@
                         </span>
                     </div>
 
+                    @if ((int) ($rows->first()->seats ?? 0) === 0)
+                        <div class="alert alert-warning py-2 px-3 small mb-2" role="note">
+                            No posts are configured for this role in the Club/ Society Role Programme Mapping, so nobody is elected.
+                        </div>
+                    @elseif ($rows->contains('tied', true) && $rows->first()->tie_drawn)
+                        <div class="alert alert-info py-2 px-3 small mb-2" role="note">
+                            Tie at the last available post: the nominees marked <strong>Tie</strong> had the same count,
+                            and the seat was decided by a random draw.
+                        </div>
+                    @elseif ($rows->contains('tied', true))
+                        <div class="alert alert-warning py-2 px-3 small mb-2 d-flex flex-wrap align-items-center justify-content-between gap-2" role="note">
+                            <span>
+                                Tie at the last available post: the nominees marked <strong>Tie</strong> have the same count.
+                                @if ($canDrawTie)
+                                    Pick the winner at random before publishing the result.
+                                @else
+                                    No draw was run, so the nominee with the lower record number is placed first.
+                                @endif
+                            </span>
+                            @if ($canDrawTie)
+                                <button type="button" class="btn btn-sm btn-warning ed-draw-tie-btn"
+                                        data-society="{{ (int) $rows->first()->club_society_master_pk }}"
+                                        data-role="{{ (int) $rows->first()->club_society_role_master_pk }}"
+                                        data-label="{{ $societyName }} — {{ $postName }}">
+                                    <i class="bi bi-shuffle" aria-hidden="true"></i> Pick at random
+                                </button>
+                            @endif
+                        </div>
+                    @endif
+
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0 programme-dt-table">
                             <thead>
@@ -68,6 +98,9 @@
                                             @else
                                                 <span class="badge rounded-1 programme-status-badge ed-status-pending">Not elected</span>
                                             @endif
+                                            @if ($row->tied)
+                                                <span class="badge rounded-1 text-bg-warning ms-1">Tie</span>
+                                            @endif
                                         </td>
                                     </tr>
                                 @endforeach
@@ -84,3 +117,51 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    (function () {
+        var drawUrl = "{{ route('master.election.drive.result.draw.tie', ['id' => $driveId]) }}";
+
+        $(document).on('click', '.ed-draw-tie-btn', function () {
+            var $btn = $(this);
+
+            Swal.fire({
+                title: 'Pick at random?',
+                text: 'One winner will be drawn at random from the tied nominees for ' + $btn.data('label')
+                    + '. The draw is saved and cannot be repeated.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, pick',
+                cancelButtonText: 'Cancel'
+            }).then(function (result) {
+                if (! result.isConfirmed) {
+                    return;
+                }
+                $btn.prop('disabled', true);
+
+                $.ajax({
+                    url: drawUrl,
+                    type: 'POST',
+                    data: {
+                        _token: $('meta[name="csrf-token"]').attr('content'),
+                        society: $btn.data('society'),
+                        role: $btn.data('role')
+                    },
+                    headers: { 'Accept': 'application/json' },
+                    success: function (res) {
+                        Swal.fire({ icon: 'success', title: 'Done', text: (res && res.message) || 'Tie drawn.' })
+                            .then(function () { window.location.reload(); });
+                    },
+                    error: function (xhr) {
+                        var msg = (xhr.responseJSON && xhr.responseJSON.message)
+                            ? xhr.responseJSON.message : 'Could not draw the tie.';
+                        Swal.fire('Error!', msg, 'error');
+                        $btn.prop('disabled', false);
+                    }
+                });
+            });
+        });
+    })();
+</script>
+@endpush

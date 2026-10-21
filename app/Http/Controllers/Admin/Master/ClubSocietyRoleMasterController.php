@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin\Master;
 
 use App\DataTables\Master\ClubSocietyRoleMasterDataTable;
 use App\Exports\ClubSocietyRoleMasterExport;
+use App\Http\Controllers\Concerns\AuditsClubSocietyActions;
 use App\Http\Controllers\Controller;
 use App\Models\ClubSocietyRoleMaster;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -19,6 +21,15 @@ use Maatwebsite\Excel\Facades\Excel;
  */
 class ClubSocietyRoleMasterController extends Controller
 {
+    use AuditsClubSocietyActions;
+
+    /** Tables that reference a role; any row there blocks its delete. */
+    private const DEPENDANTS = [
+        'club_society_role_programme_mapping' => 'role programme mappings',
+        'nomination_drive_society_post'       => 'nomination drives',
+        'nomination'                          => 'nominations',
+    ];
+
     public function index(ClubSocietyRoleMasterDataTable $dataTable)
     {
         return $dataTable->render('admin.master.club_society_role.index');
@@ -68,6 +79,12 @@ class ClubSocietyRoleMasterController extends Controller
 
         $role->save();
 
+        $this->auditClubSociety($pk ? 'club_society_role.update' : 'club_society_role.create', [
+            'club_society_role_master_pk' => $role->pk,
+            'club_society_role_name'      => $role->club_society_role_name,
+            'active_inactive'             => (int) $role->active_inactive,
+        ]);
+
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json(['status' => 'success', 'message' => $message]);
         }
@@ -83,7 +100,20 @@ class ClubSocietyRoleMasterController extends Controller
             return $this->failure($request, 'Club/ Society role not found.', 404);
         }
 
+        // No FKs: a hard delete would silently drop this role's posts and
+        // results from every inner join (PR #340 F-005).
+        foreach (self::DEPENDANTS as $table => $label) {
+            if (DB::table($table)->where('club_society_role_master_pk', $role->pk)->exists()) {
+                return $this->failure($request, "This role is used in {$label} and cannot be deleted.", 422);
+            }
+        }
+
         $role->delete();
+
+        $this->auditClubSociety('club_society_role.delete', [
+            'club_society_role_master_pk' => $role->pk,
+            'club_society_role_name'      => $role->club_society_role_name,
+        ]);
 
         $message = 'Club/ Society role deleted successfully.';
 

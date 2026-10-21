@@ -112,11 +112,23 @@ return new class extends Migration
             }
         }
 
+        // up() reuses a permission that already exists, and roles may have been
+        // granted it since. Delete it only when nothing holds it, or a rollback
+        // silently revokes access this migration never gave (PR #340 F-008).
         if (DB::getSchemaBuilder()->hasTable('permissions')) {
-            DB::table('permissions')
+            $permissionId = DB::table('permissions')
                 ->where('name', $this->permissionName)
                 ->where('guard_name', 'web')
-                ->delete();
+                ->value('id');
+
+            $granted = $permissionId && (
+                DB::table('role_has_permissions')->where('permission_id', $permissionId)->exists()
+                || DB::table('model_has_permissions')->where('permission_id', $permissionId)->exists()
+            );
+
+            if ($permissionId && ! $granted) {
+                DB::table('permissions')->where('id', $permissionId)->delete();
+            }
         }
 
         SidebarNavResolver::clearCache();

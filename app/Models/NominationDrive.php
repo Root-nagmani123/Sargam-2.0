@@ -9,7 +9,15 @@ class NominationDrive extends Model
     protected $table = 'nomination_drive';
     protected $primaryKey = 'pk';
     public $timestamps = false;
-    protected $guarded = [];
+    // Status, publish and active flags are deliberately not mass-assignable:
+    // they are set explicitly by the controller actions that own them (PR #340 F-010).
+    protected $fillable = [
+        'drive_name',
+        'course_master_pk',
+        'start_date',
+        'end_date',
+        'self_nomination_allow',
+    ];
 
     protected $casts = [
         'start_date'                 => 'date',
