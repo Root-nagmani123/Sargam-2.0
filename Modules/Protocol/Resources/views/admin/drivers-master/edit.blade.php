@@ -297,7 +297,7 @@
                             <div class="col-md-4 mb-3">
 
                                 <label for="helperOne" class="form-label">
-                                    Helper One
+                                    Helper One (Name)
                                 </label>
 
                                 <input
@@ -326,7 +326,7 @@
                             <div class="col-md-4 mb-3">
 
                                 <label for="helperTwo" class="form-label">
-                                    Helper Two
+                                    Helper Two (Name)
                                 </label>
 
                                 <input
