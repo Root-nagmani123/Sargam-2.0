@@ -36,11 +36,8 @@ use App\Http\Controllers\Admin\IssueManagement\IssuePriorityController;
 use App\Http\Controllers\Admin\IssueManagement\IssueSubCategoryController;
 use App\Http\Controllers\Admin\IssueReportController;
 use App\Http\Controllers\Admin\LeaveApplicationController;
-use App\Http\Controllers\Admin\LeaveApplicationAttachmentController;
-use App\Http\Controllers\Admin\LeaveOnBehalfController;
 use App\Http\Controllers\Admin\Master\AppellationMasterController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
-use App\Http\Controllers\Admin\Master\LeaveNatureMasterController;
 use App\Http\Controllers\Admin\MDOEscrotExemptionController;
 use App\Http\Controllers\Admin\MedicalExceptionFacultyViewController;
 use App\Http\Controllers\Admin\MedicalExceptionOTViewController;
@@ -100,7 +97,6 @@ use App\Http\Controllers\SidebarController;
 use App\Http\Controllers\SidebarMenu\MenuController;
 use App\Http\Controllers\SidebarMenu\MenuGroupController;
 use App\Http\Controllers\SidebarMenu\SidebarCategoryController;
-use App\Http\Middleware\EnsureDirectoryExportAccess;
 use App\Http\Middleware\EnsureFacultyPortalUser;
 use App\Http\Middleware\EnsureMenuPermission;
 use App\Http\Middleware\EnsureRoleAdmin;
@@ -248,26 +244,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/feed', [UserController::class, 'dashboardFeed'])->name('admin.dashboard.feed');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/ot-participants', [UserController::class, 'otParticipantsList'])->name('admin.dashboard.ot-participants');
-    Route::get('/dashboard/ot-participants/export/{format}', [UserController::class, 'otParticipantsExport'])->name('admin.dashboard.ot-participants.export');
-    // Comment / Feedback on a participant: the Action column's form, and the
-    // history page behind the COMMENTS/FEEDBACKS count.
-    Route::post('/dashboard/ot-participants/comment', [UserController::class, 'otParticipantCommentStore'])
-        ->middleware('throttle:30,1')->name('admin.dashboard.ot-participants.comment.store');
-    Route::get('/dashboard/ot-participants/{id}/comments', [UserController::class, 'otParticipantComments'])->name('admin.dashboard.ot-participants.comments');
-    Route::get('/dashboard/ot-participants/{id}/comments/export/{format}', [UserController::class, 'otParticipantCommentsExport'])->name('admin.dashboard.ot-participants.comments.export');
     Route::get('/dashboard/students/export/{format}', [UserController::class, 'studentListExport'])->name('admin.dashboard.students.export');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
-    Route::get('/dashboard/house-wise-performance', [UserController::class, 'houseWisePerformanceDetail'])->name('admin.dashboard.house-wise-performance');
-    Route::get('/dashboard/my-groups', [UserController::class, 'myGroups'])->name('admin.dashboard.my-groups');
-    Route::get('/dashboard/my-groups/{mapPk}/students', [UserController::class, 'myGroupStudents'])->name('admin.dashboard.my-groups.students');
-    Route::get('/dashboard/my-groups/{mapPk}/students/export', [UserController::class, 'myGroupStudentsExport'])->name('admin.dashboard.my-groups.students.export');
-    // Sends real SMS / email through the institutional gateway on an OT's text.
-    // Off unless config('my_groups.messaging_enabled') (PR #334 F-005: no Product
-    // owner decision on record). When on: the dedicated `my-groups-message` limiter
-    // (RouteServiceProvider), sender attribution, and an audit row per send.
-    Route::post('/dashboard/my-groups/{mapPk}/students/message', [UserController::class, 'myGroupSendMessage'])
-        ->middleware('throttle:my-groups-message')
-        ->name('admin.dashboard.my-groups.students.message');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
     Route::post('/dashboard/report-issue', [IssueReportController::class, 'store'])->middleware('throttle:10,1')->name('admin.dashboard.report-issue');
     // Admin console for issues submitted via the dashboard "Report Issue" launcher
@@ -290,24 +268,7 @@ Route::middleware(['auth'])->group(function () {
     // Shared: attachment download, gated in-body to the admin or the issue's own reporter
     Route::get('/issue-reports/{id}/attachment', [IssueReportController::class, 'attachment'])->whereNumber('id')->name('issue-reports.attachment');
     Route::get('/directory/lbsnaa', [DirectoryController::class, 'lbsnaa'])->name('admin.directory.lbsnaa');
-    Route::get('/directory/lbsnaa/data', [DirectoryController::class, 'lbsnaaData'])->name('admin.directory.lbsnaa.data');
     Route::get('/directory/ot', [DirectoryController::class, 'ot'])->name('admin.directory.ot');
-    // DataTables server-side feed for the OT grid (search / sort / paging are all SQL).
-    Route::get('/directory/ot/data', [DirectoryController::class, 'otData'])->name('admin.directory.ot.data');
-
-    // The grids are open to every authenticated user; the DOWNLOADS are not — one
-    // GET returns the whole roster's address / phone / personal email as a file.
-    // The gate is named by class, not by its Kernel alias, so a lost alias line in a
-    // Kernel.php merge cannot turn every export into a 500 (PR #317 F-028).
-    Route::middleware([EnsureDirectoryExportAccess::class, 'throttle:20,1'])->group(function () {
-        // csv | excel | pdf | print | full — one action, so the five can't drift apart.
-        Route::get('/directory/lbsnaa/export/{format}', [DirectoryController::class, 'lbsnaaExport'])
-            ->whereIn('format', ['csv', 'excel', 'pdf', 'print', 'full'])
-            ->name('admin.directory.lbsnaa.export');
-        Route::get('/directory/ot/export/{format}', [DirectoryController::class, 'otExport'])
-            ->whereIn('format', ['csv', 'excel', 'pdf', 'print', 'full'])
-            ->name('admin.directory.ot.export');
-    });
 
     // Birthday Wish Routes
     Route::get('/birthday-wishes', [BirthdayWishController::class, 'index'])->name('admin.birthday-wish.index');
@@ -605,9 +566,6 @@ Route::middleware(['auth'])->group(function () {
         Route::post('store', 'store')->name('store');
         Route::delete('delete/{id}', 'destroy')->name('destroy');
         Route::get('get-courses-by-status', 'getCoursesByStatus')->name('get.courses.by.status');
-        // Grid exports: one query, one column list, four formats.
-        Route::get('export/{format}', 'export')->name('export')
-            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
     });
 
     // batch route
@@ -652,27 +610,12 @@ Route::middleware(['auth'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
 
-        Route::get('/notice/{id}/attachment', [NoticeNotificationController::class, 'attachment'])
-            ->whereNumber('id')
-            ->name('notice.attachment');
-
         Route::resource('notice', NoticeNotificationController::class)
             ->except(['show'])
             ->parameters(['notice' => 'encId']);
 
         Route::get('/notice/get-courses', [NoticeNotificationController::class, 'getCourses'])
             ->name('notice.getCourses');
-
-        // Target-audience cascade on the notice form.
-        Route::get('/notice/get-group-types', [NoticeNotificationController::class, 'getGroupTypes'])
-            ->name('notice.getGroupTypes');
-        Route::get('/notice/get-students', [NoticeNotificationController::class, 'getStudents'])
-            ->name('notice.getStudents');
-        Route::get('/notice/get-departments', [NoticeNotificationController::class, 'getDepartments'])
-            ->name('notice.getDepartments');
-        Route::get('/notice/get-employees', [NoticeNotificationController::class, 'getEmployees'])
-            ->name('notice.getEmployees');
-
         Route::post('/summernote/upload', [UserController::class, 'uploadPdf'])->name('summernote.upload');
     });
 
@@ -1060,16 +1003,6 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/delete/{id}', 'destroy')->name('destroy');
     });
 
-    // Leave Nature Master (Leave Management)
-    Route::prefix('master/leave-nature-master')->name('master.leave-nature.')->controller(LeaveNatureMasterController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::post('/status/{id}', 'status')->name('status');
-        Route::delete('/delete/{id}', 'destroy')->name('delete');
-    });
-
     // Stationed Leave Master (Leave Management)
     Route::prefix('admin/stationed-leave-master')->name('admin.stationed-leave-master.')->controller(StationedLeaveMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
@@ -1081,18 +1014,6 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/delete/{id}', 'destroy')->name('destroy');
     });
 
-    // Training Section — Apply Leave on Behalf of OT (menu route: admin/leave-on-behalf)
-    Route::prefix('admin/leave-on-behalf')->name('admin.leave-on-behalf.')->controller(LeaveOnBehalfController::class)->group(function () {
-        // The menu points at '/', so the register is the landing page and the
-        // form is reached from its "Apply Leave" button.
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::get('/export', 'export')->name('export');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/students', 'students')->name('students');
-        Route::get('/context', 'context')->name('context');
-    });
-
     // Faculty — Leave Approval (menu route: faculty-leave-approval)
     Route::controller(FacultyLeaveApprovalController::class)->group(function () {
         Route::get('/faculty-leave-approval', 'index')->name('faculty.leave-approval.index');
@@ -1101,11 +1022,6 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/faculty-leave-approval/{id}/approve', 'approve')->name('faculty.leave-approval.approve');
         Route::post('/faculty-leave-approval/{id}/reject', 'reject')->name('faculty.leave-approval.reject');
     });
-
-    Route::get('/leave-applications/{applicationId}/attachments/{attachmentId}', [
-        LeaveApplicationAttachmentController::class,
-        'show',
-    ])->whereNumber('applicationId')->whereNumber('attachmentId')->name('leave.attachments.show');
 
     // Officer Trainee — Leave Application (User Side)
     Route::prefix('leave')->name('leave.')->controller(LeaveApplicationController::class)->group(function () {
@@ -1124,7 +1040,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/medical-exception-faculty-view', [MedicalExceptionFacultyViewController::class, 'index'])->name('medical.exception.faculty.view');
 
     Route::get('/medical-exception-ot-view', [MedicalExceptionOTViewController::class, 'index'])->name('medical.exception.ot.view');
-    Route::get('/medical-exception-ot-view/export', [MedicalExceptionOTViewController::class, 'export'])->name('medical.exception.ot.view.export');
 
     // OT MDO/Escort Exception View
     Route::get('/ot-mdo-escrot-exemption-view', [OTMDOEscrotExemptionController::class, 'index'])->name('ot.mdo.escrot.exemption.view');
@@ -1249,9 +1164,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [MemoDisciplineController::class, 'index'])->name('index');
         // Officer Trainee: dedicated, read-only "my discipline memos" page (view own records + chat).
         Route::get('/my-memos', [MemoDisciplineController::class, 'otIndex'])->name('ot_index');
-        // Officer Trainee: every mark deducted from them, discipline memos and
-        // memo/notices together — what the dashboard card opens.
-        Route::get('/my-marks', [MemoDisciplineController::class, 'otMarksDeducted'])->name('ot_marks');
         Route::delete('/delete/{id}', [MemoDisciplineController::class, 'destroy'])->name('destroy');
         Route::get('/export-csv', [MemoDisciplineController::class, 'exportCsv'])->name('export_csv');
         Route::get('/export-pdf', [MemoDisciplineController::class, 'exportPdf'])->name('export_pdf');
@@ -1299,11 +1211,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/create', 'create')->name('create');
         Route::post('store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
-        // Download (csv | excel | pdf) + Print via ExportsMasterGrid — same
-        // filters/search as the grid. {format} optional: old /export = .xlsx.
-        Route::get('/export/{format?}', 'export')->name('export')
-            ->whereIn('format', ['csv', 'excel', 'pdf', 'print']);
-        Route::get('/print', 'print')->name('print');
+        Route::get('/export', 'export')->name('export');
         Route::post('/update-comment', 'updateComment')->name('update.comment');
         Route::delete('/destroy/{id}', 'destroy')->name('destroy');
     });
@@ -1427,11 +1335,6 @@ Route::middleware(['auth'])->group(function () {
 
     // / Faculty Dashboard Route
     Route::get('/faculty_dashboard', function () {
-        // Faculty and Super Admin only. The view now uses the admin layout, whose sidebar
-        // is filtered by the RBAC menu table (PR #317 F-024); it used to render the
-        // unfiltered static admin partials (F-019).
-        abort_unless(hasRole('Faculty') || isSidebarPrivilegedUser(), 403);
-
         return view('faculty.dashboard');
     })->name('faculty.dashboard');
 
@@ -1488,15 +1391,7 @@ Route::middleware(['auth'])->group(function () {
             ->orderBy('end_date', 'desc')
             ->value('pk');
 
-        // Faculty Name opens pinned to the logged-in faculty; FeedbackController
-        // enforces the same scope on every query behind this page.
-        $lockedFacultyPk = \App\Services\Timetable\FacultySessionScope::lockedFacultyPk();
-        $lockedFacultyName = $lockedFacultyPk !== null
-            ? (\App\Models\FacultyMaster::where('pk', $lockedFacultyPk)->value('full_name') ?: null)
-            : null;
-        $currentFaculty = $lockedFacultyName;
-
-        return view('admin.feedback.faculty_view', compact('programs', 'currentProgram', 'lockedFacultyName', 'currentFaculty'));
+        return view('admin.feedback.faculty_view', compact('programs', 'currentProgram'));
     })->name('admin.feedback.faculty_view');
 
     //  dashboard page route
@@ -1505,17 +1400,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/active-course', [DashboardController::class, 'active_course'])->name('admin.dashboard.active_course');
     Route::get('/incoming-course', [DashboardController::class, 'incoming_course'])->name('admin.dashboard.incoming_course');
     Route::get('/guest-faculty', [DashboardController::class, 'guest_faculty'])->name('admin.dashboard.guest_faculty');
-    Route::get('/guest-faculty/export', [DashboardController::class, 'guest_faculty_export'])->middleware('throttle:10,1,faculty-contact-export')->name('admin.dashboard.guest_faculty.export');
     Route::get('/inhouse-faculty', [DashboardController::class, 'inhouse_faculty'])->name('admin.dashboard.inhouse_faculty');
-    Route::get('/inhouse-faculty/export', [DashboardController::class, 'inhouse_faculty_export'])->middleware('throttle:10,1,faculty-contact-export')->name('admin.dashboard.inhouse_faculty.export');
 
     // Who's Who Routes
     Route::get('/faculty/whos-who', [WhosWhoController::class, 'index'])->name('admin.faculty.whos-who');
     Route::get('/faculty/whos-who/courses', [WhosWhoController::class, 'getCourses'])->name('admin.faculty.whos-who.courses');
     Route::get('/faculty/whos-who/students', [WhosWhoController::class, 'getStudents'])->name('admin.faculty.whos-who.students');
     Route::get('/faculty/whos-who/download-pdf', [WhosWhoController::class, 'downloadPdf'])->name('admin.faculty.whos-who.download-pdf');
-    Route::get('/faculty/whos-who/download-excel', [WhosWhoController::class, 'downloadExcel'])->name('admin.faculty.whos-who.download-excel');
-    Route::get('/faculty/whos-who/download-csv', [WhosWhoController::class, 'downloadCsv'])->name('admin.faculty.whos-who.download-csv');
     Route::get('/faculty/whos-who/static-info', [WhosWhoController::class, 'getStaticInfo'])->name('admin.faculty.whos-who.static-info');
     Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
 
@@ -1574,11 +1465,6 @@ Route::middleware(['auth'])->group(function () {
 
     // User view routes
     Route::get('/course-repository-user', [CourseRepositoryController::class, 'userIndex'])->name('admin.course-repository.user.index');
-
-    // Universal search (user end). MUST stay above the {pk} route below, which
-    // would otherwise swallow /course-repository-user/search as a repository id.
-    Route::get('/course-repository-user/search', [CourseRepositoryController::class, 'userSearch'])->name('admin.course-repository.user.search');
-    Route::get('/course-repository-user/search/suggest', [CourseRepositoryController::class, 'userSearchSuggest'])->name('admin.course-repository.user.search.suggest');
     Route::get('/course-repository-user/foundation-course', [CourseRepositoryController::class, 'foundationCourse'])->name('admin.course-repository.user.foundation-course');
     Route::get('/course-repository-user/foundation-course/{courseCode}', [CourseRepositoryController::class, 'foundationCourseDetail'])->name('admin.course-repository.user.foundation-course.detail');
     Route::get('/course-repository-user/foundation-course/{courseCode}/class-material-subject-wise', [CourseRepositoryController::class, 'classMaterialSubjectWise'])->name('admin.course-repository.user.class-material-subject-wise');
@@ -1772,10 +1658,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     Route::resource('purchaseorders', PurchaseOrderController::class)->except(['edit', 'update', 'destroy']);
     Route::get('purchaseorders/{id}/edit', [PurchaseOrderController::class, 'edit'])->name('purchaseorders.edit');
     Route::put('purchaseorders/{id}', [PurchaseOrderController::class, 'update'])->name('purchaseorders.update');
-    // Delete disabled for now.
-    // To turn delete back on, uncomment all three together: this route, and the delete button and
-    // destroy() in Mess\PurchaseOrderController.
-    // Route::delete('purchaseorders/{id}', [PurchaseOrderController::class, 'destroy'])->name('purchaseorders.destroy');
+    Route::delete('purchaseorders/{id}', [PurchaseOrderController::class, 'destroy'])->name('purchaseorders.destroy');
     Route::post('purchaseorders/{id}/approve', [PurchaseOrderController::class, 'approve'])->name('purchaseorders.approve');
     Route::post('purchaseorders/{id}/reject', [PurchaseOrderController::class, 'reject'])->name('purchaseorders.reject');
     Route::get('purchaseorders/vendor/{vendorId}/items', [PurchaseOrderController::class, 'getVendorItems'])->name('purchaseorders.vendor.items');

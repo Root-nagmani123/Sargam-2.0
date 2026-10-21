@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Member Details')
+@section('title', 'Member Details - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/member-admin.css') }}?v={{ @filemtime(public_path('css/member-admin.css')) ?: time() }}">

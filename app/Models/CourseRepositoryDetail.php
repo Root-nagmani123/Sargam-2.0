@@ -29,16 +29,12 @@ class CourseRepositoryDetail extends Model
         'status',
         'type',
         'videolink',
-        'video_download_enabled',
     ];
 
     protected $casts = [
         'session_date' => 'date',
         'created_date' => 'datetime',
         'modify_date' => 'datetime',
-        // Whether the user side may download this detail's video. Viewing and
-        // playing are never gated by it.
-        'video_download_enabled' => 'boolean',
     ];
 
     /**

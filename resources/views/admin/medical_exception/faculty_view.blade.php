@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Medical Exception Faculty View')
+@section('title', 'Medical Exception Faculty View - Sargam | Lal Bahadur')
 
 @section('setup_content')
 

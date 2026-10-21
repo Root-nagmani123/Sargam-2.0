@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Member')
+@section('title', 'Member - Sargam | Lal Bahadur')
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/member-admin.css') }}?v={{ @filemtime(public_path('css/member-admin.css')) ?: time() }}">
@@ -51,11 +51,6 @@
                     <section id="step-5" class="step-section">
                         <!-- Content will be loaded via AJAX -->
                     </section>
-
-                    <h3>Employee Grade Pay</h3>
-                    <section id="step-6" class="step-section">
-                        <!-- Content will be loaded via AJAX -->
-                    </section>
                 </div>
             </form>
 
@@ -74,11 +69,6 @@ $(document).ready(function() {
     // True from the moment the member POST leaves until it fails; see onFinished.
     let memberSubmitInFlight = false;
 
-    // Set right before a validated step programmatically re-triggers "next" —
-    // lets onStepChanging skip re-validating on that second, synthetic call.
-    let skipNextValidation = false;
-    let stepValidationInFlight = false;
-
     const wizard = $("#wizard").steps({
         headerTag: "h3",
         bodyTag: "section",
@@ -89,37 +79,23 @@ $(document).ready(function() {
 
         onStepChanging: function(event, currentIndex, newIndex) {
             if (newIndex < currentIndex) return true;
-            if (skipNextValidation) {
-                skipNextValidation = false;
-                return true;
-            }
-            if (stepValidationInFlight) return false;
+            event.preventDefault();
 
-            const validatingIndex = currentIndex;
-            const currentStep = $(`#wizard-p-${validatingIndex}`);
+            const currentStep = $(`#wizard-p-${currentIndex}`);
             let stepData = currentStep.find(':input').serialize();
 
-            stepValidationInFlight = true;
+            let canProceed = false;
 
             // Validates this step's fields only — nothing is saved to the database
             // yet. The record is created in one shot from onFinished() below.
-            // Runs async so the UI doesn't lock up while waiting on the server;
-            // on success we re-issue "next" ourselves once validation passes.
             $.ajax({
-                url: `/member/validate-step/${validatingIndex + 1}`,
+                url: `/member/validate-step/${currentIndex + 1}`,
                 method: "POST",
                 data: stepData + '&_token={{ csrf_token() }}',
+                async: false,
                 success: function(response) {
                     clearErrors(currentStep);
-                    // If the user has since navigated away from the step that was
-                    // just validated (e.g. clicked Previous while this request was
-                    // in flight), don't pull them back forward from wherever they
-                    // are now — just record that this step is clean.
-                    if (wizard.steps("getCurrentIndex") !== validatingIndex) {
-                        return;
-                    }
-                    skipNextValidation = true;
-                    wizard.steps("next");
+                    canProceed = true;
                 },
                 error: function(xhr) {
                     const status = xhr.status;
@@ -131,13 +107,12 @@ $(document).ready(function() {
                         toastr.error(xhr.responseJSON?.message ||
                             `Error (${status}) occurred while validating step.`);
                     }
-                },
-                complete: function() {
-                    stepValidationInFlight = false;
+
+                    canProceed = false;
                 }
             });
 
-            return false;
+            return canProceed;
         },
 
         onStepChanged: function(event, currentIndex, priorIndex) {
@@ -162,7 +137,7 @@ $(document).ready(function() {
             memberSubmitInFlight = true;
             window.MemberWizardUI.setBusy('#wizard', true);
 
-            // All 6 steps' inputs are still in the DOM (jQuery Steps never removes
+            // All 5 steps' inputs are still in the DOM (jQuery Steps never removes
             // them), so this FormData already carries every field from every step —
             // this is the single point where the member is actually created.
             const formData = new FormData(form[0]);
@@ -173,23 +148,9 @@ $(document).ready(function() {
                 data: formData,
                 contentType: false,
                 processData: false,
-                // PR #319 review round 3 (R-001/R-003). Took no argument and discarded the
-                // response, so a partial refusal — Step 6 skipped because its schema is
-                // missing — was reported as plain success and the data was lost silently.
-                success: function(res) {
+                success: function() {
                     formIsDirty = false;
-
-                    const warning = res && res.warning;
-
-                    if (!warning) {
-                        toastr.success("Member created successfully!");
-                        window.location.href = "/member";
-                        return;
-                    }
-
-                    // alert(), not a toast: a toast vanishes on its own and this says part
-                    // of the save did not happen, which has to be acknowledged.
-                    alert("Member created, but not everything was saved:\n\n" + warning);
+                    toastr.success("Member created successfully!");
                     window.location.href = "/member";
                 },
                 error: function(xhr) {

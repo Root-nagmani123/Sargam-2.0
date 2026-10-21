@@ -20,7 +20,7 @@
         ];
     }
     $activeCategoryId = $activeCategoryId
-        ?? (\App\Services\SidebarMenu\SidebarNavResolver::scalarQuery('category') ?: null)
+        ?? request()->get('category')
         ?? ($activeNavMeta['category_id'] ?? null)
         ?? ($sidebarMenus->first()?->id);
     $activeGroupId = $activeGroupId ?? ($activeNavMeta['group_id'] ?? null);

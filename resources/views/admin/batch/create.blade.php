@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Batch')
+@section('title', 'Batch - Sargam | Lal Bahadur')
 
 @section('setup_content')
 

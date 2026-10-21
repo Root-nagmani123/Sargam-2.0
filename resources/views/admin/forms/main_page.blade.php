@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Main Page')
+@section('title', 'Main Page - Sargam | Lal Bahadur')
 
 @section('setup_content')
 <div class="container-fluid">

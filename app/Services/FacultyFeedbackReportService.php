@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\CourseCordinatorMaster;
 use App\Models\CourseMaster;
 use App\Models\FacultyMaster;
-use App\Support\FeedbackReportGrouping;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -59,59 +58,6 @@ class FacultyFeedbackReportService
             ->filter()
             ->unique()
             ->values();
-    }
-
-    /**
-     * The dashboard's "Total Feedback" card: how many records the /faculty_view
-     * report the card opens holds for this faculty — the same N the page prints as
-     * "Showing record 1 of N".
-     *
-     * A record there is one graded session, not one OT's feedback: the report
-     * groups topic_feedback by session and shows the rating spread inside it, so a
-     * single record can carry dozens of OTs. Counting rows, or counting distinct
-     * OTs, gives a much larger number than the page shows and makes the card look
-     * wrong next to it.
-     *
-     * So this repeats facultyView()'s query verbatim — its joins, its
-     * submitted-and-rated-or-remarked filter, its default "current" course mode
-     * (active and not yet ended) and its GROUP BY — and counts the groups.
-     * facultyView() derives its own total the same way, from the row count of that
-     * grouped result, so the two cannot drift apart.
-     */
-    public function getTotalFeedbackCount(int $facultyPk): int
-    {
-        $grouped = DB::table('topic_feedback as tf')
-            ->join('timetable as tt', 'tf.timetable_pk', '=', 'tt.pk')
-            ->join('course_master as cm', 'tt.course_master_pk', '=', 'cm.pk')
-            ->join('faculty_master as fm', 'tf.faculty_pk', '=', 'fm.pk')
-            ->selectRaw('1')
-            ->where('tf.is_submitted', 1)
-            ->where('tf.faculty_pk', $facultyPk)
-            ->where('cm.active_inactive', 1)
-            ->whereDate('cm.end_date', '>=', now()->toDateString())
-            ->where(function ($q) {
-                // Remark-only sessions store no ratings by design, so requiring a
-                // rating would silently drop them — facultyView() allows either.
-                $q->whereNotNull('tf.content')
-                    ->orWhereNotNull('tf.presentation')
-                    ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
-            })
-            ->groupBy(
-                'tf.topic_name',
-                'cm.pk',
-                'cm.course_name',
-                'cm.active_inactive',
-                'cm.end_date',
-                'fm.full_name',
-                'tt.faculty_type',
-                'tf.faculty_pk',
-                'tt.START_DATE',
-                'tt.END_DATE',
-                'tt.class_session',
-                'tf.timetable_pk'
-            );
-
-        return DB::query()->fromSub($grouped, 'report_records')->count();
     }
 
     public function getPrograms(int $facultyPk, string $courseType = 'current'): Collection
@@ -209,10 +155,20 @@ class FacultyFeedbackReportService
             ->where('tf.is_submitted', 1)
             ->whereIn('cm.pk', $accessibleIds);
 
-        // Group on the determining keys only; the rest are functionally dependent on them
-        // (fm.faculty_type here hangs off tf.faculty_pk, as fm.full_name does).
-        // See App\Support\FeedbackReportGrouping.
-        $query->groupBy(FeedbackReportGrouping::FACULTY_VIEW);
+        $query->groupBy(
+            'tf.topic_name',
+            'cm.pk',
+            'cm.course_name',
+            'cm.active_inactive',
+            'cm.end_date',
+            'fm.full_name',
+            'fm.faculty_type',
+            'tf.faculty_pk',
+            'tt.START_DATE',
+            'tt.END_DATE',
+            'tt.class_session',
+            'tf.timetable_pk'
+        );
 
         $query->where('tf.faculty_pk', $viewerFacultyPk);
 

@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Calendar')
+@section('title', 'Calendar - Sargam | Lal Bahadur')
 
 @section('setup_content')
 

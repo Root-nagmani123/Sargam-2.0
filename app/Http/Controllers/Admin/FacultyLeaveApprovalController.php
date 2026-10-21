@@ -2,22 +2,15 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Exports\LbsnaaTableExport;
 use App\Http\Controllers\Controller;
 use App\Models\CourseMaster;
 use App\Models\LeaveApplication;
 use App\Services\FacultyLeaveApprovalService;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
-use App\Traits\StampsPdfPageNumbers;
-use Maatwebsite\Excel\Excel as ExcelFormat;
-use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\Facades\DataTables;
 
 class FacultyLeaveApprovalController extends Controller
 {
-    use StampsPdfPageNumbers;
-
     public function __construct(protected FacultyLeaveApprovalService $approvalService)
     {
         $this->middleware(function ($request, $next) {
@@ -105,7 +98,7 @@ class FacultyLeaveApprovalController extends Controller
     {
         $coursePks = $this->approvalService->getAccessibleCourseIds();
 
-        $query = LeaveApplication::with(['student', 'nature', 'course'])
+        $query = LeaveApplication::with(['student', 'nature'])
             ->where('leave_type', LeaveApplication::TYPE_STATIONED_LEAVE)
             ->whereIn('status', [
                 LeaveApplication::STATUS_PENDING,
@@ -146,8 +139,7 @@ class FacultyLeaveApprovalController extends Controller
         return DataTables::of($this->baseQuery($request))
             ->addIndexColumn()
             ->filter(function ($query) use ($request) {
-                // is_scalar: ?search[value][]= reached the string interpolation below (PR #334 F-072).
-                $search = is_scalar($value = $request->input('search.value')) ? (string) $value : '';
+                $search = $request->input('search.value');
                 if (! empty($search)) {
                     $query->where(function ($q) use ($search) {
                         $q->whereHas('student', function ($qs) use ($search) {
@@ -155,22 +147,17 @@ class FacultyLeaveApprovalController extends Controller
                                 ->orWhere('display_name', 'like', "%{$search}%")
                                 ->orWhere('first_name', 'like', "%{$search}%")
                                 ->orWhere('last_name', 'like', "%{$search}%");
-                        })->orWhereHas('course', function ($qc) use ($search) {
-                            $qc->where('course_name', 'like', "%{$search}%");
                         })->orWhere('reason', 'like', "%{$search}%");
                     });
                 }
             })
-            ->addColumn('ot_code', fn ($row) => (string) ($row->student->generated_OT_code ?? '-'))
-            ->addColumn('ot_name', fn ($row) => (string) ($this->approvalService->studentDisplayName($row->student)))
-            ->addColumn('course_name', fn ($row) => (string) ($row->course->course_name ?? '-'))
-            ->addColumn('leave_type_label', fn ($row) => (string) ($row->leave_type_label))
+            ->addColumn('ot_code', fn ($row) => e($row->student->generated_OT_code ?? '-'))
+            ->addColumn('ot_name', fn ($row) => e($this->approvalService->studentDisplayName($row->student)))
+            ->addColumn('leave_type_label', fn ($row) => e($row->leave_type_label))
             ->addColumn('from_date_display', fn ($row) => $row->from_date?->format('d-m-Y') ?? '-')
             ->addColumn('to_date_display', fn ($row) => $row->to_date?->format('d-m-Y') ?? '-')
-            ->addColumn('time_from_display', fn ($row) => (string) ($row->time_from_display))
-            ->addColumn('time_to_display', fn ($row) => (string) ($row->time_to_display))
             ->addColumn('total_days_display', fn ($row) => number_format((float) $row->total_days, 0))
-            ->addColumn('reason_text', fn ($row) => (string) (\Illuminate\Support\Str::limit($row->reason ?? '-', 80)))
+            ->addColumn('reason_text', fn ($row) => e(\Illuminate\Support\Str::limit($row->reason ?? '-', 80)))
             ->addColumn('status_label', function ($row) {
                 $map = [
                     LeaveApplication::STATUS_PENDING => ['Pending', 'pending'],
@@ -181,7 +168,6 @@ class FacultyLeaveApprovalController extends Controller
 
                 return '<span class="badge rounded-1 approval-status approval-status--' . $variant . '">' . $label . '</span>';
             })
-            ->addColumn('approver_name', fn ($row) => (string) ($row->action_by_faculty_name))
             ->addColumn('action', function ($row) {
                 $viewUrl = route('faculty.leave-approval.show', $row->pk);
                 $html = '<div class="d-inline-flex align-items-center gap-2 approval-action">';
@@ -200,184 +186,34 @@ class FacultyLeaveApprovalController extends Controller
             ->make(true);
     }
 
-    /**
-     * Excel (.xlsx) or PDF of the current listing, honouring the same filters
-     * (baseQuery). The PDF renders its own view (export_pdf); the Excel sheet
-     * is built from the heading/row arrays below.
-     */
     public function export(Request $request)
     {
-        $format = is_string($request->get('format')) ? strtolower($request->get('format')) : 'excel';
-        $filename = 'Leave_Approval_' . now()->format('Ymd_His');
+        $rows = $this->baseQuery($request)->get();
 
-        if ($format === 'pdf') {
-            @ini_set('memory_limit', '256M');
-            @set_time_limit(120);
+        $columns = ['S. No.', 'OT Code', 'OT Name', 'Leave Type', 'Date From', 'Date To', 'Total Days', 'Reason', 'Status'];
+        $filename = 'Leave_Approval_' . now()->format('Ymd_His') . '.csv';
 
-            // action_by_faculty_name reads both relations per row.
-            $rows = $this->baseQuery($request)->with(['approvedByFaculty', 'appliedByUser'])->get();
+        return response()->streamDownload(function () use ($rows, $columns) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, $columns);
 
-            $logoPath = public_path('images/lbsnaa_logo.jpg');
-            $logo = (is_file($logoPath) && is_readable($logoPath))
-                ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath))
-                : null;
-
-            $pdf = Pdf::loadView('admin.leave.faculty_approval.export_pdf', [
-                'rows' => $rows,
-                'approvalService' => $this->approvalService,
-                'filterLine' => $this->buildExportFilterLine($request),
-                'approverLine' => $this->buildApproverHeaderLine($rows),
-                'printedOn' => now()->format('d-m-Y H:i'),
-                'reportTitle' => 'Leave Approval Report',
-                'logo' => $logo,
-            ])
-                ->setPaper('a4', 'landscape')
-                ->setOptions([
-                    'defaultFont' => 'DejaVu Sans',
-                    'isHtml5ParserEnabled' => true,
-                    // Both off deliberately. A report has no reason to execute PHP, and
-                    // isPhpEnabled turns any raw block that later appears in the view into
-                    // server-side code execution on stored data. The only image is $logo,
-                    // a base64 data URI or null, so nothing needs fetching over the network.
-                    'isRemoteEnabled' => false,
-                    'isPhpEnabled' => false,
-                    'dpi' => 96,
+            $serial = 1;
+            foreach ($rows as $row) {
+                fputcsv($out, [
+                    $serial++,
+                    $row->student->generated_OT_code ?? '-',
+                    $this->approvalService->studentDisplayName($row->student),
+                    $row->leave_type_label,
+                    $row->from_date?->format('d-m-Y') ?? '-',
+                    $row->to_date?->format('d-m-Y') ?? '-',
+                    number_format((float) $row->total_days, 0),
+                    $row->reason ?? '-',
+                    $row->status_label,
                 ]);
-
-            $this->stampPageNumbers($pdf);
-
-            return $pdf->download($filename . '.pdf');
-        }
-
-        $rows = $this->baseQuery($request)->with(['approvedByFaculty', 'appliedByUser'])->get();
-
-        // "Approved/Rejected By" is the audit column the pre-PR LeaveApprovalExport
-        // ended with and the PDF still prints — the Excel must carry it too (PR #334 F-042).
-        $headings = ['S. No.', 'OT Code', 'OT Name', 'Course Name', 'Leave Type', 'Date From', 'Date To', 'Time From', 'Time To', 'Total Days', 'Reason', 'Status', 'Approved/Rejected By'];
-
-        $data = $rows->values()->map(fn ($row, $index) => [
-            $index + 1,
-            $row->student->generated_OT_code ?? '-',
-            $this->approvalService->studentDisplayName($row->student),
-            $row->course->course_name ?? '-',
-            $row->leave_type_label,
-            $row->from_date?->format('d-m-Y') ?? '-',
-            $row->to_date?->format('d-m-Y') ?? '-',
-            $row->time_from_display,
-            $row->time_to_display,
-            number_format((float) $row->total_days, 0),
-            $row->reason ?? '-',
-            $row->status_label,
-            // Same value the PDF prints: the faculty approver, the Training Section
-            // operator for an on-behalf leave, or "-".
-            $row->action_by_faculty_name,
-        ])->values();
-
-        $baseName = 'Leave_Approval_' . now()->format('Ymd_His');
-        // Serial, dates, times, day count and status read better centred; the
-        // names, course and reason stay left-aligned.
-        $centreColumns = [0, 5, 6, 7, 8, 9, 11];
-        $filterLine = $this->exportFilterLine($request);
-
-        return Excel::download(
-            new LbsnaaTableExport($data, $headings, 'Leave Approval', $filterLine, $centreColumns),
-            $baseName . '.xlsx'
-        );
-    }
-
-    /**
-     * Human-readable summary of the filters in force, printed on the PDF so a
-     * shared copy says what it is a report of.
-     */
-    protected function exportFilterLine(Request $request): string
-    {
-        $parts = [];
-
-        $statusLabels = [
-            LeaveApplication::STATUS_PENDING => 'Pending',
-            LeaveApplication::STATUS_APPROVED => 'Approved',
-            LeaveApplication::STATUS_REJECTED => 'Rejected',
-        ];
-        $status = $request->filled('status') ? (int) $request->input('status') : LeaveApplication::STATUS_PENDING;
-        $parts[] = 'Status: ' . ($statusLabels[$status] ?? 'All');
-
-        if ($request->filled('course_filter')) {
-            $courseName = CourseMaster::where('pk', (int) $request->input('course_filter'))->value('course_name');
-            if ($courseName) {
-                $parts[] = 'Course: ' . $courseName;
-            }
-        }
-
-        $from = is_scalar($request->input('from_date')) ? (string) $request->input('from_date') : '';
-        $to = is_scalar($request->input('to_date')) ? (string) $request->input('to_date') : '';
-        if ($from !== '' || $to !== '') {
-            $parts[] = 'Period: ' . ($from ?: '…') . ' to ' . ($to ?: '…');
-        }
-
-        return implode(' | ', $parts);
-    }
-
-    private function buildExportFilterLine(Request $request): string
-    {
-        $parts = [];
-
-        $statusMap = [
-            (string) LeaveApplication::STATUS_PENDING => 'Pending',
-            (string) LeaveApplication::STATUS_APPROVED => 'Approved',
-            (string) LeaveApplication::STATUS_REJECTED => 'Rejected',
-        ];
-        // Every value below is concatenated, so read each as a scalar: an
-        // array-valued parameter (?from_date[]=) reads as unset rather than
-        // raising "Array to string conversion" (PR #334 F-041).
-        $in = fn (string $key) => is_scalar($request->input($key)) ? (string) $request->input($key) : '';
-
-        if (isset($statusMap[$in('status')])) {
-            $parts[] = 'Status: ' . $statusMap[$in('status')];
-        }
-
-        if ($in('course_filter') !== '') {
-            $course = CourseMaster::find((int) $in('course_filter'));
-            $parts[] = 'Course: ' . ($course->course_name ?? $in('course_filter'));
-        }
-
-        if ($in('from_date') !== '' || $in('to_date') !== '') {
-            $parts[] = 'Period: ' . ($in('from_date') ?: '…') . ' to ' . ($in('to_date') ?: '…');
-        }
-
-        return implode('  |  ', $parts);
-    }
-
-    /**
-     * Name one action source only when every actioned row shares it.
-     * Faculty and on-behalf operator IDs belong to separate identity namespaces.
-     */
-    private function buildApproverHeaderLine($rows): string
-    {
-        $actionedRows = $rows->filter(fn ($row) => (int) $row->status !== LeaveApplication::STATUS_PENDING);
-
-        if ($actionedRows->isEmpty()) {
-            return '';
-        }
-
-        $actors = $actionedRows->map(function (LeaveApplication $row): string {
-            if ($row->approvedByFaculty !== null) {
-                return 'faculty:' . $row->approved_by_faculty_pk;
             }
 
-            if ($row->applied_on_behalf) {
-                return 'operator:' . $row->applied_by_user_pk;
-            }
-
-            return 'unknown';
-        })->unique();
-
-        if ($actors->count() > 1) {
-            return 'Approved/Rejected By: Multiple Approvers';
-        }
-
-        $name = $actionedRows->first()->action_by_faculty_name;
-
-        return $name && $name !== '-' ? 'Approved/Rejected By: ' . $name : '';
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
     }
 
     /**

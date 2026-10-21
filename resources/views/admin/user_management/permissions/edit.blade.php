@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Member')
+@section('title', 'Member - Sargam | Lal Bahadur')
 
 @section('setup_content')
 

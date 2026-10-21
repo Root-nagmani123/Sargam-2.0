@@ -2,25 +2,18 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Exports\StationedLeaveMasterExport;
 use App\Http\Controllers\Controller;
 use App\Models\CourseMaster;
 use App\Models\FacultyMaster;
 use App\Models\StationedLeaveFacultyApprover;
 use App\Models\StationedLeaveMaster;
-use App\Traits\StampsPdfPageNumbers;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Maatwebsite\Excel\Excel as ExcelFormat;
-use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\Facades\DataTables;
 
 class StationedLeaveMasterController extends Controller
 {
-    use StampsPdfPageNumbers;
-
     public function __construct()
     {
         $this->middleware(function ($request, $next) {
@@ -399,87 +392,32 @@ class StationedLeaveMasterController extends Controller
 
     public function export(Request $request)
     {
-        $format = strtolower((string) $request->get('format', 'excel'));
-        $filename = 'Stationed_Leave_Master_' . now()->format('Ymd_His');
         $rows = $this->baseListQuery($request)->get();
-        $filterLine = $this->buildExportFilterLine($request);
-        $columns = $this->resolveExportColumns($request);
 
-        if ($format === 'pdf') {
-            @ini_set('memory_limit', '256M');
-            @set_time_limit(120);
+        $columns = ['S. No.', 'Course', 'Effective From', 'PT Timing', 'Approval Required', 'Faculty Count', 'Status'];
+        $filename = 'Stationed_Leave_Master_' . now()->format('Ymd_His') . '.csv';
 
-            $logoPath = public_path('images/lbsnaa_logo.jpg');
-            $logo = (is_file($logoPath) && is_readable($logoPath))
-                ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($logoPath))
-                : null;
+        return response()->streamDownload(function () use ($rows, $columns) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, $columns);
 
-            $pdf = Pdf::loadView('admin.stationed_leave_master.export_pdf', [
-                'rows' => $rows,
-                'columns' => $columns,
-                'filterLine' => $filterLine,
-                'printedOn' => now()->format('d-m-Y H:i'),
-                'reportTitle' => 'Stationed Leave Master Report',
-                'logo' => $logo,
-            ])
-                ->setPaper('a4', 'landscape')
-                ->setOptions([
-                    'defaultFont' => 'DejaVu Sans',
-                    'isHtml5ParserEnabled' => true,
-                    // Both off deliberately. A report has no reason to execute PHP, and
-                    // isPhpEnabled turns any raw block that later appears in the view into
-                    // server-side code execution on stored data. The only image is $logo,
-                    // a base64 data URI or null, so nothing needs fetching over the network.
-                    'isRemoteEnabled' => false,
-                    'isPhpEnabled' => false,
-                    'dpi' => 96,
+            $serial = 1;
+            foreach ($rows as $row) {
+                $cutoffTime = $row->course->pt_start_time ?? $row->apply_cutoff_time;
+
+                fputcsv($out, [
+                    $serial++,
+                    $row->course->course_name ?? 'N/A',
+                    $row->effective_from?->format('d-m-Y') ?? 'N/A',
+                    blank($cutoffTime) ? 'N/A' : \Carbon\Carbon::parse($cutoffTime)->format('h:i A'),
+                    (int) $row->is_faculty_approval_required === 1 ? 'Yes' : 'No',
+                    (int) ($row->approvers_count ?? 0),
+                    (int) $row->active_inactive === 1 ? 'Active' : 'Inactive',
                 ]);
+            }
 
-            $this->stampPageNumbers($pdf);
-
-            return $pdf->download($filename . '.pdf');
-        }
-
-        return Excel::download(
-            new StationedLeaveMasterExport($rows, $filterLine, $columns),
-            $filename . '.xlsx',
-            ExcelFormat::XLSX
-        );
-    }
-
-    /**
-     * Columns the grid is showing (?cols=sno,course,…), intersected with the
-     * report's own list so a hand-edited value can't add or reorder columns.
-     * Absent, empty or nothing recognised => every column.
-     *
-     * @return list<string>
-     */
-    private function resolveExportColumns(Request $request): array
-    {
-        $raw = $request->query('cols', '');
-        $wanted = is_string($raw) ? array_filter(array_map('trim', explode(',', $raw))) : [];
-        $keys = array_values(array_intersect(array_keys(StationedLeaveMasterExport::COLUMNS), $wanted));
-
-        return $keys !== [] ? $keys : array_keys(StationedLeaveMasterExport::COLUMNS);
-    }
-
-    private function buildExportFilterLine(Request $request): string
-    {
-        $parts = [];
-
-        $statusFilter = strtolower((string) $request->input('status_filter', 'active'));
-        $parts[] = 'Status: ' . ($statusFilter === 'archive' ? 'Archive' : 'Active');
-
-        if ($request->filled('course_filter')) {
-            $course = CourseMaster::find($request->course_filter);
-            $parts[] = 'Course: ' . ($course->course_name ?? $request->course_filter);
-        }
-
-        if ($request->filled('from_date') || $request->filled('to_date')) {
-            $parts[] = 'Period: ' . ($request->from_date ?: '…') . ' to ' . ($request->to_date ?: '…');
-        }
-
-        return implode('  |  ', $parts);
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
     }
 
     /**

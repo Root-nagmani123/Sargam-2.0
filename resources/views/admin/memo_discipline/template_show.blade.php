@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', ' Conversation')
+@section('title', ' Conversation - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
 @section('setup_content')
 <div class="container-fluid">

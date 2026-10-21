@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Edit Exemption Master')
+@section('title', 'Edit Exemption Master - Sargam | Lal Bahadur')
 
 @section('setup_content')
 <div class="container-fluid">

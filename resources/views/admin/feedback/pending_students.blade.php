@@ -4,7 +4,7 @@
 @endphp
 @extends('admin.layouts.master')
 
-@section('title', $pageTitle)
+@section('title', $pageTitle . ' - Sargam | Lal Bahadur')
 
 @section('setup_content')
     <div class="container-fluid px-2 px-sm-3 px-md-4 pb-4 pb-lg-5 pending-feedback-page">
@@ -149,7 +149,7 @@
                             <button type="button" id="exportExcelDetailed"
                                 class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-2 rounded-3 px-3">
                                 <i class="material-symbols-rounded fs-6" aria-hidden="true">view_list</i>
-                               Not given Feedback details
+                               Not givern Feedback details
                             </button>
                             <button type="button" id="btnPrint"
                                 class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2 rounded-3 px-3">

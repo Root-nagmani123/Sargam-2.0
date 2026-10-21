@@ -120,11 +120,7 @@
      */
     $(document).ajaxSuccess(function (event, xhr, settings) {
         var url = (settings && settings.url) ? settings.url : '';
-        // Masters on their own guarded route end in /status/{id} instead of
-        // hitting the generic toggle-status endpoint.
-        if (url.indexOf('toggle-status') === -1
-            && url.indexOf('toggleStatus') === -1
-            && !/\/status\/[^\/?#]+\/?(?:[?#]|$)/.test(url)) {
+        if (url.indexOf('toggle-status') === -1 && url.indexOf('toggleStatus') === -1) {
             return;
         }
 

@@ -13,11 +13,6 @@ use Illuminate\Support\Facades\DB;
 
 class LeaveApplicationService
 {
-    public function normalizeTime(string $time): string
-    {
-        return Carbon::parse($time)->format('H:i:s');
-    }
-
     public function resolveStudentContext(int $userPk): array
     {
         $user = DB::table('user_credentials')->where('pk', $userPk)->first();
@@ -147,40 +142,6 @@ class LeaveApplicationService
     }
 
     /**
-     * PT exemption days already used or pending by a student within the calendar
-     * month containing the given date (excludes the application being edited, if any).
-     *
-     * Correct only while leave is one day at a time. The sum takes each overlapping
-     * application's whole total_days, not the portion falling inside this month, so a
-     * row spanning a month boundary would be counted at full length against both
-     * months. LeaveApplicationController::saveApplication() rejects multi-day
-     * applications, which is what keeps such a row from existing.
-     *
-     * If that restriction is ever lifted, this must sum only the days inside
-     * [$monthStart, $monthEnd] — per-day rows, or a clamped day-count expression —
-     * before the cap can be trusted.
-     */
-    public function getPtMonthlyUsage(
-        int $studentPk,
-        int $coursePk,
-        string $withinDate,
-        ?int $ignoreApplicationPk = null
-    ): float {
-        $monthStart = Carbon::parse($withinDate)->startOfMonth()->toDateString();
-        $monthEnd = Carbon::parse($withinDate)->endOfMonth()->toDateString();
-
-        return (float) LeaveApplication::query()
-            ->where('student_master_pk', $studentPk)
-            ->where('course_master_pk', $coursePk)
-            ->where('leave_type', LeaveApplication::TYPE_PT_EXEMPTION)
-            ->whereIn('status', [LeaveApplication::STATUS_APPROVED, LeaveApplication::STATUS_PENDING])
-            ->whereDate('from_date', '<=', $monthEnd)
-            ->whereDate('to_date', '>=', $monthStart)
-            ->when($ignoreApplicationPk, fn ($q) => $q->where('pk', '!=', $ignoreApplicationPk))
-            ->sum('total_days');
-    }
-
-    /**
      * Latest active stationed-leave config for a course as of a given date
      * (defaults to today). Uses the leave start date when validating applications.
      */
@@ -234,63 +195,24 @@ class LeaveApplicationService
             ->first();
     }
 
-    /**
-     * Earliest date any active stationed-leave configuration covers for a course.
-     *
-     * getActiveStationedLeaveConfig() answers "which config applies on date X" and so
-     * returns the latest row effective on or before X. Back-entry needs the opposite:
-     * the floor of the whole configured window, so a training-section operator can
-     * record leave that started under an earlier (since superseded) configuration.
-     */
-    public function earliestStationedLeaveDate(int $coursePk): ?string
-    {
-        $earliest = StationedLeaveMaster::query()
-            ->where('course_master_pk', $coursePk)
-            ->where('active_inactive', 1)
-            ->min('effective_from');
-
-        return $earliest ? Carbon::parse($earliest)->toDateString() : null;
-    }
-
-    /**
-     * Earliest date any active PT exemption configuration covers for a course/gender.
-     * See earliestStationedLeaveDate() for why this differs from the "active" lookup.
-     */
-    public function earliestPtExemptionDate(int $coursePk, ?string $gender): ?string
-    {
-        $genderLabel = $this->normalizeGender($gender);
-        if (! $genderLabel) {
-            return null;
-        }
-
-        $earliest = ExemptionMaster::query()
-            ->where('course_master_pk', $coursePk)
-            ->where('gender', $genderLabel)
-            ->where('active_inactive', 1)
-            ->min('effective_from');
-
-        return $earliest ? Carbon::parse($earliest)->toDateString() : null;
-    }
-
     public function findOverlappingApplication(
         int $studentPk,
         string $fromDate,
         string $toDate,
         ?int $ignoreApplicationPk = null,
-        ?string $leaveType = null,
-        bool $includeDrafts = true
+        ?string $leaveType = null
     ): ?LeaveApplication {
         $query = LeaveApplication::query()
             ->where('student_master_pk', $studentPk)
-            ->whereIn('status', array_merge($includeDrafts ? [LeaveApplication::STATUS_DRAFT] : [], [
+            ->whereIn('status', [
+                LeaveApplication::STATUS_DRAFT,
                 LeaveApplication::STATUS_PENDING,
                 LeaveApplication::STATUS_APPROVED,
-            ]))
+            ])
             ->when($leaveType !== null, fn ($q) => $q->where('leave_type', $leaveType))
-            // whereDate in every clause: the columns are DATETIME and legacy stationed rows carry times (F-065).
             ->where(function ($q) use ($fromDate, $toDate) {
-                $q->where(fn ($in) => $in->whereDate('from_date', '>=', $fromDate)->whereDate('from_date', '<=', $toDate))
-                    ->orWhere(fn ($in) => $in->whereDate('to_date', '>=', $fromDate)->whereDate('to_date', '<=', $toDate))
+                $q->whereBetween('from_date', [$fromDate, $toDate])
+                    ->orWhereBetween('to_date', [$fromDate, $toDate])
                     ->orWhere(function ($inner) use ($fromDate, $toDate) {
                         $inner->whereDate('from_date', '<=', $fromDate)
                             ->whereDate('to_date', '>=', $toDate);
@@ -321,10 +243,9 @@ class LeaveApplicationService
         string $fromDate,
         string $toDate,
         ?int $ignoreApplicationPk = null,
-        ?string $leaveType = null,
-        bool $includeDrafts = true
+        ?string $leaveType = null
     ): void {
-        $existing = $this->findOverlappingApplication($studentPk, $fromDate, $toDate, $ignoreApplicationPk, $leaveType, $includeDrafts);
+        $existing = $this->findOverlappingApplication($studentPk, $fromDate, $toDate, $ignoreApplicationPk, $leaveType);
 
         if ($existing) {
             throw new \InvalidArgumentException($this->overlapErrorMessage($existing));
@@ -332,16 +253,10 @@ class LeaveApplicationService
     }
 
     /**
-     * Officer trainees may apply for leave starting today only before the configured
-     * PT/cutoff time, minus an optional freeze window (e.g. freeze of 30 minutes on a
-     * 06:00 PT start time closes applications at 05:30).
+     * Officer trainees may apply for leave starting today only before the configured PT/cutoff time.
      */
-    public function isLeaveStartDateAllowedForApply(
-        ?string $cutoffTime,
-        string $fromDate,
-        ?Carbon $now = null,
-        int $freezeBeforeMinutes = 0
-    ): bool {
+    public function isLeaveStartDateAllowedForApply(?string $cutoffTime, string $fromDate, ?Carbon $now = null): bool
+    {
         if (blank($cutoffTime)) {
             return true;
         }
@@ -354,26 +269,25 @@ class LeaveApplicationService
             return true;
         }
 
-        $cutoff = Carbon::parse($today->toDateString() . ' ' . $cutoffTime)
-            ->subMinutes($freezeBeforeMinutes);
+        $cutoff = Carbon::parse($today->toDateString() . ' ' . $cutoffTime);
 
         return $now->lt($cutoff);
     }
 
-    public function applyCutoffErrorMessage(string $leaveTypeLabel, ?string $cutoffTime, int $freezeBeforeMinutes = 0): string
+    public function applyCutoffErrorMessage(string $leaveTypeLabel, ?string $cutoffTime): string
     {
         $timeDisplay = $cutoffTime
-            ? Carbon::parse($cutoffTime)->subMinutes($freezeBeforeMinutes)->format('h:i A')
+            ? Carbon::parse($cutoffTime)->format('h:i A')
             : '';
 
-        return 'Today\'s application freeze time (' . $timeDisplay . ') has passed. '
-            . 'You cannot apply for ' . $leaveTypeLabel . ' starting today. Please select a future start date.';
+        return 'You cannot apply for ' . $leaveTypeLabel . ' starting today after PT timing ('
+            . $timeDisplay . '). Please select a future start date.';
     }
 
     /**
      * Earliest selectable start date considering effective-from and same-day apply cutoff.
      */
-    public function resolveEarliestFromDate(?string $configMinDate, ?string $cutoffTime, int $freezeBeforeMinutes = 0): ?string
+    public function resolveEarliestFromDate(?string $configMinDate, ?string $cutoffTime): ?string
     {
         $candidates = array_filter([
             $configMinDate,
@@ -386,20 +300,20 @@ class LeaveApplicationService
 
         $min = max($candidates);
 
-        if (! $this->isLeaveStartDateAllowedForApply($cutoffTime, now()->toDateString(), null, $freezeBeforeMinutes)) {
+        if (! $this->isLeaveStartDateAllowedForApply($cutoffTime, now()->toDateString())) {
             $min = max($min, now()->addDay()->toDateString());
         }
 
         return $min;
     }
 
-    public function formatCutoffTimeDisplay(?string $cutoffTime, int $freezeBeforeMinutes = 0): ?string
+    public function formatCutoffTimeDisplay(?string $cutoffTime): ?string
     {
         if (blank($cutoffTime)) {
             return null;
         }
 
-        return Carbon::parse($cutoffTime)->subMinutes($freezeBeforeMinutes)->format('h:i A');
+        return Carbon::parse($cutoffTime)->format('h:i A');
     }
 
     /**

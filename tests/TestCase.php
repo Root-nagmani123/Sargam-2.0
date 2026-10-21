@@ -8,12 +8,8 @@ abstract class TestCase extends BaseTestCase
 {
     use CreatesApplication;
 
-    /**
-     * The guard's verdict, worked out once per process: null until checked, '' when
-     * the target is allowed, otherwise the refusal message. Every test re-applies it,
-     * so a refusal fails the whole run instead of only its first test.
-     */
-    private static ?string $targetDatabaseRefusal = null;
+    /** Checked once per process, not once per test. */
+    private static bool $targetDatabaseChecked = false;
 
     /**
      * Refuse to run against a database that looks like a shared environment.
@@ -33,31 +29,25 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
-        if (self::$targetDatabaseRefusal === null) {
-            self::$targetDatabaseRefusal = self::targetDatabaseRefusal();
+        if (self::$targetDatabaseChecked) {
+            return;
         }
 
-        if (self::$targetDatabaseRefusal !== '') {
-            $this->fail(self::$targetDatabaseRefusal);
-        }
-    }
+        self::$targetDatabaseChecked = true;
 
-    /** '' when the configured database may be used, otherwise why not. */
-    private static function targetDatabaseRefusal(): string
-    {
         $database = (string) config('database.connections.'.config('database.default').'.database');
 
         if ($database === '' || $database === ':memory:') {
-            return '';
+            return;
         }
 
         if (preg_match('/(prod|production|live|staging|uat)/i', $database)
             && $database !== env('SARGAM_ALLOW_TESTS_ON')) {
-            return "Refusing to run the test suite against '{$database}': the name looks like a shared "
+            $this->fail(
+                "Refusing to run the test suite against '{$database}': the name looks like a shared "
                 .'environment and these tests write rows. Point DB_DATABASE at a development copy, '
-                ."or set SARGAM_ALLOW_TESTS_ON={$database} if that really is what you want.";
+                ."or set SARGAM_ALLOW_TESTS_ON={$database} if that really is what you want."
+            );
         }
-
-        return '';
     }
 }

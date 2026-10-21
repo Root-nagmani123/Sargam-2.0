@@ -17,32 +17,26 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class MedicalExceptionFacultyViewController extends Controller
 {
-    /** menus.permission_name of this screen (menus row "Medical Exception Faculty"); the sidebar link checks it too. */
-    public const ADMIN_PERMISSION = 'medical_exception_faculty';
 
 
     public function index(Request $request)
     {
         $currentDate = now()->format('Y-m-d');
         
-        // Faculty accounts hold the "Faculty" role; without it here they got the admin view.
-        if (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Faculty')) {
-            $userId = Auth::user()->user_id;
+        if (hasRole('Internal Faculty') || hasRole('Guest Faculty')) {
+            $employeeMasterPk = Auth::user()->user_id;
         
             $facultyPk = DB::table('faculty_master')
-                ->where(login_faculty_key_column(), $userId)
+                ->where('employee_master_pk', $employeeMasterPk)
                 ->value('pk');
         
             // Faculty Login View - Show only their courses
             return $this->facultyLoginView($request, $facultyPk, $currentDate);
+        }else{
+            // Admin View - Show all faculties with filters (only for admin users)
+            return $this->adminView($request, $currentDate);
         }
-
-        // Admin View lists every faculty's trainees and exemptions, so it needs the
-        // screen's permission (Super Admin always passes); the route itself is
-        // auth-only because the faculty branch above must stay reachable.
-        abort_unless(hasMenuPermission(self::ADMIN_PERMISSION), 403, 'You do not have permission to open this screen.');
-
-        return $this->adminView($request, $currentDate);
+        
     }
 
     /**
@@ -54,9 +48,15 @@ class MedicalExceptionFacultyViewController extends Controller
   $courseFilter = $request->get('course');
   $dateFromFilter = $request->get('date_from');
 
-  // Courses the faculty is CC or ACC of (PR #335 F-008 rule 3). A login with no
-  // faculty_master row coordinates nothing.
-  $courseIds = $facultyPk === null ? [] : CourseCordinatorMaster::courseIdsForFaculty((int) $facultyPk);
+  // Get course IDs first to optimize the main query
+  $courseIds = DB::table('course_coordinator_master')
+      ->where('Coordinator_name', $facultyPk)
+      ->orWhereRaw('FIND_IN_SET(?, Assistant_Coordinator_name)', [$facultyPk])
+      ->pluck('courses_master_pk')
+      ->unique()
+      ->filter()
+      ->values()
+      ->toArray();
 
   if (empty($courseIds)) {
       $data = collect();

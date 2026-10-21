@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Forms')
+@section('title', 'Forms - Sargam | Lal Bahadur')
 
 @push('styles')
 <style>

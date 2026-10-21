@@ -41,8 +41,7 @@ Sargam 2.0 is a robust enterprise resource management system that provides compr
   - Block administration
 
 - 📚 **Course & Discipline Management**
-  - Course master data administration with UX4G redesign (hero detail view, branded exports)
-  - Group mapping and course group type management
+  - Course master data administration
   - Discipline categorization
   - Eligibility criteria configuration
 
@@ -52,8 +51,8 @@ Sargam 2.0 is a robust enterprise resource management system that provides compr
   - Fine-grained permission management
 
 - 📊 **Data Management**
-  - Interactive DataTables with server-side processing (`programme-dt-*` toolbar pattern)
-  - Branded Excel / PDF / Print exports — logo, navy header, record count, zebra rows; column visibility shared across all formats
+  - Interactive DataTables with server-side processing
+  - Excel import/export functionality
   - Advanced filtering and search
   - Bulk operations support
 
@@ -85,7 +84,7 @@ Sargam 2.0 is a robust enterprise resource management system that provides compr
 ### Key Packages
 - **LDAP**: Adldap2 Laravel
 - **Permissions**: Spatie Laravel Permission
-- **Excel**: Maatwebsite Excel (branded exports via `BrandedGridExport` + `ExportsBrandedGrid` trait)
+- **Excel**: Maatwebsite Excel
 - **PDF**: DOMPDF, MPDF
 - **Storage**: Azure Blob Storage
 - **Logging**: Arcanedev Log Viewer
@@ -160,18 +159,6 @@ php artisan serve
 Visit `http://localhost:8000` in your browser.
 
 ## ⚙️ Configuration
-
-### Notice feed release prerequisite
-
-Follow the [Notice audience release runbook](docs/deploy-notes-notice-audience.md)
-before activating the new notice feed. The audience schema migration and
-backfill must complete on the target database **before code activation**;
-`notice_audience_map` must exist and the migrated dashboard/feed must pass
-authenticated smoke checks. Code-first deployment is not permitted (F-018).
-Notice targeting is **forward-fix only** (F-055): retain its migrations and
-audience data. An exceptional code rollback requires approved notice
-deactivation and visibility/write-freeze gates in the runbook before old code
-is activated; retaining the audience table alone does not make rollback safe.
 
 ### LDAP/Active Directory Setup
 Update `.env` with your LDAP credentials:
@@ -253,13 +240,9 @@ npx playwright show-report
 Sargam-2.0/
 ├── app/
 │   ├── Console/         # Artisan commands
-│   ├── DataTables/      # DataTable classes (Yajra; programme-dt-* pattern)
-│   ├── Exports/
-│   │   └── BrandedGridExport.php   # Generic branded .xlsx (logo, navy header, zebra rows)
-│   ├── Http/
-│   │   ├── Controllers/            # Feature controllers
-│   │   └── Concerns/
-│   │       └── ExportsBrandedGrid.php  # Shared Print/PDF/Excel export trait
+│   ├── DataTables/      # DataTable classes
+│   ├── Exports/         # Excel export classes
+│   ├── Http/            # Controllers, Middleware
 │   ├── Imports/         # Excel import classes
 │   ├── Models/          # Eloquent models
 │   ├── Services/        # Business logic services
@@ -268,19 +251,13 @@ Sargam-2.0/
 ├── database/
 │   ├── migrations/      # Database migrations
 │   └── seeders/         # Database seeders
-├── public/
-│   └── css/
-│       └── programme-admin.css  # prog-* BEM styles for Course Master module
+├── public/              # Public assets
 ├── resources/
-│   ├── css/             # Global stylesheets
+│   ├── css/             # Stylesheets
 │   ├── js/              # JavaScript files
-│   └── views/
-│       └── admin/
-│           └── exports/
-│               ├── branded_pdf.blade.php    # DomPDF-safe branded header
-│               └── branded_print.blade.php  # Browser-print branded header
+│   └── views/           # Blade templates
 ├── routes/
-│   ├── web.php          # Web routes (includes programme print/pdf/excel exports)
+│   ├── web.php          # Web routes
 │   ├── api.php          # API routes
 │   ├── master.php       # Master data routes
 │   └── fc_route.php     # Faculty routes
@@ -315,19 +292,6 @@ For support and queries:
 - Create an issue in the repository
 - Contact the development team
 - Check the documentation
-
-## 🎨 UI Design System
-
-Sargam 2.0 uses **UX4G** (a Bootstrap 5 fork) as its CSS framework. Modules follow the new-design standard established by the Attendance page:
-
-| Pattern | Description |
-|---|---|
-| `programme-dt-*` toolbar | Standard DataTable toolbar: search input, filter chips, column-visibility toggle, export buttons |
-| `prog-*` BEM namespace | Module-scoped styles in `public/css/programme-admin.css` |
-| `prog-act-group` | Icon-over-label action stacks (View / Edit / Toggle / Delete) |
-| `prog-hero` | Detail-page hero: record name as `<h1>`, headline facts, status badge |
-| Branded exports | `BrandedGridExport` + `ExportsBrandedGrid` — one column definition drives Print, PDF and Excel |
-| Asset versioning | `?v=filemtime(...)` cache-busting on all module CSS/JS assets |
 
 ---
 

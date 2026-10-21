@@ -55,14 +55,9 @@ class StockSummaryViewExport implements FromView, WithStyles, WithEvents, WithTi
         $sheet->getStyle('A2')->getFont()->setBold(true)->setSize(12);
         $sheet->getStyle('A3')->getFont()->setSize(10);
 
-        // Row 4 holds the valuation note; row 5 is blank.
-        $sheet->mergeCells('A4:P4');
-        $sheet->getStyle('A4')->getAlignment()->setHorizontal('center')->setWrapText(true);
-        $sheet->getStyle('A4')->getFont()->setItalic(true)->setSize(9);
-
-        // Table header (rows 6/7 in the view)
-        $headerRange1 = 'A6:P6';
-        $headerRange2 = 'A7:P7';
+        // Table header (row 5/6 in the view)
+        $headerRange1 = 'A5:P5';
+        $headerRange2 = 'A6:P6';
         $sheet->getStyle($headerRange1)->getFont()->setBold(true);
         $sheet->getStyle($headerRange2)->getFont()->setBold(true);
         $sheet->getStyle($headerRange1)->getAlignment()->setHorizontal('center');
@@ -70,7 +65,7 @@ class StockSummaryViewExport implements FromView, WithStyles, WithEvents, WithTi
 
         // Borders for the table
         $lastRow    = $sheet->getHighestRow();
-        $tableRange = "A6:P{$lastRow}";
+        $tableRange = "A5:P{$lastRow}";
         $sheet->getStyle($tableRange)->getBorders()->getAllBorders()
             ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN)
             ->getColor()->setARGB('FFDEE2E6');
@@ -85,7 +80,7 @@ class StockSummaryViewExport implements FromView, WithStyles, WithEvents, WithTi
         }
 
         // Right-align numeric columns (E to P)
-        $sheet->getStyle("E6:P{$lastRow}")
+        $sheet->getStyle("E5:P{$lastRow}")
             ->getAlignment()->setHorizontal('right');
 
         return [
@@ -101,7 +96,7 @@ class StockSummaryViewExport implements FromView, WithStyles, WithEvents, WithTi
                 $lastRow = $sheet->getHighestRow();
 
                 // Freeze header region (after header + column titles)
-                $sheet->freezePane('A8');
+                $sheet->freezePane('A7');
 
                 // Landscape + print area (optional)
                 $sheet->getPageSetup()

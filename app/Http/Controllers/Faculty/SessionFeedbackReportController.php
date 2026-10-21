@@ -31,22 +31,9 @@ class SessionFeedbackReportController extends Controller
         }
 
         $programs = $this->reportService->getPrograms($facultyPk, $courseType);
-
-        // The page normally opens on the newest programme. program_id=all opens it
-        // on All Programmes instead — the dashboard's feedback card counts every
-        // running course, so the page it opens has to start on the same footing or
-        // the card and "Showing record 1 of N" disagree.
-        $requestedProgram = $request->input('program_id');
-
-        if ($requestedProgram === 'all') {
-            $currentProgram = '';
-        } elseif ($requestedProgram !== null && $requestedProgram !== '' && $programs->has((int) $requestedProgram)) {
-            $currentProgram = (int) $requestedProgram;
-        } else {
-            $currentProgram = $courseType === 'current'
-                ? $this->reportService->getDefaultProgramId($facultyPk)
-                : $this->defaultArchivedProgramId($facultyPk);
-        }
+        $currentProgram = $courseType === 'current'
+            ? $this->reportService->getDefaultProgramId($facultyPk)
+            : $this->defaultArchivedProgramId($facultyPk);
 
         return view('admin.feedback.faculty_view', [
             'programs' => $programs,

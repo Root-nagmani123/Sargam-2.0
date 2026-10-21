@@ -26,10 +26,7 @@
                                rel="noopener noreferrer">
                                 <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Open video link
                             </a>
-                            {{-- Downloading is the admin's switch to give; watching above
-                                 is not gated by it. --}}
-                            @if(($document->video_download_enabled ?? true)
-                                && preg_match('/\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i', $document->videolink))
+                            @if(preg_match('/\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i', $document->videolink))
                                 <a href="{{ $document->videolink }}"
                                    class="btn btn-sm btn-primary"
                                    download>

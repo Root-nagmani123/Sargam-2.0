@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Subject')
+@section('title', 'Subject - Sargam | Lal Bahadur')
 
 @section('setup_content')
 <div class="container-fluid py-5">

@@ -5,15 +5,14 @@ namespace App\Http\Controllers\Admin\Master;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\ClassSessionMaster;
-use App\DataTables\ClassSessionMasterDataTable;
 use App\Http\Requests\ClassSessionMasterRequest;
 
 class ClassSessionMasterController extends Controller
 {
-    // Server-side grid: search, sorting, page size and paging (ClassSessionMasterDataTable).
-    function index(ClassSessionMasterDataTable $dataTable)
-    {
-        return $dataTable->render('admin.master.class_session_master.index');
+    function index() {
+
+        $classSessionMaster = ClassSessionMaster::paginate(10);
+        return view('admin.master.class_session_master.index', compact('classSessionMaster'));
     }
     function create() {
         return view('admin.master.class_session_master.create');

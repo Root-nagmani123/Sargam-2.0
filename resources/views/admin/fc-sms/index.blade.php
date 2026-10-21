@@ -146,13 +146,11 @@
                     <div>
                         <label for="fcSmsFormFilter" class="fc-sms-field-label">Template Name</label>
                         <select name="form_id" id="fcSmsFormFilter" class="form-select">
-                            @forelse(($forms ?? []) as $form)
+                            @foreach(($forms ?? []) as $form)
                                 <option value="{{ (int) $form->id }}" {{ (int) ($selectedFormId ?? 0) === (int) $form->id ? 'selected' : '' }}>
                                     {{ $form->form_name }}
                                 </option>
-                            @empty
-                                <option value="" selected disabled>No active course</option>
-                            @endforelse
+                            @endforeach
                         </select>
                     </div>
                     <div class="ds-card ds-card--accent" style="box-shadow:none;">

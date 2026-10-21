@@ -158,12 +158,9 @@
                                   <li class="sidebar-item"><a class="sidebar-link" href="{{ route('faculty.mdo.escort.exception.view') }}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">OT - MDO / Escort Duty</span>
                                 </a></li>
-                                {{-- Same rule as MedicalExceptionFacultyViewController::index(): anyone else gets 403. --}}
-                                @if (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Faculty') || hasMenuPermission(\App\Http\Controllers\Admin\MedicalExceptionFacultyViewController::ADMIN_PERMISSION))
                                   <li class="sidebar-item"><a class="sidebar-link" href="{{ route('medical.exception.faculty.view') }}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">OT - Medical Exemption</span>
                                 </a></li>
-                                @endif
                                   <li class="sidebar-item"><a class="sidebar-link" href="{{ route('faculty.notice.memo.view') }}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">OT - Memo / Notice</span>
                                 </a></li>

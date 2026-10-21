@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Edit Form')
+@section('title', 'Edit Form - Sargam | Lal Bahadur')
 
 @section('setup_content')
     @include('admin.partials.choices-bootstrap5')

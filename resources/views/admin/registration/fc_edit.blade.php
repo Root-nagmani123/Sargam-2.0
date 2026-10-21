@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Edit Form Fields')
+@section('title', 'Edit Form Fields - Sargam | Lal Bahadur')
 @section('content')
     <div class="container-fluid">
         <x-session_message />
