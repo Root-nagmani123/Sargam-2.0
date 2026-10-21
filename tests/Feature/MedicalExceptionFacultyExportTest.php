@@ -237,6 +237,33 @@ class MedicalExceptionFacultyExportTest extends TestCase
         $this->assertStringContainsString('Course: Mefx Header Course A', $own);
     }
 
+    // ---------- F-010: a non-digit course filter is ignored everywhere ----------
+
+    public function test_a_course_pk_with_trailing_text_is_ignored_by_rows_and_header_alike(): void
+    {
+        [$faculty, $courseA] = $this->facultyWithCourse('Mefx Suffix Course A');
+        // A second course of the same faculty, so a filter the query applied would drop its row.
+        $courseB = DB::table('course_master')->insertGetId([
+            'course_name' => 'Mefx Suffix Course B', 'course_year' => (int) now()->format('Y'),
+            'active_inactive' => 1, 'end_date' => now()->addDays(30),
+        ]);
+        DB::table('course_coordinator_master')->insert([
+            'courses_master_pk' => $courseB, 'created_date' => now(),
+            'Coordinator_name' => DB::table('course_coordinator_master')->where('courses_master_pk', $courseA)->value('Coordinator_name'),
+        ]);
+        $this->exemption($courseA, 'Mefx Suffix Student A');
+        $this->exemption($courseB, 'Mefx Suffix Student B');
+
+        $response = $this->export($faculty, 'course='.$courseA.'abc');
+        $this->assertStringNotContainsString('Course: ', $response->streamedContent());
+        [$header, $rows] = $this->csvRows($response);
+        $this->assertEqualsCanonicalizing(['Mefx Suffix Student A', 'Mefx Suffix Student B'], $this->column($rows, $header, 'Student Name'));
+
+        [$user, $sessionRoles] = $faculty;
+        $screen = $this->actingAs($user)->withSession(['user_roles' => $sessionRoles])->get(self::SCREEN.'?course='.$courseA.'abc')->assertOk();
+        $this->assertNull($screen->viewData('courseFilter'));
+    }
+
     // ---------- F-003: a malformed date never 500s ----------
 
     public function test_a_malformed_date_is_ignored_and_a_valid_one_still_filters(): void

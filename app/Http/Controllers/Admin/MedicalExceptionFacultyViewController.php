@@ -239,8 +239,9 @@ class MedicalExceptionFacultyViewController extends Controller
     {
   // Get filter parameters
   $courseFilter = $request->get('course');
-  // course[]=x is ignored like a malformed date (the export's filter line cast it to string: 500).
-  $courseFilter = is_scalar($courseFilter) ? $courseFilter : null;
+  // Only a pk of digits filters; anything else (course[]=x, "5abc") is ignored like a malformed date,
+  // since MySQL reads "5abc" as 5 while the dropdown and export header do not.
+  $courseFilter = is_string($courseFilter) && ctype_digit($courseFilter) ? $courseFilter : null;
   $dateFromFilter = $request->get('date_from');
   // Only a real Y-m-d date filters; anything else is ignored like an empty field
   // (raw input reached Carbon::parse() in the export header and threw a 500).

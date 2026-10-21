@@ -181,6 +181,4 @@ class OtPendingFeedbackCountTest extends TestCase
             $this->assertSame($columns, $index->sortBy('Seq_in_index')->pluck('Column_name')->all());
         }
     }
-    
 }
-
