@@ -472,7 +472,7 @@
         city_id: "{{ old('city_id', $vehicle->city_id) }}"
     };
 </script>
-<script src="{{ asset('Modules/protocol/js/state_city.js') }}"></script>
+<script src="{{ asset('modules/protocol/js/state_city.js') }}"></script>
 @endpush
 
 @push('scripts')
