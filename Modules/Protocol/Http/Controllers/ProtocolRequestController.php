@@ -166,7 +166,8 @@ class ProtocolRequestController extends Controller
         } catch (\Throwable $e) {
             report($e);
 
-            $message = 'Something went wrong while submitting your request. Please try again, or contact IT support if the problem continues.';
+            // $message = 'Something went wrong while submitting your request. Please try again, or contact IT support if the problem continues.';
+            $message = $e->getMessage();
 
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([
