@@ -35,9 +35,13 @@ class UserRoleMaster extends Model
                 $query->where('active_inactive', 1)
                     ->orWhereNull('active_inactive');
             })
+            ->orderBy('pk')
             ->select('pk', 'user_role_display_name')
             ->get()
             ->filter(fn ($row) => isset($roleKeys[RoleNames::normalize((string) $row->user_role_display_name)]))
+            // One option per role: if several rows match the same role (e.g. "Super Admin"
+            // and "Super-Admin"), keep the oldest one. No row is changed or deleted.
+            ->unique(fn ($row) => RoleNames::normalize((string) $row->user_role_display_name))
             ->pluck('user_role_display_name', 'pk');
     }
 
@@ -54,6 +58,7 @@ class UserRoleMaster extends Model
                 $query->where('active_inactive', 1)
                     ->orWhereNull('active_inactive');
             })
+            ->orderBy('pk')
             ->get()
             ->first(fn ($row) => RoleNames::normalize((string) $row->user_role_display_name) === $key);
 
@@ -86,6 +91,7 @@ class UserRoleMaster extends Model
                 $query->where('active_inactive', 1)
                     ->orWhereNull('active_inactive');
             })
+            ->orderBy('pk')
             ->get();
 
         $old = $rows->first(fn ($row) => RoleNames::normalize((string) $row->user_role_display_name) === $oldKey);
