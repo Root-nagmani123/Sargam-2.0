@@ -835,6 +835,8 @@ $(function () {
         if (e.key === 'Escape' && toolbar.classList.contains('is-compact') && input && input.value === '') {
             setSearchOpen(false);
             searchToggle.focus();
+            // Handled here: the document-level sidebar Escape handler would move focus away.
+            e.stopPropagation();
         }
     });
 

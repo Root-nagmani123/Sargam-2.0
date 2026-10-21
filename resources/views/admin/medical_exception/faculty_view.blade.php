@@ -100,25 +100,32 @@
                     action="{{ route('medical.exception.faculty.view') }}">
                     <span class="programme-dt-filters-label">Filters</span>
 
-                    <div class="programme-dt-filter-select">
-                        <select name="course" id="filter_course" class="form-select mef-filter-control"
-                            aria-label="Course Name" onchange="this.form.submit()">
-                            <option value="">Course Name</option>
-                            @foreach($courses ?? [] as $course)
-                                <option value="{{ $course->pk }}" {{ (isset($courseFilter) && $courseFilter == $course->pk) ? 'selected' : '' }}>
-                                    {{ $course->course_name }}
-                                </option>
-                            @endforeach
-                        </select>
+                    {{-- No onchange submit: arrow keys and partly typed dates would navigate (WCAG 3.2.2). --}}
+                    <div class="d-flex align-items-center gap-2">
+                        <label for="filter_course" class="form-label mb-0 fw-semibold">Course</label>
+                        <div class="programme-dt-filter-select">
+                            <select name="course" id="filter_course" class="form-select mef-filter-control">
+                                <option value="">All Courses</option>
+                                @foreach($courses ?? [] as $course)
+                                    <option value="{{ $course->pk }}" {{ (isset($courseFilter) && $courseFilter == $course->pk) ? 'selected' : '' }}>
+                                        {{ $course->course_name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
 
-                    <div class="programme-dt-filter-select">
-                        <input type="date" name="date_from" id="filter_date_from"
-                            class="form-control mef-filter-control" aria-label="Date From"
-                            title="Exemptions from this date" value="{{ $dateFromFilter ?? '' }}"
-                            onchange="this.form.submit()">
+                    <div class="d-flex align-items-center gap-2">
+                        <label for="filter_date_from" class="form-label mb-0 fw-semibold">Date From</label>
+                        <div class="programme-dt-filter-select">
+                            <input type="date" name="date_from" id="filter_date_from"
+                                class="form-control mef-filter-control" value="{{ $dateFromFilter ?? '' }}">
+                        </div>
                     </div>
 
+                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
+                        <i class="bi bi-funnel" aria-hidden="true"></i><span>Filter</span>
+                    </button>
                     <a href="{{ route('medical.exception.faculty.view') }}"
                         class="btn programme-dt-btn-reset d-inline-flex align-items-center">Reset Filters</a>
                 </form>
@@ -169,7 +176,8 @@
                                     <td data-order="{{ $from?->timestamp ?? 0 }}">{{ $from ? $from->format('d-m-Y') : 'N/A' }}</td>
                                     <td>{{ $from ? $from->format('h:i A') : 'N/A' }}</td>
                                     <td>{{ $record->ot_code ?? 'N/A' }}</td>
-                                    <td>
+                                    {{-- Explicit sort/search text, so the export (sortLikeGrid / filterLikeGrid) can mirror it. --}}
+                                    <td data-order="{{ $record->medical_document ? 'View' : 'N/A' }}" data-search="{{ $record->medical_document ? 'View' : 'N/A' }}">
                                         @if($record->medical_document)
                                             <a href="{{ asset('storage/' . $record->medical_document) }}" target="_blank" rel="noopener"
                                                 class="d-inline-flex align-items-center gap-1 fw-semibold text-primary text-decoration-none">
@@ -225,6 +233,9 @@ $(function () {
     // Search box + footer are relocated into the slots above by datatable-global-ui.js.
     var dt = $('#mefTable').DataTable({
         order: [],
+        // Ties fall back to the server order (S.No.'s cached value), not the previous
+        // sort, so the export's ?order= reproduces the grid exactly (sortLikeGrid()).
+        orderFixed: { post: [[0, 'asc']] },
         pageLength: 10,
         autoWidth: false,
         columnDefs: [{ targets: 0, orderable: false, searchable: false }],
@@ -243,7 +254,8 @@ $(function () {
     /* ---------- Export links follow the grid ----------
      * Positional map: header index -> export key in
      * MedicalExceptionFacultyViewController::exportColumnDefs(). '' = not in the
-     * export (Medical Document). Adding a table column means adding it here too. */
+     * export (Medical Document), which still sorts as 'document' (?order=).
+     * Adding a table column means adding it here too. */
     var MEF_EXPORT_COLUMN_KEYS = ['sno', 'course', 'faculty', 'topics', 'student', 'date', 'time',
         'ot_code', '', 'application_type', 'exemption_count', 'submitted_on'];
     var MEF_EXPORT_COL_COUNT = MEF_EXPORT_COLUMN_KEYS.filter(Boolean).length;
@@ -256,6 +268,9 @@ $(function () {
             if (key && this.visible()) { keys.push(key); }
         });
         var term = dt.search() || '';
+        var order = dt.order().map(function (o) {
+            return (MEF_EXPORT_COLUMN_KEYS[o[0]] || 'document') + ':' + o[1];
+        }).join(',');
 
         MEF_EXPORT_LINK_IDS.forEach(function (id) {
             var link = document.getElementById(id);
@@ -265,6 +280,8 @@ $(function () {
 
             params.delete('q');
             if (term !== '') { params.set('q', term); }
+            params.delete('order');
+            if (order !== '') { params.set('order', order); }
             params.delete('cols');
             // No ?cols= while nothing is hidden — the server reads that as "every column".
             if (keys.length !== MEF_EXPORT_COL_COUNT) { params.set('cols', keys.join(',')); }
@@ -273,7 +290,7 @@ $(function () {
             link.href = base + (qs ? '?' + qs : '');
         });
     }
-    dt.on('search.dt', mefUpdateExportLinks);
+    dt.on('search.dt order.dt', mefUpdateExportLinks);
 
     /* ---------- Column visibility (stores LABELS, not indices — docs/column-visibility.md) ---------- */
     var MEF_COLVIS_KEY = 'sargam.medicalExemptionFaculty.hiddenCols.{{ auth()->id() ?? 'guest' }}';
