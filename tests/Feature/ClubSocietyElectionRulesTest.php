@@ -139,9 +139,12 @@ class ClubSocietyElectionRulesTest extends TestCase
     {
         $this->assertSame(['Asha'], $this->electedNames());
 
+        // Withdrawal is only allowed while the result is unpublished (F-007 rule).
+        DB::table('election_drive')->where('pk', 1)->update(['result_status' => 0]);
         $minPk = DB::table('nomination')->where('nominee_student_pk', self::ASHA)->min('pk');
         $this->postJson(route('master.nomination.drive.nomination.withdraw', ['id' => encrypt($minPk)]))
             ->assertOk();
+        DB::table('election_drive')->where('pk', 1)->update(['result_status' => 1]);
 
         $this->assertSame(
             ['withdrawn', 'withdrawn', 'withdrawn'],
@@ -549,7 +552,7 @@ class ClubSocietyElectionRulesTest extends TestCase
         $this->postJson(route('master.nomination.drive.nomination.withdraw', ['id' => encrypt($minPk)]))->assertOk();
     }
 
-    public function test_after_publish_a_withdrawal_outside_the_tie_keeps_the_officer_bearer(): void
+    public function test_after_publish_a_withdrawal_is_refused_and_the_officer_bearer_stays(): void
     {
         $this->makeTieWithOutsider();
         $this->drawTie()->assertOk();
@@ -557,7 +560,13 @@ class ClubSocietyElectionRulesTest extends TestCase
         DB::table('election_drive')->where('pk', 1)->update(['result_status' => 1]);
         $this->assertSame([$winner], $this->electedNames());
 
-        $this->withdraw(104);
+        // Neither an outsider nor the drawn winner can withdraw once published.
+        foreach ([104, $winner === 'Asha' ? self::ASHA : self::BHARAT] as $nominee) {
+            $minPk = DB::table('nomination')->where('nominee_student_pk', $nominee)->min('pk');
+            $this->postJson(route('master.nomination.drive.nomination.withdraw', ['id' => encrypt($minPk)]))
+                ->assertStatus(422);
+        }
+        $this->assertSame(0, DB::table('nomination')->where('status', 'withdrawn')->count());
 
         $this->assertSame(1, DB::table('election_drive_tie_pick')->count());
         $this->assertSame([$winner], $this->electedNames());
@@ -588,6 +597,28 @@ class ClubSocietyElectionRulesTest extends TestCase
 
         $this->assertTrue($this->resultRows()->first()->tie_drawn);
         $this->drawTie()->assertStatus(422);
+    }
+
+    // ---- F-007 rule: no withdrawal once the result is published ------------
+
+    public function test_no_withdrawal_after_the_result_is_published(): void
+    {
+        $minPk = DB::table('nomination')->where('nominee_student_pk', self::ASHA)->min('pk');
+
+        $this->postJson(route('master.nomination.drive.nomination.withdraw', ['id' => encrypt($minPk)]))
+            ->assertStatus(422);
+
+        $this->assertSame(0, DB::table('nomination')->where('status', 'withdrawn')->count());
+        $this->assertSame(['Asha'], $this->electedNames());
+    }
+
+    public function test_withdrawal_works_again_once_the_result_is_unpublished(): void
+    {
+        DB::table('election_drive')->where('pk', 1)->update(['result_status' => 0]);
+        $minPk = DB::table('nomination')->where('nominee_student_pk', self::ASHA)->min('pk');
+
+        $this->postJson(route('master.nomination.drive.nomination.withdraw', ['id' => encrypt($minPk)]))
+            ->assertOk();
     }
 
     // ---- F-008: rollbacks never take data with them -----------------------

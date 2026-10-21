@@ -307,7 +307,7 @@ class NominationDriveController extends Controller
             'drive'     => $drive,
             'driveId'   => $id,
             'rows'      => self::nomineeRows($drive->pk),
-            'canWithdraw' => (bool) $drive->nomination_withdraw_status,
+            'canWithdraw' => (bool) $drive->nomination_withdraw_status && ! self::resultPublished($drive->pk),
         ]);
     }
 
@@ -370,6 +370,10 @@ class NominationDriveController extends Controller
             return $this->failure($request, 'Withdrawal is disabled for this drive.', 422);
         }
 
+        if (self::resultPublished($nomination->nomination_drive_pk)) {
+            return $this->failure($request, 'The election result is published; nominations can no longer be withdrawn.', 422);
+        }
+
         $withdrawn = Nomination::where('nomination_drive_pk', $nomination->nomination_drive_pk)
             ->where('club_society_master_pk', $nomination->club_society_master_pk)
             ->where('club_society_role_master_pk', $nomination->club_society_role_master_pk)
@@ -388,6 +392,22 @@ class NominationDriveController extends Controller
         ]);
 
         return response()->json(['status' => 'success', 'message' => 'Nomination withdrawn.']);
+    }
+
+    /**
+     * Whether an active election on this nomination drive has a published result.
+     *
+     * Module owner's rule (F-007): no withdrawal once the result is published, so
+     * a published Officer Bearer can never change underneath the election. To
+     * withdraw anyway, unpublish the result first.
+     */
+    private static function resultPublished($nominationDrivePk): bool
+    {
+        return DB::table('election_drive')
+            ->where('nomination_drive_pk', $nominationDrivePk)
+            ->where('active_inactive', 1)
+            ->where('result_status', 1)
+            ->exists();
     }
 
     /**
