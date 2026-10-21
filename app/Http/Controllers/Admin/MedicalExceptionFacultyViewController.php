@@ -188,8 +188,14 @@ class MedicalExceptionFacultyViewController extends Controller
         $parts = [];
 
         if (!empty($payload['courseFilter'])) {
-            // Not from $payload['courses']: the admin dropdown lists running courses only.
-            $parts[] = 'Course: '.(CourseMaster::where('pk', $payload['courseFilter'])->value('course_name') ?? $payload['courseFilter']);
+            $courseName = isset($payload['allCourses'])
+                // Admin view: its dropdown lists running courses only, so look the name up.
+                ? (CourseMaster::where('pk', $payload['courseFilter'])->value('course_name') ?? $payload['courseFilter'])
+                // Faculty view: name only their own courses; any other pk matched no rows.
+                : collect($payload['courses'])->firstWhere('pk', $payload['courseFilter'])?->course_name;
+            if ($courseName !== null) {
+                $parts[] = 'Course: '.$courseName;
+            }
         }
         if (!empty($payload['dateFromFilter'])) {
             $parts[] = 'From: '.self::formatDate($payload['dateFromFilter'], 'd-m-Y');

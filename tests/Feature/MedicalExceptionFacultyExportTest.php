@@ -221,6 +221,22 @@ class MedicalExceptionFacultyExportTest extends TestCase
         $this->assertContains('Mefx Admin Student B', $exported);
     }
 
+    // ---------- F-009: the header names only the faculty's own course ----------
+
+    public function test_the_header_never_names_another_facultys_course(): void
+    {
+        [$facultyA, $courseA] = $this->facultyWithCourse('Mefx Header Course A');
+        [, $courseB] = $this->facultyWithCourse('Mefx Header Course B');
+        $this->exemption($courseA, 'Mefx Header Student A');
+
+        $foreign = $this->export($facultyA, 'course='.$courseB)->streamedContent();
+        $this->assertStringNotContainsString('Mefx Header Course B', $foreign);
+        $this->assertStringNotContainsString('Course: ', $foreign);
+
+        $own = $this->export($facultyA, 'course='.$courseA)->streamedContent();
+        $this->assertStringContainsString('Course: Mefx Header Course A', $own);
+    }
+
     // ---------- F-003: a malformed date never 500s ----------
 
     public function test_a_malformed_date_is_ignored_and_a_valid_one_still_filters(): void
