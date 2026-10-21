@@ -9,7 +9,7 @@
     @include('protocol::partials.style')
 
     @push('styles')
-        <link rel="stylesheet" href="{{ asset('Modules/protocol/css/driver_master.css') }}">
+        <link rel="stylesheet" href="{{ asset('modules/protocol/css/driver_master.css') }}">
     @endpush
 
     <div class="container-fluid profile-page">
@@ -678,7 +678,7 @@
 
     </script>
 
-    <script src="{{ asset('Modules/protocol/js/driver_master.js') }}"></script>
-    <script src="{{ asset('Modules/protocol/js/state_city.js') }}"></script>
+    <script src="{{ asset('modules/protocol/js/driver_master.js') }}"></script>
+    <script src="{{ asset('modules/protocol/js/state_city.js') }}"></script>
 
 @endpush

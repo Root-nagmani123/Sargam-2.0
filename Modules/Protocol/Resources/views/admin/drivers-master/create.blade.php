@@ -9,7 +9,7 @@
     @include('protocol::partials.style')
 
     @push('styles')
-        <link rel="stylesheet" href="{{ asset('Modules/protocol/css/driver_master.css') }}">
+        <link rel="stylesheet" href="{{ asset('modules/protocol/css/driver_master.css') }}">
     @endpush
 
     <div class="container-fluid profile-page">
@@ -235,7 +235,7 @@
                             <div class="col-md-4 mb-3">
 
                                 <label for="helperOne" class="form-label">
-                                    Helper One
+                                    Helper One (Name)
                                 </label>
 
                                 <input type="text" class="form-control @error('helper_one') is-invalid @enderror"
@@ -258,7 +258,7 @@
                             <div class="col-md-4 mb-3">
 
                                 <label for="helperTwo" class="form-label">
-                                    Helper Two
+                                    Helper Two  (Name)
                                 </label>
 
                                 <input type="text" class="form-control @error('helper_two') is-invalid @enderror"
