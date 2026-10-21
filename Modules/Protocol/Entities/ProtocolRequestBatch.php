@@ -16,6 +16,7 @@ class ProtocolRequestBatch extends Model
         'employee_department',
         'course_team_to_notify',
         'purpose',
+        'other_purpose',
         'escort_required',
         'is_faculty',
     ];

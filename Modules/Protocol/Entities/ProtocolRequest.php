@@ -182,7 +182,6 @@ class ProtocolRequest extends Model
     {
         DB::transaction(function () use ($protocolStaffId, $recommendedToId, $remarks) {
             $recommendedToName = User::find($recommendedToId)->name ?? "User #{$recommendedToId}";
-
             $this->update([
                 'status' => self::STATUS_RECOMMENDED,
                 'current_stage' => "Recommended to {$recommendedToName}",

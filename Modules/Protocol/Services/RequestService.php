@@ -135,10 +135,7 @@ class RequestService
             ->addColumn('created_at', fn($e) => $e->created_at->format('d-m-Y') ?: '-')
             ->addColumn('status', fn($e) => view('protocol::components.status-badge', ['status' => $e->status])->render())
             ->addColumn('action', function ($row) {
-                return '
-                    <a href="' . route('protocol.requests.show', $row->id) . '" class="btn btn-sm btn-primary">
-                        View <i class="bi bi-chevron-right"></i>
-                    </a>';
+                return $this->actionButtons($row);
             })
             ->rawColumns(['request_type', 'details', 'status', 'action'])
             ->addIndexColumn()
@@ -147,8 +144,18 @@ class RequestService
 
     private function actionButtons($data)
     {
-        $editUrl = route('protocol.approval.review', $data->id);
-        return '<a href="' . $editUrl . '" class="btn btn-sm btn-outline-saffron">Review <i class="bi bi-chevron-right"></i></a>';
+        $editUrl = route('protocol.requests.show', $data->id);
+        $btn = '<a href="' . $editUrl . '" class="btn btn-sm btn-primary">
+                        View <i class="bi bi-chevron-right"></i>
+                    </a>';
+        
+        if($data->status == 'pending') {
+            $btn .= '<a href="' . route('protocol.requests.edit', $data->id) . '" class="btn btn-sm btn-warning mx-2">
+                        Edit <i class="bi bi-chevron-right"></i>
+                    </a>';
+        }
+        
+        return $btn;
     }
 
     public function getAll()

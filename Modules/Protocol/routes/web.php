@@ -46,7 +46,9 @@ Route::group(['middleware' => ['web', 'auth'], 'prefix' => 'protocol', 'as' => '
         Route::get('/new', [ProtocolRequestController::class, 'create'])->name('requests.create');
         Route::get('/my-requests', [ProtocolRequestController::class, 'myRequests'])->name('requests.my');
         Route::get('/requests/{protocolRequest}', [ProtocolRequestController::class, 'show'])->name('requests.show');
+        Route::get('/requests/{protocolRequest}/edit', [ProtocolRequestController::class, 'edit'])->name('requests.edit');
         Route::post('/requests', [ProtocolRequestController::class, 'storeCombined'])->name('requests.store');
+        Route::put('/requests/{protocolRequest}', [ProtocolRequestController::class, 'update'])->name('requests.update');
     });
 
     /*

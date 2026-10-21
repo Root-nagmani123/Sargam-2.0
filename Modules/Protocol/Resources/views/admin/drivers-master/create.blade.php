@@ -14,17 +14,11 @@
 
     <div class="container-fluid profile-page">
 
-        <x-breadcrum
-            title="Add Driver"
-            :items="[
-                'Home',
-                ['label' => 'Protocol', 'url' => route('protocol.dashboard')],
-                'Add Driver',
-            ]"
-            :showBack="true"
-            :buttonUrl="route('protocol.driver-master.index')"
-            buttonIcon="arrow_back"
-        />
+        <x-breadcrum title="Add Driver" :items="[
+            'Home',
+            ['label' => 'Protocol', 'url' => route('protocol.dashboard')],
+            'Add Driver',
+        ]" :showBack="true" :buttonUrl="route('protocol.driver-master.index')" buttonIcon="arrow_back" />
 
         <div class="card-clean p-3">
 
@@ -41,11 +35,7 @@
                     </p>
                 </div>
 
-                <form
-                    id="driverForm"
-                    method="POST"
-                    action="{{ route('protocol.driver-master.store') }}"
-                >
+                <form id="driverForm" method="POST" action="{{ route('protocol.driver-master.store') }}">
 
                     @csrf
 
@@ -73,16 +63,9 @@
                                     <span class="required">*</span>
                                 </label>
 
-                                <input
-                                    type="text"
-                                    class="form-control @error('name') is-invalid @enderror"
-                                    id="driverName"
-                                    name="name"
-                                    placeholder="Enter driver name"
-                                    maxlength="255"
-                                    autocomplete="off"
-                                    value="{{ old('name') }}"
-                                >
+                                <input type="text" class="form-control @error('name') is-invalid @enderror" id="driverName"
+                                    name="name" placeholder="Enter driver name" maxlength="255" autocomplete="off"
+                                    value="{{ old('name') }}">
 
                                 @error('name')
                                     <div class="invalid-feedback">
@@ -104,24 +87,14 @@
                                     <span class="required">*</span>
                                 </label>
 
-                                <select
-                                    class="form-select @error('type') is-invalid @enderror"
-                                    id="driverType"
-                                    name="type"
-                                >
+                                <select class="form-select @error('type') is-invalid @enderror" id="driverType" name="type">
                                     <option value="">Select Driver Type</option>
 
-                                    <option
-                                        value="Permanent"
-                                        {{ old('type') == 'Permanent' ? 'selected' : '' }}
-                                    >
+                                    <option value="Permanent" {{ old('type') == 'Permanent' ? 'selected' : '' }}>
                                         Permanent
                                     </option>
 
-                                    <option
-                                        value="Contract"
-                                        {{ old('type') == 'Contract' ? 'selected' : '' }}
-                                    >
+                                    <option value="Contract" {{ old('type') == 'Contract' ? 'selected' : '' }}>
                                         Contract
                                     </option>
                                 </select>
@@ -146,13 +119,8 @@
                                     <span class="required">*</span>
                                 </label>
 
-                                <input
-                                    type="date"
-                                    class="form-control @error('dob') is-invalid @enderror"
-                                    id="dob"
-                                    name="dob"
-                                    value="{{ old('dob') }}"
-                                >
+                                <input type="date" class="form-control @error('dob') is-invalid @enderror" id="dob"
+                                    name="dob" value="{{ old('dob') }}">
 
                                 @error('dob')
                                     <div class="invalid-feedback">
@@ -174,16 +142,9 @@
                                     <span class="required">*</span>
                                 </label>
 
-                                <input
-                                    type="number"
-                                    class="form-control @error('driver_no') is-invalid @enderror"
-                                    id="driverNumber"
-                                    name="driver_no"
-                                    placeholder="Enter driver number"
-                                    min="0"
-                                    autocomplete="off"
-                                    value="{{ old('driver_no') }}"
-                                >
+                                <input type="number" class="form-control @error('driver_no') is-invalid @enderror"
+                                    id="driverNumber" name="driver_no" placeholder="Enter driver number" min="0"
+                                    autocomplete="off" value="{{ old('driver_no') }}">
 
                                 @error('driver_no')
                                     <div class="invalid-feedback">
@@ -205,16 +166,11 @@
                                     <span class="required">*</span>
                                 </label>
 
-                                <input
-                                    type="text"
+                                <input type="text"
                                     class="form-control text-uppercase @error('driving_licence_no') is-invalid @enderror"
-                                    id="drivingLicenceNo"
-                                    name="driving_licence_no"
-                                    placeholder="Enter driving licence number"
-                                    maxlength="255"
-                                    autocomplete="off"
-                                    value="{{ old('driving_licence_no') }}"
-                                >
+                                    id="drivingLicenceNo" name="driving_licence_no"
+                                    placeholder="Enter driving licence number" maxlength="255" autocomplete="off"
+                                    value="{{ old('driving_licence_no') }}">
 
                                 @error('driving_licence_no')
                                     <div class="invalid-feedback">
@@ -236,13 +192,9 @@
                                     <span class="required">*</span>
                                 </label>
 
-                                <input
-                                    type="date"
-                                    class="form-control @error('licence_expiry_date') is-invalid @enderror"
-                                    id="licenceExpiryDate"
-                                    name="licence_expiry_date"
-                                    value="{{ old('licence_expiry_date') }}"
-                                >
+                                <input type="date" class="form-control @error('licence_expiry_date') is-invalid @enderror"
+                                    id="licenceExpiryDate" name="licence_expiry_date"
+                                    value="{{ old('licence_expiry_date') }}">
 
                                 @error('licence_expiry_date')
                                     <div class="invalid-feedback">
@@ -264,13 +216,8 @@
                                     <span class="required">*</span>
                                 </label>
 
-                                <input
-                                    type="date"
-                                    class="form-control @error('hiring_date') is-invalid @enderror"
-                                    id="hiringDate"
-                                    name="hiring_date"
-                                    value="{{ old('hiring_date') }}"
-                                >
+                                <input type="date" class="form-control @error('hiring_date') is-invalid @enderror"
+                                    id="hiringDate" name="hiring_date" value="{{ old('hiring_date') }}">
 
                                 @error('hiring_date')
                                     <div class="invalid-feedback">
@@ -291,15 +238,9 @@
                                     Helper One
                                 </label>
 
-                                <input
-                                    type="text"
-                                    class="form-control @error('helper_one') is-invalid @enderror"
-                                    id="helperOne"
-                                    name="helper_one"
-                                    placeholder="Enter helper one"
-                                    maxlength="255"
-                                    value="{{ old('helper_one') }}"
-                                >
+                                <input type="text" class="form-control @error('helper_one') is-invalid @enderror"
+                                    id="helperOne" name="helper_one" placeholder="Enter helper one" maxlength="255"
+                                    value="{{ old('helper_one') }}">
 
                                 @error('helper_one')
                                     <div class="invalid-feedback">
@@ -320,15 +261,9 @@
                                     Helper Two
                                 </label>
 
-                                <input
-                                    type="text"
-                                    class="form-control @error('helper_two') is-invalid @enderror"
-                                    id="helperTwo"
-                                    name="helper_two"
-                                    placeholder="Enter helper two"
-                                    maxlength="255"
-                                    value="{{ old('helper_two') }}"
-                                >
+                                <input type="text" class="form-control @error('helper_two') is-invalid @enderror"
+                                    id="helperTwo" name="helper_two" placeholder="Enter helper two" maxlength="255"
+                                    value="{{ old('helper_two') }}">
 
                                 @error('helper_two')
                                     <div class="invalid-feedback">
@@ -349,13 +284,9 @@
                                     Note About Driver
                                 </label>
 
-                                <textarea
-                                    class="form-control @error('note_about_driver') is-invalid @enderror"
-                                    id="noteAboutDriver"
-                                    name="note_about_driver"
-                                    rows="3"
-                                    placeholder="Enter notes about driver"
-                                >{{ old('note_about_driver') }}</textarea>
+                                <textarea class="form-control @error('note_about_driver') is-invalid @enderror"
+                                    id="noteAboutDriver" name="note_about_driver" rows="3"
+                                    placeholder="Enter notes about driver">{{ old('note_about_driver') }}</textarea>
 
                                 @error('note_about_driver')
                                     <div class="invalid-feedback">
@@ -394,11 +325,8 @@
                                     <span class="required">*</span>
                                 </label>
 
-                                <select
-                                    class="form-select @error('country_id') is-invalid @enderror"
-                                    id="countryId"
-                                    name="country_id"
-                                >
+                                <select class="form-select @error('country_id') is-invalid @enderror" id="countryId"
+                                    name="country_id">
                                     <option value="">Select Country</option>
 
                                     {{-- Populate dynamically --}}
@@ -424,12 +352,8 @@
                                     <span class="required">*</span>
                                 </label>
 
-                                <select
-                                    class="form-select @error('state_id') is-invalid @enderror"
-                                    id="stateId"
-                                    name="state_id"
-                                    disabled
-                                >
+                                <select class="form-select @error('state_id') is-invalid @enderror" id="stateId"
+                                    name="state_id" disabled>
                                     <option value="">Select State</option>
 
                                     {{-- Populate dynamically --}}
@@ -455,12 +379,8 @@
                                     <span class="required">*</span>
                                 </label>
 
-                                <select
-                                    class="form-select @error('city_id') is-invalid @enderror"
-                                    id="cityId"
-                                    name="city_id"
-                                    disabled
-                                >
+                                <select class="form-select @error('city_id') is-invalid @enderror" id="cityId"
+                                    name="city_id" disabled>
                                     <option value="">Select City</option>
 
                                     {{-- Populate dynamically --}}
@@ -486,16 +406,9 @@
                                     <span class="required">*</span>
                                 </label>
 
-                                <input
-                                    type="text"
-                                    class="form-control @error('postal_code') is-invalid @enderror"
-                                    id="postalCode"
-                                    name="postal_code"
-                                    placeholder="Enter postal code"
-                                    maxlength="20"
-                                    inputmode="numeric"
-                                    value="{{ old('postal_code') }}"
-                                >
+                                <input type="text" class="form-control @error('postal_code') is-invalid @enderror"
+                                    id="postalCode" name="postal_code" placeholder="Enter postal code" maxlength="20"
+                                    inputmode="numeric" value="{{ old('postal_code') }}">
 
                                 @error('postal_code')
                                     <div class="invalid-feedback">
@@ -517,16 +430,9 @@
                                     <span class="required">*</span>
                                 </label>
 
-                                <input
-                                    type="email"
-                                    class="form-control @error('email') is-invalid @enderror"
-                                    id="email"
-                                    name="email"
-                                    placeholder="Enter email address"
-                                    maxlength="150"
-                                    autocomplete="off"
-                                    value="{{ old('email') }}"
-                                >
+                                <input type="email" class="form-control @error('email') is-invalid @enderror" id="email"
+                                    name="email" placeholder="Enter email address" maxlength="150" autocomplete="off"
+                                    value="{{ old('email') }}">
 
                                 @error('email')
                                     <div class="invalid-feedback">
@@ -548,13 +454,9 @@
                                     <span class="required">*</span>
                                 </label>
 
-                                <textarea
-                                    class="form-control @error('address') is-invalid @enderror"
-                                    id="address"
-                                    name="address"
-                                    rows="3"
-                                    placeholder="Enter complete address"
-                                >{{ old('address') }}</textarea>
+                                <textarea class="form-control @error('address') is-invalid @enderror" id="address"
+                                    name="address" rows="3"
+                                    placeholder="Enter complete address">{{ old('address') }}</textarea>
 
                                 @error('address')
                                     <div class="invalid-feedback">
@@ -575,16 +477,10 @@
 
                     {{-- <div class="d-flex gap-2 mt-4">
 
-                        <button
-                            type="submit"
-                            class="btn btn-success d-inline-flex align-items-center"
-                            id="submitDriverForm"
-                        >
+                        <button type="submit" class="btn btn-success d-inline-flex align-items-center"
+                            id="submitDriverForm">
 
-                            <i
-                                class="material-icons material-symbols-rounded me-2"
-                                style="font-size: 20px;"
-                            >
+                            <i class="material-icons material-symbols-rounded me-2" style="font-size: 20px;">
                                 save
                             </i>
 
@@ -593,15 +489,10 @@
                         </button>
 
 
-                        <a
-                            href="{{ route('protocol.driver-master.index') }}"
-                            class="btn btn-secondary d-inline-flex align-items-center"
-                        >
+                        <a href="{{ route('protocol.driver-master.index') }}"
+                            class="btn btn-secondary d-inline-flex align-items-center">
 
-                            <i
-                                class="material-icons material-symbols-rounded me-2"
-                                style="font-size: 20px;"
-                            >
+                            <i class="material-icons material-symbols-rounded me-2" style="font-size: 20px;">
                                 cancel
                             </i>
 
@@ -612,23 +503,17 @@
                     </div> --}}
                     <div class="button-group">
 
-                    <button
-                        type="submit"
-                        class="btn btn-save"
-                    >
-                        <i class="fas fa-save"></i>
-                        Save
-                    </button>
+                        <button type="submit" class="btn btn-save">
+                            <i class="fas fa-save"></i>
+                            Save
+                        </button>
 
-                    <a
-                        href="{{ route('protocol.driver-master.index') }}"
-                        class="btn btn-cancel"
-                    >
-                        <i class="fas fa-times"></i>
-                        Cancel
-                    </a>
+                        <a href="{{ route('protocol.driver-master.index') }}" class="btn btn-cancel">
+                            <i class="fas fa-times"></i>
+                            Cancel
+                        </a>
 
-                </div>
+                    </div>
 
                 </form>
 
@@ -648,6 +533,11 @@
 @push('scripts')
 
     <script>
+
+        // $(function () {
+        //     alert('dev');
+        // });
+
         window.driverMasterUrls = {
             countries: "{{ route('protocol.countries') }}",
             states: "{{ route('protocol.states', ':country_id') }}",
@@ -660,9 +550,11 @@
             state_id: "{{ old('state_id') }}",
             city_id: "{{ old('city_id') }}"
         };
+
+        
     </script>
 
-    <script src="{{ asset('Modules/protocol/js/driver_master.js') }}"></script>
-    <script src="{{ asset('Modules/protocol/js/state_city.js') }}"></script>
+    <script src="{{ asset('modules/protocol/js/driver_master.js') }}"></script>
+    <script src="{{ asset('modules/protocol/js/state_city.js') }}"></script>
 
 @endpush

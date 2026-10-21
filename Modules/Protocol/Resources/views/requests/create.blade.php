@@ -74,7 +74,7 @@
         </div>
         <div class="col-md-4">
           <label class="form-label">Purpose <span class="required-star">*</span></label>
-          <select name="purpose" class="form-select" required>
+          <select name="purpose" class="form-select" onchange="toggleOther(this.value)" required>
             <option value="">-- select --</option>
             <option value="Official Visit">Official Visit</option>
             <option value="Training Programme">Training Programme</option>
@@ -84,6 +84,11 @@
             <option value="Other">Other</option>
           </select>
           <div class="invalid-feedback" id="err_purpose"></div>
+        </div>
+        <div class="col-md-4" id="other_purpose" style="display:none;">
+          <label class="form-label">Other Purpose <span class="required-star">*</span></label>
+          <input type="text" name="other_purpose" class="form-control" placeholder="Enter purpose">
+          <div class="invalid-feedback" id="err_other_purpose"></div>
         </div>
         <div class="col-md-4">
           <label class="form-label d-block">Escort Required <span class="required-star">*</span></label>
@@ -366,7 +371,10 @@ function addVehicleLeg() {
       <input type="datetime-local" name="vehicle[legs][${i}][date_time_from]" class="form-control section-field" data-section="vehicle">
       <div class="invalid-feedback" data-err="vehicle.legs.${i}.date_time_from"></div>
     </td>
-    <td><input type="datetime-local" name="vehicle[legs][${i}][date_time_to]" class="form-control"></td>
+    <td>
+      <input type="datetime-local" name="vehicle[legs][${i}][date_time_to]" class="form-control section-field" data-section="vehicle">
+      <div class="invalid-feedback" data-err="vehicle.legs.${i}.date_time_to"></div>
+    </td>
     <td>
       <select name="vehicle[legs][${i}][pickup_type]" class="form-select mb-1">
         <option value="location">Location</option>
@@ -385,7 +393,9 @@ function addVehicleLeg() {
       <div class="invalid-feedback" data-err="vehicle.legs.${i}.drop_value"></div>
     </td>
     <td><input type="time" name="vehicle[legs][${i}][drop_time]" class="form-control"></td>
-    <td><input type="number" name="vehicle[legs][${i}][no_of_persons]" class="form-control" value="1" min="1"></td>
+    <td><input type="number" name="vehicle[legs][${i}][no_of_persons]" class="form-control" value="1" min="1">
+      <div class="invalid-feedback" data-err="vehicle.legs.${i}.no_of_persons"></div>
+    </td>
     <td><textarea name="vehicle[legs][${i}][remarks]" class="form-control" rows="1"></textarea></td>
     <td class="text-center"><button type="button" class="remove-row-btn" onclick="this.closest('tr').remove()"><i class="bi bi-dash-circle"></i></button></td>
   `;
@@ -562,6 +572,14 @@ function renderFieldErrors(errors) {
       input.insertAdjacentElement('afterend', fallback);
     }
   });
+}
+
+function toggleOther(value){
+  if(value == 'Other'){
+    document.getElementById('other_purpose').style.display = 'block';
+  }else{
+    document.getElementById('other_purpose').style.display = 'none';
+  }
 }
 
 function showTopAlert(message) {
