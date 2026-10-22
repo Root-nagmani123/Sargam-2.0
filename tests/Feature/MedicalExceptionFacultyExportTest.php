@@ -264,6 +264,34 @@ class MedicalExceptionFacultyExportTest extends TestCase
         $this->assertNull($screen->viewData('courseFilter'));
     }
 
+    // ---------- F-012: the admin view ignores it the same way ----------
+
+    public function test_the_admin_view_ignores_a_course_pk_with_trailing_text_in_grid_course_table_and_export(): void
+    {
+        [, $courseA] = $this->facultyWithCourse('Mefx Admin Suffix Course A');
+        [, $courseB] = $this->facultyWithCourse('Mefx Admin Suffix Course B');
+        $this->exemption($courseA, 'Mefx Admin Suffix Student A');
+        $this->exemption($courseB, 'Mefx Admin Suffix Student B');
+        $admin = $this->account('Super Admin', ['Super Admin']);
+
+        $screen = $this->actingAs($admin[0])->withSession(['user_roles' => $admin[1]])->get(self::SCREEN.'?course='.$courseA.'abc')->assertOk();
+        $this->assertNull($screen->viewData('courseFilter'));
+        $onScreen = collect($screen->viewData('data'))->pluck('student_name');
+        $this->assertContains('Mefx Admin Suffix Student A', $onScreen);
+        $this->assertContains('Mefx Admin Suffix Student B', $onScreen);
+        // MySQL read "<pk>abc" as <pk> for the grid while PHP's != dropped every course-table row.
+        $courseTable = collect($screen->viewData('adminCoursePaginator')->items())->pluck('course_name');
+        $this->assertContains('Mefx Admin Suffix Course A', $courseTable);
+        $this->assertContains('Mefx Admin Suffix Course B', $courseTable);
+
+        $response = $this->export($admin, 'course='.$courseA.'abc');
+        $this->assertStringNotContainsString('Course: ', $response->streamedContent());
+        [$header, $rows] = $this->csvRows($response);
+        $exported = $this->column($rows, $header, 'Student Name');
+        $this->assertContains('Mefx Admin Suffix Student A', $exported);
+        $this->assertContains('Mefx Admin Suffix Student B', $exported);
+    }
+
     // ---------- F-003: a malformed date never 500s ----------
 
     public function test_a_malformed_date_is_ignored_and_a_valid_one_still_filters(): void

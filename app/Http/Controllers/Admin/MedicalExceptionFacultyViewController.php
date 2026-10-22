@@ -318,7 +318,7 @@ class MedicalExceptionFacultyViewController extends Controller
         // Get filter parameters (accept both course and course_filter for compatibility)
         $facultyFilter = $request->get('faculty_filter');
         $courseFilter = $request->get('course_filter') ?: $request->get('course');
-        $courseFilter = is_scalar($courseFilter) ? $courseFilter : null; // as in facultyLoginView()
+        $courseFilter = is_string($courseFilter) && ctype_digit($courseFilter) ? $courseFilter : null; // as in facultyLoginView()
         
         // Get all faculties who have courses assigned (from timetable)
         $facultiesQuery = FacultyMaster::query()
