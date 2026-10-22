@@ -1122,6 +1122,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Medical Exception Views
     Route::get('/medical-exception-faculty-view', [MedicalExceptionFacultyViewController::class, 'index'])->name('medical.exception.faculty.view');
+    // One action, four formats (csv | excel | pdf | print) - see ExportsMasterGrid.
+    Route::get('/medical-exception-faculty-view/export/{format?}', [MedicalExceptionFacultyViewController::class, 'export'])->name('medical.exception.faculty.view.export');
 
     Route::get('/medical-exception-ot-view', [MedicalExceptionOTViewController::class, 'index'])->name('medical.exception.ot.view');
     Route::get('/medical-exception-ot-view/export', [MedicalExceptionOTViewController::class, 'export'])->name('medical.exception.ot.view.export');

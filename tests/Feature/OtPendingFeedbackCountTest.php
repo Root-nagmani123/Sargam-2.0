@@ -11,7 +11,9 @@ use Tests\TestCase;
 
 class OtPendingFeedbackCountTest extends TestCase
 {
-    use RollsBackAgainstAppDatabase;
+    use RollsBackAgainstAppDatabase {
+        setUp as rollbackSetUp;
+    }
 
     private int $course;
 
@@ -23,7 +25,7 @@ class OtPendingFeedbackCountTest extends TestCase
 
     protected function setUp(): void
     {
-        parent::setUp();
+        $this->rollbackSetUp();
         Log::shouldReceive('error')->never();
         $this->faculty = (int) DB::table('faculty_master')->value('pk');
         $this->venue = (int) DB::table('venue_master')->value('venue_id');

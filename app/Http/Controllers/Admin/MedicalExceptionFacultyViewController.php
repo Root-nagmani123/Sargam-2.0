@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Concerns\ExportsMasterGrid;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\FacultyMaster;
@@ -17,11 +20,195 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class MedicalExceptionFacultyViewController extends Controller
 {
+    use ExportsMasterGrid;
+
     /** menus.permission_name of this screen (menus row "Medical Exception Faculty"); the sidebar link checks it too. */
     public const ADMIN_PERMISSION = 'medical_exception_faculty';
 
 
     public function index(Request $request)
+    {
+        return view('admin.medical_exception.faculty_view', $this->viewData($request));
+    }
+
+    /**
+     * Export - CSV | Excel | PDF | Print (rendering lives in ExportsMasterGrid).
+     *
+     * Rows come from viewData(), the same builder (and the same access check)
+     * as the grid, so a download can never show more than the screen does.
+     */
+    public function export(Request $request, string $format = 'csv')
+    {
+        $format = strtolower($format);
+        abort_unless(in_array($format, self::$exportFormats, true), 404);
+
+        $payload = $this->viewData($request);
+        $search = $request->query('q');
+        $search = is_string($search) ? trim($search) : '';
+        $order = $request->query('order');
+        $defs = $this->exportColumnDefs();
+        $rows = $this->filterLikeGrid(collect($payload['data']), $defs, $search);
+
+        return $this->renderMasterExport(
+            $format,
+            is_string($order) ? $this->sortLikeGrid($rows, $defs, $order) : $rows,
+            $this->resolveExportColumns($request, $defs),
+            'Medical Exemption Faculty View',
+            'MedicalExemptionFacultyView',
+            $this->exportFilterLine($payload, $search),
+            'No medical exemption records to export',
+            'landscape'
+        );
+    }
+
+    /**
+     * Canonical export columns, in display order.
+     *
+     * Keys must match MEF_EXPORT_COLUMN_KEYS in faculty_view.blade.php. Values
+     * are formatted exactly as the grid renders them, so the ?q= filter matches
+     * what the user searched on screen.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function exportColumnDefs(): array
+    {
+        return [
+            'sno' => ['heading' => 'S.No.', 'width' => '4%', 'align' => 'center', 'value' => fn ($row, int $index) => $index + 1],
+            'course' => ['heading' => 'Course Name', 'width' => '12%', 'value' => fn ($row) => $row->course_name ?? 'N/A'],
+            'faculty' => ['heading' => 'Faculty Name', 'width' => '10%', 'value' => fn ($row) => $row->faculty_name ?? 'N/A'],
+            'topics' => ['heading' => 'Topics', 'width' => '16%', 'value' => fn ($row) => $row->topics ?? 'N/A'],
+            'student' => ['heading' => 'Student Name', 'width' => '10%', 'value' => fn ($row) => $row->student_name ?? 'N/A'],
+            'date' => ['heading' => 'Medical Exemption Date', 'width' => '7%', 'align' => 'center', 'value' => fn ($row) => self::formatDate($row->from_date, 'd-m-Y')],
+            'time' => ['heading' => 'Medical Exemption Time', 'width' => '6%', 'align' => 'center', 'value' => fn ($row) => self::formatDate($row->from_date, 'h:i A')],
+            'ot_code' => ['heading' => 'OT Code', 'width' => '7%', 'value' => fn ($row) => $row->ot_code ?? 'N/A'],
+            'application_type' => ['heading' => 'Application Type', 'width' => '10%', 'value' => fn ($row) => $row->application_type ?? 'N/A'],
+            'exemption_count' => ['heading' => 'Exemption Count', 'width' => '6%', 'align' => 'center', 'value' => fn ($row) => $row->exemption_count ?? 0],
+            'submitted_on' => ['heading' => 'Submitted On', 'width' => '12%', 'align' => 'center', 'value' => fn ($row) => self::formatDate($row->submitted_on, 'd-m-Y h:i A')],
+        ];
+    }
+
+    private static function formatDate($value, string $format): string
+    {
+        return $value ? Carbon::parse($value)->format($format) : 'N/A';
+    }
+
+    /**
+     * Apply the grid's client-side search to the export rows.
+     *
+     * Mirrors DataTables 1.13's "smart" search: the term is split on spaces, a
+     * "double-quoted phrase" stays one word, and every word must appear,
+     * case-insensitively, somewhere in the row's rendered text (S.No. is not
+     * searchable; the Document column searches as "View" / "N/A").
+     */
+    private function filterLikeGrid(Collection $rows, array $defs, string $search): Collection
+    {
+        // Same tokenizer and quote stripping as DataTables' _fnFilterCreateSearch().
+        preg_match_all('/["\x{201C}][^"\x{201D}]+["\x{201D}]|[^ ]+/u', $search, $matches);
+        $words = array_filter(array_map(function (string $word) {
+            if (preg_match('/^"(.*)"$/us', $word, $m) || preg_match('/^\x{201C}(.*)\x{201D}$/us', $word, $m)) {
+                $word = $m[1];
+            }
+
+            return mb_strtolower(preg_replace('/"/', '', $word, 1));
+        }, $matches[0]), 'strlen');
+
+        if ($words) {
+            unset($defs['sno']);
+            $rows = $rows->filter(function ($row) use ($defs, $words) {
+                $cells = array_map(fn ($col) => (string) $col['value']($row, 0), $defs);
+                $cells[] = $row->medical_document ? 'View' : 'N/A';
+                $haystack = mb_strtolower(implode('  ', $cells));
+
+                foreach ($words as $word) {
+                    if (!str_contains($haystack, $word)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+        }
+
+        return $rows->values();
+    }
+
+    /**
+     * Apply the grid's current client-side ordering (?order=key:asc,key:desc).
+     *
+     * Mirrors DataTables 1.13: date columns sort on their data-order timestamp, a
+     * column whose every value is numeric sorts as a number, anything else as a
+     * lower-cased string; ties keep the server order. Unknown keys are ignored.
+     */
+    private function sortLikeGrid(Collection $rows, array $defs, string $order): Collection
+    {
+        $sortValues = array_map(fn ($col) => $col['value'], $defs);
+        unset($sortValues['sno']); // not orderable on the grid
+        $sortValues['date'] = fn ($row) => $row->from_date ? Carbon::parse($row->from_date)->timestamp : 0;
+        $sortValues['submitted_on'] = fn ($row) => $row->submitted_on ? Carbon::parse($row->submitted_on)->timestamp : 0;
+        $sortValues['document'] = fn ($row) => $row->medical_document ? 'View' : 'N/A';
+
+        $rules = [];
+        foreach (explode(',', $order) as $part) {
+            [$key, $dir] = array_pad(explode(':', $part, 2), 2, 'asc');
+            if (!isset($sortValues[$key])) {
+                continue;
+            }
+            // DataTables trims each cell's HTML before typing and sorting it.
+            $values = $rows->map(fn ($row) => trim((string) $sortValues[$key]($row, 0)));
+            $numeric = $values->every(fn ($value) => is_numeric($value));
+            $rules[] = [
+                $values->map(fn ($value) => $numeric ? (float) $value : mb_strtolower($value))->all(),
+                $numeric,
+                $dir === 'desc' ? -1 : 1,
+            ];
+        }
+
+        if (!$rules) {
+            return $rows;
+        }
+
+        $positions = $rows->keys()->all();
+        usort($positions, function ($a, $b) use ($rules) {
+            foreach ($rules as [$values, $numeric, $sign]) {
+                $cmp = $numeric ? $values[$a] <=> $values[$b] : strcmp($values[$a], $values[$b]);
+                if ($cmp !== 0) {
+                    return $cmp * $sign;
+                }
+            }
+
+            return $a <=> $b;
+        });
+
+        return collect($positions)->map(fn ($position) => $rows[$position]);
+    }
+
+    /** The header band's "applied filters" line, or null when nothing narrowed the rows. */
+    private function exportFilterLine(array $payload, string $search): ?string
+    {
+        $parts = [];
+
+        if (!empty($payload['courseFilter'])) {
+            $courseName = isset($payload['allCourses'])
+                // Admin view: its dropdown lists running courses only, so look the name up.
+                ? (CourseMaster::where('pk', $payload['courseFilter'])->value('course_name') ?? $payload['courseFilter'])
+                // Faculty view: name only their own courses; any other pk matched no rows.
+                : collect($payload['courses'])->firstWhere('pk', $payload['courseFilter'])?->course_name;
+            if ($courseName !== null) {
+                $parts[] = 'Course: '.$courseName;
+            }
+        }
+        if (!empty($payload['dateFromFilter'])) {
+            $parts[] = 'From: '.self::formatDate($payload['dateFromFilter'], 'd-m-Y');
+        }
+        if ($search !== '') {
+            $parts[] = 'Search: '.$search;
+        }
+
+        return $parts ? implode(' | ', $parts) : null;
+    }
+
+    /** Everything the page (and its export) shows, for the logged-in user. */
+    private function viewData(Request $request): array
     {
         $currentDate = now()->format('Y-m-d');
         
@@ -52,7 +239,16 @@ class MedicalExceptionFacultyViewController extends Controller
     {
   // Get filter parameters
   $courseFilter = $request->get('course');
+  // Only a pk of digits filters; anything else (course[]=x, "5abc") is ignored like a malformed date,
+  // since MySQL reads "5abc" as 5 while the dropdown and export header do not.
+  $courseFilter = is_string($courseFilter) && ctype_digit($courseFilter) ? $courseFilter : null;
   $dateFromFilter = $request->get('date_from');
+  // Only a real Y-m-d date filters; anything else is ignored like an empty field
+  // (raw input reached Carbon::parse() in the export header and threw a 500).
+  $parsedDate = is_string($dateFromFilter) ? \DateTime::createFromFormat('!Y-m-d', $dateFromFilter) : false;
+  if (!$parsedDate || $parsedDate->format('Y-m-d') !== $dateFromFilter) {
+      $dateFromFilter = null;
+  }
 
   // Courses the faculty is CC or ACC of (PR #335 F-008 rule 3). A login with no
   // faculty_master row coordinates nothing.
@@ -109,7 +305,7 @@ class MedicalExceptionFacultyViewController extends Controller
           ->get();
   }
 
-  return view('admin.medical_exception.faculty_view', compact('data', 'courses', 'courseFilter', 'dateFromFilter'));
+  return compact('data', 'courses', 'courseFilter', 'dateFromFilter');
 }        
 
 
@@ -122,6 +318,7 @@ class MedicalExceptionFacultyViewController extends Controller
         // Get filter parameters (accept both course and course_filter for compatibility)
         $facultyFilter = $request->get('faculty_filter');
         $courseFilter = $request->get('course_filter') ?: $request->get('course');
+        $courseFilter = is_string($courseFilter) && ctype_digit($courseFilter) ? $courseFilter : null; // as in facultyLoginView()
         
         // Get all faculties who have courses assigned (from timetable)
         $facultiesQuery = FacultyMaster::query()
@@ -216,24 +413,25 @@ class MedicalExceptionFacultyViewController extends Controller
         $facultyData = [];
         
         foreach ($faculties as $faculty) {
-            // Get unique courses for this faculty from timetable
-            $courseIds = collect();
+            // Get unique courses for this faculty from timetable. Its own variable:
+            // $courseIds (every active course) still scopes the admin query below.
+            $facultyCourseIds = collect();
             foreach ($faculty->timetableCourses as $timetable) {
                 if ($timetable->course_master_pk) {
-                    $courseIds->push($timetable->course_master_pk);
+                    $facultyCourseIds->push($timetable->course_master_pk);
                 } elseif ($timetable->course_group_type_master) {
-                    $courseIds->push($timetable->course_group_type_master);
+                    $facultyCourseIds->push($timetable->course_group_type_master);
                 }
             }
-            $courseIds = $courseIds->unique()->filter();
-            
-            if ($courseIds->isEmpty()) {
+            $facultyCourseIds = $facultyCourseIds->unique()->filter();
+
+            if ($facultyCourseIds->isEmpty()) {
                 continue;
             }
-            
+
             $coursesData = [];
-            
-            foreach ($courseIds as $courseId) {
+
+            foreach ($facultyCourseIds as $courseId) {
                 if (!$courseId || !isset($courses[$courseId])) {
                     continue;
                 }
@@ -396,7 +594,7 @@ class MedicalExceptionFacultyViewController extends Controller
             ['path' => $request->url(), 'pageName' => 'admin_students_page']
         );
 
-        return view('admin.medical_exception.faculty_view', [
+        return [
             'data' => $adminData, // Medical exceptions data for admin view
             'courses' => $allCourses, // Map allCourses to courses for dropdown
             'courseFilter' => $courseFilter,
@@ -407,7 +605,7 @@ class MedicalExceptionFacultyViewController extends Controller
             'facultyFilter' => $facultyFilter,
             'adminCoursePaginator' => $adminCoursePaginator,
             'adminStudentsPaginator' => $adminStudentsPaginator,
-        ]);
+        ];
     }
 }
 
