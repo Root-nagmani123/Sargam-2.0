@@ -280,7 +280,8 @@ class MedicalExceptionFacultyExportTest extends TestCase
         $this->assertContains('Mefx Admin Suffix Student A', $onScreen);
         $this->assertContains('Mefx Admin Suffix Student B', $onScreen);
         // MySQL read "<pk>abc" as <pk> for the grid while PHP's != dropped every course-table row.
-        $courseTable = collect($screen->viewData('adminCoursePaginator')->items())->pluck('course_name');
+        // facultyData is the course table before pagination, so other running courses cannot push A or B off page 1.
+        $courseTable = collect($screen->viewData('facultyData'))->flatMap(fn ($faculty) => $faculty['courses'])->pluck('course_name');
         $this->assertContains('Mefx Admin Suffix Course A', $courseTable);
         $this->assertContains('Mefx Admin Suffix Course B', $courseTable);
 
