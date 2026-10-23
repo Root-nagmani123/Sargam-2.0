@@ -27,11 +27,11 @@ class TravelPlanController extends Controller
             $form = $this->registrationFlow->activeFormFromSession();
             if ($form) {
                 return redirect()->route('fc-reg.forms.dashboard', $form)
-                    ->with('error', 'Please complete bank details before the travel plan.');
+                    ->with('error', 'Please complete the earlier registration steps before the travel plan.');
             }
 
             return redirect()->route('fc-reg.registration.bank')
-                ->with('error', 'Please complete bank details before the travel plan.');
+                ->with('error', 'Please complete the earlier registration steps before the travel plan.');
         }
 
         $plan = StudentTravelPlanMaster::forUser($userId)
@@ -90,11 +90,11 @@ class TravelPlanController extends Controller
             $form = $this->registrationFlow->activeFormFromSession();
             if ($form) {
                 return redirect()->route('fc-reg.forms.dashboard', $form)
-                    ->with('error', 'Please complete bank details first.');
+                    ->with('error', 'Please complete the earlier registration steps first.');
             }
 
             return redirect()->route('fc-reg.registration.bank')
-                ->with('error', 'Please complete bank details first.');
+                ->with('error', 'Please complete the earlier registration steps first.');
         }
 
         $existing = StudentTravelPlanMaster::forUser($userId)->first();
@@ -173,11 +173,11 @@ class TravelPlanController extends Controller
             $form = $this->registrationFlow->activeFormFromSession();
             if ($form) {
                 return redirect()->route('fc-reg.forms.dashboard', $form)
-                    ->with('error', 'Please complete bank details first.');
+                    ->with('error', 'Please complete the earlier registration steps first.');
             }
 
             return redirect()->route('fc-reg.registration.bank')
-                ->with('error', 'Please complete bank details first.');
+                ->with('error', 'Please complete the earlier registration steps first.');
         }
 
         $existing = StudentTravelPlanMaster::forUser($userId)->first();
