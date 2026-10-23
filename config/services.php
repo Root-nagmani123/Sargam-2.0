@@ -41,4 +41,12 @@ return [
         'iv'  => env('MOODLE_SHARED_IV'),
     ],
 
+// COE: OTP SMS the faculty confirms a question paper freeze with. Needs its own
+// DLT-approved template; `message` is that exact body with {#var#} for the OTP.
+// Unset: local/testing write the OTP to the log, other environments refuse.
+'coe_freeze_otp' => [
+    'dlt_template_id' => env('COE_FREEZE_OTP_DLT_TEMPLATE_ID'),
+    'message' => env('COE_FREEZE_OTP_MESSAGE'),
+],
+
 ];

@@ -3,108 +3,122 @@
 namespace App\Http\Controllers\Admin\COE;
 
 use App\Http\Controllers\Controller;
-use Carbon\Carbon;
-use Illuminate\Support\Collection;
+use App\Http\Requests\Admin\COE\FreezeQuestionPaperRequest;
+use App\Http\Requests\Admin\COE\UploadQuestionPaperRequest;
+use App\Services\COE\QuestionPaperService;
+use App\Services\COE\QuestionPaperStorage;
+use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * COE → Question Paper Management → My Question Paper, as the FACULTY sees it
- * (the setter uploads the original paper, revises it, then freezes it with an
- * OTP so it can go to Rajbhasha for translation).
+ * (the setter uploads the original paper, which goes straight to Rajbhasha for
+ * translation - no freeze - and can replace it until Rajbhasha translates it).
  *
- * Design-first screen, like MyQuestionPaperController: the rows are SAMPLE
- * data and no table backs this page yet. Replace sampleRows() with the real
- * query when the COE question paper module lands; the view reads only the
- * keys listed on sampleRows().
+ * Once Rajbhasha sends the translation back, the faculty verifies it and
+ * freezes it with an OTP to publish. The rows and their shape come from
+ * QuestionPaperService::papersForFaculty().
  */
 class FacultyQuestionPaperController extends Controller
 {
-    public const STATUS_PENDING_FACULTY = 'pending-faculty';     // nothing uploaded yet
-
-    public const STATUS_DRAFT = 'draft';                         // uploaded, still editable
-
-    public const STATUS_PENDING_RAJBHASHA = 'pending-rajbhasha'; // frozen, with the translator
-
-    public const STATUS_PUBLISHED = 'published';                 // translated and released
-
-    public const STATUS_LABELS = [
-        self::STATUS_PENDING_FACULTY => 'Pending at Faculty',
-        self::STATUS_DRAFT => 'Draft',
-        self::STATUS_PENDING_RAJBHASHA => 'Pending at Rajbhasha',
-        self::STATUS_PUBLISHED => 'Published',
-    ];
+    public function __construct(
+        private QuestionPaperService $papers,
+        private QuestionPaperStorage $files,
+    ) {
+    }
 
     public function index()
     {
-        $papers = $this->sampleRows();
+        $facultyPk = $this->papers->currentFacultyPk();
+        $papers = $facultyPk ? $this->papers->papersForFaculty($facultyPk) : collect();
 
         return view('admin.coe.faculty_question_paper.index', [
             'papers' => $papers,
             'drives' => $papers->pluck('drive')->unique()->sort()->values(),
             'batches' => $papers->pluck('batch')->unique()->sort()->values(),
-            'statusLabels' => self::STATUS_LABELS,
-            'otpPhoneMasked' => '+91 ******3274',
+            'statusLabels' => QuestionPaperService::FACULTY_STATUS_LABELS,
+            'otpPhoneMasked' => $facultyPk ? $this->papers->otpPhoneMasked($facultyPk) : '',
         ]);
     }
 
     /**
-     * Add Question Paper — upload a .docx or write the paper in the editor.
-     * Only a paper still waiting on the faculty can be added; any other state
-     * goes back to the list (a draft is revised with Re-upload there).
+     * Add Question Paper — upload a .docx or write the paper in the editor. Also
+     * "Reupload or Edit Original Paper" while it is Pending at Rajbhasha; once
+     * Rajbhasha has translated it, it goes back to the list.
      */
     public function create(int $paper)
     {
-        $row = $this->sampleRows()->firstWhere('id', $paper);
+        $facultyPk = $this->facultyPk();
+        $row = $this->papers->findForFaculty($facultyPk, $paper);
         abort_if($row === null, 404);
 
-        if ($row['status'] !== self::STATUS_PENDING_FACULTY) {
+        if (! $row['editable']) {
             return redirect()->route('admin.coe.faculty-question-paper.index')
-                ->with('error', 'This question paper has already been added.');
+                ->with('error', 'Rajbhasha has already translated this question paper, so it can no longer be changed.');
         }
 
-        return view('admin.coe.faculty_question_paper.create', ['paper' => $row]);
+        return view('admin.coe.faculty_question_paper.create', [
+            'paper' => $row,
+            'editorHtml' => $this->papers->editorHtmlFor($facultyPk, $paper),
+        ]);
     }
 
     /**
-     * @return Collection<int, array{id:int, code:string, name:string, drive:string, examination:string,
-     *     course:string, term:string, batch:string, max_marks:int, duration:int, exam_date:Carbon,
-     *     original_file:?string, translated_file:?string, translated_by:?string, comments:?string,
-     *     version:int, status:string}>
+     * Add Question Paper (submit): the first paper is V1 and goes to Rajbhasha;
+     * a reupload / edit before Rajbhasha translates it is the next version.
      */
-    private function sampleRows(): Collection
+    public function upload(UploadQuestionPaperRequest $request, int $paper): JsonResponse
     {
-        $rows = [
-            ['FC101-001', 'Law- Ethics & Intergrity', 'Mid Term Drive', 'Phase IV 2025', 'Annual Term', '2026', 100, 120, '2026-10-05', null, 1, self::STATUS_PENDING_FACULTY],
-            ['FC101-004', 'Public Policy & Governance', 'Mid Term Drive', 'Phase IV 2025', 'Annual Term', '2026', 100, 120, '2026-10-09', 'Please reduce Section B to 5 questions.', 2, self::STATUS_DRAFT],
-            ['FC102-002', 'FC- Indian Polity', 'End Term Drive', 'Foundation Course 2026', 'Term I', '2026', 50, 90, '2026-11-14', null, 1, self::STATUS_PENDING_RAJBHASHA],
-            ['FC102-006', 'FC- Economic Survey', 'End Term Drive', 'Foundation Course 2025', 'Term II', '2025', 75, 90, '2026-11-18', 'Approved.', 3, self::STATUS_PUBLISHED],
-            ['FC103-002', 'FC- Public Administration', 'End Term Drive', 'Foundation Course 2026', 'Term I', '2026', 100, 180, '2026-11-20', null, 1, self::STATUS_PENDING_FACULTY],
-        ];
+        $qp = $this->papers->saveOriginalPaper(
+            $this->facultyPk(),
+            $paper,
+            $request->isEditorPaper() ? null : $request->file('question_paper'),
+            $request->isEditorPaper() ? $request->input('paper_html') : null
+        );
 
-        return collect($rows)->values()->map(function (array $r, int $i) {
-            [$code, $name, $drive, $course, $term, $batch, $maxMarks, $duration, $examDate, $comments, $version, $status] = $r;
-            $hasOriginal = $status !== self::STATUS_PENDING_FACULTY;
-            $isPublished = $status === self::STATUS_PUBLISHED;
+        return response()->json(['message' => $qp->version > 1
+            ? 'Question paper updated (V'.$qp->version.').'
+            : 'Question paper uploaded and sent for translation.']);
+    }
 
-            return [
-                'id' => $i + 1,
-                'code' => $code,
-                'name' => $name,
-                'drive' => $drive,
-                // "Mid Term Drive" is sat as the "Mid Term Examination".
-                'examination' => preg_replace('/\s*Drive$/i', '', $drive).' Examination',
-                'course' => $course,
-                'term' => $term,
-                'batch' => $batch,
-                'max_marks' => $maxMarks,
-                'duration' => $duration,           // minutes
-                'exam_date' => Carbon::parse($examDate),
-                'original_file' => $hasOriginal ? "{$code}_v{$version}.docx" : null,
-                'translated_file' => $isPublished ? "{$code}_hindi.docx" : null,
-                'translated_by' => $isPublished ? 'Lova Gray' : null,
-                'comments' => $comments,
-                'version' => $version,
-                'status' => $status,
-            ];
-        });
+    /** Freeze, step 1 (modal opened / Resend OTP): sends the OTP. */
+    public function freezeOtp(int $paper): JsonResponse
+    {
+        $this->papers->sendFreezeOtp($this->facultyPk(), $paper);
+
+        return response()->json(['message' => 'OTP sent.']);
+    }
+
+    /** Freeze, step 2: the right OTP publishes a translation the faculty has verified. */
+    public function freeze(FreezeQuestionPaperRequest $request, int $paper): JsonResponse
+    {
+        $this->papers->freeze($this->facultyPk(), $paper, $request->input('otp'));
+
+        return response()->json(['message' => 'Question paper verified and published.']);
+    }
+
+    /** See Attachment / Download Original Paper. */
+    public function original(int $paper): StreamedResponse
+    {
+        $qp = $this->papers->originalPaperFor($this->facultyPk(), $paper);
+
+        return $this->files->download($qp->original_file_path, $qp->original_file_name);
+    }
+
+    /** See Attachment / Download Translated Paper, once Rajbhasha has sent it. */
+    public function translated(int $paper): StreamedResponse
+    {
+        $qp = $this->papers->translatedPaperFor($this->facultyPk(), $paper);
+
+        return $this->files->download($qp->translated_file_path, $qp->translated_file_name);
+    }
+
+    /** The logged-in faculty, or 404: no one else has papers here. */
+    private function facultyPk(): int
+    {
+        $facultyPk = $this->papers->currentFacultyPk();
+        abort_unless($facultyPk, 404);
+
+        return $facultyPk;
     }
 }

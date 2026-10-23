@@ -208,6 +208,9 @@
      *   CoeGrid.upload({ table: '#t', trigger: '.coe-act--upload',
      *                   meta: function ($row) { return 'FC101 — …'; },
      *                   onSubmit: function ($row, file) { … } });
+     *
+     * onSubmit may return a promise (e.g. $.ajax): the modal then stays open
+     * until it resolves, and stays open on a rejection so the user can retry.
      */
     function upload(o) {
         var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('qpUploadModal'));
@@ -235,9 +238,24 @@
 
         $('#qpUploadForm').on('submit', function (e) {
             e.preventDefault();
-            if (!chosenFile || !$row) { return; }
-            o.onSubmit($row, chosenFile);
-            modal.hide();
+            if (!chosenFile || !$row || $submit.data('busy')) { return; }
+            settle(o.onSubmit($row, chosenFile), $submit, function () { modal.hide(); });
+        });
+    }
+
+    /**
+     * Hide now for a plain callback; for a promise, keep the button busy and
+     * call done() only once it resolves. A rejection leaves the modal as it was.
+     */
+    function settle(result, $button, done, failed) {
+        if (!result || typeof result.then !== 'function') { done(); return; }
+        $button.data('busy', true).prop('disabled', true);
+        result.then(function () {
+            $button.data('busy', false).prop('disabled', false);
+            done();
+        }, function (err) {
+            $button.data('busy', false).prop('disabled', false);
+            if (failed) { failed(err); }
         });
     }
 
@@ -297,7 +315,13 @@
      * Freeze modal (admin/coe/partials/freeze_modal) — OTP boxes + resend timer.
      *
      *   CoeGrid.freeze({ table: '#t', trigger: '.coe-act--freeze', resendSeconds: 60,
+     *                   onOpen: function ($row) { … },      // optional: send the OTP
+     *                   onResend: function ($row) { … },    // optional: send it again
      *                   onConfirm: function ($row, otp) { … } });
+     *
+     * Any callback may return a promise. onConfirm's keeps the modal open until it
+     * resolves; a rejection with a message string (or {message}) shows it under
+     * the boxes, as does a rejected onOpen / onResend.
      */
     function freeze(o) {
         var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('qpFreezeModal'));
@@ -339,9 +363,22 @@
             }, 1000);
         }
 
+        function message(err) {
+            if (typeof err === 'string') { return err; }
+            return (err && err.message) || 'Something went wrong. Please try again.';
+        }
+
+        function send(fn) {
+            var result = fn ? fn($row) : null;
+            if (result && typeof result.then === 'function') {
+                result.then(null, function (err) { stopTimer(); error(message(err)); });
+            }
+        }
+
         $(o.table).on('click', o.trigger, function () {
             $row = $(this).closest('tr');
             modal.show();
+            send(o.onOpen);
         });
 
         $('#qpFreezeModal')
@@ -382,18 +419,23 @@
             error('');
             $boxes.first().trigger('focus');
             startTimer();
+            send(o.onResend);
         });
 
         $('#qpFreezeForm').on('submit', function (e) {
             e.preventDefault();
+            var $submit = $(this).find('[type="submit"]');
+            if ($submit.data('busy')) { return; }
             if (value().length !== length) {
                 error('Enter the ' + length + '-digit OTP sent to your phone.');
                 $boxes.filter(function () { return !this.value; }).first().trigger('focus');
                 return;
             }
             if (!$row) { return; }
-            o.onConfirm($row, value());
-            modal.hide();
+            settle(o.onConfirm($row, value()), $submit, function () { modal.hide(); }, function (err) {
+                error(message(err));
+                $boxes.val('').first().trigger('focus');
+            });
         });
     }
 
@@ -407,6 +449,9 @@
      *
      * Exported as CoeGrid.confirm too, for any one-step row confirm with its own
      * modal (e.g. admin/coe/partials/confirm_approval_modal — Send for Approval).
+     *
+     * onConfirm may return a promise: the confirm button stays busy until it
+     * settles, then the modal closes either way (the page reports the outcome).
      */
     function confirmDelete(o) {
         var modalEl = document.querySelector(o.modal || '#qpDeleteModal');
@@ -424,9 +469,10 @@
         }
         $(modalEl).on('hidden.bs.modal', function () { $row = null; bulk = false; });
         $(o.confirm || '#qpDeleteConfirm').on('click', function () {
-            if (!$row && !bulk) { return; }
-            o.onConfirm($row);
-            modal.hide();
+            var $button = $(this);
+            if ((!$row && !bulk) || $button.data('busy')) { return; }
+            var close = function () { modal.hide(); };
+            settle(o.onConfirm($row), $button, close, close);
         });
     }
 

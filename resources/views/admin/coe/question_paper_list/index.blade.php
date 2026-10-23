@@ -131,7 +131,12 @@
                              column count. DataTables renders its own empty state. --}}
                         <tbody>
                             @foreach ($papers as $paper)
-                                <tr data-coe-id="{{ $paper['id'] }}">
+                                @php
+                                    $originalUrl = $paper['original_file'] ? route('admin.coe.question-paper.original', $paper['paper_id']) : null;
+                                    $translatedUrl = $paper['translated_file'] ? route('admin.coe.question-paper.translated', $paper['paper_id']) : null;
+                                @endphp
+                                <tr data-coe-id="{{ $paper['id'] }}"
+                                    data-coe-delete-url="{{ $paper['paper_id'] ? route('admin.coe.question-paper.destroy', $paper['paper_id']) : '' }}">
                                     <td></td>
                                     <td>{{ $paper['code'] }}</td>
                                     <td>{{ $paper['name'] }}</td>
@@ -142,15 +147,15 @@
                                         <span class="coe-deadline">{{ $paper['deadline']->format('d/m/Y') }}</span>
                                     </td>
                                     <td>
-                                        @if ($paper['original_file'])
-                                            <a href="#" class="coe-attach" title="{{ $paper['original_file'] }}">See Attachment</a>
+                                        @if ($originalUrl)
+                                            <a href="{{ $originalUrl }}" class="coe-attach" title="{{ $paper['original_file'] }}">See Attachment</a>
                                         @else
                                             <span class="coe-muted">-</span>
                                         @endif
                                     </td>
                                     <td>
-                                        @if ($paper['translated_file'])
-                                            <a href="#" class="coe-attach" title="{{ $paper['translated_file'] }}">See Attachment</a>
+                                        @if ($translatedUrl)
+                                            <a href="{{ $translatedUrl }}" class="coe-attach" title="{{ $paper['translated_file'] }}">See Attachment</a>
                                         @else
                                             <span class="coe-muted">-</span>
                                         @endif
@@ -161,19 +166,26 @@
                                     </td>
                                     <td>
                                         <div class="coe-act-group" role="group" aria-label="Row actions">
-                                            <button type="button" class="coe-act coe-act--del">
-                                                <span class="coe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
-                                                <span class="coe-act__label">Delete</span>
-                                            </button>
+                                            {{-- Greyed, not hidden, when there is nothing to act on yet —
+                                                 keeps the action column the same shape on every row. --}}
+                                            @if ($paper['paper_id'])
+                                                <button type="button" class="coe-act coe-act--del">
+                                                    <span class="coe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+                                                    <span class="coe-act__label">Delete</span>
+                                                </button>
+                                            @else
+                                                <span class="coe-act is-disabled" aria-disabled="true" title="Faculty has not added the paper yet">
+                                                    <span class="coe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+                                                    <span class="coe-act__label">Delete</span>
+                                                </span>
+                                            @endif
 
-                                            {{-- Greyed, not hidden, when there is no file yet — keeps
-                                                 the action column the same shape on every row. --}}
                                             @foreach ([
-                                                [$paper['original_file'], 'bi-download', 'Download Original Paper', 'Faculty has not uploaded the paper yet'],
-                                                [$paper['translated_file'], 'bi-translate', 'Download Translated Paper', 'No translation uploaded yet'],
-                                            ] as [$file, $icon, $label, $why])
-                                                @if ($file)
-                                                    <a href="#" class="coe-act coe-act--download" title="{{ $file }}">
+                                                [$originalUrl, $paper['original_file'], 'bi-download', 'Download Original Paper', 'Faculty has not uploaded the paper yet'],
+                                                [$translatedUrl, $paper['translated_file'], 'bi-translate', 'Download Translated Paper', 'No translation sent yet'],
+                                            ] as [$url, $file, $icon, $label, $why])
+                                                @if ($url)
+                                                    <a href="{{ $url }}" class="coe-act coe-act--download" title="{{ $file }}">
                                                         <span class="coe-act__icon"><i class="bi {{ $icon }}" aria-hidden="true"></i></span>
                                                         <span class="coe-act__label">{{ $label }}</span>
                                                     </a>
@@ -263,20 +275,29 @@ $(function () {
 
     var $table = $('#qplTable');
 
-    // No file store yet — keep the links from jumping to "#".
-    $table.on('click', 'a.coe-act--download, a.coe-attach', function (e) { e.preventDefault(); });
-
     /* ── Delete ──────────────────────────────────────────────────────────────
-       DESIGN PREVIEW: no backend yet, so the row is removed in the browser
-       only. When the endpoint exists, DELETE first and redraw from the
-       response — never from the client alone. */
+       Sent first; on success the page reloads, so the row is repainted from the
+       database (the subject stays listed, back to Pending at Faculty). */
     CoeGrid.confirmDelete({
         table: '#qplTable',
         modal: '#qplDeleteModal',
         confirm: '#qplDeleteConfirm',
         onConfirm: function ($row) {
-            dt.row($row).remove().draw(false);
-            Swal.fire({ icon: 'success', title: 'Success', text: 'Question paper deleted.' });
+            var d = $.Deferred();
+            $.ajax({
+                url: $row.attr('data-coe-delete-url'),
+                method: 'DELETE',
+                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+            }).done(function (res) {
+                d.resolve();
+                Swal.fire({ icon: 'success', title: 'Success', text: (res && res.message) || 'Question paper deleted.' })
+                    .then(function () { window.location.reload(); });
+            }).fail(function (xhr) {
+                d.reject();
+                var r = xhr.responseJSON || {};
+                Swal.fire({ icon: 'error', title: 'Error', text: r.message || 'Could not delete the question paper.' });
+            });
+            return d.promise();
         }
     });
 });

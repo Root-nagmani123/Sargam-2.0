@@ -1988,16 +1988,55 @@ Route::middleware(['auth'])->prefix('sidebar')->name('sidebar.')->group(function
     Route::get('getMenus/{group_id}', [SidebarController::class, 'getGroupMenus'])->name('getMenus');
 });
 
-// COE -> Question Paper Management (design-first screens, sample rows).
+// COE -> Question Paper Management. Each screen is gated by its sidebar menu
+// permission (Super Admin always passes); the services also scope every row.
 Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(function () {
-    Route::get('my-question-paper', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'index'])
-        ->name('my-question-paper.index');
-    Route::get('question-paper', [\App\Http\Controllers\Admin\COE\QuestionPaperListController::class, 'index'])
-        ->name('question-paper.index');
-    Route::get('faculty-question-paper', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'index'])
-        ->name('faculty-question-paper.index');
-    Route::get('faculty-question-paper/{paper}/create', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'create'])
-        ->whereNumber('paper')->name('faculty-question-paper.create');
+    // My Question Paper (Rajbhasha)
+    Route::middleware('menu.permission:coe_my_question_paper_rajbhasha')->group(function () {
+        Route::get('my-question-paper', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'index'])
+            ->name('my-question-paper.index');
+        Route::get('my-question-paper/{paper}/original', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'original'])
+            ->whereNumber('paper')->name('my-question-paper.original');
+        Route::get('my-question-paper/{paper}/translated', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'translated'])
+            ->whereNumber('paper')->name('my-question-paper.translated');
+        Route::post('my-question-paper/{paper}/translation', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'storeTranslation'])
+            ->whereNumber('paper')->name('my-question-paper.translation.store');
+        Route::delete('my-question-paper/{paper}/translation', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'destroyTranslation'])
+            ->whereNumber('paper')->name('my-question-paper.translation.destroy');
+        Route::post('my-question-paper/{paper}/send-for-approval', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'sendForApproval'])
+            ->whereNumber('paper')->name('my-question-paper.send-for-approval');
+    });
+
+    // Question Paper (administrator)
+    Route::middleware('menu.permission:coe_question_paper')->group(function () {
+        Route::get('question-paper', [\App\Http\Controllers\Admin\COE\QuestionPaperListController::class, 'index'])
+            ->name('question-paper.index');
+        Route::get('question-paper/{paper}/original', [\App\Http\Controllers\Admin\COE\QuestionPaperListController::class, 'original'])
+            ->whereNumber('paper')->name('question-paper.original');
+        Route::get('question-paper/{paper}/translated', [\App\Http\Controllers\Admin\COE\QuestionPaperListController::class, 'translated'])
+            ->whereNumber('paper')->name('question-paper.translated');
+        Route::delete('question-paper/{paper}', [\App\Http\Controllers\Admin\COE\QuestionPaperListController::class, 'destroy'])
+            ->whereNumber('paper')->name('question-paper.destroy');
+    });
+
+    // My Question Paper (faculty)
+    Route::middleware('menu.permission:coe_my_question_paper_faculty')->group(function () {
+        Route::get('faculty-question-paper', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'index'])
+            ->name('faculty-question-paper.index');
+        Route::get('faculty-question-paper/{paper}/create', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'create'])
+            ->whereNumber('paper')->name('faculty-question-paper.create');
+        Route::post('faculty-question-paper/{paper}/upload', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'upload'])
+            ->whereNumber('paper')->name('faculty-question-paper.upload');
+        Route::get('faculty-question-paper/{paper}/original', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'original'])
+            ->whereNumber('paper')->name('faculty-question-paper.original');
+        Route::get('faculty-question-paper/{paper}/translated', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'translated'])
+            ->whereNumber('paper')->name('faculty-question-paper.translated');
+        // Throttled per user on top of FreezeOtpService's own per-paper limits.
+        Route::post('faculty-question-paper/{paper}/freeze-otp', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'freezeOtp'])
+            ->whereNumber('paper')->middleware('throttle:10,1')->name('faculty-question-paper.freeze-otp');
+        Route::post('faculty-question-paper/{paper}/freeze', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'freeze'])
+            ->whereNumber('paper')->middleware('throttle:10,1')->name('faculty-question-paper.freeze');
+    });
     // COE -> Master Data
     Route::get('examination-type', [\App\Http\Controllers\Admin\COE\ExaminationTypeController::class, 'index'])
         ->name('examination-type.index');

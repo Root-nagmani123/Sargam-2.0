@@ -111,7 +111,7 @@
                             @foreach ($papers as $paper)
                                 @php
                                     // Exam day reached and the paper is still with the faculty.
-                                    $isOverdue = in_array($paper['status'], ['pending-faculty', 'draft'], true)
+                                    $isOverdue = $paper['status'] === 'pending-faculty'
                                         && $paper['exam_date']->isPast();
                                 @endphp
                                 <tr data-coe-id="{{ $paper['id'] }}"
@@ -120,7 +120,9 @@
                                     data-coe-state="{{ $paper['status'] }}"
                                     data-coe-version="{{ $paper['version'] }}"
                                     data-coe-translated="{{ $paper['translated_file'] ? '1' : '0' }}"
-                                    data-coe-create-url="{{ route('admin.coe.faculty-question-paper.create', $paper['id']) }}">
+                                    data-coe-create-url="{{ $paper['editable'] ? route('admin.coe.faculty-question-paper.create', $paper['id']) : '' }}"
+                                    data-coe-original-url="{{ $paper['original_file'] ? route('admin.coe.faculty-question-paper.original', $paper['id']) : '' }}"
+                                    data-coe-translated-url="{{ $paper['translated_file'] ? route('admin.coe.faculty-question-paper.translated', $paper['id']) : '' }}">
                                     <td></td>
                                     <td>{{ $paper['code'] }}</td>
                                     <td>{{ $paper['name'] }}</td>
@@ -135,14 +137,14 @@
                                     </td>
                                     <td class="coe-cell-original">
                                         @if ($paper['original_file'])
-                                            <a href="#" class="coe-attach" title="{{ $paper['original_file'] }}">See Attachment</a>
+                                            <a href="{{ route('admin.coe.faculty-question-paper.original', $paper['id']) }}" class="coe-attach" title="{{ $paper['original_file'] }}">See Attachment</a>
                                         @else
                                             <span class="coe-muted">-</span>
                                         @endif
                                     </td>
                                     <td>
                                         @if ($paper['translated_file'])
-                                            <a href="#" class="coe-attach" title="{{ $paper['translated_file'] }}">See Attachment</a>
+                                            <a href="{{ route('admin.coe.faculty-question-paper.translated', $paper['id']) }}" class="coe-attach" title="{{ $paper['translated_file'] }}">See Attachment</a>
                                         @else
                                             <span class="coe-muted">-</span>
                                         @endif
@@ -169,8 +171,6 @@
     </div>
 </div>
 
-@include('admin.coe.partials.upload_modal', ['title' => 'Upload Question Paper', 'field' => 'question_paper'])
-@include('admin.coe.partials.confirm_delete_modal')
 @include('admin.coe.partials.freeze_modal', ['phoneMasked' => $otpPhoneMasked])
 
 {{-- Column Visibility --}}
@@ -201,11 +201,11 @@ $(function () {
 
     /* Column indexes — keep in step with the <thead>. */
     var COL = { sno: 0, drive: 3, batch: 4, examDate: 6, status: 12, action: 13 };
-    var STATUS = @json($statusLabels);
     var $table = $('#qpfTable');
 
     /* ── Row actions per state — the ONE place they are defined ─────────── */
-    // href: null → a button; '#' → an inert link; otherwise a real link.
+    // href: null → a button; '#' → an inert link; 'create' / 'original' /
+    // 'translated' → the row's own URL (data-coe-*-url); otherwise a real link.
     function act(cls, icon, label, href) {
         var $el = href ? $('<a></a>').attr('href', href) : $('<button type="button"></button>');
         return $el.addClass('coe-act ' + cls).append(
@@ -219,27 +219,33 @@ $(function () {
         'pending-faculty': [
             ['coe-act--create coe-act--wide', 'bi-upload', 'Upload or Create Original Paper', 'create']
         ],
-        'draft': [
-            ['coe-act--download', 'bi-download', 'Download Original Paper', '#'],
-            ['coe-act--upload', 'bi-arrow-repeat', 'Re-upload Paper'],
-            ['coe-act--del', 'bi-trash3', 'Delete'],
+        // Uploaded: straight to Rajbhasha, no freeze. Replaceable (next version)
+        // until Rajbhasha uploads the translation - then the row has no create URL.
+        'pending-rajbhasha': [
+            ['coe-act--create coe-act--wide', 'bi-upload', 'Reupload or Edit Original Paper', 'create']
+        ],
+        // Pending Verification: Rajbhasha sent the translation back; Freeze (OTP) publishes it.
+        'translated': [
+            ['coe-act--download', 'bi-download', 'Download Original Paper', 'original'],
+            ['coe-act--download', 'bi-translate', 'Download Translated Paper', 'translated'],
             ['coe-act--freeze', 'bi-snow', 'Freeze']
         ],
-        'pending-rajbhasha': [
-            ['coe-act--download', 'bi-download', 'Download Original Paper', '#']
-        ],
         'published': [
-            ['coe-act--download', 'bi-download', 'Download Original Paper', '#'],
-            ['coe-act--download', 'bi-translate', 'Download Translated Paper', '#']
+            ['coe-act--download', 'bi-download', 'Download Original Paper', 'original'],
+            ['coe-act--download', 'bi-translate', 'Download Translated Paper', 'translated']
         ]
     };
 
     function paintActions($row) {
-        var list = ACTIONS[$row.attr('data-coe-state')] || [];
+        var list = (ACTIONS[$row.attr('data-coe-state')] || []).filter(function (a) {
+            return a[3] !== 'create' || $row.attr('data-coe-create-url');   // locked: no Add / Edit
+        });
         $row.find('.coe-cell-actions').html(
             '<div class="coe-act-group" role="group" aria-label="Row actions">' +
             list.map(function (a) {
-                var href = a[3] === 'create' ? $row.attr('data-coe-create-url') : a[3];
+                var href = ['create', 'original', 'translated'].indexOf(a[3]) !== -1
+                    ? ($row.attr('data-coe-' + a[3] + '-url') || '#')
+                    : a[3];
                 return act(a[0], a[1], a[2], href);
             }).join('') + '</div>'
         );
@@ -265,62 +271,57 @@ $(function () {
         empty: { title: 'No Question Papers', zeroTitle: 'No Question Papers Found', text: 'No question paper has been assigned to you yet.' }
     });
 
-    /* ── Row state ───────────────────────────────────────────────────────────
-       DESIGN PREVIEW: no backend yet, so upload / delete / freeze repaint the
-       row in the browser only. When the endpoints exist, POST first and repaint
-       from the response (or reload) — never from the client alone. */
-    function setRow($row, state, originalFile, version) {
-        $row.attr('data-coe-state', state).attr('data-coe-version', version);
+    // Links with no file behind them yet (the translated paper) stay inert.
+    $table.on('click', 'a.coe-act--download[href="#"], a.coe-attach[href="#"]', function (e) { e.preventDefault(); });
 
-        var $orig = $row.find('.coe-cell-original').empty();
-        if (originalFile) {
-            $('<a href="#" class="coe-attach">See Attachment</a>').attr('title', originalFile).appendTo($orig);
-        } else {
-            $('<span class="coe-muted">-</span>').appendTo($orig);
-        }
+    /* ── Row actions → server ────────────────────────────────────────────────
+       Every change is sent first; on success the page reloads, so a row is
+       always repainted from the database, never from the client alone. */
+    var URLS = {
+        freezeOtp: @json(route('admin.coe.faculty-question-paper.freeze-otp', ['paper' => '__PAPER__'])),
+        freeze: @json(route('admin.coe.faculty-question-paper.freeze', ['paper' => '__PAPER__']))
+    };
 
-        $row.find('.coe-cell-version').text('V' + version);
-        $row.find('.coe-cell-status').html(
-            $('<span class="coe-state"></span>').addClass('coe-state--' + state).text(STATUS[state])
-        );
-        paintActions($row);
+    function url(name, $row) { return URLS[name].replace('__PAPER__', $row.attr('data-coe-id')); }
 
-        // Let the Status filter / search see the new label.
-        dt.row($row).invalidate('dom').draw(false);
+    function errorText(xhr) {
+        var r = (xhr && xhr.responseJSON) || {};
+        var keys = r.errors ? Object.keys(r.errors) : [];
+        return keys.length ? r.errors[keys[0]][0] : (r.message || 'Something went wrong. Please try again.');
     }
 
-    function version($row) { return parseInt($row.attr('data-coe-version'), 10) || 1; }
+    // Resolves with the JSON response; rejects with the server's message.
+    function send(method, href, data) {
+        var isForm = data instanceof FormData;
+        var d = $.Deferred();
+        $.ajax({
+            url: href,
+            method: method,
+            data: data || {},
+            processData: !isForm,
+            contentType: isForm ? false : 'application/x-www-form-urlencoded; charset=UTF-8',
+            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+        }).done(function (res) { d.resolve(res || {}); })
+          .fail(function (xhr) { d.reject(errorText(xhr)); });
+        return d.promise();
+    }
 
-    $table.on('click', 'a.coe-act--download, a.coe-attach', function (e) { e.preventDefault(); });
+    function successThenReload(res) {
+        Swal.fire({ icon: 'success', title: 'Success', text: res.message || 'Done.' })
+            .then(function () { window.location.reload(); });
+    }
 
-    CoeGrid.upload({
-        table: '#qpfTable',
-        trigger: '.coe-act--upload',
-        meta: function ($row) { return $row.data('coe-code') + ' — ' + $row.data('coe-name'); },
-        onSubmit: function ($row, file) {
-            // A re-upload of a draft is a new version; the first upload is V1.
-            var isRevision = $row.attr('data-coe-state') === 'draft';
-            setRow($row, 'draft', file.name, isRevision ? version($row) + 1 : version($row));
-            Swal.fire({ icon: 'success', title: 'Success',
-                text: isRevision ? 'New version uploaded.' : 'Question paper uploaded.' });
-        }
-    });
-
-    CoeGrid.confirmDelete({
-        table: '#qpfTable',
-        onConfirm: function ($row) {
-            setRow($row, 'pending-faculty', null, version($row));
-            Swal.fire({ icon: 'success', title: 'Success', text: 'Question paper deleted.' });
-        }
-    });
-
+    // Freeze (Pending Verification only) publishes the translation. The OTP is
+    // sent when the modal opens and on Resend; errors show under the boxes.
     CoeGrid.freeze({
         table: '#qpfTable',
         trigger: '.coe-act--freeze',
-        onConfirm: function ($row) {
-            var file = $row.find('.coe-cell-original .coe-attach').attr('title') || null;
-            setRow($row, 'pending-rajbhasha', file, version($row));
-            Swal.fire({ icon: 'success', title: 'Success', text: 'Question paper frozen and sent for translation.' });
+        onOpen: function ($row) { return send('POST', url('freezeOtp', $row)); },
+        onResend: function ($row) { return send('POST', url('freezeOtp', $row)); },
+        onConfirm: function ($row, otp) {
+            var request = send('POST', url('freeze', $row), { otp: otp });
+            request.then(successThenReload);
+            return request;
         }
     });
 });

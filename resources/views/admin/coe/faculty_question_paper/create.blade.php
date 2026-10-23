@@ -64,9 +64,14 @@
             </div>
 
             <div id="qpaperPaneCreate" class="coe-qp-editor" role="tabpanel" aria-labelledby="qpaperTabCreate" hidden>
-                {{-- Summernote takes this markup as its starting document. --}}
+                {{-- Summernote takes this markup as its starting document: the paper
+                     being edited (already cleaned by PaperHtmlSanitizer), else the template. --}}
                 <div id="qpaperEditor">
-                    @include('admin.coe.faculty_question_paper.partials.paper_template', ['paper' => $paper])
+                    @if (! empty($editorHtml))
+                        {!! $editorHtml !!}
+                    @else
+                        @include('admin.coe.faculty_question_paper.partials.paper_template', ['paper' => $paper])
+                    @endif
                 </div>
                 <input type="hidden" name="paper_html" id="qpaperHtml">
                 <p class="coe-dropzone__error d-none" id="qpaperEditorError" role="alert"></p>
@@ -90,6 +95,7 @@ $(function () {
     'use strict';
 
     var LIST_URL = @json(route('admin.coe.faculty-question-paper.index'));
+    var UPLOAD_URL = @json(route('admin.coe.faculty-question-paper.upload', $paper['id']));
 
     var $form = $('#qpaperForm');
     var $submit = $('#qpaperSubmit');
@@ -211,26 +217,47 @@ $(function () {
     });
 
     /* ── Submit ──────────────────────────────────────────────────────────────
-       DESIGN PREVIEW: no backend yet, so nothing is stored. When the endpoint
-       exists, POST this form (multipart: mode + question_paper | paper_html),
-       sanitise paper_html on the server, and redirect from the response. */
+       Multipart POST (mode + question_paper | paper_html); the server cleans
+       paper_html. Back to the list only once the paper is stored. */
     $form.on('submit', function (e) {
         e.preventDefault();
+        if (submitting) { return; }
+
+        var body = new FormData();
+        body.append('mode', mode);
 
         if (mode === 'upload') {
             if (!chosenFile) { return; }
+            body.append('question_paper', chosenFile);
         } else {
             if (editorText() === '') {
                 $('#qpaperEditorError').text('Write the question paper before uploading it.').removeClass('d-none');
                 return;
             }
             $('#qpaperHtml').val($editor.summernote('code'));
+            body.append('paper_html', $('#qpaperHtml').val());
         }
 
         submitting = true;
         $submit.prop('disabled', true);
-        Swal.fire({ icon: 'success', title: 'Success', text: 'Question paper uploaded.' })
-            .then(function () { window.location.href = LIST_URL; });
+
+        $.ajax({
+            url: UPLOAD_URL,
+            method: 'POST',
+            data: body,
+            processData: false,
+            contentType: false,
+            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+        }).done(function (res) {
+            Swal.fire({ icon: 'success', title: 'Success', text: (res && res.message) || 'Question paper uploaded.' })
+                .then(function () { window.location.href = LIST_URL; });
+        }).fail(function (xhr) {
+            submitting = false;
+            refresh();
+            var r = xhr.responseJSON || {};
+            var firstError = r.errors && Object.keys(r.errors).length ? r.errors[Object.keys(r.errors)[0]][0] : null;
+            Swal.fire({ icon: 'error', title: 'Error', text: firstError || r.message || 'Could not upload the question paper.' });
+        });
     });
 
     refresh();

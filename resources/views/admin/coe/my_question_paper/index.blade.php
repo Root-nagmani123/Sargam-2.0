@@ -122,7 +122,8 @@
                                 <tr data-coe-id="{{ $paper['id'] }}"
                                     data-coe-code="{{ $paper['code'] }}"
                                     data-coe-name="{{ $paper['name'] }}"
-                                    data-coe-state="{{ $status }}">
+                                    data-coe-state="{{ $status }}"
+                                    data-coe-original-url="{{ route('admin.coe.my-question-paper.original', $paper['id']) }}">
                                     <td></td>
                                     <td>{{ $paper['code'] }}</td>
                                     <td>{{ $paper['name'] }}</td>
@@ -136,11 +137,11 @@
                                     </td>
                                     <td>{{ $paper['faculty'] }}</td>
                                     <td>
-                                        <a href="#" class="coe-attach" title="{{ $paper['original_file'] }}">See Attachment</a>
+                                        <a href="{{ route('admin.coe.my-question-paper.original', $paper['id']) }}" class="coe-attach" title="{{ $paper['original_file'] }}">See Attachment</a>
                                     </td>
                                     <td class="coe-cell-translated">
                                         @if ($paper['translated_file'])
-                                            <a href="#" class="coe-attach" title="{{ $paper['translated_file'] }}">See Attachment</a>
+                                            <a href="{{ route('admin.coe.my-question-paper.translated', $paper['id']) }}" class="coe-attach" title="{{ $paper['translated_file'] }}">See Attachment</a>
                                         @else
                                             <span class="coe-muted">-</span>
                                         @endif
@@ -202,13 +203,12 @@ $(function () {
 
     /* Column indexes — keep in step with the <thead>. */
     var COL = { sno: 0, drive: 3, batch: 4, status: 9, action: 10 };
-    var STATUS = @json($statusLabels);
 
     var $table = $('#qpTable');
 
     /* ── Row actions per state — the ONE place they are defined ─────────── */
-    // [class, icon, label, href]: href '#' → an inert link (no file store yet), none → a button.
-    var DOWNLOAD = ['coe-act--download', 'bi-download', 'Download Original Paper', '#'];
+    // [class, icon, label, href]: href 'original' → the row's data-coe-original-url, none → a button.
+    var DOWNLOAD = ['coe-act--download', 'bi-download', 'Download Original Paper', 'original'];
     var ACTIONS = {
         'pending': [DOWNLOAD, ['coe-act--upload', 'bi-upload', 'Upload Translated Paper']],
         'translated': [
@@ -216,11 +216,13 @@ $(function () {
             ['coe-act--del', 'bi-trash3', 'Delete Translated Paper'],
             ['coe-act--approve', 'bi-send-check', 'Send for Approval']
         ],
-        'sent': [DOWNLOAD]
+        'sent': [DOWNLOAD],
+        'published': [DOWNLOAD]
     };
 
-    function act(a) {
-        var $el = a[3] ? $('<a></a>').attr('href', a[3]) : $('<button type="button"></button>');
+    function act(a, $row) {
+        var href = a[3] === 'original' ? ($row.attr('data-coe-original-url') || '#') : a[3];
+        var $el = href ? $('<a></a>').attr('href', href) : $('<button type="button"></button>');
         return $el.addClass('coe-act ' + a[0]).append(
             '<span class="coe-act__icon"><i class="bi ' + a[1] + '" aria-hidden="true"></i></span>',
             $('<span class="coe-act__label"></span>').text(a[2])
@@ -230,7 +232,7 @@ $(function () {
     function paintActions($row) {
         $row.find('.coe-cell-actions').html(
             '<div class="coe-act-group" role="group" aria-label="Row actions">' +
-            (ACTIONS[$row.attr('data-coe-state')] || []).map(act).join('') + '</div>'
+            (ACTIONS[$row.attr('data-coe-state')] || []).map(function (a) { return act(a, $row); }).join('') + '</div>'
         );
     }
 
@@ -256,36 +258,56 @@ $(function () {
         empty: { title: 'No Question Papers', zeroTitle: 'No Question Papers Found', text: 'No question paper has been assigned to you yet.' }
     });
 
-    /* ── Row state ───────────────────────────────────────────────────────────
-       DESIGN PREVIEW: no backend yet, so upload / delete / send repaint the
-       row in the browser only. When the endpoints exist, POST first and repaint
-       from the response (or reload) — never from the client alone. */
-    function setRowState($row, state, fileName) {
-        $row.attr('data-coe-state', state);
-
-        var $translated = $row.find('.coe-cell-translated').empty();
-        if (fileName) {
-            $('<a href="#" class="coe-attach">See Attachment</a>').attr('title', fileName).appendTo($translated);
-        } else {
-            $('<span class="coe-muted">-</span>').appendTo($translated);
-        }
-
-        $row.find('.coe-cell-status').html(
-            $('<span class="coe-state"></span>').addClass('coe-state--' + state).text(STATUS[state])
-        );
-        paintActions($row);
-
-        // Let the status filter / search see the new label.
-        dt.row($row).invalidate('dom').draw(false);
-    }
-
     function rowLabel($row) {
         return $row.data('coe-code') + ' — ' + $row.data('coe-name');
     }
 
-    $table.on('click', 'a.coe-act--download, a.coe-attach', function (e) {
-        e.preventDefault();   // no file store yet
-    });
+    $table.on('click', 'a.coe-act--download[href="#"], a.coe-attach[href="#"]', function (e) { e.preventDefault(); });
+
+    /* ── Row actions → server ────────────────────────────────────────────────
+       Every change is sent first; on success the page reloads, so a row is
+       always repainted from the database, never from the client alone. */
+    var URLS = {
+        upload: @json(route('admin.coe.my-question-paper.translation.store', ['paper' => '__PAPER__'])),
+        destroy: @json(route('admin.coe.my-question-paper.translation.destroy', ['paper' => '__PAPER__'])),
+        send: @json(route('admin.coe.my-question-paper.send-for-approval', ['paper' => '__PAPER__']))
+    };
+
+    function url(name, $row) { return URLS[name].replace('__PAPER__', $row.attr('data-coe-id')); }
+
+    function errorText(xhr) {
+        var r = (xhr && xhr.responseJSON) || {};
+        var keys = r.errors ? Object.keys(r.errors) : [];
+        return keys.length ? r.errors[keys[0]][0] : (r.message || 'Something went wrong. Please try again.');
+    }
+
+    // Resolves with the JSON response; rejects with the server's message.
+    function send(method, href, data) {
+        var isForm = data instanceof FormData;
+        var d = $.Deferred();
+        $.ajax({
+            url: href,
+            method: method,
+            data: data || {},
+            processData: !isForm,
+            contentType: isForm ? false : 'application/x-www-form-urlencoded; charset=UTF-8',
+            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+        }).done(function (res) { d.resolve(res || {}); })
+          .fail(function (xhr) { d.reject(errorText(xhr)); });
+        return d.promise();
+    }
+
+    function successThenReload(res) {
+        Swal.fire({ icon: 'success', title: 'Success', text: res.message || 'Done.' })
+            .then(function () { window.location.reload(); });
+    }
+
+    function errorAlert(message) { Swal.fire({ icon: 'error', title: 'Error', text: message }); }
+
+    function run(request) {
+        request.then(successThenReload, errorAlert);
+        return request;
+    }
 
     /* ── Upload / Delete / Send for Approval — shared modal behaviour (coe-grid.js) ── */
     CoeGrid.upload({
@@ -293,17 +315,15 @@ $(function () {
         trigger: '.coe-act--upload',
         meta: rowLabel,
         onSubmit: function ($row, file) {
-            setRowState($row, 'translated', file.name);
-            Swal.fire({ icon: 'success', title: 'Success', text: 'Translated question paper uploaded.' });
+            var body = new FormData();
+            body.append('translated_paper', file);
+            return run(send('POST', url('upload', $row), body));
         }
     });
 
     CoeGrid.confirmDelete({
         table: '#qpTable',
-        onConfirm: function ($row) {
-            setRowState($row, 'pending', null);
-            Swal.fire({ icon: 'success', title: 'Success', text: 'Translated question paper deleted.' });
-        }
+        onConfirm: function ($row) { return run(send('DELETE', url('destroy', $row))); }
     });
 
     CoeGrid.confirm({
@@ -311,11 +331,7 @@ $(function () {
         trigger: '.coe-act--approve',
         modal: '#qpApprovalModal',
         confirm: '#qpApprovalConfirm',
-        onConfirm: function ($row) {
-            var file = $row.find('.coe-cell-translated .coe-attach').attr('title') || null;
-            setRowState($row, 'sent', file);
-            Swal.fire({ icon: 'success', title: 'Success', text: 'Translated question paper sent for approval.' });
-        }
+        onConfirm: function ($row) { return run(send('POST', url('send', $row))); }
     });
 });
 </script>

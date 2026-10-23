@@ -3,38 +3,47 @@
 namespace App\Http\Controllers\Admin\COE;
 
 use App\Http\Controllers\Controller;
-use Carbon\Carbon;
-use Illuminate\Support\Collection;
+use App\Http\Requests\Admin\COE\UploadTranslationRequest;
+use App\Services\COE\QuestionPaperStorage;
+use App\Services\COE\RajbhashaPaperService;
+use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * COE → Question Paper Management → My Question Paper.
+ * COE → Question Paper Management → My Question Paper (Rajbhasha).
  *
  * The Rajbhasha translator's view: download the original, upload the Hindi
- * translation, then send it for approval.
- *
- * Design-first screen: the grid, filters, upload modal and Send for Approval
- * confirm are built against the row shape below. The rows are SAMPLE data — no table backs
- * this page yet. Replace sampleRows() with the real query when the COE question
- * paper module lands; the view only reads the keys listed there.
+ * translation, then send it to the faculty for approval. Rows come from
+ * RajbhashaPaperService::papers(). Every route is gated by
+ * menu.permission:coe_my_question_paper_rajbhasha (routes/web.php).
  */
 class MyQuestionPaperController extends Controller
 {
-    /** Status keys the view knows how to badge and act on. */
+    /** Badge keys the view knows how to show and act on (also its CSS classes). */
     public const STATUS_PENDING = 'pending';       // waiting on the Rajbhasha translator
 
     public const STATUS_TRANSLATED = 'translated'; // translation uploaded, not yet sent
 
     public const STATUS_SENT = 'sent';             // sent for approval; no further edits here
 
+    public const STATUS_PUBLISHED = 'published';   // the faculty verified and published it
+
     public const STATUS_LABELS = [
         self::STATUS_PENDING => 'Pending at Rajbhasha',
         self::STATUS_TRANSLATED => 'Translated',
         self::STATUS_SENT => 'Sent for Approval',
+        self::STATUS_PUBLISHED => 'Published',
     ];
+
+    public function __construct(
+        private RajbhashaPaperService $papers,
+        private QuestionPaperStorage $files,
+    ) {
+    }
 
     public function index()
     {
-        $papers = $this->sampleRows();
+        $papers = $this->papers->papers();
 
         return view('admin.coe.my_question_paper.index', [
             'papers' => $papers,
@@ -44,32 +53,44 @@ class MyQuestionPaperController extends Controller
         ]);
     }
 
-    /**
-     * @return Collection<int, array{id:int, code:string, name:string, drive:string, batch:string,
-     *     deadline:Carbon, faculty:string, original_file:string, translated_file:?string, status:string}>
-     */
-    private function sampleRows(): Collection
+    /** Download Original Paper / See Attachment (original). */
+    public function original(int $paper): StreamedResponse
     {
-        $rows = [
-            ['FC101-001', 'FC- FC 103', 'Mid Term Drive', '2026', '2026-10-05', 'John Doe', null, self::STATUS_PENDING],
-            ['FC101-002', 'FC- Public Administration', 'Mid Term Drive', '2026', '2026-10-07', 'Anita Sharma', null, self::STATUS_PENDING],
-            ['FC102-001', 'FC- Indian Economy', 'End Term Drive', '2026', '2026-11-12', 'Rahul Verma', 'FC102-001_hindi.docx', self::STATUS_TRANSLATED],
-            ['FC102-004', 'FC- Constitutional Law', 'End Term Drive', '2025', '2026-11-15', 'Meera Iyer', 'FC102-004_hindi.docx', self::STATUS_SENT],
-            ['FC103-002', 'FC- Ethics & Integrity', 'Mid Term Drive', '2025', '2026-10-20', 'Sanjay Gupta', null, self::STATUS_PENDING],
-            ['FC104-003', 'FC- Disaster Management', 'Supplementary Drive', '2026', '2026-12-01', 'Priya Nair', 'FC104-003_hindi.docx', self::STATUS_TRANSLATED],
-        ];
+        $qp = $this->papers->find($paper);
 
-        return collect($rows)->values()->map(fn (array $r, int $i) => [
-            'id' => $i + 1,
-            'code' => $r[0],
-            'name' => $r[1],
-            'drive' => $r[2],
-            'batch' => $r[3],
-            'deadline' => Carbon::parse($r[4]),
-            'faculty' => $r[5],
-            'original_file' => $r[0].'_original.pdf',
-            'translated_file' => $r[6],
-            'status' => $r[7],
-        ]);
+        return $this->files->download($qp->original_file_path, $qp->original_file_name);
+    }
+
+    /** See Attachment (translated). */
+    public function translated(int $paper): StreamedResponse
+    {
+        $qp = $this->papers->find($paper);
+        abort_unless($qp->translated_file_path, 404);
+
+        return $this->files->download($qp->translated_file_path, $qp->translated_file_name);
+    }
+
+    /** Upload Translated Paper → Translated. */
+    public function storeTranslation(UploadTranslationRequest $request, int $paper): JsonResponse
+    {
+        $this->papers->addTranslation($paper, $request->file('translated_paper'));
+
+        return response()->json(['message' => 'Translated question paper uploaded.']);
+    }
+
+    /** Delete Translated Paper → Pending at Rajbhasha again. */
+    public function destroyTranslation(int $paper): JsonResponse
+    {
+        $this->papers->deleteTranslation($paper);
+
+        return response()->json(['message' => 'Translated question paper deleted.']);
+    }
+
+    /** Send for Approval → back to the faculty to verify. */
+    public function sendForApproval(int $paper): JsonResponse
+    {
+        $this->papers->sendForApproval($paper);
+
+        return response()->json(['message' => 'Translated question paper sent for approval.']);
     }
 }

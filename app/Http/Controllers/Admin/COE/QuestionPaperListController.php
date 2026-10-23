@@ -3,17 +3,17 @@
 namespace App\Http\Controllers\Admin\COE;
 
 use App\Http\Controllers\Controller;
-use Carbon\Carbon;
+use App\Services\COE\AdminPaperService;
+use App\Services\COE\QuestionPaperStorage;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * COE → Question Paper Management → Question Paper (the administrator's list).
  *
- * Design-first screen, like MyQuestionPaperController: the rows are SAMPLE
- * data and no table backs this page yet. Replace sampleRows() with the real
- * query when the COE question paper module lands; the view reads only the
- * keys listed on sampleRows().
+ * Rows come from AdminPaperService::papers(): every subject mapped on a drive,
+ * with its paper's progress and files.
  *
  * Two scopes, each its own URL (docs/new-design-index-page.md §1 "Scope tabs"):
  *   ?scope=all        every paper (default)
@@ -21,7 +21,8 @@ use Illuminate\Support\Collection;
  */
 class QuestionPaperListController extends Controller
 {
-    public const STATUS_PENDING_FACULTY = 'pending-faculty';     // faculty has not submitted the paper
+    /** Badge keys the view shows (also its CSS classes). */
+    public const STATUS_PENDING_FACULTY = 'pending-faculty';     // with the faculty: to write, or to verify
 
     public const STATUS_PENDING_RAJBHASHA = 'pending-rajbhasha'; // waiting on the translator
 
@@ -35,11 +36,17 @@ class QuestionPaperListController extends Controller
 
     public const SCOPES = ['all', 'translated'];
 
+    public function __construct(
+        private AdminPaperService $papers,
+        private QuestionPaperStorage $files,
+    ) {
+    }
+
     public function index(Request $request)
     {
         $scope = in_array($request->query('scope'), self::SCOPES, true) ? $request->query('scope') : 'all';
 
-        $papers = $this->sampleRows();
+        $papers = $this->papers->papers();
         if ($scope === 'translated') {
             $papers = $papers->filter(fn (array $p) => filled($p['translated_file']))->values();
         }
@@ -54,34 +61,27 @@ class QuestionPaperListController extends Controller
         ]);
     }
 
-    /**
-     * @return Collection<int, array{id:int, code:string, name:string, drive:string, faculty:string, batch:string,
-     *     deadline:Carbon, original_file:?string, translated_file:?string, translated_by:?string, status:string}>
-     */
-    private function sampleRows(): Collection
+    /** See Attachment / Download Original Paper. */
+    public function original(int $paper): StreamedResponse
     {
-        $rows = [
-            ['FC101-001', 'Law- Ethics & Intergrity', 'Mid Term Drive', 'Amit Sharma', '2026', '2026-10-05', false, null, self::STATUS_PENDING_FACULTY],
-            ['FC101-002', 'Leadership- Discipline', 'Mid Term Drive', 'Sumit Verma', '2026', '2026-10-05', true, 'Lova Gray', self::STATUS_PUBLISHED],
-            ['FC101-003', 'FC- FC 103', 'Mid Term Drive', 'John Doe', '2026', '2026-10-05', true, null, self::STATUS_PENDING_RAJBHASHA],
-            ['FC102-001', 'FC- Indian Economy', 'End Term Drive', 'Rahul Verma', '2026', '2026-11-12', true, 'Kavita Rao', self::STATUS_PUBLISHED],
-            ['FC102-004', 'FC- Constitutional Law', 'End Term Drive', 'Meera Iyer', '2025', '2026-11-15', false, null, self::STATUS_PENDING_FACULTY],
-            ['FC104-003', 'FC- Disaster Management', 'Supplementary Drive', 'Priya Nair', '2026', '2026-12-01', true, null, self::STATUS_PENDING_RAJBHASHA],
-        ];
+        $qp = $this->papers->originalFor($paper);
 
-        return collect($rows)->values()->map(fn (array $r, int $i) => [
-            'id' => $i + 1,
-            'code' => $r[0],
-            'name' => $r[1],
-            'drive' => $r[2],
-            'faculty' => $r[3],
-            'batch' => $r[4],
-            'deadline' => Carbon::parse($r[5]),
-            'original_file' => $r[6] ? $r[0].'_original.pdf' : null,
-            // Only a published paper has a translation on file.
-            'translated_file' => $r[8] === self::STATUS_PUBLISHED ? $r[0].'_hindi.docx' : null,
-            'translated_by' => $r[7],
-            'status' => $r[8],
-        ]);
+        return $this->files->download($qp->original_file_path, $qp->original_file_name);
+    }
+
+    /** See Attachment / Download Translated Paper. */
+    public function translated(int $paper): StreamedResponse
+    {
+        $qp = $this->papers->translationFor($paper);
+
+        return $this->files->download($qp->translated_file_path, $qp->translated_file_name);
+    }
+
+    /** Delete: the paper and its files go; the subject is Pending at Faculty again. */
+    public function destroy(int $paper): JsonResponse
+    {
+        $this->papers->delete($paper);
+
+        return response()->json(['message' => 'Question paper deleted.']);
     }
 }
