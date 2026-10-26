@@ -195,7 +195,10 @@ class NoticeAudienceTest extends TestCase
         Auth::logout();
         $this->get(route('admin.notice.attachment', $notice->pk))->assertRedirect();
 
-        $this->as($recipient, [])->get(route('admin.notice.attachment', $notice->pk))->assertOk();
+        // The route streams the file itself; a redirect to /storage/... would only
+        // work if the web server left that path open.
+        $served = $this->as($recipient, [])->get(route('admin.notice.attachment', $notice->pk))->assertOk();
+        $this->assertSame(Storage::disk('public')->get($notice->document), $served->streamedContent());
 
         $this->as($this->officerTrainee(), ['Student-OT'])
             ->get(route('admin.notice.attachment', $notice->pk))
