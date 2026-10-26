@@ -386,9 +386,10 @@ class RoleController extends Controller
         $validated = $request->validate([
             'name' => [
                 'required', 'string', 'max:100', 'unique:roles,name,'.$id,
-                // PR #343 review, F-001: a rename must not adopt an option employees hold.
+                // PR #343 review, F-001 / F-008: a rename must not adopt an option employees
+                // hold, nor leave the role's own option behind under the old name.
                 function ($attribute, $value, $fail) use ($oldName) {
-                    if (is_string($value) && ($message = UserRoleMaster::mappedOptionConflict($value, $oldName))) {
+                    if (is_string($value) && ($message = UserRoleMaster::renameOptionConflict($value, $oldName))) {
                         $fail($message);
                     }
                 },

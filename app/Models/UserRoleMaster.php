@@ -96,6 +96,33 @@ class UserRoleMaster extends Model
     }
 
     /**
+     * Refusal message for renaming a role, or null when the rename is safe.
+     *
+     * On top of mappedOptionConflict(): when the role has its own option and another
+     * option already carries the new name (even one nobody holds, active or not),
+     * renameOptionForRole() cannot rename in place, so the role's own option would be
+     * left behind under the old name and its holders would lose the role in the wizard
+     * (PR #343 review, F-008).
+     */
+    public static function renameOptionConflict(string $newName, ?string $oldName): ?string
+    {
+        if ($message = self::mappedOptionConflict($newName, $oldName)) {
+            return $message;
+        }
+
+        if ($oldName === null || RoleNames::normalize($oldName) === RoleNames::normalize($newName)) {
+            return null;
+        }
+
+        if (self::optionsNamed($oldName)->isEmpty() || self::optionsNamed($newName)->isEmpty()) {
+            return null;
+        }
+
+        return 'A Role Assignment option named "' . $newName . '" already exists. '
+            . 'Rename or remove that option first, or choose a different name.';
+    }
+
+    /**
      * Make sure the Role Assignment step has an option for this role, using the same
      * name rule as getUserRoleList() and the sync migration. Returns the existing
      * option of any status when one already matches, so it never creates a duplicate

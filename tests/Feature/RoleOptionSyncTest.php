@@ -172,4 +172,58 @@ class RoleOptionSyncTest extends TestCase
         $this->assertStringContainsString('is not managed from the Member wizard', $warning);
         $this->assertStringNotContainsString('no longer an active role', $warning);
     }
+
+    /**
+     * F-008: renaming a role whose option employees hold onto the name of another,
+     * unheld option (active or inactive) is refused, so the role's own option is not
+     * left behind under the old name.
+     */
+    public function test_renaming_onto_another_unheld_option_name_is_refused(): void
+    {
+        foreach ([1, 0] as $targetStatus) {
+            $roleName = 'Opt Test Role ' . uniqid();
+            $role = Role::create(['name' => $roleName]);
+            $own = $this->makeHeldTag($roleName);
+            $targetName = 'Opt Test Target ' . uniqid();
+            $this->makeOption($targetName, $targetStatus);
+
+            $this->actingAs($this->superAdmin())
+                ->put(route('roles.update', $role->id), ['name' => $targetName])
+                ->assertSessionHasErrors('name');
+
+            $this->assertSame($roleName, $role->fresh()->name, "target active_inactive={$targetStatus}");
+            $this->assertSame($roleName, $own->fresh()->user_role_display_name, "target active_inactive={$targetStatus}");
+        }
+    }
+
+    /**
+     * F-003: the edit form's Step 3 lists an option the member holds that is not offered
+     * as text, not as a checkbox, so it is shown but never posted back.
+     */
+    public function test_edit_step3_lists_a_held_option_that_is_not_offered(): void
+    {
+        $roleName = 'Opt Test Role ' . uniqid();
+        Role::create(['name' => $roleName]);
+        $offered = UserRoleMaster::ensureOptionForRole($roleName);
+        $tagName = 'Opt Test Tag ' . uniqid();
+        $tag = $this->makeOption($tagName);
+
+        // The partial only asks the member for its mapped option pks.
+        $member = new class ([$offered->pk, $tag->pk]) {
+            public function __construct(private array $pks)
+            {
+            }
+
+            public function employeeRoleMapping()
+            {
+                return collect($this->pks);
+            }
+        };
+
+        $html = view('admin.member.edit_steps.step3', ['member' => $member])->render();
+
+        $this->assertStringContainsString('id="userrole' . $offered->pk . '"', $html);
+        $this->assertStringNotContainsString('id="userrole' . $tag->pk . '"', $html);
+        $this->assertStringContainsString('Also assigned, not managed here (kept when you save): ' . $tagName, $html);
+    }
 }
