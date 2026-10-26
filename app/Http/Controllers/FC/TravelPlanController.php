@@ -119,7 +119,8 @@ class TravelPlanController extends Controller
             'journey_vehicle_no'        => 'required|string|max:200|no_html',
             'academy_arrival_date'      => 'nullable|date',
             'arrival_time_dehradun'     => 'required|string|max:120|no_html',
-            'require_academy_vehicle'   => 'required|boolean',
+            // Hidden on the form for now, so optional; a missing answer is stored as 0 (column default).
+            'require_academy_vehicle'   => 'nullable|boolean',
             'special_requirements'      => 'nullable|string|max:1000|no_html',
         ], [], [
             'journey_vehicle_no'    => 'Flight No / Train No / Vehicle No',

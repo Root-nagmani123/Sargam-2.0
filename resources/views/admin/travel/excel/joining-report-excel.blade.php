@@ -28,7 +28,7 @@
         <th>Mode of journey</th>
         <th>Flight No / Train No /<br>Vehicle No</th>
         <th>Arrival time at<br>Airport/Railway Station (24-hour)</th>
-        <th>Whether Require Academy Vehicle<br>From Dehradun Airport/Railway Station to Academy</th>
+        {{-- <th>Whether Require Academy Vehicle<br>From Dehradun Airport/Railway Station to Academy</th> (hidden for now, will be used in future) --}}
         <th>Service</th>
         <th>Submitted</th>
     </tr>
@@ -45,7 +45,7 @@
             <td>{{ $row['mode'] }}</td>
             <td>{{ $row['vehicle_no'] }}</td>
             <td>{{ $row['dehradun_time'] }}</td>
-            <td>{{ $row['require_vehicle'] }}</td>
+            {{-- <td>{{ $row['require_vehicle'] }}</td> --}}
             <td>{{ $row['service'] }}</td>
             <td>{{ $row['submitted'] }}</td>
         </tr>

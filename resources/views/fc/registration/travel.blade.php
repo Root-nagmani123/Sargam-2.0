@@ -196,8 +196,10 @@
                 <dt class="col-sm-3">Flight / Train / Vehicle no.</dt><dd class="col-sm-9">{{ $plan->journey_vehicle_no ?? '—' }}</dd>
                 <dt class="col-sm-3">Date of arrival at Academy</dt><dd class="col-sm-9">{{ $plan->academy_arrival_date?->format('d M Y') ?? '—' }}</dd>
                 <dt class="col-sm-3">Arrival time at Dehradun</dt><dd class="col-sm-9">{{ $plan->arrival_time_dehradun ?? '—' }}</dd>
+                {{-- Require academy vehicle hidden for now (will be used in future).
                 <dt class="col-sm-3">Require academy vehicle</dt>
                 <dd class="col-sm-9">{{ $plan->requiresAcademyVehicleYes() ? 'Yes' : 'No' }}</dd>
+                --}}
             </dl>
             @if($plan->special_requirements)
                 <p class="small mt-2"><span class="text-muted">Remarks:</span> {{ $plan->special_requirements }}</p>
@@ -334,15 +336,13 @@
                            value="{{ old('joining_time', $plan?->joining_time) }}">
                 </div>
                 --}}
-            </div>
-
-            <div class="row g-3 mb-1">
                 <div class="col-12 col-md-6 field-block">
                     <label class="form-label">Flight No / Train No/ Vehicle No <span class="text-danger">*</span></label>
                     <input type="text" name="journey_vehicle_no" class="form-control @error('journey_vehicle_no') is-invalid @enderror" maxlength="200" required
                            value="{{ old('journey_vehicle_no', $plan?->journey_vehicle_no) }}">
                     @error('journey_vehicle_no')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
+                {{-- Require academy vehicle hidden for now (will be used in future). Server treats it as optional.
                 <div class="col-12 col-md-6 field-block">
                     <label class="form-label">Whether Require Academy Vehicle From Dehradun Airport/Railway Station to Academy <span class="text-danger">*</span></label>
                     <div class="vehicle-choice-group">
@@ -358,6 +358,7 @@
                         </div>
                     </div>
                 </div>
+                --}}
                 {{-- Keep for future use (currently hidden):
                 <div class="col-12 col-md-6 field-block">
                     <label class="form-label small fw-semibold">Date of arrival at Academy</label>
@@ -404,7 +405,9 @@
                             <dt class="col-sm-4">Mode of journey</dt><dd class="col-sm-8 preview-highlight" data-preview="mode_of_journey">—</dd>
                             <dt class="col-sm-4">Flight/Train/Vehicle no.</dt><dd class="col-sm-8 preview-highlight" data-preview="journey_vehicle_no">—</dd>
                             <dt class="col-sm-4">Arrival time at Dehradun</dt><dd class="col-sm-8 preview-highlight" data-preview="arrival_time_dehradun">—</dd>
+                            {{-- Require academy vehicle hidden for now (will be used in future).
                             <dt class="col-sm-4">Require academy vehicle</dt><dd class="col-sm-8 preview-highlight" data-preview="require_academy_vehicle">—</dd>
+                            --}}
                             <dt class="col-sm-4">Remarks</dt><dd class="col-sm-8 preview-highlight" data-preview="special_requirements">—</dd>
                         </dl>
                 </div>
