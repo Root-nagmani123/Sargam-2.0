@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -24,9 +26,15 @@ class NoticeAudienceTest extends TestCase
 
     private const NIAR = 0;
 
-    private function postStaffNotice(array $departments, string $title)
+    private function postStaffNotice(array $departments, string $title, ?UploadedFile $document = null)
     {
-        return $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])->post(route('admin.notice.store'), [
+        return $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])
+            ->post(route('admin.notice.store'), $this->staffNoticePayload($departments, $title, $document));
+    }
+
+    private function staffNoticePayload(array $departments, string $title, ?UploadedFile $document = null): array
+    {
+        return array_filter([
             'notice_title' => $title,
             'description' => 'audience probe',
             'notice_type' => 'Office notice',
@@ -35,7 +43,8 @@ class NoticeAudienceTest extends TestCase
             'target_audience' => 'Staff/Faculty',
             'department_master_pks' => $departments,
             'staff_scope' => 'all',
-        ]);
+            'document' => $document,
+        ], fn ($value) => $value !== null);
     }
 
     /** Notice pks the staff login sees in its live feed. */
@@ -155,6 +164,74 @@ class NoticeAudienceTest extends TestCase
         $this->as($trainee, ['Student-OT'])
             ->get(route('admin.notice.attachment', $notice->pk))
             ->assertNotFound();
+    }
+
+    /**
+     * An upload through store() lands on the public disk (client requirement) and
+     * is still read only through the audience-gated route. Blocking the direct
+     * /storage/notice_docs/ URL is web-server config and cannot be tested here.
+     */
+    public function test_an_uploaded_notice_attachment_is_on_the_public_disk_and_served_only_to_its_audience(): void
+    {
+        Storage::fake('public');
+        Storage::fake('private');
+
+        $recipient = $this->employeeLogin();
+        $department = (int) DB::table('employee_master')
+            ->join('user_credentials', 'user_credentials.user_id', '=', 'employee_master.pk')
+            ->where('user_credentials.pk', $recipient->pk)
+            ->value('employee_master.department_master_pk');
+
+        $title = 'Uploaded notice attachment ' . Str::random(8);
+        $this->postStaffNotice([(string) $department], $title, UploadedFile::fake()->create('n.pdf', 10, 'application/pdf'))
+            ->assertSessionHasNoErrors();
+        $notice = DB::table('notices_notification')->where('notice_title', $title)->first();
+        $this->assertNotNull($notice);
+
+        $this->assertStringStartsWith('notice_docs/', (string) $notice->document);
+        Storage::disk('public')->assertExists($notice->document);
+        Storage::disk('private')->assertMissing($notice->document);
+
+        Auth::logout();
+        $this->get(route('admin.notice.attachment', $notice->pk))->assertRedirect();
+
+        $this->as($recipient, [])->get(route('admin.notice.attachment', $notice->pk))->assertOk();
+
+        $this->as($this->officerTrainee(), ['Student-OT'])
+            ->get(route('admin.notice.attachment', $notice->pk))
+            ->assertNotFound();
+    }
+
+    public function test_replacing_or_deleting_a_notice_removes_its_old_attachment_file(): void
+    {
+        Storage::fake('public');
+        Storage::fake('private');
+
+        $department = (int) DB::table('department_master')->where('pk', '>', 0)->value('pk');
+        $title = 'Attachment cleanup ' . Str::random(8);
+        $this->postStaffNotice([(string) $department], $title, UploadedFile::fake()->create('old.pdf', 10, 'application/pdf'))
+            ->assertSessionHasNoErrors();
+        $notice = DB::table('notices_notification')->where('notice_title', $title)->first();
+        $oldPath = $notice->document;
+        Storage::disk('public')->assertExists($oldPath);
+
+        $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])
+            ->put(route('admin.notice.update', Crypt::encrypt($notice->pk)), $this->staffNoticePayload(
+                [(string) $department], $title, UploadedFile::fake()->create('new.pdf', 10, 'application/pdf')
+            ))
+            ->assertSessionHasNoErrors();
+
+        $newPath = DB::table('notices_notification')->where('pk', $notice->pk)->value('document');
+        $this->assertNotSame($oldPath, $newPath);
+        Storage::disk('public')->assertExists($newPath);
+        Storage::disk('public')->assertMissing($oldPath);
+
+        DB::table('notices_notification')->where('pk', $notice->pk)->update(['active_inactive' => 0]);
+        $this->as($this->staffWithRole('Super Admin'), ['Super Admin'])
+            ->delete(route('admin.notice.destroy', Crypt::encrypt($notice->pk)))
+            ->assertSessionHas('success');
+
+        Storage::disk('public')->assertMissing($newPath);
     }
 
     public function test_a_failed_audience_insert_leaves_no_notice_behind(): void
