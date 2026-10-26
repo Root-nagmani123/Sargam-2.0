@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserRoleMaster;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /**
@@ -318,6 +319,8 @@ class MemberWizardPayrollAndStepsTest extends TestCase
             'user_role_display_name' => 'Held Then Retired',
             'active_inactive'        => 1,
         ]);
+        // The wizard only offers options that name a role on Role & Permission > Roles (PR #343).
+        Role::create(['name' => 'Held Then Retired']);
 
         $createPayload = $this->basicMemberPayload('HeldInactive');
         $createPayload['userrole'][] = $heldRolePk;
@@ -364,6 +367,8 @@ class MemberWizardPayrollAndStepsTest extends TestCase
             'user_role_display_name' => 'Soon Retired',
             'active_inactive'        => 1,
         ]);
+        // The wizard only offers options that name a role on Role & Permission > Roles (PR #343).
+        Role::create(['name' => 'Soon Retired']);
 
         $createPayload = $this->basicMemberPayload('UpdateOnlyInactive');
         $createPayload['userrole'] = [$rolePk];

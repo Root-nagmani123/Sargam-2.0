@@ -18,6 +18,21 @@
                         </label>
                     @endforeach
                 </div>
+                {{-- Options this member holds that are not offered above, shown as text only:
+                     they are not posted back, and update() keeps their mappings (PR #343 review, F-003). --}}
+                @php
+                    $heldNotOffered = App\Models\UserRoleMaster::whereIn(
+                            'pk',
+                            collect($memberRoles)->diff($userRoleOptions->keys())->all()
+                        )
+                        ->orderBy('pk')
+                        ->pluck('user_role_display_name');
+                @endphp
+                @if ($heldNotOffered->isNotEmpty())
+                    <div class="form-text mt-2">
+                        Also assigned, not managed here (kept when you save): {{ $heldNotOffered->implode(', ') }}
+                    </div>
+                @endif
             </div>
         </div>
     </div>

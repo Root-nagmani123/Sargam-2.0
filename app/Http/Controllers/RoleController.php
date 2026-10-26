@@ -218,9 +218,17 @@ class RoleController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            // 100, not 255: the Role Assignment option is stored in
-            // user_role_master, whose name columns are varchar(100).
-            'name' => 'required|string|max:100|unique:roles,name',
+            'name' => [
+                // 100, not 255: the Role Assignment option is stored in
+                // user_role_master, whose name columns are varchar(100).
+                'required', 'string', 'max:100', 'unique:roles,name',
+                // PR #343 review, F-001: never adopt an option employees already hold.
+                function ($attribute, $value, $fail) {
+                    if (is_string($value) && ($message = UserRoleMaster::mappedOptionConflict($value))) {
+                        $fail($message);
+                    }
+                },
+            ],
         ]);
 
         // The Role Assignment step reads user_role_master, so a role created here
@@ -373,11 +381,19 @@ class RoleController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:100|unique:roles,name,'.$id,
-        ]);
-
         $oldName = Role::whereKey($id)->value('name');
+
+        $validated = $request->validate([
+            'name' => [
+                'required', 'string', 'max:100', 'unique:roles,name,'.$id,
+                // PR #343 review, F-001: a rename must not adopt an option employees hold.
+                function ($attribute, $value, $fail) use ($oldName) {
+                    if (is_string($value) && ($message = UserRoleMaster::mappedOptionConflict($value, $oldName))) {
+                        $fail($message);
+                    }
+                },
+            ],
+        ]);
 
         DB::transaction(function () use ($id, $validated, $oldName) {
             Role::where('id', $id)->update(['name' => $validated['name']]);

@@ -56,7 +56,7 @@ use Spatie\Permission\Models\Role;
  *     F-012..F-040 belong to it.
  *   - A second, shorter review run during development used its own F-001..F-011 plus
  *     R-001..R-004. Its F-001 is the confused-deputy RBAC escalation, its F-006 the
- *     payroll read-then-write. Evheeery "R-00x" citation is unambiguously from this one.
+ *     payroll read-then-write. Every "R-00x" citation is unambiguously from this one.
  *
  * Where the two cannot be told apart from the ID alone, the surrounding comment states
  * the defect in words — read that, not the number. Neither report is authority for what
@@ -608,13 +608,38 @@ class MemberController extends Controller
             return [$kept, null];
         }
 
-        $names = UserRoleMaster::whereIn('pk', $dropped)->pluck('user_role_display_name')->all();
-        $one = count($names) === 1;
+        // An option can be dropped for two reasons: it was deactivated, or it is active
+        // but not offered here because it names no role on Role & Permission > Roles.
+        // Calling the second kind "no longer active" was false (PR #343 review, F-003).
+        [$notManaged, $inactive] = UserRoleMaster::whereIn('pk', $dropped)
+            ->get(['user_role_display_name', 'active_inactive'])
+            ->partition(fn ($row) => $row->active_inactive === null || (int) $row->active_inactive === 1);
 
-        return [$kept, implode(', ', $names)
-            . ($one ? ' is no longer an active role and ' : ' are no longer active roles and ')
-            . ($isUpdate ? ($one ? 'was not changed.' : 'were not changed.') : ($one ? 'was not assigned.' : 'were not assigned.'))
-            . ' The rest of the record was saved.'];
+        $outcome = fn (bool $one) => $isUpdate
+            ? ($one ? 'was not changed.' : 'were not changed.')
+            : ($one ? 'was not assigned.' : 'were not assigned.');
+
+        $parts = [];
+
+        if ($inactive->isNotEmpty()) {
+            $one = $inactive->count() === 1;
+            $parts[] = $inactive->pluck('user_role_display_name')->implode(', ')
+                . ($one ? ' is no longer an active role and ' : ' are no longer active roles and ')
+                . $outcome($one);
+        }
+
+        if ($notManaged->isNotEmpty()) {
+            $one = $notManaged->count() === 1;
+            $parts[] = $notManaged->pluck('user_role_display_name')->implode(', ')
+                . ($one ? ' is not managed from the Member wizard and ' : ' are not managed from the Member wizard and ')
+                . $outcome($one);
+        }
+
+        if ($parts === []) {
+            return [$kept, null];
+        }
+
+        return [$kept, implode(' ', $parts) . ' The rest of the record was saved.'];
     }
 
     /**

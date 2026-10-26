@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\UserRoleMaster;
 use App\Support\RoleNames;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
@@ -48,7 +47,15 @@ return new class extends Migration
                 continue;
             }
 
-            UserRoleMaster::ensureOptionForRole((string) $roleName);
+            // Written inline rather than through UserRoleMaster, so a later change to the
+            // model cannot change what this migration inserts (PR #343 review, F-006).
+            DB::table('user_role_master')->insert([
+                'user_role_name' => $roleName,
+                'user_role_display_name' => $roleName,
+                'active_inactive' => 1,
+                'created_date' => now(),
+                'updated_date' => now(),
+            ]);
             $existing[$key] = true;
         }
     }

@@ -46,21 +46,64 @@ class UserRoleMaster extends Model
     }
 
     /**
-     * Make sure the Role Assignment step has an option for this role, using the same
-     * name rule as getUserRoleList() and the sync migration. Returns the existing
-     * option when one already matches, so it never creates a duplicate.
+     * Options of ANY status whose display name matches this role name, oldest first.
+     * Status is ignored on purpose: a deactivated option still belongs to its role, and
+     * treating it as missing created an active duplicate that put the role back in the
+     * wizard (PR #343 review, F-004). Same rule as the 2026_10_21 backfill's pre-check.
      */
-    public static function ensureOptionForRole(string $roleName): self
+    private static function optionsNamed(string $roleName)
     {
         $key = RoleNames::normalize($roleName);
 
-        $existing = self::where(function ($query) {
-                $query->where('active_inactive', 1)
-                    ->orWhereNull('active_inactive');
-            })
-            ->orderBy('pk')
+        return self::orderBy('pk')
             ->get()
-            ->first(fn ($row) => RoleNames::normalize((string) $row->user_role_display_name) === $key);
+            ->filter(fn ($row) => RoleNames::normalize((string) $row->user_role_display_name) === $key)
+            ->values();
+    }
+
+    /**
+     * Refusal message when a role name would take over an option employees already hold,
+     * or null when the name is safe.
+     *
+     * A new role adopts the existing option of the same name, and the next wizard save
+     * converts every mapping on that option into a real Spatie grant (PR #343 review,
+     * F-001: creating "Admin" granted it to the members tagged "Admin"). Pass the role's
+     * current name on a rename so keeping its own option (e.g. a case-only change) is allowed.
+     */
+    public static function mappedOptionConflict(string $roleName, ?string $currentName = null): ?string
+    {
+        if ($currentName !== null && RoleNames::normalize($currentName) === RoleNames::normalize($roleName)) {
+            return null;
+        }
+
+        $pks = self::optionsNamed($roleName)->pluck('pk')->all();
+
+        if ($pks === []) {
+            return null;
+        }
+
+        $held = EmployeeRoleMapping::whereIn('user_role_master_pk', $pks)
+            ->distinct()
+            ->count('user_credentials_pk');
+
+        if ($held === 0) {
+            return null;
+        }
+
+        return '"' . $roleName . '" is already a Role Assignment option held by ' . $held
+            . ($held === 1 ? ' employee' : ' employees')
+            . '. A role with this name would be granted to them on their next save. Choose a different name.';
+    }
+
+    /**
+     * Make sure the Role Assignment step has an option for this role, using the same
+     * name rule as getUserRoleList() and the sync migration. Returns the existing
+     * option of any status when one already matches, so it never creates a duplicate
+     * and never reactivates a deactivated option.
+     */
+    public static function ensureOptionForRole(string $roleName): self
+    {
+        $existing = self::optionsNamed($roleName)->first();
 
         if ($existing) {
             return $existing;
@@ -80,23 +123,16 @@ class UserRoleMaster extends Model
 
     /**
      * Keep the Role Assignment option in step when a role is renamed, so employees
-     * already mapped to it keep it under the new name.
+     * already mapped to it keep it under the new name. The option is renamed in place
+     * and keeps its status, so a deactivated option stays deactivated (F-004).
      */
     public static function renameOptionForRole(string $oldName, string $newName): void
     {
         $oldKey = RoleNames::normalize($oldName);
-        $newKey = RoleNames::normalize($newName);
 
-        $rows = self::where(function ($query) {
-                $query->where('active_inactive', 1)
-                    ->orWhereNull('active_inactive');
-            })
-            ->orderBy('pk')
-            ->get();
-
-        $old = $rows->first(fn ($row) => RoleNames::normalize((string) $row->user_role_display_name) === $oldKey);
-        $newExists = $oldKey !== $newKey
-            && $rows->contains(fn ($row) => RoleNames::normalize((string) $row->user_role_display_name) === $newKey);
+        $old = self::optionsNamed($oldName)->first();
+        $newExists = $oldKey !== RoleNames::normalize($newName)
+            && self::optionsNamed($newName)->isNotEmpty();
 
         if ($old && ! $newExists) {
             $old->forceFill([
