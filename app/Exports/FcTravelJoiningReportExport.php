@@ -18,7 +18,8 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class FcTravelJoiningReportExport implements FromView, WithStyles, WithEvents, WithTitle
 {
-    public const COL_COUNT = 13;
+    // 12 while the Activity slot column is hidden (was 13).
+    public const COL_COUNT = 12;
 
     /** Rows before the table column-header row (titles + blank spacer). */
     protected int $headerRows = 6;
@@ -58,7 +59,7 @@ class FcTravelJoiningReportExport implements FromView, WithStyles, WithEvents, W
                 'code'             => (string) ($r->roll_no ?? ''),
                 'mobile'           => (string) ($r->mobile_no ?? ''),
                 'arrival_date'     => $r->joining_date ? \Carbon\Carbon::parse($r->joining_date)->format('Y-m-d') : '',
-                'slot'             => (string) ($r->slot_label ?? ''),
+                // 'slot'          => (string) ($r->slot_label ?? ''), // Activity slot hidden for now
                 'mode'             => (string) ($r->mode_of_journey ?? ''),
                 'vehicle_no'       => (string) ($r->journey_vehicle_no ?? ''),
                 'dehradun_time'    => (string) ($r->arrival_time_dehradun ?? ''),
@@ -114,9 +115,9 @@ class FcTravelJoiningReportExport implements FromView, WithStyles, WithEvents, W
             ]);
         }
 
-        // S.No.(A), arrival date(F), mode(H), require vehicle(K), submitted(M).
+        // S.No.(A), arrival date(F), mode(G), require vehicle(J), submitted(L).
         // These are column LETTERS, so they move whenever a column is added or removed.
-        $centerCols = ['A', 'F', 'H', 'K', 'M'];
+        $centerCols = ['A', 'F', 'G', 'J', 'L'];
         foreach ($centerCols as $col) {
             if ($lastRow >= $dataStart) {
                 $sheet->getStyle("{$col}{$dataStart}:{$col}{$lastRow}")
@@ -126,7 +127,7 @@ class FcTravelJoiningReportExport implements FromView, WithStyles, WithEvents, W
 
         $sheet->getStyle("A{$dataRowStart}:{$lastCol}{$lastRow}")->getFont()->setSize(10);
 
-        $widths = [6, 16, 22, 12, 14, 13, 20, 16, 24, 24, 26, 12, 10];
+        $widths = [6, 16, 22, 12, 14, 13, 16, 24, 24, 26, 12, 10];
         foreach ($widths as $i => $w) {
             $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i + 1))->setWidth($w);
         }
