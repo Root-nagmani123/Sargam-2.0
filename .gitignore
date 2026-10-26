@@ -38,4 +38,3 @@ tools/phpstan/vendor/
 /playwright/.cache/
 bootstrap/
 tools/phpstan/
-/docs/deploy-notes-role-assignment-roles.md
