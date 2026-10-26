@@ -166,19 +166,19 @@ return [
 
     // ── Steps ─────────────────────────────────────────────────────────────
     // Add Step. Also performs live DDL when a tracker column is named — see below.
-    'form_step_add_enabled'         => (bool) env('FC_FORM_STEP_ADD_ENABLED', true),
+    'form_step_add_enabled'         => (bool) env('FC_FORM_STEP_ADD_ENABLED', false),
     // Up / Down arrows. Fires immediately with no confirm dialog.
-    'form_step_reorder_enabled'     => (bool) env('FC_FORM_STEP_REORDER_ENABLED', true),
+    'form_step_reorder_enabled'     => (bool) env('FC_FORM_STEP_REORDER_ENABLED', false),
     // step_slug (bookmarked URLs) and target_table (where answers are stored).
-    'form_step_structure_enabled'   => (bool) env('FC_FORM_STEP_STRUCTURE_ENABLED', true),
+    'form_step_structure_enabled'   => (bool) env('FC_FORM_STEP_STRUCTURE_ENABLED', false),
     // completion_column / tracker_column. Naming a column that does not exist runs
     // ALTER TABLE ... ADD COLUMN against the live consolidation table
     // (FormManagementController::ensureTrackerColumn), so a typo is permanent.
-    'form_step_tracker_enabled'     => (bool) env('FC_FORM_STEP_TRACKER_ENABLED', true),
+    'form_step_tracker_enabled'     => (bool) env('FC_FORM_STEP_TRACKER_ENABLED', false),
     // applicability_rule — silently adds/removes trainees from a step.
-    'form_step_applicability_enabled' => (bool) env('FC_FORM_STEP_APPLICABILITY_ENABLED', true),
+    'form_step_applicability_enabled' => (bool) env('FC_FORM_STEP_APPLICABILITY_ENABLED', false),
     // per-step is_active — hides one step from every trainee mid-intake.
-    'form_step_activate_enabled'    => (bool) env('FC_FORM_STEP_ACTIVATE_ENABLED', true),
+    'form_step_activate_enabled'    => (bool) env('FC_FORM_STEP_ACTIVATE_ENABLED', false),
     // The whole Actions column on the STEPS table — the "Step" (edit step settings) and
     // "Fields" (open the field editor) buttons. The individual field locks above already stop
     // a locked VALUE from moving, but the two screens behind these buttons are still where a
@@ -195,7 +195,7 @@ return [
     //
     // Reordering, deleting and every per-field lock keep their own flags; this one is only
     // about reaching the two editors.
-    'form_step_actions_enabled'     => (bool) env('FC_FORM_STEP_ACTIONS_ENABLED', true),
+    'form_step_actions_enabled'     => (bool) env('FC_FORM_STEP_ACTIONS_ENABLED', false),
 
     /*
     |--------------------------------------------------------------------------
