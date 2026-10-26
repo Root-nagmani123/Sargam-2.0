@@ -297,12 +297,35 @@
                     <label class="form-label">Mode of journey <span class="text-danger">*</span></label>
                     {{-- Options come from mctp_travel_mode_masters (active rows). The plan
                          still stores the NAME string in mode_of_journey, as before. --}}
-                    <select name="mode_of_journey" class="form-select" required>
+                    <select name="mode_of_journey" id="modeOfJourneySelect" class="form-select" required>
                         <option value="">-- Select --</option>
                         @foreach(($travelModes ?? []) as $m)
-                            <option value="{{ $m }}" {{ old('mode_of_journey', $plan?->mode_of_journey) === $m ? 'selected' : '' }}>{{ $m }}</option>
+                            <option value="{{ $m }}" data-message="{{ $travelModeMessages[$m] ?? '' }}" {{ old('mode_of_journey', $plan?->mode_of_journey) === $m ? 'selected' : '' }}>{{ $m }}</option>
                         @endforeach
                     </select>
+                    {{-- Guidance for the selected mode (mctp_travel_mode_masters.message); display only. --}}
+                    <div id="modeOfJourneyMessage" class="alert d-none py-2 px-3 mt-2 mb-0 fw-bold" role="status"
+                         style="background:#fff3cd; color:#7a4a00; border:1px solid #f0ad4e; border-left:6px solid #e67e00; border-radius:8px; font-size:0.95rem; box-shadow:0 2px 6px rgba(230,126,0,.25);">
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="bi bi-exclamation-triangle-fill fs-5" style="color:#e67e00; line-height:1.2;"></i>
+                            <div><div class="text-uppercase small" style="letter-spacing:.04em; color:#b35c00;">Important</div><span></span></div>
+                        </div>
+                    </div>
+                    <script>
+                        (function () {
+                            const select = document.getElementById('modeOfJourneySelect');
+                            const box = document.getElementById('modeOfJourneyMessage');
+                            if (!select || !box) return;
+                            function showModeMessage() {
+                                const opt = select.options[select.selectedIndex];
+                                const msg = opt ? (opt.getAttribute('data-message') || '').trim() : '';
+                                box.querySelector('span').textContent = msg;
+                                box.classList.toggle('d-none', msg === '');
+                            }
+                            select.addEventListener('change', showModeMessage);
+                            showModeMessage();
+                        })();
+                    </script>
                 </div>
                 {{-- Keep for future use (currently hidden):
                 <div class="col-md-3">

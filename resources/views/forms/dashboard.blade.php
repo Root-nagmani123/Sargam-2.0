@@ -243,7 +243,7 @@
             @endforeach
 
             {{-- Travel Plan is not an admin-configurable step; render it once, LAST, after every
-                 step. It unlocks on Bank Details, or on the last active step when Bank Details
+                 step. It unlocks on Bank Details, or on Descriptive Roll 2 when Bank Details
                  is switched off (FcRegistrationFlowService::travelAnchorStep). --}}
             @php
                 $bankStep = app(\App\Services\FC\FcRegistrationFlowService::class)->travelAnchorStep($form, $steps);

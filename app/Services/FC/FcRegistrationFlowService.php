@@ -42,8 +42,9 @@ class FcRegistrationFlowService
 
     /**
      * The step whose completion unlocks the Travel Plan: Bank Details when the form
-     * has it active, otherwise the form's last active step (a form that switched its
-     * Bank Details step off still reaches Travel Plan). Null only for a form with no
+     * has it active, otherwise Descriptive Roll 2 (tracker step3_done), otherwise the
+     * form's last active step. Steps after Descriptive Roll 2 (Special Assistance,
+     * Health, ...) must not hold Travel Plan back. Null only for a form with no
      * active steps. Every Travel Plan gate — stepper, dashboard card, post-step
      * redirect, travel page guard — must ask this, not look for bank_done itself.
      *
@@ -55,6 +56,7 @@ class FcRegistrationFlowService
 
         return $steps->first(fn ($step) => ($step->tracker_column ?? '') === 'bank_done'
                 || str_contains(strtolower((string) ($step->step_slug ?? '')), 'bank'))
+            ?? $steps->first(fn ($step) => ($step->tracker_column ?? '') === 'step3_done')
             ?? $steps->last();
     }
 

@@ -73,6 +73,7 @@ class TravelPlanController extends Controller
             'travelModes'    => MctpTravelModeMaster::choicesIncluding(
                 old('mode_of_journey', $plan?->mode_of_journey)
             ),
+            'travelModeMessages' => MctpTravelModeMaster::activeMessages(),
             'availableDates' => $availableDates,
             'step1'          => $step1,
             'master'         => $master,
