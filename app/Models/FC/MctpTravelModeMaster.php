@@ -25,8 +25,6 @@ class MctpTravelModeMaster extends Model {
      */
     public static function activeNames(): array
     {
-        $ttl = (int) config('fc.lookup_cache_ttl', 600);
-
         $fetch = static fn () => static::query()
             ->where('is_active', true)
             ->orderBy('id')
@@ -37,13 +35,40 @@ class MctpTravelModeMaster extends Model {
             ->values()
             ->all();
 
+        return static::rememberLookup('travel_modes', $fetch);
+    }
+
+    /**
+     * Guidance text per active travel-mode name (the `message` column), shown to the
+     * trainee under "Mode of journey" when that mode is selected. Modes without a
+     * message are left out. Cached like activeNames().
+     *
+     * @return array<string, string>
+     */
+    public static function activeMessages(): array
+    {
+        $fetch = static fn () => static::query()
+            ->where('is_active', true)
+            ->orderBy('id')
+            ->get(['travel_mode_name', 'message'])
+            ->mapWithKeys(static fn ($row) => [trim((string) $row->travel_mode_name) => trim((string) $row->message)])
+            ->filter()
+            ->all();
+
+        return static::rememberLookup('travel_mode_messages', $fetch);
+    }
+
+    private static function rememberLookup(string $suffix, \Closure $fetch): array
+    {
+        $ttl = (int) config('fc.lookup_cache_ttl', 600);
+
         if ($ttl <= 0) {
             return $fetch();
         }
 
         try {
             return Cache::remember(
-                'fc_lookup:'.DB::getDatabaseName().':v'.fc_lookup_cache_version().':travel_modes',
+                'fc_lookup:'.DB::getDatabaseName().':v'.fc_lookup_cache_version().':'.$suffix,
                 $ttl,
                 $fetch
             );

@@ -243,9 +243,10 @@
             @endforeach
 
             {{-- Travel Plan is not an admin-configurable step; render it once, LAST, after every
-                 step, for any form that has a Bank Details step (tracker_column = bank_done). --}}
+                 step. It unlocks on Bank Details, or on Descriptive Roll 2 when Bank Details
+                 is switched off (FcRegistrationFlowService::travelAnchorStep). --}}
             @php
-                $bankStep = $steps->firstWhere('tracker_column', 'bank_done');
+                $bankStep = app(\App\Services\FC\FcRegistrationFlowService::class)->travelAnchorStep($form, $steps);
             @endphp
             @if($bankStep)
                 @php
@@ -270,14 +271,14 @@
                                     @endif
                                 </div>
                                 <div>
-                                    <h6 class="mb-0">Travel Plan</h6>
+                                    <h6 class="mb-0 fw-bold">Travel Plan</h6>
                                     <small class="text-muted">Joining journey and pickup</small>
                                 </div>
                                 @if($travelDone)
                                     <span class="badge bg-success ms-auto">Completed</span>
                                 @endif
                             </div>
-                            <p class="text-muted small mb-3">Journey to Mussoorie and pickup preferences (same as main registration flow).</p>
+                            <p class="small fw-bold mb-3">Share your arrival date, mode of journey and flight/train details, and request Academy pickup from Dehradun.</p>
                             @if($travelAccessible)
                                 <a href="{{ route('fc-reg.registration.travel') }}"
                                    class="btn btn-sm {{ $travelDone ? 'btn-outline-success' : 'btn-primary' }} w-100">
@@ -289,7 +290,7 @@
                                 </a>
                             @else
                                 <button type="button" class="btn btn-sm btn-outline-secondary w-100" disabled>
-                                    <i class="bi bi-lock me-1"></i>Complete bank details first
+                                    <i class="bi bi-lock me-1"></i>Complete {{ $bankStep->step_name }} first
                                 </button>
                             @endif
                         </div>
