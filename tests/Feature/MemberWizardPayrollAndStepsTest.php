@@ -498,10 +498,6 @@ class MemberWizardPayrollAndStepsTest extends TestCase
     }
 
     /**
-     * Shared step 1-5 payload valid against combinedMemberRules(). $employeePk, when given,
-     * targets update() against an existing record instead of creating a new one.
-     */
-    /**
      * PR #343 review, F-009: Step 3 only offers options that are real roles. A member whose
      * only mapping is a hidden HR option (e.g. "Staff") shows nothing ticked, and must still
      * be savable by an administrator without ticking — and so granting — a role.
@@ -564,6 +560,10 @@ class MemberWizardPayrollAndStepsTest extends TestCase
             ->assertJsonValidationErrors(['userrole'], 'errors');
     }
 
+    /**
+     * Shared step 1-5 payload valid against combinedMemberRules(). $employeePk, when given,
+     * targets update() against an existing record instead of creating a new one.
+     */
     private function basicMemberPayload(string $suffix, ?int $employeePk = null): array
     {
         // PR #319 re-review F-061: guarded the same way the other wizard fixtures

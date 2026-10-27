@@ -682,7 +682,9 @@ class MemberController extends Controller
      */
     private function memberHoldsHiddenRoleOption($employeePk): bool
     {
-        $credentialPk = UserCredential::where('user_id', $employeePk)->value('pk');
+        // Ordered as update() resolves the credential it writes (orderBy('pk')->first()), so
+        // both decisions use the same row when user_id has duplicates (PR #343 review, F-011).
+        $credentialPk = UserCredential::where('user_id', $employeePk)->orderBy('pk')->value('pk');
 
         if ($credentialPk === null) {
             return false;
