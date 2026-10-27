@@ -501,6 +501,69 @@ class MemberWizardPayrollAndStepsTest extends TestCase
      * Shared step 1-5 payload valid against combinedMemberRules(). $employeePk, when given,
      * targets update() against an existing record instead of creating a new one.
      */
+    /**
+     * PR #343 review, F-009: Step 3 only offers options that are real roles. A member whose
+     * only mapping is a hidden HR option (e.g. "Staff") shows nothing ticked, and must still
+     * be savable by an administrator without ticking — and so granting — a role.
+     */
+    public function test_an_admin_can_save_a_member_holding_only_a_hidden_option_without_granting_a_role(): void
+    {
+        $actor = $this->makeActor('hidden_only');
+        $actor->assignRole('Super Admin');
+
+        $createPayload = $this->basicMemberPayload('HiddenOnly');
+        $this->actingAs($actor)->post(route('member.store'), $createPayload)->assertOk();
+
+        $employeePk = DB::table('employee_master')->where('emp_id', $createPayload['id'])->value('pk');
+        $credentialPk = DB::table('user_credentials')->where('user_name', $createPayload['userid'])->value('pk');
+        $this->assertNotNull($employeePk);
+        $this->assertNotNull($credentialPk);
+
+        // Leave the member holding only an option that names no role, so Step 3 offers it no checkbox.
+        $hiddenPk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'Hidden Tag ' . uniqid(),
+            'user_role_display_name' => 'Hidden Tag ' . uniqid(),
+            'active_inactive'        => 1,
+        ]);
+        DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->delete();
+        DB::table('employee_role_mapping')->insert(['user_credentials_pk' => $credentialPk, 'user_role_master_pk' => $hiddenPk]);
+        $rolesBefore = User::find($credentialPk)->getRoleNames()->sort()->values()->all();
+
+        $updatePayload = $this->basicMemberPayload('HiddenOnly', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['first_name'] = 'Changed';
+        unset($updatePayload['userrole']);
+
+        $stepUrl = str_replace('edit-step', 'update-validate-step', route('member.edit-step', ['step' => 3, 'id' => $employeePk]));
+        $this->actingAs($actor)->postJson($stepUrl, [])->assertOk();
+
+        $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
+
+        $this->assertSame('Changed', DB::table('employee_master')->where('pk', $employeePk)->value('first_name'));
+        $this->assertSame(
+            [$hiddenPk],
+            DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->pluck('user_role_master_pk')->map(fn ($pk) => (int) $pk)->all(),
+            'The hidden option must be kept, and nothing else mapped.'
+        );
+        $this->assertSame($rolesBefore, User::find($credentialPk)->getRoleNames()->sort()->values()->all(), 'No role may be granted or removed.');
+    }
+
+    /** F-009 counterpart: a member with no hidden option still has to pick a role. */
+    public function test_step3_still_requires_a_role_when_the_member_holds_no_hidden_option(): void
+    {
+        $actor = $this->makeActor('no_hidden');
+        $actor->assignRole('Super Admin');
+
+        $createPayload = $this->basicMemberPayload('NoHidden');
+        $this->actingAs($actor)->post(route('member.store'), $createPayload)->assertOk();
+        $employeePk = DB::table('employee_master')->where('emp_id', $createPayload['id'])->value('pk');
+
+        $stepUrl = str_replace('edit-step', 'update-validate-step', route('member.edit-step', ['step' => 3, 'id' => $employeePk]));
+        $this->actingAs($actor)->postJson($stepUrl, [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['userrole'], 'errors');
+    }
+
     private function basicMemberPayload(string $suffix, ?int $employeePk = null): array
     {
         // PR #319 re-review F-061: guarded the same way the other wizard fixtures

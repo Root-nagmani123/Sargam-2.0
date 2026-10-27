@@ -2,11 +2,12 @@
 
 Branch `role-permission-feedback-october`, PR #343. Commits on top of `main` (merge-base
 `84ecdc9d1`): `a028ef89c`, `658b3776e`, `dce26e3ea`, `1d1adbc4c`, plus the review fixes
-`d27b57def` (round 1) and `4ca5f02eb` (round 2).
+`d27b57def` (round 1), `4ca5f02eb` (round 2), `91f317d12` and `ad4ec3a84` (these deploy
+notes), and the round 4 fix for F-009 and F-010 (the commit that adds this line).
 
 One data migration (insert-only) and code changes. Test on preprod before production.
 
-Last updated: 26 Oct 2026 (after PR #343 review rounds 1–2).
+Last updated: 26 Oct 2026 (after PR #343 review rounds 1–4).
 
 ---
 
@@ -36,7 +37,12 @@ Problems this fixes:
   role show once (the oldest row).
 - **Existing HR-only mappings are kept.** On the edit form, a member who holds a hidden
   option sees *"Also assigned, not managed here (kept when you save): Staff"*. Saving does not
-  remove it. (Decision: PR343-DECISION-1 in the remediation register.)
+  remove it.
+- **A member who holds a hidden option can be saved without ticking a role.** For example, a
+  Staff-only employee shows nothing ticked in step 3; an administrator can still save other
+  changes, and no role is granted. A member with no hidden option must still pick a role.
+- **The module owner's decision on the two points above is pending**: remediation register row
+  PR343-DECISION-1. Do not deploy to production until that row reads *Decided*.
 - **Add Role** creates the Role Assignment option in the same transaction. **Edit Role**
   renames the option in place, so employees keep it, and a deactivated option stays
   deactivated.
@@ -56,7 +62,7 @@ Problems this fixes:
 | --- | --- |
 | `app/Models/UserRoleMaster.php` | `getUserRoleList()` filter and one-per-role; `ensureOptionForRole()`, `renameOptionForRole()`, `mappedOptionConflict()`, `renameOptionConflict()` |
 | `app/Http/Controllers/RoleController.php` | `store()` / `update()` keep the option in step and refuse unsafe names |
-| `app/Http/Controllers/Admin/MemberController.php` | `withoutInactiveRoles()` message wording |
+| `app/Http/Controllers/Admin/MemberController.php` | `withoutInactiveRoles()` message wording; `memberHoldsHiddenRoleOption()` relaxes Step 3's required role for a member who keeps a hidden option (`update()`, `updateValidateStep()`) |
 | `resources/views/admin/member/edit_steps/step3.blade.php` | Lists held options that are not offered |
 | `database/migrations/2026_10_21_000001_backfill_user_role_master_options_for_roles.php` | Option for every role created before this change |
 | `tests/Feature/RoleOptionSyncTest.php`, `tests/Feature/MemberWizardPayrollAndStepsTest.php` | Tests only |
@@ -99,8 +105,15 @@ If it shows **Pending**, run it first, by path, before this release.
    ```
    **Do not run a plain `php artisan migrate`.** On the live copy it lists dozens of unrelated
    migrations (from 2025 onward) as pending, and they would all run.
-4. Clear caches: `php artisan optimize:clear`.
-5. Run the checks in section 6.
+4. Clear caches:
+   ```bash
+   php artisan config:clear && php artisan route:clear && php artisan view:clear && php artisan cache:clear
+   ```
+   **Do not use `php artisan optimize:clear`.** It also runs `clear-compiled`, which deletes
+   `bootstrap/cache/packages.php` and `services.php`. Both are tracked in git, so a server
+   deployed from git is left with two deleted tracked files. If it was run by mistake, restore
+   them with `git checkout -- bootstrap/cache`.
+5. Run the checks in section 6. `git status` on the server should be clean.
 
 ## 6. Checks after deploy
 
@@ -113,8 +126,9 @@ If it shows **Pending**, run it first, by path, before this release.
 5. Rename any role to the name of an existing option (e.g. "Guest Faculty") → refused.
 6. Open a Staff-tagged employee → step 3 shows *"Also assigned, not managed here … Staff"*.
    Save → their Staff row is still in `employee_role_mapping`.
-7. Open a Staff-only employee → step 3 has nothing ticked and asks for a role before it saves
-   (`userrole` is required). Confirm with HR that this is expected.
+7. Open a Staff-only employee → step 3 has nothing ticked and shows Staff as "Also assigned".
+   Change another field and save without ticking anything → it saves, Staff is kept, and on
+   **Role & Permission › Users** the employee has no new role.
 8. Delete "Test Role Oct 2" afterwards.
 
 SQL check for roles missing from Role Assignment (should return 0 rows):
@@ -134,7 +148,8 @@ backfill should have covered (rerun it).
 
 ## 7. Rollback
 
-- Revert the PR's commits and redeploy, then `php artisan optimize:clear`.
+- Revert the PR's commits and redeploy, then clear caches as in section 5 step 4 (not
+  `optimize:clear`).
 - The migration's `down()` does nothing. Any row it inserted can stay: it is an option for a
   role that exists. To remove one anyway, the DBA first checks
   `SELECT COUNT(*) FROM employee_role_mapping WHERE user_role_master_pk = <pk>` returns 0, then
@@ -159,4 +174,5 @@ backfill should have covered (rerun it).
 | 21 Oct 2026 | Preprod count mismatch: duplicate options shown once (`dce26e3ea`); backfill migration `2026_10_21_000001` for roles created before the fix (`1d1adbc4c`). |
 | 26 Oct 2026 | PR #343 review round 1 fixes (`d27b57def`): refuse role names employees already hold; options matched at any status; held hidden options listed on the edit form; message wording; migration inserts inline. |
 | 26 Oct 2026 | PR #343 review round 2 fix (`4ca5f02eb`): refuse renaming a role onto another existing option's name. |
-| 26 Oct 2026 | Notes brought up to date with the review fixes and committed to the repository (review finding F-007). |
+| 26 Oct 2026 | Notes brought up to date with the review fixes and committed to the repository (`ad4ec3a84`, review finding F-007). |
+| 26 Oct 2026 | PR #343 review round 4 fixes. F-009: a member who holds a hidden option can be saved without ticking, so granting, a role. F-010: decision marked pending; `optimize:clear` replaced with targeted cache clears; commit list updated. |

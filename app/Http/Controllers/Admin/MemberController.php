@@ -672,6 +672,28 @@ class MemberController extends Controller
     }
 
     /**
+     * Whether this member holds a Role Assignment option that Step 3 does not offer.
+     *
+     * Step 3 only offers options that are real roles (getUserRoleList()), so a member
+     * whose mappings are all hidden HR options (e.g. "Staff") shows nothing ticked.
+     * Requiring a tick there forced an administrator to grant a real role just to save
+     * an unrelated change (PR #343 review, F-009). update() keeps hidden mappings, so a
+     * member who holds one is never left with no role and the tick need not be required.
+     */
+    private function memberHoldsHiddenRoleOption($employeePk): bool
+    {
+        $credentialPk = UserCredential::where('user_id', $employeePk)->value('pk');
+
+        if ($credentialPk === null) {
+            return false;
+        }
+
+        return EmployeeRoleMapping::where('user_credentials_pk', $credentialPk)
+            ->whereNotIn('user_role_master_pk', UserRoleMaster::getUserRoleList()->keys()->all())
+            ->exists();
+    }
+
+    /**
      * One batch insert instead of N round-trips (PR #319 re-review F-049),
      * extracted so store()/update() can't drift from each other (F-065).
      */
@@ -1200,7 +1222,10 @@ class MemberController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        [$rules, $messages] = $this->combinedMemberRules($this->actingUserCanManageRbacRoles());
+        // F-009: no tick required when the member keeps a hidden option (see memberHoldsHiddenRoleOption()).
+        [$rules, $messages] = $this->combinedMemberRules(
+            $this->actingUserCanManageRbacRoles() && ! $this->memberHoldsHiddenRoleOption($request->emp_id)
+        );
 
         $validator = Validator::make($request->all(), $rules, $messages);
 
@@ -1724,10 +1749,17 @@ class MemberController extends Controller
             return response()->json(['error' => 'Unauthorized'], $e->getStatusCode());
         }
 
+        $rules = $formRequest->rules();
+
+        // F-009: same rule as update() — no tick required when the member keeps a hidden option.
+        if ((int) $step === 3 && $this->memberHoldsHiddenRoleOption($id)) {
+            $rules['userrole'] = ['nullable', 'array'];
+        }
+
         // Run validation with rules & messages from FormRequest
         $validator = Validator::make(
             $formRequest->all(),
-            $formRequest->rules(),
+            $rules,
             $formRequest->messages(),
             $formRequest->attributes()
         );
