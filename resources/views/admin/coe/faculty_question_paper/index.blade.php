@@ -123,10 +123,9 @@
                                     data-coe-name="{{ $paper['name'] }}"
                                     data-coe-state="{{ $paper['status'] }}"
                                     data-coe-version="{{ $paper['version'] }}"
+                                    data-coe-original="{{ $paper['original_file'] ? '1' : '0' }}"
                                     data-coe-translated="{{ $paper['translated_file'] ? '1' : '0' }}"
-                                    data-coe-create-url="{{ $paper['editable'] ? route('admin.coe.faculty-question-paper.create', $paper['id']) : '' }}"
-                                    data-coe-original-url="{{ $paper['original_file'] ? route('admin.coe.faculty-question-paper.original', $paper['id']) : '' }}"
-                                    data-coe-translated-url="{{ $paper['translated_file'] ? route('admin.coe.faculty-question-paper.translated', $paper['id']) : '' }}">
+                                    data-coe-create-url="{{ $paper['editable'] ? route('admin.coe.faculty-question-paper.create', $paper['id']) : '' }}">
                                     <td class="coe-col-check">
                                         <input type="checkbox" class="form-check-input m-0 qpf-row-check"
                                                aria-label="Select {{ $paper['name'] }}">
@@ -145,14 +144,14 @@
                                     </td>
                                     <td class="coe-cell-original">
                                         @if ($paper['original_file'])
-                                            <a href="{{ route('admin.coe.faculty-question-paper.original', $paper['id']) }}" class="coe-attach" title="{{ $paper['original_file'] }}">See Attachment</a>
+                                            <a href="#" role="button" class="coe-attach" data-coe-view="original">See Attachment</a>
                                         @else
                                             <span class="coe-muted">-</span>
                                         @endif
                                     </td>
                                     <td>
                                         @if ($paper['translated_file'])
-                                            <a href="{{ route('admin.coe.faculty-question-paper.translated', $paper['id']) }}" class="coe-attach" title="{{ $paper['translated_file'] }}">See Attachment</a>
+                                            <a href="#" role="button" class="coe-attach" data-coe-view="translated">See Attachment</a>
                                         @else
                                             <span class="coe-muted">-</span>
                                         @endif
@@ -180,6 +179,7 @@
 </div>
 
 @include('admin.coe.partials.freeze_modal', ['phoneMasked' => $otpPhoneMasked])
+@include('admin.coe.partials.paper_viewer_modal')
 
 {{-- Column Visibility --}}
 <div class="modal fade" id="qpfColumnVisibilityModal" tabindex="-1" aria-labelledby="qpfColumnVisibilityLabel" aria-hidden="true">
@@ -203,6 +203,7 @@
 
 @push('scripts')
 <script src="{{ asset('js/coe-grid.js') }}?v={{ @filemtime(public_path('js/coe-grid.js')) ?: time() }}"></script>
+<script src="{{ asset('js/coe-paper-viewer.js') }}?v={{ @filemtime(public_path('js/coe-paper-viewer.js')) ?: time() }}"></script>
 <script>
 $(function () {
     'use strict';
@@ -212,10 +213,12 @@ $(function () {
     var $table = $('#qpfTable');
 
     /* ── Row actions per state — the ONE place they are defined ─────────── */
-    // href: null → a button; '#' → an inert link; 'create' / 'original' /
-    // 'translated' → the row's own URL (data-coe-*-url); otherwise a real link.
-    function act(cls, icon, label, href) {
+    // href: null → a button; 'create' → the row's own URL (data-coe-create-url).
+    // view: 'original' / 'translated' → opens that paper in the read-only viewer,
+    // shown only when the row has it (data-coe-original / data-coe-translated).
+    function act(cls, icon, label, href, view) {
         var $el = href ? $('<a></a>').attr('href', href) : $('<button type="button"></button>');
+        if (view) { $el.attr('data-coe-view', view); }
         return $el.addClass('coe-act ' + cls).append(
             '<span class="coe-act__icon"><i class="bi ' + icon + '" aria-hidden="true"></i></span>',
             $('<span class="coe-act__label"></span>').text(label)
@@ -233,28 +236,28 @@ $(function () {
             ['coe-act--create coe-act--wide', 'bi-pencil-square', 'Edit Original Paper', 'create']
         ],
         // Pending Verification: Rajbhasha sent the translation back; Freeze (OTP) publishes it.
+        // Papers are only ever viewed here, never downloaded.
         'translated': [
-            ['coe-act--download', 'bi-download', 'Download Original Paper', 'original'],
-            ['coe-act--download', 'bi-translate', 'Download Translated Paper', 'translated'],
+            ['coe-act--download', 'bi-eye', 'View Original Paper', null, 'original'],
+            ['coe-act--download', 'bi-translate', 'View Translated Paper', null, 'translated'],
             ['coe-act--freeze', 'bi-snow', 'Freeze']
         ],
         'published': [
-            ['coe-act--download', 'bi-download', 'Download Original Paper', 'original'],
-            ['coe-act--download', 'bi-translate', 'Download Translated Paper', 'translated']
+            ['coe-act--download', 'bi-eye', 'View Original Paper', null, 'original'],
+            ['coe-act--download', 'bi-translate', 'View Translated Paper', null, 'translated']
         ]
     };
 
     function paintActions($row) {
         var list = (ACTIONS[$row.attr('data-coe-state')] || []).filter(function (a) {
-            return a[3] !== 'create' || $row.attr('data-coe-create-url');   // locked: no Add / Edit
+            if (a[3] === 'create') { return !!$row.attr('data-coe-create-url'); }   // locked: no Add / Edit
+            return !a[4] || $row.attr('data-coe-' + a[4]) === '1';
         });
         $row.find('.coe-cell-actions').html(
             '<div class="coe-act-group" role="group" aria-label="Row actions">' +
             list.map(function (a) {
-                var href = ['create', 'original', 'translated'].indexOf(a[3]) !== -1
-                    ? ($row.attr('data-coe-' + a[3] + '-url') || '#')
-                    : a[3];
-                return act(a[0], a[1], a[2], href);
+                var href = a[3] === 'create' ? $row.attr('data-coe-create-url') : a[3];
+                return act(a[0], a[1], a[2], href, a[4]);
             }).join('') + '</div>'
         );
     }
@@ -299,18 +302,31 @@ $(function () {
     $table.on('change', '.qpf-row-check', syncSelection);
     dt.on('search.dt', function () { setTimeout(syncSelection, 0); });
 
-    // Links with no file behind them yet (the translated paper) stay inert.
-    $table.on('click', 'a.coe-act--download[href="#"], a.coe-attach[href="#"]', function (e) { e.preventDefault(); });
-
     /* ── Row actions → server ────────────────────────────────────────────────
        Every change is sent first; on success the page reloads, so a row is
        always repainted from the database, never from the client alone. */
     var URLS = {
+        original: @json(route('admin.coe.faculty-question-paper.original', ['paper' => '__PAPER__'])),
+        translated: @json(route('admin.coe.faculty-question-paper.translated', ['paper' => '__PAPER__'])),
         freezeOtp: @json(route('admin.coe.faculty-question-paper.freeze-otp', ['paper' => '__PAPER__'])),
         freeze: @json(route('admin.coe.faculty-question-paper.freeze', ['paper' => '__PAPER__']))
     };
 
     function url(name, $row) { return URLS[name].replace('__PAPER__', $row.attr('data-coe-id')); }
+
+    // See Attachment / View … Paper: read-only viewer, no download.
+    $table.on('click', '[data-coe-view]', function (e) {
+        e.preventDefault();
+        var $row = $(this).closest('tr');
+        var which = $(this).attr('data-coe-view');
+        CoePaperViewer.open({
+            url: url(which, $row),
+            title: $row.attr('data-coe-code') + ' · ' + $row.attr('data-coe-name'),
+            subtitle: which === 'original'
+                ? 'Original Paper · V' + $row.attr('data-coe-version')
+                : 'Translated Paper (Rajbhasha)'
+        });
+    });
 
     function errorText(xhr) {
         var r = (xhr && xhr.responseJSON) || {};

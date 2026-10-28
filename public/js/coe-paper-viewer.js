@@ -1,0 +1,203 @@
+/**
+ * COE question papers — read-only paper viewer (See Attachment / View … Paper).
+ * Markup: resources/views/admin/coe/partials/paper_viewer_modal.blade.php.
+ *
+ *   CoePaperViewer.open({ url: '…/original', title: 'QP-3-015 · Counselling', subtitle: 'Original Paper · V1' });
+ *
+ * The server answers { format: 'html' | 'docx', content, watermark }: an editor
+ * paper as its cleaned HTML, a Word file as base64 that docx-preview lays out
+ * (loaded on first use). The paper is never offered as a file.
+ *
+ * These are deterrents: no browser can stop a phone camera or a capture tool
+ * outside it. What makes a leak traceable is the viewer's name, ID and time
+ * stamped across the whole page.
+ */
+(function (window, document, $) {
+    'use strict';
+
+    var JSZIP = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    var DOCX_PREVIEW = 'https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js';
+
+    // Save, print, copy, select all, view source, devtools.
+    var BLOCKED_KEYS = ['s', 'p', 'c', 'x', 'a', 'u'];
+    var DEVTOOLS_KEYS = ['i', 'j', 'c'];
+
+    var scripts = {};
+    var el = null;
+    var modal = null;
+    var request = null;
+    var isOpen = false;
+
+    function loadScript(src) {
+        if (!scripts[src]) {
+            scripts[src] = $.Deferred(function (d) {
+                var s = document.createElement('script');
+                s.src = src;
+                s.onload = function () { d.resolve(); };
+                s.onerror = function () { delete scripts[src]; d.reject(); };
+                document.head.appendChild(s);
+            }).promise();
+        }
+        return scripts[src];
+    }
+
+    function docxPreview() {
+        return (window.JSZip ? $.when() : loadScript(JSZIP)).then(function () {
+            return window.docx ? $.when() : loadScript(DOCX_PREVIEW);
+        });
+    }
+
+    function toBytes(base64) {
+        var bin = window.atob(base64);
+        var out = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) { out[i] = bin.charCodeAt(i); }
+        return out.buffer;
+    }
+
+    function escapeXml(text) {
+        return String(text).replace(/[<>&"']/g, function (c) {
+            return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[c];
+        });
+    }
+
+    // One tilted line, tiled over the whole paper (it scrolls with it).
+    function watermark(text) {
+        var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="440" height="240">' +
+            '<text x="220" y="120" text-anchor="middle" dominant-baseline="middle" transform="rotate(-24 220 120)" ' +
+            'font-family="Arial, sans-serif" font-size="15" font-weight="600" fill="#0b2a5b" fill-opacity="0.14">' +
+            escapeXml(text) + '</text></svg>';
+        return 'url("data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg) + '")';
+    }
+
+    function state(text) {
+        el.state.textContent = text || '';
+        el.state.hidden = !text;
+    }
+
+    function clear() {
+        if (request) { request.abort(); request = null; }
+        el.sheet.innerHTML = '';
+        el.sheet.className = 'coe-viewer__sheet';
+        el.mark.style.backgroundImage = '';
+        el.stage.hidden = true;
+    }
+
+    function shield(on) {
+        el.content.classList.toggle('is-shielded', on);
+    }
+
+    function render(res) {
+        if (res.format === 'html') {
+            el.sheet.classList.add('coe-paper-view');
+            el.sheet.innerHTML = res.content;          // cleaned on the server (PaperHtmlSanitizer)
+            return $.when();
+        }
+        return docxPreview().then(function () {
+            return window.docx.renderAsync(toBytes(res.content), el.sheet, el.sheet, {
+                className: 'docx',
+                inWrapper: true,
+                breakPages: true,
+                useBase64URL: true,
+                renderComments: false
+            });
+        });
+    }
+
+    function open(o) {
+        setup();
+        clear();
+        shield(false);
+        el.title.textContent = o.title || 'Question Paper';
+        el.sub.textContent = o.subtitle || '';
+        state('Loading the question paper…');
+        modal.show();
+
+        var current = request = $.ajax({ url: o.url, method: 'GET', dataType: 'json', headers: { Accept: 'application/json' } });
+        current
+            .then(function (res) {
+                if (request !== current) { return $.Deferred().reject().promise(); }
+                el.mark.style.backgroundImage = watermark(res.watermark || '');
+                el.stage.hidden = false;
+                return render(res);
+            })
+            .then(function () {
+                if (request === current) { state(''); request = null; }
+            }, function (xhr) {
+                if (request !== current || (xhr && xhr.statusText === 'abort')) { return; }
+                request = null;
+                clear();
+                state(xhr && xhr.status === 404
+                    ? 'This question paper is not available.'
+                    : 'The question paper could not be shown. Please try again.');
+            });
+    }
+
+    // Keys pressed with Ctrl (Cmd on a Mac) that would save, print or copy the paper.
+    function blocksKey(e) {
+        var key = (e.key || '').toLowerCase();
+        var ctrl = e.ctrlKey || e.metaKey;
+        return key === 'printscreen' || key === 'f12'
+            || (ctrl && e.shiftKey && DEVTOOLS_KEYS.indexOf(key) !== -1)
+            || (ctrl && BLOCKED_KEYS.indexOf(key) !== -1);
+    }
+
+    function setup() {
+        if (el) { return; }
+        var root = document.getElementById('coePaperViewer');
+        el = {
+            root: root,
+            content: root.querySelector('.coe-viewer'),
+            title: document.getElementById('coePaperViewerTitle'),
+            sub: document.getElementById('coePaperViewerSub'),
+            state: document.getElementById('coePaperViewerState'),
+            stage: document.getElementById('coePaperViewerStage'),
+            sheet: document.getElementById('coePaperViewerSheet'),
+            mark: document.getElementById('coePaperViewerMark')
+        };
+        modal = bootstrap.Modal.getOrCreateInstance(root);
+
+        root.addEventListener('show.bs.modal', function () {
+            isOpen = true;
+            document.body.classList.add('coe-viewer-open');      // print → blank page (coe-admin.css)
+        });
+        // Nothing of the paper stays in the page once it is closed.
+        root.addEventListener('hidden.bs.modal', function () {
+            isOpen = false;
+            document.body.classList.remove('coe-viewer-open');
+            clear();
+            state('');
+        });
+
+        ['contextmenu', 'copy', 'cut', 'dragstart', 'selectstart'].forEach(function (type) {
+            root.addEventListener(type, function (e) { e.preventDefault(); });
+        });
+
+        // Capture phase, so nothing on the page sees these first.
+        document.addEventListener('keydown', function (e) {
+            if (!isOpen || !blocksKey(e)) { return; }
+            e.preventDefault();
+            e.stopPropagation();
+            if ((e.key || '').toLowerCase() === 'printscreen') { shield(true); }
+        }, true);
+        // Windows takes the PrintScreen shot on key down and only reports key up:
+        // empty the clipboard and keep the paper covered until the user returns.
+        document.addEventListener('keyup', function (e) {
+            if (!isOpen || (e.key || '').toLowerCase() !== 'printscreen') { return; }
+            shield(true);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText('').catch(function () {});
+            }
+        }, true);
+
+        // Covered whenever this window is not the one in use: capture tools
+        // (Win+Shift+S, Snipping Tool), Alt+Tab, another tab.
+        window.addEventListener('blur', function () { if (isOpen) { shield(true); } });
+        window.addEventListener('focus', function () { shield(false); });
+        document.addEventListener('visibilitychange', function () {
+            if (isOpen && document.hidden) { shield(true); }
+        });
+        el.content.addEventListener('click', function () { shield(false); });
+    }
+
+    window.CoePaperViewer = { open: open };
+})(window, document, jQuery);

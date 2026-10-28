@@ -1003,23 +1003,23 @@
 .coe-qp-add #qpaperEditorError { text-align: center; }
 
 
-/* ── The paper — in the editor and in the template previews ──
-   :is() keeps the two in step; four classes deep so these beat
+/* ── The paper — in the editor, the template previews and the read-only viewer ──
+   :is() keeps them in step; four classes deep so these beat
    summernote-lite.css, which borders and pads every table cell in the editor. */
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) {
     color: #1d3461;
     font-family: "Times New Roman", Georgia, serif;
     font-size: 0.9375rem;
     line-height: 1.5;
 }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) table {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table {
     width: 100%;
     margin: 0 0 1rem;
     border-collapse: collapse;
 }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) table td {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table td {
     border: 0;
     padding: 0.25rem 0.4rem;
     vertical-align: top;
@@ -1028,110 +1028,110 @@
 /* !important only because the admin theme (styles.css) forces tbody, tr and td
    to 500 / 0.75rem with it; the paper is body text, not a data grid. All three
    levels, or td would inherit the forced size from tr. */
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) table tbody,
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) table tr,
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) table td {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table tbody,
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table tr,
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table td {
     font-size: inherit !important;
     font-weight: inherit !important;
 }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) :is(h2, h3, h4) {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) :is(h2, h3, h4) {
     color: #0b2a5b;
     font-family: inherit;
     font-weight: 700;
 }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) h3 { margin: 0; font-size: 1.125rem; }
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) h4 { margin: 0.75rem 0 0.5rem; font-size: 1.0625rem; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) h3 { margin: 0; font-size: 1.125rem; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) h4 { margin: 0.75rem 0 0.5rem; font-size: 1.0625rem; }
 
 /* Candidate line (Multi-Section): name left, roll number right, dashed rule under. */
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) table.coe-paper-candidate {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-candidate {
     border-bottom: 1px dashed #c9d7ea;
 }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) .coe-paper-candidate__roll { text-align: right; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-candidate__roll { text-align: right; }
 
 /* Header: भारत सरकार · title · time and marks, ruled off below */
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) table.coe-paper-head {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-head {
     margin-bottom: 1.5rem;
     border-bottom: 2px solid #c9d7ea;
 }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) table.coe-paper-head td {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-head td {
     padding-bottom: 1.25rem;
     vertical-align: middle;
 }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) .coe-paper-head__gov { width: 22%; }
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) .coe-paper-head__title { text-align: center; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-head__gov { width: 22%; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-head__title { text-align: center; }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) .coe-paper-head__title h2 {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-head__title h2 {
     margin: 0 0 0.25rem;
     font-size: 2rem;
 }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) .coe-paper-head__title p { margin: 0.1rem 0 0; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-head__title p { margin: 0.1rem 0 0; }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) .coe-paper-head__subject {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-head__subject {
     font-size: 1.375rem;
     font-weight: 700;
     color: #0b2a5b;
 }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) .coe-paper-head__code {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-head__code {
     font-size: 1.25rem;
     font-weight: 700;
     color: #0b2a5b;
 }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) .coe-paper-head__time { width: 24%; }
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) .coe-paper-head__time p { margin: 0; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-head__time { width: 24%; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-head__time p { margin: 0; }
 
 /* Particulars and instructions: tinted, ruled boxes */
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) table:is(.coe-paper-meta, .coe-paper-instructions) {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table:is(.coe-paper-meta, .coe-paper-instructions) {
     margin-bottom: 1.5rem;
     border: 1px solid #b9cde8;
     background: #f6f9fd;
 }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) table:is(.coe-paper-meta, .coe-paper-instructions) td {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table:is(.coe-paper-meta, .coe-paper-instructions) td {
     width: 50%;
     padding: 0.45rem 0.85rem;
 }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) table.coe-paper-meta td { border: 1px solid #dce6f3; }
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) table.coe-paper-instructions td { padding: 0.75rem 0.85rem; }
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) .coe-paper-instructions h4 { margin: 0 0 0.75rem; }
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) .coe-paper-instructions ol { margin: 0; padding-left: 1.25rem; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-meta td { border: 1px solid #dce6f3; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-instructions td { padding: 0.75rem 0.85rem; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-instructions h4 { margin: 0 0 0.75rem; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-instructions ol { margin: 0; padding-left: 1.25rem; }
 
 /* Section band: English · Hindi · marks each, on a light tint */
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) table.coe-paper-section {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-section {
     margin: 1.5rem 0 0.5rem;
     border: 1px solid #e1eaf6;
     background: #eef4fb;
 }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) table.coe-paper-section td {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-section td {
     padding: 0.6rem 0.85rem;
     vertical-align: middle;
 }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) .coe-paper-section__en { width: 34%; }
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) .coe-paper-section__hi { width: 30%; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-section__en { width: 34%; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-section__hi { width: 30%; }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) .coe-paper-marks {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-marks {
     width: 140px;
     text-align: right;
 }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) table.coe-paper-section .coe-paper-marks { width: auto; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-section .coe-paper-marks { width: auto; }
 
 /* Questions: number, English over Hindi, marks right */
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) table.coe-paper-questions td { padding: 0.4rem 0.25rem; }
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) .coe-paper-questions__no { width: 36px; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-questions td { padding: 0.4rem 0.25rem; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-questions__no { width: 36px; }
 
 /* Case Study: the passage box and its exhibit table */
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) .coe-paper-box {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-box {
     margin: 0 0 1rem;
     padding: 0.75rem 1rem;
     border: 1px solid #dce6f3;
@@ -1139,24 +1139,24 @@
     background: #f6f9fd;
 }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) .coe-paper-box p { margin: 0 0 0.35rem; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-box p { margin: 0 0 0.35rem; }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) table.coe-paper-exhibit td {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-exhibit td {
     border: 1px solid #c9d7ea;
     padding: 0.35rem 0.6rem;
 }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) table.coe-paper-exhibit tr:first-child td { background: #eef4fb; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-exhibit tr:first-child td { background: #eef4fb; }
 
 /* Case Study: where the second page starts */
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) hr.coe-paper-break {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) hr.coe-paper-break {
     margin: 2rem 0;
     border: 0;
     border-top: 2px dashed #c9d7ea;
     opacity: 1;
 }
 
-.coe-page.coe-qp-add :is(.coe-qp-editor .note-editable, .coe-tpl-sheet) .coe-paper-end {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-end {
     margin: 2rem 0 0;
     text-align: center;
     font-style: italic;
@@ -1183,4 +1183,109 @@
     .coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-marks { width: auto; }
     .coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-questions__no { width: 28px; }
     .coe-qp-add .coe-qp-actions .coe-btn { flex: 1; min-width: 0; }
+}
+
+/* ============================================================================
+   Read-only paper viewer (See Attachment / View … Paper) — coe-paper-viewer.js
+   ========================================================================== */
+.coe-viewer .coe-viewer__head {
+    gap: 0.75rem;
+    border-bottom: 1px solid #e4e7ec;
+}
+.coe-viewer .coe-viewer__head .btn-close { margin: 0; }
+.coe-viewer__heading { min-width: 0; }
+.coe-viewer__heading .modal-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.coe-viewer__sub {
+    margin: 0.15rem 0 0;
+    color: var(--ds-ink-muted, #667085);
+    font-size: 0.8125rem;
+}
+.coe-viewer__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: auto;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    background: #fef3f2;
+    color: #b42318;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Nothing in the viewer can be selected, dragged or long-pressed to save. */
+.coe-viewer__body {
+    min-height: 60vh;
+    background: #f2f4f7;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+.coe-viewer__state {
+    margin: 3rem 0;
+    text-align: center;
+    color: var(--ds-ink-muted, #667085);
+}
+.coe-viewer__stage {
+    position: relative;
+    max-width: 860px;
+    margin: 0 auto;
+}
+.coe-viewer__sheet img { pointer-events: none; }
+.coe-viewer__sheet.coe-paper-view {
+    padding: 2.5rem 3rem;
+    border: 1px solid #dce6f3;
+    border-radius: 0.5rem;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
+}
+/* docx-preview: its pages on the viewer's own grey, not a second grey frame. */
+.coe-viewer__sheet .docx-wrapper {
+    padding: 0;
+    background: transparent;
+}
+.coe-viewer__sheet .docx-wrapper > section.docx { margin-bottom: 1.25rem; }
+
+/* The viewer's name, ID and time, tiled over the whole paper (set by the script). */
+.coe-viewer__mark {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background-repeat: repeat;
+    pointer-events: none;
+}
+
+.coe-viewer__shield {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: inherit;
+    background: #fff;
+    color: var(--ds-ink-muted, #667085);
+    text-align: center;
+    cursor: pointer;
+}
+.coe-viewer__shield .bi { font-size: 2rem; }
+.coe-viewer__shield p { margin: 0; }
+.coe-viewer.is-shielded .coe-viewer__stage { visibility: hidden; }
+.coe-viewer.is-shielded .coe-viewer__shield { display: flex; }
+
+/* Printing while a paper is open gives a blank page. */
+@media print {
+    body.coe-viewer-open { display: none !important; }
+}
+
+@media (max-width: 767.98px) {
+    .coe-viewer__badge { display: none; }
+    .coe-viewer__sheet.coe-paper-view { padding: 1.25rem 1rem; }
 }

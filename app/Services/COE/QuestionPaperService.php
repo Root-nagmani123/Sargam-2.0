@@ -112,7 +112,7 @@ class QuestionPaperService
     }
 
     /**
-     * The faculty's own added paper, for downloading its original file.
+     * The faculty's own added paper, for viewing its original file.
      *
      * @throws ModelNotFoundException when the paper is not theirs or has no file yet
      */
@@ -127,7 +127,7 @@ class QuestionPaperService
     }
 
     /**
-     * The faculty's own paper, for downloading its translation - only once
+     * The faculty's own paper, for viewing its translation - only once
      * Rajbhasha has sent it to them (not while it is still Rajbhasha's draft).
      *
      * @throws ModelNotFoundException when the paper is not theirs or the translation is not theirs to see yet
@@ -140,6 +140,27 @@ class QuestionPaperService
         }
 
         return $paper;
+    }
+
+    /**
+     * A stored paper file for the read-only viewer, never as a file: an editor
+     * paper as its cleaned HTML, a Word file (an older upload, Rajbhasha's
+     * translation) as base64 for the browser to lay out.
+     *
+     * @return array{format:string, content:string}
+     *
+     * @throws ModelNotFoundException when the file is missing from the disk
+     */
+    public function forViewer(QuestionPaper $paper, ?string $path, string $fileName): array
+    {
+        $contents = $this->files->contents($path);
+        if ($contents === null) {
+            throw (new ModelNotFoundException())->setModel(QuestionPaper::class, [$paper->id]);
+        }
+
+        return str_ends_with(strtolower($fileName), '.html')
+            ? ['format' => 'html', 'content' => $this->sanitizer->fromDocument($contents)]
+            : ['format' => 'docx', 'content' => base64_encode($contents)];
     }
 
     /** "+91 ******3274" — the number the freeze OTP goes to. */

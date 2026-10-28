@@ -152,7 +152,7 @@ class RajbhashaQuestionPaperTest extends TestCase
             ->get(route('admin.coe.faculty-question-paper.index'))
             ->assertSee('data-coe-state="pending-rajbhasha"', false);
         $this->actingAs($this->faculty)
-            ->get(route('admin.coe.faculty-question-paper.translated', $this->map->id))
+            ->getJson(route('admin.coe.faculty-question-paper.translated', $this->map->id))
             ->assertNotFound();
 
         $this->rajbhashaAction('translation.store', ['translated_paper' => $this->docx()])->assertStatus(422);
@@ -202,9 +202,11 @@ class RajbhashaQuestionPaperTest extends TestCase
             ->get(route('admin.coe.faculty-question-paper.index'))
             ->assertSee('data-coe-state="translated"', false)
             ->assertSee('Pending Verification');
+        // Shown in the viewer: the Word file goes to the browser to lay out, never as a download.
         $this->actingAs($this->faculty)
-            ->get(route('admin.coe.faculty-question-paper.translated', $this->map->id))
-            ->assertOk();
+            ->getJson(route('admin.coe.faculty-question-paper.translated', $this->map->id))
+            ->assertOk()
+            ->assertJson(['format' => 'docx']);
 
         $otp = $this->sendFacultyOtp();
         $this->actingAs($this->faculty)

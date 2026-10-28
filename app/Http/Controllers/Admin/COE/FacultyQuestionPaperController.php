@@ -6,9 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\COE\FreezeQuestionPaperRequest;
 use App\Http\Requests\Admin\COE\UploadQuestionPaperRequest;
 use App\Services\COE\QuestionPaperService;
-use App\Services\COE\QuestionPaperStorage;
 use Illuminate\Http\JsonResponse;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Illuminate\Http\Request;
 
 /**
  * COE → Question Paper Management → My Question Paper, as the FACULTY sees it
@@ -46,7 +45,6 @@ class FacultyQuestionPaperController extends Controller
 
     public function __construct(
         private QuestionPaperService $papers,
-        private QuestionPaperStorage $files,
     ) {
     }
 
@@ -116,20 +114,41 @@ class FacultyQuestionPaperController extends Controller
         return response()->json(['message' => 'Question paper verified and published.']);
     }
 
-    /** See Attachment / Download Original Paper. */
-    public function original(int $paper): StreamedResponse
+    /** See Attachment / View Original Paper — read-only viewer, never a download. */
+    public function original(Request $request, int $paper): JsonResponse
     {
+        abort_unless($request->expectsJson(), 404);
         $qp = $this->papers->originalPaperFor($this->facultyPk(), $paper);
 
-        return $this->files->download($qp->original_file_path, $qp->original_file_name);
+        return $this->viewer($request, $this->papers->forViewer($qp, $qp->original_file_path, $qp->original_file_name));
     }
 
-    /** See Attachment / Download Translated Paper, once Rajbhasha has sent it. */
-    public function translated(int $paper): StreamedResponse
+    /** See Attachment / View Translated Paper, once Rajbhasha has sent it. */
+    public function translated(Request $request, int $paper): JsonResponse
     {
+        abort_unless($request->expectsJson(), 404);
         $qp = $this->papers->translatedPaperFor($this->facultyPk(), $paper);
 
-        return $this->files->download($qp->translated_file_path, $qp->translated_file_name);
+        return $this->viewer($request, $this->papers->forViewer($qp, $qp->translated_file_path, $qp->translated_file_name));
+    }
+
+    /**
+     * The paper plus who is looking at it - the viewer stamps that across the
+     * page, so a screenshot or a phone photo still shows whose copy it was.
+     * Kept out of every cache: the paper is confidential until the exam.
+     */
+    private function viewer(Request $request, array $file): JsonResponse
+    {
+        $user = $request->user();
+        $name = trim(($user->first_name ?? '').' '.($user->last_name ?? '')) ?: ($user->name ?? 'User');
+
+        return response()->json($file + [
+            'watermark' => $name.' · ID '.$user->getAuthIdentifier().' · '.now()->format('d-m-Y H:i'),
+        ])->withHeaders([
+            'Cache-Control' => 'no-store, private, max-age=0',
+            'Pragma' => 'no-cache',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     /** The logged-in faculty, or 404: no one else has papers here. */

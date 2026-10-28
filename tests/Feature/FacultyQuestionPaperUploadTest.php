@@ -174,32 +174,39 @@ class FacultyQuestionPaperUploadTest extends TestCase
         $this->assertCount(1, Storage::disk(QuestionPaper::DISK)->allFiles());
     }
 
-    public function test_faculty_downloads_their_original_paper_as_an_attachment(): void
+    public function test_faculty_views_their_original_paper_but_never_downloads_it(): void
     {
         $url = route('admin.coe.faculty-question-paper.original', $this->map->id);
 
-        // Nothing uploaded yet.
-        $this->actingAs($this->faculty)->get($url)->assertNotFound();
+        // Nothing added yet.
+        $this->actingAs($this->faculty)->getJson($url)->assertNotFound();
 
-        $this->upload(['paper_html' => '<p>Q1 Explain.</p>'])->assertOk();
+        $this->upload(['paper_html' => '<p>Q1 Explain.</p><script>alert(1)</script>'])->assertOk();
 
         $this->actingAs($this->faculty)
             ->get(route('admin.coe.faculty-question-paper.index'))
-            ->assertSee($url, false);
+            ->assertSee('data-coe-view="original"', false)
+            ->assertDontSee('href="'.$url.'"', false);
 
-        $response = $this->actingAs($this->faculty)->get($url)->assertOk();
-        $this->assertStringContainsString('attachment', $response->headers->get('Content-Disposition'));
-        $this->assertStringContainsString($this->code().'_v1.html', $response->headers->get('Content-Disposition'));
-        $this->assertSame('nosniff', $response->headers->get('X-Content-Type-Options'));
-        $this->assertStringContainsString('Q1 Explain.', $response->streamedContent());
+        $response = $this->actingAs($this->faculty)->getJson($url)
+            ->assertOk()
+            ->assertJson(['format' => 'html']);
+        $this->assertStringContainsString('Q1 Explain.', $response->json('content'));
+        $this->assertStringNotContainsString('<script', $response->json('content'));
+        $this->assertStringContainsString('ID '.$this->faculty->getAuthIdentifier(), $response->json('watermark'));
+        $this->assertNull($response->headers->get('Content-Disposition'));
+        $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+
+        // Opening the address in the browser gets no file.
+        $this->actingAs($this->faculty)->get($url)->assertNotFound();
     }
 
-    public function test_non_faculty_cannot_download_the_paper(): void
+    public function test_non_faculty_cannot_view_the_paper(): void
     {
         $this->upload(['paper_html' => '<p>Q1 Explain.</p>'])->assertOk();
 
         $this->actingAs($this->nonFaculty())
-            ->get(route('admin.coe.faculty-question-paper.original', $this->map->id))
+            ->getJson(route('admin.coe.faculty-question-paper.original', $this->map->id))
             ->assertForbidden();
     }
 
@@ -332,7 +339,7 @@ class FacultyQuestionPaperUploadTest extends TestCase
             ->get(route('admin.coe.faculty-question-paper.index'))
             ->assertOk()
             ->assertDontSee($this->code());
-        $this->actingAs($admin)->get(route('admin.coe.faculty-question-paper.original', $this->map->id))->assertNotFound();
+        $this->actingAs($admin)->getJson(route('admin.coe.faculty-question-paper.original', $this->map->id))->assertNotFound();
         $this->actingAs($admin)->postJson(route('admin.coe.faculty-question-paper.freeze-otp', $this->map->id))->assertNotFound();
         $this->assertNotNull($this->paper());
     }
