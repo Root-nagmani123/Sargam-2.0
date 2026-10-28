@@ -101,12 +101,29 @@
                                 <label class="coe-form-label" for="{{ $p }}Field_{{ $f['key'] }}">
                                     {{ $f['label'] }}@if (! empty($f['required']))<span class="coe-req">*</span>@endif
                                 </label>
+                                @if (($f['type'] ?? 'text') === 'select')
+                                    <select id="{{ $p }}Field_{{ $f['key'] }}"
+                                            name="{{ $f['name'] }}" data-coe-field="{{ $f['key'] }}"
+                                            class="form-select coe-control"
+                                            @if (! empty($f['required'])) required @endif>
+                                        <option value="">{{ $f['placeholder'] ?? 'Select' }}</option>
+                                        @foreach ($f['options'] as $value => $text)<option value="{{ $value }}">{{ $text }}</option>@endforeach
+                                    </select>
+                                @elseif (($f['type'] ?? 'text') === 'number')
+                                    <input type="number" id="{{ $p }}Field_{{ $f['key'] }}"
+                                           name="{{ $f['name'] }}" data-coe-field="{{ $f['key'] }}"
+                                           class="form-control coe-control"
+                                           placeholder="{{ $f['placeholder'] ?? '' }}" autocomplete="off"
+                                           min="{{ $f['minValue'] ?? 0 }}" max="{{ $f['maxValue'] ?? '' }}" step="{{ $f['step'] ?? 'any' }}"
+                                           @if (! empty($f['required'])) required @endif>
+                                @else
                                 <input type="text" id="{{ $p }}Field_{{ $f['key'] }}"
                                        name="{{ $f['name'] }}" data-coe-field="{{ $f['key'] }}"
                                        class="form-control coe-control"
                                        placeholder="{{ $f['placeholder'] ?? '' }}" autocomplete="off"
                                        maxlength="{{ $f['max'] ?? '' }}"
                                        @if (! empty($f['required'])) required @endif>
+                                @endif
                             </div>
                         @endforeach
                         <div class="col-12">

@@ -115,7 +115,7 @@
                             <th style="width:17%">Faculty</th>
                             <th style="width:8%">Weightage %<i class="bi bi-chevron-expand"></i></th>
                             <th style="width:13%">Exam Date</th>
-                            <th style="width:11%">Exam Type</th>
+                            <th style="width:11%">Exam Mode</th>
                             <th style="width:9%" class="text-end">Action</th>
                         </tr>
                     </thead>
@@ -154,7 +154,7 @@
                             <td>
                                 <select class="form-select edc-sel-mode">
                                     @foreach ($examModes as $m)
-                                    <option value="{{ $m }}" @if($m === $row['exam_type']) selected @endif>{{ $m }}</option>
+                                    <option value="{{ $m }}" @if($m === $row['exam_mode']) selected @endif>{{ $m }}</option>
                                     @endforeach
                                 </select>
                             </td>
@@ -272,7 +272,7 @@ $(function () {
                 faculty: $r.find('.edc-sel-faculty').val(),
                 weightage: $r.find('.edc-weightage').val(),
                 exam_date: $r.find('.edc-exam-date').val(),
-                exam_type: $r.find('.edc-sel-mode').val()
+                exam_mode: $r.find('.edc-sel-mode').val()
             });
         });
         return rows;
@@ -298,9 +298,9 @@ $(function () {
     /* Download: CSV of the table as currently shown. */
     $('#edcDownload').on('click', function () {
         var cell = function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
-        var lines = [['Component', 'Max Marks', 'Passing Marks', 'Source', 'Faculty', 'Weightage %', 'Exam Date', 'Exam Type'].map(cell).join(',')];
+        var lines = [['Component', 'Max Marks', 'Passing Marks', 'Source', 'Faculty', 'Weightage %', 'Exam Date', 'Exam Mode'].map(cell).join(',')];
         collectRows().forEach(function (r) {
-            lines.push([r.component, r.max_marks, r.passing_marks, r.source, r.faculty, r.weightage, r.exam_date, r.exam_type].map(cell).join(','));
+            lines.push([r.component, r.max_marks, r.passing_marks, r.source, r.faculty, r.weightage, r.exam_date, r.exam_mode].map(cell).join(','));
         });
         var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
         var a = document.createElement('a');

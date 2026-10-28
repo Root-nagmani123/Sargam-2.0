@@ -2062,6 +2062,22 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('component-master.destroy');
     Route::patch('component-master/{id}/toggle-status', [\App\Http\Controllers\Admin\COE\ComponentMasterController::class, 'toggleStatus'])
         ->name('component-master.toggle-status');
+    Route::get('subject-max-marks', [\App\Http\Controllers\Admin\COE\SubjectMaxMarksController::class, 'index'])
+        ->name('subject-max-marks.index');
+    Route::post('subject-max-marks', [\App\Http\Controllers\Admin\COE\SubjectMaxMarksController::class, 'store'])
+        ->name('subject-max-marks.store');
+    Route::delete('subject-max-marks/{id}', [\App\Http\Controllers\Admin\COE\SubjectMaxMarksController::class, 'destroy'])
+        ->name('subject-max-marks.destroy');
+    Route::patch('subject-max-marks/{id}/toggle-status', [\App\Http\Controllers\Admin\COE\SubjectMaxMarksController::class, 'toggleStatus'])
+        ->name('subject-max-marks.toggle-status');
+    Route::get('service-passing-marks', [\App\Http\Controllers\Admin\COE\ServicePassingMarksController::class, 'index'])
+        ->name('service-passing-marks.index');
+    Route::post('service-passing-marks', [\App\Http\Controllers\Admin\COE\ServicePassingMarksController::class, 'store'])
+        ->name('service-passing-marks.store');
+    Route::delete('service-passing-marks/{id}', [\App\Http\Controllers\Admin\COE\ServicePassingMarksController::class, 'destroy'])
+        ->name('service-passing-marks.destroy');
+    Route::patch('service-passing-marks/{id}/toggle-status', [\App\Http\Controllers\Admin\COE\ServicePassingMarksController::class, 'toggleStatus'])
+        ->name('service-passing-marks.toggle-status');
     Route::get('building', [\App\Http\Controllers\Admin\COE\BuildingController::class, 'index'])
         ->name('building.index');
     Route::get('floor', [\App\Http\Controllers\Admin\COE\FloorController::class, 'index'])

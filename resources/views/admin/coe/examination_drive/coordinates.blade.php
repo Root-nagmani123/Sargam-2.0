@@ -64,7 +64,7 @@
         'component' => $row['component'], 'max' => $row['max_marks'], 'pass' => $row['passing_marks'],
         'source' => $row['source'], 'people' => $peopleFor($row), 'codes' => (object) array_map($codeText, $row['faculty_codes']),
         'weightage' => $row['weightage'],
-        'date' => $row['exam_date'], 'type' => $row['exam_type'],
+        'date' => $row['exam_date'], 'type' => $row['exam_mode'],
     ])->values()->all();
 @endphp
 <div class="container-fluid coe-page">
@@ -118,7 +118,7 @@
                             <th>Faculty &amp; Subcoordinates</th>
                             <th>Weightage %</th>
                             <th>Exam Date</th>
-                            <th>Exam Type</th>
+                            <th>Exam Mode</th>
                             <th class="text-center">Action</th>
                         </tr>
                     </thead>
@@ -142,7 +142,7 @@
                                 </td>
                                 <td>{{ $row['weightage'] }}</td>
                                 <td>{{ $row['exam_date'] }}</td>
-                                <td>{{ $row['exam_type'] }}</td>
+                                <td>{{ $row['exam_mode'] }}</td>
                                 <td class="text-center">
                                     <button type="button" class="edc-toggle" data-row="{{ $i }}"
                                             aria-expanded="false" aria-controls="edcDetail{{ $i }}"
@@ -228,7 +228,7 @@ $(function () {
     $('#edcDownload').on('click', function () {
         var rows = {!! json_encode($csvRows, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!};
         var cell = function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
-        var lines = [['Component', 'Max Marks', 'Passing Marks', 'Source', 'Faculty / Subcoordinator', 'OT Roll Number', 'Weightage %', 'Exam Date', 'Exam Type'].map(cell).join(',')];
+        var lines = [['Component', 'Max Marks', 'Passing Marks', 'Source', 'Faculty / Subcoordinator', 'OT Roll Number', 'Weightage %', 'Exam Date', 'Exam Mode'].map(cell).join(',')];
         rows.forEach(function (r) {
             (r.people.length ? r.people : ['']).forEach(function (p) {
                 lines.push([r.component, r.max, r.pass, r.source, p, (r.codes || {})[p] || '', r.weightage, r.date, r.type].map(cell).join(','));

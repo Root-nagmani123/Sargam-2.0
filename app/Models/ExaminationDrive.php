@@ -52,6 +52,11 @@ class ExaminationDrive extends Model
         return $this->belongsTo(CourseMaster::class, 'course_master_pk', 'pk');
     }
 
+    public function service(): BelongsTo
+    {
+        return $this->belongsTo(ServiceMaster::class, 'service_master_pk', 'pk');
+    }
+
     public function componentMaps(): HasMany
     {
         return $this->hasMany(ExaminationDriveComponentMap::class, 'examination_drive_id');

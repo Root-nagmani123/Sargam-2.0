@@ -26,6 +26,10 @@ class ExaminationDriveDataTable extends DataTable
             ->editColumn('exam_type', fn ($row) => $row->examinationType ? e($row->examinationType->exam_type_name) : '<span class="coe-muted">-</span>')
             ->editColumn('term', fn ($row) => e($row->term->term_name ?? '-'))
             ->editColumn('course', fn ($row) => e($row->course->course_name ?? '-'))
+            // Short name in the cell (full names run long); full name on hover.
+            ->addColumn('service', fn ($row) => $row->service
+                ? '<span title="' . e($row->service->service_name) . '">' . e($row->service->service_short_name) . '</span>'
+                : '<span class="coe-muted">-</span>')
             ->editColumn('academic_session', fn ($row) => e($row->academic_session))
             ->addColumn('faculty', fn ($row) => e(implode(', ', $row->driveFacultyNames()) ?: '-'))
             ->addColumn('sub_coords', fn ($row) => $this->countCell($this->subCoordCount($row), $row))
@@ -38,6 +42,7 @@ class ExaminationDriveDataTable extends DataTable
                 'data-coe-id' => fn ($row) => $row->id,
                 'data-edc-status' => fn ($row) => $row->statusLabel(),
                 'data-edc-course' => fn ($row) => $row->course->course_name ?? '',
+                'data-edc-service' => fn ($row) => $row->service_master_pk ?? '',
                 'data-edc-type' => fn ($row) => $row->examinationType->exam_type_name ?? '',
                 'data-edc-term' => fn ($row) => $row->term->term_name ?? '',
                 'data-edc-session' => fn ($row) => $row->academic_session,
@@ -45,15 +50,16 @@ class ExaminationDriveDataTable extends DataTable
                 'data-edc-end' => fn ($row) => optional($row->end_date)->format('d-m-Y'),
             ])
             ->filterColumn('course', fn ($q, $kw) => $q->whereHas('course', fn ($qq) => $qq->where('course_name', 'REGEXP', $kw)))
+            ->filterColumn('service', fn ($q, $kw) => $q->whereHas('service', fn ($qq) => $qq->where('service_name', 'REGEXP', $kw)->orWhere('service_short_name', 'REGEXP', $kw)))
             ->filterColumn('term', fn ($q, $kw) => $q->whereHas('term', fn ($qq) => $qq->where('term_name', 'REGEXP', $kw)))
             ->filterColumn('exam_type', fn ($q, $kw) => $q->whereHas('examinationType', fn ($qq) => $qq->where('exam_type_name', 'REGEXP', $kw)))
-            ->rawColumns(['exam_type', 'sub_coords', 'components', 'status', 'actions']);
+            ->rawColumns(['exam_type', 'service', 'sub_coords', 'components', 'status', 'actions']);
     }
 
     public function query(ExaminationDrive $model): Builder
     {
         $query = $model->newQuery()
-            ->with(['examinationType', 'term', 'course'])
+            ->with(['examinationType', 'term', 'course', 'service'])
             ->withCount('componentMaps')
             // Drive faculty (creation mapping) and sub-coordinators (faculty setup),
             // loaded up front so the two columns do not query per row.
@@ -91,6 +97,7 @@ class ExaminationDriveDataTable extends DataTable
             Column::computed('exam_type')->title('Examination Type'),
             Column::computed('term')->title('Term'),
             Column::computed('course')->title('Course'),
+            Column::computed('service')->title('Service'),
             Column::make('academic_session')->title('Academic Session'),
             Column::computed('faculty')->title('Faculty'),
             Column::computed('sub_coords')->title('Sub-Coordinates')->addClass('coe-col-center'),

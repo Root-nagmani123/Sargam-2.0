@@ -996,11 +996,15 @@
         function cellText($row, f) { return cell($row, f).text().trim(); }
 
         $status.select2({ width: '100%', dropdownParent: $(P + 'FormModal .modal-body') });
+        fields.forEach(function (f) {
+            if (f.type === 'select') { input(f).select2({ width: '100%', dropdownParent: $(P + 'FormModal .modal-body') }); }
+        });
 
         function fieldError(f, msg) {
             var $in = input(f), $wrap = $in.parent();
             $wrap.find('.coe-field-error').remove();
             $in.toggleClass('is-invalid', !!msg);
+            $wrap.find('.select2-selection').toggleClass('is-invalid', !!msg);
             if (msg) { $('<div class="coe-field-error"></div>').text(msg).appendTo($wrap); }
             return !msg;
         }
@@ -1014,7 +1018,14 @@
             var isEdit = !!$row;
             $(P + 'FormModalLabel').text(isEdit ? L.editTitle : L.createTitle);
             $(P + 'Submit').text(isEdit ? L.editSubmit : L.createSubmit);
-            formFields.forEach(function (f) { input(f).val(isEdit ? cellText($row, f) : ''); });
+            formFields.forEach(function (f) {
+                // A select's cell shows a label; its value comes from the row's data-coe-val-<key>.
+                if (f.type === 'select') {
+                    input(f).val(isEdit ? ($row.attr('data-coe-val-' + f.key) || '') : '').trigger('change.select2');
+                } else {
+                    input(f).val(isEdit ? cellText($row, f) : '');
+                }
+            });
             $status.val(isEdit ? $row.attr('data-coe-active') : '1').trigger('change.select2');
             clearErrors();
             formModal.show();
@@ -1029,7 +1040,12 @@
 
         function validate(f, value) {
             var label = f.label.toLowerCase();
-            if (value === '') { return f.required ? 'Enter the ' + label + '.' : ''; }
+            if (value === '') { return f.required ? (f.type === 'select' ? 'Select the ' : 'Enter the ') + label + '.' : ''; }
+            if (f.type === 'number') {
+                if (!/^\d+(\.\d{1,2})?$/.test(value)) { return 'Enter a number with at most 2 decimals.'; }
+                if (f.maxValue !== undefined && parseFloat(value) > f.maxValue) { return 'Use at most ' + f.maxValue + '.'; }
+                return '';
+            }
             if (f.max && value.length > f.max) { return 'Use at most ' + f.max + ' characters.'; }
             return '';
         }

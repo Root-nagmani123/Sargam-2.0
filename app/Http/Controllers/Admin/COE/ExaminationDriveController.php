@@ -12,6 +12,7 @@ use App\Models\ExaminationDriveComponentMap;
 use App\Models\ExaminationDriveFacultyMap;
 use App\Models\ExaminationTypeMaster;
 use App\Models\FacultyMaster;
+use App\Models\ServiceMaster;
 use App\Models\SubjectMaster;
 use App\Models\TermMaster;
 use Illuminate\Http\JsonResponse;
@@ -37,7 +38,8 @@ class ExaminationDriveController extends Controller
     public const PHASES       = ['Phase-IV 2025', 'Phase-III 2025', 'Phase-II 2024'];
     public const COURSES      = ['Phase IV 2025', 'Phase III 2025', 'Foundation Course 2026'];
     public const SOURCES      = ['Faculty', 'Sargam', 'Sargam 2.0'];
-    public const EXAM_MODES   = ['Online', 'Offline'];
+    public const EXAM_MODES   = ['Online', 'Offline', 'Offline & Online'];
+    public const COMPONENT_EXAM_TYPES = ['Online Objective', 'Offline Objective', 'Online Descriptive', 'Offline Descriptive'];
 
 
     public function index(Request $request, ExaminationDriveDataTable $dataTable)
@@ -48,6 +50,7 @@ class ExaminationDriveController extends Controller
         return $dataTable->render('admin.coe.examination_drive.index', [
             'scope'     => $scope,
             'courses'   => $this->courseNames(),
+            'services'  => $this->serviceOptions(),
             'terms'     => $this->termNames(),
             'phases'    => $this->phaseValues(),
             'examTypes' => $this->examTypeNames(),
@@ -63,6 +66,8 @@ class ExaminationDriveController extends Controller
         $data = $request->validate([
             'drive_name'       => ['required', 'string', 'max:150'],
             'course'           => ['required', 'string', Rule::exists('course_master', 'course_name')],
+            // service_master pk, not name: short names repeat (IDES, ITS).
+            'service'          => ['required', 'integer', Rule::exists('service_master', 'pk')->where('active_inactive', 1)],
             'exam_type'        => ['required', 'string', Rule::exists('examination_type_master', 'exam_type_name')],
             'term'             => ['required', 'string', Rule::exists('term_master', 'term_name')],
             'academic_session' => ['required', 'string', 'max:10'],
@@ -85,6 +90,7 @@ class ExaminationDriveController extends Controller
                 'examination_type_master_pk' => $examTypePk,
                 'term_master_pk'             => $termPk,
                 'course_master_pk'           => $coursePk,
+                'service_master_pk'          => (int) $data['service'],
                 'academic_session'           => $data['academic_session'],
                 // `phase` is NOT NULL in the schema but the Create form has no
                 // separate Phase field; the academic session is the closest
@@ -130,6 +136,8 @@ class ExaminationDriveController extends Controller
 
         $data = $request->validate([
             'course'           => ['required', 'string', Rule::exists('course_master', 'course_name')],
+            // service_master pk, not name: short names repeat (IDES, ITS).
+            'service'          => ['required', 'integer', Rule::exists('service_master', 'pk')->where('active_inactive', 1)],
             'exam_type'        => ['required', 'string', Rule::exists('examination_type_master', 'exam_type_name')],
             'term'             => ['required', 'string', Rule::exists('term_master', 'term_name')],
             'academic_session' => ['required', 'string', 'max:10'],
@@ -151,6 +159,7 @@ class ExaminationDriveController extends Controller
                 'examination_type_master_pk' => $examTypePk,
                 'term_master_pk'             => $termPk,
                 'course_master_pk'           => $coursePk,
+                'service_master_pk'          => (int) $data['service'],
                 'academic_session'           => $data['academic_session'],
                 'phase'                      => $data['academic_session'],
                 'status'                     => $statusCode,
@@ -233,12 +242,16 @@ class ExaminationDriveController extends Controller
             'rows.*.faculty'        => ['nullable', 'string', 'max:150'],
             'rows.*.weightage'      => ['required', 'numeric', 'min:0', 'max:100'],
             'rows.*.exam_date'      => ['nullable', 'date'],
-            'rows.*.exam_type'      => ['nullable', 'string', Rule::in(self::EXAM_MODES)],
+            'rows.*.exam_end_date'  => ['nullable', 'date', 'after_or_equal:rows.*.exam_date'],
+            'rows.*.exam_mode'      => ['nullable', 'string', Rule::in(self::EXAM_MODES)],
+            'rows.*.exam_type'      => ['nullable', 'string', Rule::in(self::COMPONENT_EXAM_TYPES)],
             // JSON-encoded string, not an array: jQuery drops an empty array from the
             // request, so "[]" (cleared) would be indistinguishable from "not sent".
             'rows.*.sub_faculty'    => ['nullable', 'string', 'json'],
             // {"Faculty Name": "24"} - same JSON-string reason as sub_faculty.
             'rows.*.codes'          => ['nullable', 'string', 'json'],
+        ], [
+            'rows.*.exam_end_date.after_or_equal' => 'An exam range cannot end before it starts.',
         ]);
 
         $rows = collect($data['rows'] ?? [])->map(function (array $row) {
@@ -269,10 +282,11 @@ class ExaminationDriveController extends Controller
         $otCodes = $this->courseOtCodes($drive);
 
         DB::transaction(function () use ($drive, $rows, $otCodes) {
-            // Sub-coordinators by component, so a page that does not send them
-            // (admin Map Faculty) does not wipe what faculty set on Complete Setup.
+            // Sub-coordinators, exam end date and exam type by component, so a page
+            // that does not send them (admin Map Faculty) does not wipe what faculty
+            // set on Complete Setup.
             $previous = ExaminationDriveComponentMap::where('examination_drive_id', $drive->id)
-                ->get(['component_master_pk', 'sub_faculty_names', 'faculty_codes'])
+                ->get(['component_master_pk', 'sub_faculty_names', 'faculty_codes', 'exam_end_date', 'exam_type'])
                 ->keyBy('component_master_pk');
 
             ExaminationDriveComponentMap::where('examination_drive_id', $drive->id)->delete();
@@ -295,7 +309,13 @@ class ExaminationDriveController extends Controller
                     'source'               => $row['source'],
                     'weightage'            => $row['weightage'],
                     'exam_date'            => $row['exam_date'] ?? null,
-                    'exam_type'            => $row['exam_type'] ?? null,
+                    'exam_end_date'        => array_key_exists('exam_end_date', $row)
+                        ? $row['exam_end_date']
+                        : ($previous[$componentPk]->exam_end_date ?? null),
+                    'exam_mode'            => $row['exam_mode'] ?? null,
+                    'exam_type'            => array_key_exists('exam_type', $row)
+                        ? $row['exam_type']
+                        : ($previous[$componentPk]->exam_type ?? null),
                     'sub_faculty_names'    => $subs = array_key_exists('sub_faculty', $row)
                         ? ($row['sub_faculty'] ?: null)
                         : ($previous[$componentPk]->sub_faculty_names ?? null),
@@ -395,6 +415,7 @@ class ExaminationDriveController extends Controller
             'sources'     => self::SOURCES,
             'faculty'     => $this->facultyNames(),
             'examModes'   => self::EXAM_MODES,
+            'componentExamTypes' => self::COMPONENT_EXAM_TYPES,
             // Select Roll Number lists the real OTs enrolled in the drive's course.
             'otList'      => $this->courseOts((int) $drive->course_master_pk),
         ]);
@@ -529,7 +550,7 @@ class ExaminationDriveController extends Controller
     private function findDriveOrFail(int $id): ExaminationDrive
     {
         return ExaminationDrive::with([
-            'examinationType', 'term', 'course',
+            'examinationType', 'term', 'course', 'service',
             'facultyMaps.faculty', 'facultyMaps.subject',
             'componentMaps.component', 'componentMaps.faculty',
         ])->findOrFail($id);
@@ -552,6 +573,8 @@ class ExaminationDriveController extends Controller
             'exam_type'  => $drive->examinationType->exam_type_name ?? '-',
             'term'       => $drive->term->term_name ?? '-',
             'course'     => $drive->course->course_name ?? '-',
+            'service'    => $drive->service->service_short_name ?? '-',
+            'service_name' => $drive->service->service_name ?? '',
             'session'    => $drive->academic_session,
             // Faculty mapped when the drive was created (Subject -> Faculty rows).
             'drive_faculty' => $drive->driveFacultyNames(),
@@ -575,7 +598,10 @@ class ExaminationDriveController extends Controller
                 'weightage'      => $map->weightage,
                 'exam_date'      => optional($map->exam_date)->format('d/m/Y')
                     ?: (optional($drive->start_date)->format('d/m/Y') ?: now()->format('d/m/Y')),
-                'exam_type'      => $map->exam_type ?: self::EXAM_MODES[0],
+                'exam_end_date'  => optional($map->exam_end_date)->format('d/m/Y')
+                    ?: (optional($drive->end_date)->format('d/m/Y') ?: now()->format('d/m/Y')),
+                'exam_mode'      => $map->exam_mode ?: self::EXAM_MODES[0],
+                'exam_type'      => $map->exam_type,
                 'sub_faculty'    => $map->sub_faculty_names ?? [],
                 // Setup faculty + further names, as shown in SUB-COORDINATES.
                 'sub_coordinators' => $map->subCoordinatorNames(),
@@ -625,6 +651,17 @@ class ExaminationDriveController extends Controller
             ->filter()
             ->unique()
             ->values()
+            ->all();
+    }
+
+    /** Active service_master rows for the Service select, as [pk => name]. */
+    private function serviceOptions(): array
+    {
+        return ServiceMaster::where('active_inactive', 1)
+            ->orderBy('service_name')
+            ->pluck('service_name', 'pk')
+            ->map(fn ($name) => trim($name))
+            ->filter()
             ->all();
     }
 

@@ -5,6 +5,7 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
 <link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
 <link rel="stylesheet"
       href="{{ asset('css/coe-admin.css') }}?v={{ @filemtime(public_path('css/coe-admin.css')) ?: time() }}">
 <style>
@@ -15,13 +16,13 @@
 .fedc-tool-btn:hover{ background:var(--ds-surface-2); }
 /* Info bar */
 .fedc-info-bar      { background:#fff;border-radius:12px;padding:24px 30px;margin-bottom:22px;
-                      display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:20px; }
+                      display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:20px; }
 .fedc-info-item     { display:flex;flex-direction:column;gap:6px;min-width:0; }
 .fedc-info-label    { font-size:13px;color:var(--ds-ink-muted);text-transform:uppercase;letter-spacing:.3px; }
 .fedc-info-value    { font-size:17px;font-weight:600;color:var(--ds-ink);overflow-wrap:anywhere; }
 @media (max-width: 991.98px) { .fedc-info-bar { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 /* Component mapping table */
-.fedc-map-table     { width:100%;border-collapse:separate;border-spacing:0;min-width:1080px;table-layout:fixed; }
+.fedc-map-table     { width:100%;border-collapse:separate;border-spacing:0;min-width:1280px;table-layout:fixed; }
 .fedc-map-table thead th { padding:10px 8px;background:var(--ds-surface-2);font-size:14px;font-weight:500;line-height:1.2;
                       color:var(--ds-ink);white-space:normal;vertical-align:middle; }
 .fedc-map-table thead th:first-child { padding-left:14px; }
@@ -31,7 +32,7 @@
 .fedc-map-table tbody td:first-child { padding-left:12px; }
 .fedc-map-table tbody td:last-child  { padding-right:12px; }
 .fedc-map-table thead th:last-child  { padding-right:12px; }
-.fedc-map-table input[type=date] { padding:6px 6px 6px 10px; }
+.fedc-map-table .fedc-exam-range { padding:6px 8px 6px 10px;background:#fff; }
 .fedc-map-table .form-control,
 .fedc-map-table .form-select { height:40px;font-size:14px;border-color:var(--ds-line);border-radius:6px;color:var(--ds-ink); }
 .fedc-map-table .form-select  { padding-left:12px;padding-right:30px;background-position:right 10px center;text-overflow:ellipsis; }
@@ -132,6 +133,10 @@
             <span class="fedc-info-label">Subject</span>
             <span class="fedc-info-value">{{ implode(', ', $drive['subjects']) ?: '—' }}</span>
         </div>
+        <div class="fedc-info-item">
+            <span class="fedc-info-label">Service</span>
+            <span class="fedc-info-value" title="{{ $drive['service_name'] }}">{{ $drive['service'] }}</span>
+        </div>
     </div>
 
     <div class="card overflow-hidden rounded-3">
@@ -140,14 +145,15 @@
                 <table class="fedc-map-table" id="fedcMapTable">
                     <thead>
                         <tr>
-                            <th style="width:15%" data-sort="component">Components<i class="bi bi-chevron-expand"></i></th>
-                            <th style="width:8%"  data-sort="max">Max Marks<i class="bi bi-chevron-expand"></i></th>
+                            <th style="width:13%" data-sort="component">Components<i class="bi bi-chevron-expand"></i></th>
+                            <th style="width:7%"  data-sort="max">Max Marks<i class="bi bi-chevron-expand"></i></th>
                             <th style="width:8%"  data-sort="pass">Passing Marks<i class="bi bi-chevron-expand"></i></th>
-                            <th style="width:11%">Source</th>
-                            <th style="width:17%">Faculty</th>
+                            <th style="width:9%">Evaluation Through</th>
+                            <th style="width:12%">Faculty</th>
                             <th style="width:8%"  data-sort="weightage">Weightage %<i class="bi bi-chevron-expand"></i></th>
-                            <th style="width:13%">Exam Date</th>
-                            <th style="width:11%">Exam Type</th>
+                            <th style="width:14%">Exam Range</th>
+                            <th style="width:10%">Exam Mode</th>
+                            <th style="width:10%">Exam Type</th>
                             <th style="width:9%" class="text-end">Action</th>
                         </tr>
                     </thead>
@@ -201,13 +207,23 @@
                                        min="0" max="100" step="0.01" value="{{ $row['weightage'] }}">
                             </td>
                             <td>
-                                <input type="date" class="form-control fedc-exam-date"
-                                       value="{{ \Carbon\Carbon::createFromFormat('d/m/Y', $row['exam_date'])->format('Y-m-d') }}">
+                                <input type="text" class="form-control fedc-exam-range" readonly
+                                       data-start="{{ \Carbon\Carbon::createFromFormat('d/m/Y', $row['exam_date'])->format('Y-m-d') }}"
+                                       data-end="{{ \Carbon\Carbon::createFromFormat('d/m/Y', $row['exam_end_date'])->format('Y-m-d') }}"
+                                       placeholder="dd/mm/yyyy - dd/mm/yyyy">
                             </td>
                             <td>
                                 <select class="form-select fedc-sel-mode">
                                     @foreach ($examModes as $m)
-                                    <option value="{{ $m }}" @if($m === $row['exam_type']) selected @endif>{{ $m }}</option>
+                                    <option value="{{ $m }}" @if($m === $row['exam_mode']) selected @endif>{{ $m }}</option>
+                                    @endforeach
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-select fedc-sel-type">
+                                    <option value="">Select</option>
+                                    @foreach ($componentExamTypes as $t)
+                                    <option value="{{ $t }}" @if($t === $row['exam_type']) selected @endif>{{ $t }}</option>
                                     @endforeach
                                 </select>
                             </td>
@@ -228,7 +244,7 @@
                         <tr class="fedc-total-row">
                             <td colspan="5" class="text-end pe-4">Total Weightage:</td>
                             <td id="fedcTotalWeightage" class="ps-3">{{ array_sum(array_column($drive['component_rows'], 'weightage')) }}</td>
-                            <td colspan="3"></td>
+                            <td colspan="4"></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -387,6 +403,7 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
 <script>
 $(function () {
     'use strict';
@@ -395,6 +412,7 @@ $(function () {
     var SOURCES    = @json($sources);
     var FACULTY    = @json($faculty);
     var EXAM_MODES = @json($examModes);
+    var EXAM_TYPES = @json($componentExamTypes);
 
     /* ── Total Weightage live update ──────────────────────────────────── */
     function recalcTotal() {
@@ -420,6 +438,30 @@ $(function () {
             return '<option value="' + m + '"' + (m === sel ? ' selected' : '') + '>' + m + '</option>';
         }).join('');
     }
+    function typeOptions(sel) {
+        return '<option value="">Select</option>' + EXAM_TYPES.map(function (t) {
+            return '<option value="' + t + '"' + (t === sel ? ' selected' : '') + '>' + t + '</option>';
+        }).join('');
+    }
+
+    /* ── Exam Range: one flatpickr range per row; start/end kept as Y-m-d ── */
+    function initRange(el) {
+        var $el = $(el);
+        flatpickr(el, {
+            mode: 'range',
+            dateFormat: 'd/m/Y',
+            locale: { rangeSeparator: ' - ' },
+            defaultDate: [$el.attr('data-start'), $el.attr('data-end')].filter(Boolean),
+            parseDate: function (str) { var p = str.split('-'); return p.length === 3 ? new Date(p[0], p[1] - 1, p[2]) : undefined; },
+            onClose: function (dates, str, fp) {
+                // A single pick means a one-day exam.
+                var start = dates[0] ? fp.formatDate(dates[0], 'Y-m-d') : '';
+                var end = dates[1] ? fp.formatDate(dates[1], 'Y-m-d') : start;
+                $el.attr('data-start', start).attr('data-end', end);
+                if (dates.length === 1) { fp.setDate([dates[0], dates[0]], false); }
+            }
+        });
+    }
 
     function buildRow() {
         return '<tr class="fedc-map-row">' +
@@ -430,8 +472,9 @@ $(function () {
             '<td><button type="button" class="fedc-fac-open-btn" data-faculty="" data-sub="[]" data-codes="{}">' +
             '<span class="fedc-fac-text"><span class="fedc-fac-placeholder">Click to add Faculty &amp; Sub coordinates.</span></span></button></td>' +
             '<td><input type="number" class="form-control fedc-weightage" min="0" max="100" step="0.01" value="0"></td>' +
-            '<td><input type="date" class="form-control fedc-exam-date"></td>' +
+            '<td><input type="text" class="form-control fedc-exam-range" readonly placeholder="dd/mm/yyyy - dd/mm/yyyy"></td>' +
             '<td><select class="form-select fedc-sel-mode">' + modeOptions(EXAM_MODES[0]) + '</select></td>' +
+            '<td><select class="form-select fedc-sel-type">' + typeOptions('') + '</select></td>' +
             '<td><div class="fedc-actions">' +
             '<button type="button" class="fedc-row-del fedc-row-del-btn" aria-label="Remove row"><i class="bi bi-dash"></i></button>' +
             '<button type="button" class="fedc-row-add fedc-row-add-btn" aria-label="Add row"><i class="bi bi-plus"></i></button>' +
@@ -460,13 +503,16 @@ $(function () {
         }
     });
     $body.on('click', '.fedc-row-add-btn', function () {
-        $(this).closest('.fedc-map-row').after(buildRow());
+        var $row = $(buildRow());
+        $(this).closest('.fedc-map-row').after($row);
+        initRange($row.find('.fedc-exam-range')[0]);
     });
 
     if ($body.find('.fedc-map-row').length === 0) {
         $body.append(buildRow());
         recalcTotal();
     }
+    $body.find('.fedc-exam-range').each(function () { initRange(this); });
 
     /* ── Save ─────────────────────────────────────────────────────────── */
     $('#fedcSaveBtn').on('click', function () {
@@ -483,8 +529,10 @@ $(function () {
                 sub_faculty: JSON.stringify($r.find('.fedc-fac-open-btn').data('sub') || []),
                 codes: JSON.stringify($r.find('.fedc-fac-open-btn').data('codes') || {}),
                 weightage: $r.find('.fedc-weightage').val(),
-                exam_date: $r.find('.fedc-exam-date').val(),
-                exam_type: $r.find('.fedc-sel-mode').val()
+                exam_date: $r.find('.fedc-exam-range').attr('data-start') || '',
+                exam_end_date: $r.find('.fedc-exam-range').attr('data-end') || '',
+                exam_mode: $r.find('.fedc-sel-mode').val(),
+                exam_type: $r.find('.fedc-sel-type').val()
             });
         });
 

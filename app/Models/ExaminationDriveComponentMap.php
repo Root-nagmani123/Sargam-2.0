@@ -18,6 +18,7 @@ class ExaminationDriveComponentMap extends Model
         'sub_faculty_names' => 'array',
         'faculty_codes' => 'array',
         'exam_date' => 'date',
+        'exam_end_date' => 'date',
     ];
 
     public function drive(): BelongsTo

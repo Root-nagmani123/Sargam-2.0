@@ -115,6 +115,7 @@
                                 <th>EXAMINATION TYPE</th>
                                 <th>TERM</th>
                                 <th>COURSE</th>
+                                <th>SERVICE</th>
                                 <th>ACADEMIC SESSION</th>
                                 <th>FACULTY</th>
                                 <th class="coe-col-center">SUB-COORDINATES</th>
@@ -155,13 +156,20 @@
                                    placeholder="eg. Foundation Exam Drive" maxlength="150" autocomplete="off">
                         </div>
                     </div>
-                    {{-- Course --}}
+                    {{-- Course + Service --}}
                     <div class="row g-3 mb-3">
-                        <div class="col-12">
+                        <div class="col-sm-6">
                             <label class="coe-form-label" for="edcCourse">Course<span class="coe-req">*</span></label>
                             <select id="edcCourse" name="course" class="form-select coe-control">
                                 <option value="">Select Course</option>
                                 @foreach ($courses as $c)<option value="{{ $c }}">{{ $c }}</option>@endforeach
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="coe-form-label" for="edcService">Service<span class="coe-req">*</span></label>
+                            <select id="edcService" name="service" class="form-select coe-control">
+                                <option value="">Select Service</option>
+                                @foreach ($services as $pk => $name)<option value="{{ $pk }}">{{ $name }}</option>@endforeach
                             </select>
                         </div>
                     </div>
@@ -265,7 +273,7 @@ $(function () {
     var STATUSES = @json($statuses);
 
     /* COL indexes — keep in step with <thead> AND with the DataTable class's getColumns() */
-    var COL = { sno:0, name:1, type:2, term:3, course:4, session:5, faculty:6, sub:7, comp:8, start:9, end:10, status:11, action:12 };
+    var COL = { sno:0, name:1, type:2, term:3, course:4, service:5, session:6, faculty:7, sub:8, comp:9, start:10, end:11, status:12, action:13 };
 
     var $table = $('#edcTable');
 
@@ -286,6 +294,7 @@ $(function () {
             { data: 'exam_type', name: 'exam_type' },
             { data: 'term', name: 'term' },
             { data: 'course', name: 'course' },
+            { data: 'service', name: 'service' },
             { data: 'academic_session', name: 'academic_session' },
             { data: 'faculty', name: 'faculty' },
             { data: 'sub_coords', name: 'sub_coords' },
@@ -302,7 +311,7 @@ $(function () {
         searchToggle: '#edcSearchToggle',
         searchSlot: '#edcDtSearch',
         colvisGrid: '#edcColumnToggleGrid',
-        colvisKey: 'coeExaminationDrive:hiddenColumns:v1',
+        colvisKey: 'coeExaminationDrive:hiddenColumns:v2',
         empty: { title: 'No Examination Drives', zeroTitle: 'No Records Found', text: 'Create the first examination drive to get started.' }
     });
 
@@ -405,11 +414,12 @@ $(function () {
     var $editingRow = null;
 
     var $course  = $('#edcCourse');
+    var $service = $('#edcService');
     var $type    = $('#edcExamType');
     var $term    = $('#edcTerm');
     var $status  = $('#edcStatus');
-    [$course, $type, $term, $status].forEach(function ($s) {
-        $s.select2({ width: '100%', dropdownParent: $modal });
+    [$course, $service, $type, $term, $status].forEach(function ($s) {
+        $s.select2({ width: '100%', dropdownParent: $modalBody });
     });
 
     function fieldError($el, msg) {
@@ -439,6 +449,7 @@ $(function () {
             $type.val($row.attr('data-edc-type') || '').trigger('change.select2');
             $term.val($row.attr('data-edc-term') || '').trigger('change.select2');
             $course.val($row.attr('data-edc-course') || '').trigger('change.select2');
+            $service.val($row.attr('data-edc-service') || '').trigger('change.select2');
             $('#edcSession').val($row.attr('data-edc-session') || '');
             $status.val($row.attr('data-edc-status') || 'Draft').trigger('change.select2');
             // Convert dd-mm-yyyy → yyyy-mm-dd for date input
@@ -455,6 +466,7 @@ $(function () {
         } else {
             $('#edcDriveName').val('');
             $course.val('').trigger('change.select2');
+            $service.val('').trigger('change.select2');
             $type.val('').trigger('change.select2');
             $term.val('').trigger('change.select2');
             $('#edcSession').val('');
@@ -478,6 +490,7 @@ $(function () {
             ok = fieldError($('#edcDriveName'), $.trim($('#edcDriveName').val()) ? '' : 'Enter the drive name.') && ok;
         }
         ok = fieldError($course, $course.val() ? '' : 'Select a course.') && ok;
+        ok = fieldError($service, $service.val() ? '' : 'Select a service.') && ok;
         ok = fieldError($type,   $type.val()   ? '' : 'Select the examination type.') && ok;
         ok = fieldError($term,   $term.val()   ? '' : 'Select a term.') && ok;
         ok = fieldError($('#edcSession'), $.trim($('#edcSession').val()) ? '' : 'Enter the academic session.') && ok;
@@ -495,6 +508,7 @@ $(function () {
 
         var payload = {
             course: $course.val(),
+            service: $service.val(),
             exam_type: $type.val(),
             term: $term.val(),
             academic_session: $.trim($('#edcSession').val()),
