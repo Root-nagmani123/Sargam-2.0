@@ -898,7 +898,7 @@ class ProcessMessBillsEmployeeController extends Controller
             true
         );
 
-        return $groupedRows
+        return $this->withBuyerPooledPeriodPaid($groupedRows, $dateFrom, $dateTo)
             ->filter(function ($row) {
                 return trim((string) ($row->buyer_name ?? '')) !== ''
                     && (float) ($row->due ?? 0) > 0;
@@ -906,6 +906,137 @@ class ProcessMessBillsEmployeeController extends Controller
             ->map(fn ($cb) => $this->buildModalBillSummaryFromGroup($cb, $dateFrom, $dateTo))
             ->values()
             ->all();
+    }
+
+    /**
+     * Modal only: period paid / due / status per buyer the way computeCombinedBillFinancials
+     * does it — all of the buyer's payments (bills up to date_to) pooled and settled against
+     * line items oldest first. FIFO by date reduces to three aggregates, so no per-buyer loads:
+     * period paid = min(period total, max(0, paid pool - net of lines dated before date_from)).
+     *
+     * The grid's light rows set a date-range voucher's whole paid_amount against only its
+     * in-range items, so a buyer with a part-paid multi-month voucher showed due 0 and was
+     * dropped from the modal. Rows are cloned so the cached grid rows stay as they are.
+     */
+    private function withBuyerPooledPeriodPaid(Collection $groups, string $dateFrom, string $dateTo): Collection
+    {
+        if ($groups->isEmpty()) {
+            return $groups;
+        }
+
+        $clientIds = [];
+        $names = [];
+        foreach ($groups as $group) {
+            foreach ($group->bills ?? [] as $bill) {
+                $clientId = (int) ($bill->client_id ?? 0);
+                if ($clientId > 0) {
+                    $clientIds[$clientId] = true;
+                } else {
+                    $name = trim((string) ($bill->client_name ?? ''));
+                    if ($name !== '') {
+                        $names[$name] = true;
+                    }
+                }
+            }
+        }
+        $pool = $this->fetchBuyerPaidPoolByGroupKey(array_keys($clientIds), array_keys($names), $dateFrom, $dateTo);
+
+        return $groups->map(function ($group) use ($pool) {
+            $group = clone $group;
+            $groupKeys = collect($group->bills ?? [])
+                ->map(fn ($bill) => $this->messBillBuyerGroupKeyFast($bill))
+                ->unique();
+            $paidPool = 0.0;
+            $netBefore = 0.0;
+            foreach ($groupKeys as $key) {
+                $paidPool += $pool[$key]['paid'] ?? 0.0;
+                $netBefore += $pool[$key]['net_before'] ?? 0.0;
+            }
+
+            $total = (float) ($group->total ?? 0);
+            $paid = $this->roundMoney(min($total, max(0.0, $paidPool - $netBefore)));
+            $group->paid = $paid;
+            $group->due = $this->billDueAmount($total, $paid);
+            $group->status = $this->isBillFullyPaid($paid, $total) ? 2 : ($paid > 0 ? 1 : 0);
+
+            return $group;
+        });
+    }
+
+    /**
+     * Paid pool and pre-range net per buyer group key, over the same bills
+     * resolveBuyerBillsForPaymentAllocation loads (sale-status SV vouchers with items up to
+     * date_to, mess-selling kitchen issues issued up to date_to).
+     *
+     * @param  array<int, int>  $clientIds
+     * @param  array<int, string>  $names
+     * @return array<string, array{paid: float, net_before: float}>
+     */
+    private function fetchBuyerPaidPoolByGroupKey(array $clientIds, array $names, string $dateFrom, string $dateTo): array
+    {
+        $pool = [];
+        if ($clientIds === [] && $names === []) {
+            return $pool;
+        }
+
+        $add = function (object $bill, float $paid, float $netBefore) use (&$pool) {
+            $key = $this->messBillBuyerGroupKeyFast($bill);
+            $pool[$key]['paid'] = ($pool[$key]['paid'] ?? 0.0) + $paid;
+            $pool[$key]['net_before'] = ($pool[$key]['net_before'] ?? 0.0) + $netBefore;
+        };
+        $buyerScope = function ($query, string $table) use ($clientIds, $names) {
+            $query->where(function ($q) use ($table, $clientIds, $names) {
+                if ($clientIds !== []) {
+                    $q->orWhereIn("{$table}.client_id", $clientIds);
+                }
+                if ($names !== []) {
+                    $q->orWhereIn(DB::raw("TRIM({$table}.client_name)"), $names);
+                }
+            });
+        };
+        $lineExpr = 'ROUND(GREATEST(0, COALESCE(i.quantity, 0) - COALESCE(i.return_quantity, 0)) * COALESCE(i.rate, 0), 2)';
+
+        $svQuery = DB::table('sv_date_range_reports as r')
+            ->join('sv_date_range_report_items as i', 'i.sv_date_range_report_id', '=', 'r.id')
+            ->select(
+                'r.id',
+                'r.client_id',
+                'r.client_name',
+                'r.client_type_slug',
+                'r.paid_amount',
+                DB::raw("SUM(CASE WHEN COALESCE(i.issue_date, r.issue_date) < ? THEN {$lineExpr} ELSE 0 END) as net_before")
+            )
+            ->addBinding($dateFrom, 'select')
+            ->whereIn('r.status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses())
+            ->where('i.issue_date', '<=', $dateTo)
+            ->groupBy('r.id', 'r.client_id', 'r.client_name', 'r.client_type_slug', 'r.paid_amount');
+        $buyerScope($svQuery, 'r');
+        foreach ($svQuery->get() as $row) {
+            $add($row, (float) ($row->paid_amount ?? 0), (float) $row->net_before);
+        }
+
+        $kiQuery = DB::table('kitchen_issue_master as k')
+            ->leftJoin('kitchen_issue_items as i', 'i.kitchen_issue_master_pk', '=', 'k.pk')
+            ->select(
+                'k.pk',
+                'k.client_id',
+                'k.client_name',
+                'k.client_type',
+                DB::raw("SUM(CASE WHEN COALESCE(i.issue_date, k.issue_date) < ? THEN {$lineExpr} ELSE 0 END) as net_before")
+            )
+            ->addBinding($dateFrom, 'select')
+            ->whereIn('k.kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
+            ->where('k.issue_date', '<=', $dateTo)
+            ->groupBy('k.pk', 'k.client_id', 'k.client_name', 'k.client_type');
+        $buyerScope($kiQuery, 'k');
+        $kiRows = $kiQuery->get();
+        $kiPaid = $this->fetchProcessIndexKitchenPaidTotalsByPk($kiRows->pluck('pk')->map(fn ($pk) => (int) $pk)->all());
+        foreach ($kiRows as $row) {
+            $row->client_type_slug = $this->kitchenClientTypeIdToSlug((int) $row->client_type);
+            $add($row, (float) ($kiPaid[(int) $row->pk] ?? 0), (float) $row->net_before);
+        }
+
+        return $pool;
     }
 
     /**
@@ -957,7 +1088,7 @@ class ProcessMessBillsEmployeeController extends Controller
         string $dateFrom,
         string $dateTo
     ): array {
-        return $combinedBills
+        return $this->withBuyerPooledPeriodPaid($combinedBills, $dateFrom, $dateTo)
             ->filter(function ($row) {
                 return trim((string) ($row->buyer_name ?? '')) !== ''
                     && (float) ($row->due ?? 0) > 0;
