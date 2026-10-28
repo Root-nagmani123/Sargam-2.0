@@ -3,6 +3,7 @@
  * Markup: resources/views/admin/coe/partials/paper_viewer_modal.blade.php.
  *
  *   CoePaperViewer.open({ url: '…/original', title: 'QP-3-015 · Counselling', subtitle: 'Original Paper · V1' });
+ *   CoePaperViewer.print({ url: '…/original', title: '…' });   // administrator: print, no viewer
  *
  * The server answers { format: 'html' | 'docx', content, watermark }: an editor
  * paper as its cleaned HTML, a Word file as base64 that docx-preview lays out
@@ -132,6 +133,83 @@
             });
     }
 
+    // The page's coe-admin.css: the paper styles (.coe-paper-view) for the print copy.
+    function paperCss() {
+        var link = document.querySelector('link[href*="coe-admin.css"]');
+        return link ? link.href : null;
+    }
+
+    /**
+     * Print … Paper (COE administrator): the paper laid out in a hidden frame and
+     * handed to the browser's print dialog - no file, and no watermark on the
+     * printed exam paper. Resolves once the dialog has been opened.
+     *
+     *   CoePaperViewer.print({ url: '…/original', title: 'QP-3-015 · Counselling' });
+     */
+    function print(o) {
+        var frame = null;
+
+        function remove() {
+            if (frame && frame.parentNode) { frame.parentNode.removeChild(frame); }
+        }
+
+        return $.ajax({ url: o.url, method: 'GET', dataType: 'json', headers: { Accept: 'application/json' } })
+            .then(function (res) {
+                frame = document.createElement('iframe');
+                frame.setAttribute('aria-hidden', 'true');
+                frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+                document.body.appendChild(frame);
+
+                var doc = frame.contentDocument;
+                doc.open();
+                doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title></title>' +
+                    '<style>@page{margin:14mm}body{margin:0;background:#fff;' +
+                    '-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body></body></html>');
+                doc.close();
+                doc.title = o.title || 'Question Paper';    // the browser prints it in the page header
+
+                if (res.format === 'html') {
+                    var css = paperCss();
+                    var styled = $.Deferred();
+                    if (css) {
+                        var link = doc.createElement('link');
+                        link.rel = 'stylesheet';
+                        link.href = css;
+                        link.onload = link.onerror = function () { styled.resolve(); };
+                        doc.head.appendChild(link);
+                    } else {
+                        styled.resolve();
+                    }
+                    var sheet = doc.createElement('div');
+                    sheet.className = 'coe-paper-view';
+                    sheet.innerHTML = res.content;          // cleaned on the server (PaperHtmlSanitizer)
+                    doc.body.appendChild(sheet);
+                    return styled.promise();
+                }
+                return docxPreview().then(function () {
+                    return window.docx.renderAsync(toBytes(res.content), doc.body, doc.head, {
+                        className: 'docx',
+                        inWrapper: false,
+                        breakPages: true,
+                        useBase64URL: true,
+                        renderComments: false
+                    });
+                });
+            })
+            .then(function () {
+                var win = frame.contentWindow;
+                win.addEventListener('afterprint', remove);
+                setTimeout(remove, 60000);                  // a browser that never reports afterprint
+                win.focus();
+                win.print();
+            }, function (err) {
+                remove();
+                return $.Deferred().reject(err && err.status === 404
+                    ? 'This question paper is not available.'
+                    : 'The question paper could not be printed. Please try again.').promise();
+            });
+    }
+
     // Keys pressed with Ctrl (Cmd on a Mac) that would save, print or copy the paper.
     function blocksKey(e) {
         var key = (e.key || '').toLowerCase();
@@ -199,5 +277,5 @@
         el.content.addEventListener('click', function () { shield(false); });
     }
 
-    window.CoePaperViewer = { open: open };
+    window.CoePaperViewer = { open: open, print: print };
 })(window, document, jQuery);

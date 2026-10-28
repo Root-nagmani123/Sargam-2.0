@@ -2017,6 +2017,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
             ->whereNumber('paper')->name('question-paper.original');
         Route::get('question-paper/{paper}/translated', [\App\Http\Controllers\Admin\COE\QuestionPaperListController::class, 'translated'])
             ->whereNumber('paper')->name('question-paper.translated');
+        Route::post('question-paper/{paper}/unfreeze', [\App\Http\Controllers\Admin\COE\QuestionPaperListController::class, 'unfreeze'])
+            ->whereNumber('paper')->name('question-paper.unfreeze');
         Route::delete('question-paper/{paper}', [\App\Http\Controllers\Admin\COE\QuestionPaperListController::class, 'destroy'])
             ->whereNumber('paper')->name('question-paper.destroy');
     });

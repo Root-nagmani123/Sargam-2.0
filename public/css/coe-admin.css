@@ -244,6 +244,8 @@
 .coe-page .coe-act.is-disabled:hover .coe-act__label { text-decoration: none; }
 .coe-page .coe-act--freeze { color: #0e9384; }
 .coe-page .coe-act--approve { color: #067647; }
+.coe-page .coe-act--unfreeze { color: #344054; }   /* dark, as designed: undoes a release */
+.coe-page .coe-act.is-busy { opacity: 0.5; pointer-events: none; }
 
 /* ── Empty state ── */
 .coe-page .coe-empty {
@@ -351,6 +353,7 @@
 .coe-modal .coe-confirm__icon--danger { background: var(--coe-danger-soft); color: var(--coe-danger); }
 .coe-modal .coe-confirm__icon--freeze { background: var(--coe-success-soft); color: var(--coe-success); }
 .coe-modal .coe-confirm__icon--approve { background: var(--coe-success-soft); color: var(--coe-success); }
+.coe-modal .coe-confirm__icon--unfreeze { background: var(--coe-warn-soft); color: var(--coe-warn-strong); }
 
 .coe-modal .coe-confirm__title {
     font-size: 1.25rem;

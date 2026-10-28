@@ -8,10 +8,13 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 /**
  * COE question papers from the administrator's side (Question Paper screen):
- * every paper owed on every drive, where it stands, its files, and deleting it.
+ * every paper owed on every drive, where it stands, its files, unfreezing a
+ * published paper, and deleting it.
  *
  * The administrator sees the original once the faculty has uploaded it, and
  * the translation only once Rajbhasha has sent it - never Rajbhasha's draft.
@@ -46,7 +49,7 @@ class AdminPaperService
      * One row per subject mapped on a drive, with its paper if added - plus any
      * paper whose subject has since been taken off the drive.
      *
-     * @return Collection<int, array{id:int, paper_id:?int, code:string, name:string, drive:string, faculty:string,
+     * @return Collection<int, array{id:int, paper_id:?int, version:int, code:string, name:string, drive:string, faculty:string,
      *     batch:string, deadline:Carbon, original_file:?string, translated_file:?string, translated_by:?string, status:string}>
      */
     public function papers(): Collection
@@ -91,6 +94,40 @@ class AdminPaperService
     }
 
     /**
+     * Unfreeze (Published only): the paper goes back to the faculty's Pending
+     * Verification - they can freeze it again (OTP), or edit the original, which
+     * sends it back to Rajbhasha. Logged, as the release is undone.
+     *
+     * @throws ModelNotFoundException
+     * @throws ValidationException when it is not published
+     */
+    public function unfreeze(int $paperId): QuestionPaper
+    {
+        return DB::transaction(function () use ($paperId) {
+            $paper = QuestionPaper::lockForUpdate()->findOrFail($paperId);
+            if ($paper->status !== QuestionPaper::STATUS_PUBLISHED) {
+                throw ValidationException::withMessages(['paper' => 'Only a published question paper can be unfrozen.']);
+            }
+
+            Log::info('COE question paper unfrozen', [
+                'paper_id' => $paper->id,
+                'paper_code' => $paper->paper_code,
+                'frozen_at' => $paper->frozen_at?->toDateTimeString(),
+                'frozen_by' => $paper->frozen_by,
+                'unfrozen_by' => auth()->id(),
+            ]);
+
+            $paper->update([
+                'status' => QuestionPaper::STATUS_SENT_FOR_APPROVAL,
+                'frozen_at' => null,
+                'frozen_by' => null,
+            ]);
+
+            return $paper;
+        });
+    }
+
+    /**
      * Delete: the paper and its files go; the record stays soft-deleted (who
      * owed it, its code and dates). The subject is Pending at Faculty again.
      *
@@ -121,6 +158,7 @@ class AdminPaperService
 
         return [
             'paper_id' => $paper?->id,
+            'version' => $paper->version ?? 1,
             'code' => $code,
             'name' => $name,
             'drive' => $drive->drive_name ?? '-',
