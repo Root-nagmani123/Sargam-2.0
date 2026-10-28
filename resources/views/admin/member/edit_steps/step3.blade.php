@@ -6,6 +6,10 @@
 <div class="row">
     <div class="col-12">
         <div class="mb-3">
+            {{-- Posted only when this step was actually rendered: an empty checkbox group posts
+                 nothing, so without it "nothing ticked" and "step never loaded" look the same
+                 (PR #343 review, F-013). --}}
+            <input type="hidden" name="userrole_step_shown" value="1">
             <label class="form-label" for="role">Role Option <span class="text-danger">*</span></label>
             <div class="controls">
                 <div class="mbrw-role-grid">

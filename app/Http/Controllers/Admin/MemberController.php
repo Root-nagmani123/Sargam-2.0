@@ -1224,9 +1224,12 @@ class MemberController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        // F-009: no tick required when the member keeps a hidden option (see memberHoldsHiddenRoleOption()).
+        // F-009: no tick required when the member keeps a hidden option (see memberHoldsHiddenRoleOption()),
+        // but only when Step 3 was actually posted (its userrole_step_shown marker). Without Step 3,
+        // an empty selection would revoke the member's offered roles, so it is refused as before (F-013).
         [$rules, $messages] = $this->combinedMemberRules(
-            $this->actingUserCanManageRbacRoles() && ! $this->memberHoldsHiddenRoleOption($request->emp_id)
+            $this->actingUserCanManageRbacRoles()
+                && ! ($request->filled('userrole_step_shown') && $this->memberHoldsHiddenRoleOption($request->emp_id))
         );
 
         $validator = Validator::make($request->all(), $rules, $messages);
@@ -1753,8 +1756,9 @@ class MemberController extends Controller
 
         $rules = $formRequest->rules();
 
-        // F-009: same rule as update() — no tick required when the member keeps a hidden option.
-        if ((int) $step === 3 && $this->memberHoldsHiddenRoleOption($id)) {
+        // F-009 / F-013: same rule as update() — no tick required when Step 3 was posted and
+        // the member keeps a hidden option.
+        if ((int) $step === 3 && $request->filled('userrole_step_shown') && $this->memberHoldsHiddenRoleOption($id)) {
             $rules['userrole'] = ['nullable', 'array'];
         }
 

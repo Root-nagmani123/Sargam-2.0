@@ -3,11 +3,12 @@
 Branch `role-permission-feedback-october`, PR #343. Commits on top of `main` (merge-base
 `84ecdc9d1`): `a028ef89c`, `658b3776e`, `dce26e3ea`, `1d1adbc4c`, plus the review fixes
 `d27b57def` (round 1), `4ca5f02eb` (round 2), `91f317d12` and `ad4ec3a84` (these deploy
-notes), and the round 4 fix for F-009 and F-010 (the commit that adds this line).
+notes), `1e100bdab` (round 4: F-009, F-010), `558a94883` (F-011, F-012), and the F-013 fix
+(the commit that adds this line).
 
 One data migration (insert-only) and code changes. Test on preprod before production.
 
-Last updated: 26 Oct 2026 (after PR #343 review rounds 1–4).
+Last updated: 28 Oct 2026 (after PR #343 review rounds 1–7).
 
 ---
 
@@ -129,7 +130,11 @@ If it shows **Pending**, run it first, by path, before this release.
 7. Open a Staff-only employee → step 3 has nothing ticked and shows Staff as "Also assigned".
    Change another field and save without ticking anything → it saves, Staff is kept, and on
    **Role & Permission › Users** the employee has no new role.
-8. Delete "Test Role Oct 2" afterwards.
+8. Open an employee who holds Staff **and** a role ticked in step 3 (e.g. Doctor). Untick
+   nothing, save → Doctor stays ticked and on **Role & Permission › Users**. If step 3 fails to
+   load and the save is attempted, it is refused with *"Please select a user role."*; nothing
+   is removed.
+9. Delete "Test Role Oct 2" afterwards.
 
 SQL check for roles missing from Role Assignment (should return 0 rows):
 
@@ -176,3 +181,5 @@ backfill should have covered (rerun it).
 | 26 Oct 2026 | PR #343 review round 2 fix (`4ca5f02eb`): refuse renaming a role onto another existing option's name. |
 | 26 Oct 2026 | Notes brought up to date with the review fixes and committed to the repository (`ad4ec3a84`, review finding F-007). |
 | 26 Oct 2026 | PR #343 review round 4 fixes. F-009: a member who holds a hidden option can be saved without ticking, so granting, a role. F-010: decision marked pending; `optimize:clear` replaced with targeted cache clears; commit list updated. |
+| 27 Oct 2026 | PR #343 review round 6 fixes (`558a94883`): F-011 credential lookup ordered like `update()`; F-012 test docblock moved back. |
+| 28 Oct 2026 | PR #343 review round 7 fix, F-013: step 3 posts a hidden `userrole_step_shown` marker; the F-009 "no tick required" rule applies only when it is present, so a save without step 3 is refused instead of removing the member's roles. |
