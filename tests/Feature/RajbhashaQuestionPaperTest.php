@@ -21,12 +21,15 @@ use Tests\TestCase;
 
 /**
  * COE → My Question Paper (Rajbhasha) and the faculty's verification:
- * an uploaded paper is translated, sent for approval, and the faculty freezes
- * it (OTP) to publish. Hits the real routes.
+ * an added paper is translated in the editor, sent for approval, and the
+ * faculty freezes it (OTP) to publish. Hits the real routes.
  */
 class RajbhashaQuestionPaperTest extends TestCase
 {
     use DatabaseTransactions;
+
+    /** A translation as written in the editor. */
+    private const HINDI = '<h4>लघु उत्तरीय प्रश्न</h4><p>1. लोक प्रशासन को परिभाषित कीजिए।</p>';
 
     private User $faculty;
 
@@ -114,38 +117,69 @@ class RajbhashaQuestionPaperTest extends TestCase
         $this->actingAs($this->outsider)->get(route('admin.coe.my-question-paper.index'))->assertForbidden();
         $this->actingAs($this->faculty)->get(route('admin.coe.my-question-paper.index'))->assertForbidden();
         $this->actingAs($this->outsider)
-            ->postJson(route('admin.coe.my-question-paper.translation.store', $this->paper->id), ['translated_paper' => $this->docx()])
+            ->postJson(route('admin.coe.my-question-paper.translation.store', $this->paper->id), ['paper_html' => self::HINDI])
             ->assertForbidden();
-        $this->actingAs($this->outsider)->get(route('admin.coe.my-question-paper.original', $this->paper->id))->assertForbidden();
+        $this->actingAs($this->outsider)->getJson(route('admin.coe.my-question-paper.original', $this->paper->id))->assertForbidden();
+        $this->actingAs($this->outsider)->get(route('admin.coe.my-question-paper.translate', $this->paper->id))->assertForbidden();
 
         $this->actingAs($this->rajbhasha)
             ->get(route('admin.coe.my-question-paper.index'))
             ->assertOk()
             ->assertSee($this->paper->paper_code)
-            ->assertSee('data-coe-state="pending"', false);
+            ->assertSee('data-coe-state="pending"', false)
+            ->assertSee(route('admin.coe.my-question-paper.translate', $this->paper->id), false);
     }
 
-    public function test_rajbhasha_downloads_the_original(): void
+    public function test_rajbhasha_views_the_original_but_never_downloads_it(): void
     {
-        $response = $this->actingAs($this->rajbhasha)
-            ->get(route('admin.coe.my-question-paper.original', $this->paper->id))
-            ->assertOk();
+        $url = route('admin.coe.my-question-paper.original', $this->paper->id);
 
-        $this->assertStringContainsString($this->paper->original_file_name, $response->headers->get('Content-Disposition'));
-        $this->assertSame('original paper', $response->streamedContent());
+        // An older .docx upload: the browser lays it out from base64.
+        $response = $this->actingAs($this->rajbhasha)->getJson($url)
+            ->assertOk()
+            ->assertJson(['format' => 'docx', 'content' => base64_encode('original paper')]);
+        $this->assertNull($response->headers->get('Content-Disposition'));
+        $this->assertStringContainsString('ID '.$this->rajbhasha->getAuthIdentifier(), $response->json('watermark'));
+
+        // Opening the address in the browser gets no file.
+        $this->actingAs($this->rajbhasha)->get($url)->assertNotFound();
     }
 
-    public function test_upload_then_delete_the_translation(): void
+    public function test_translate_page_starts_from_the_faculty_paper(): void
     {
-        $this->rajbhashaAction('translation.store', ['translated_paper' => $this->docx()])
+        $url = route('admin.coe.my-question-paper.translate', $this->paper->id);
+
+        // An older .docx original: nothing to start from, so the first template.
+        $this->actingAs($this->rajbhasha)->get($url)
+            ->assertOk()
+            ->assertSee('Translate Question Paper')
+            ->assertSee('Standard Question Paper')
+            ->assertSee('var STARTS_FROM_COPY = false', false);
+
+        // A paper written in the editor: translated in place.
+        $path = 'coe/question-papers/'.$this->paper->examination_drive_id.'/orig.html';
+        Storage::disk(QuestionPaper::DISK)->put($path, '<!DOCTYPE html><html><body><p>Q1 Define governance.</p></body></html>');
+        $this->paper->update(['original_file_path' => $path, 'original_file_name' => $this->paper->paper_code.'_v1.html']);
+
+        $this->actingAs($this->rajbhasha)->get($url)
+            ->assertOk()
+            ->assertSee('<div id="qpaperEditor"><p>Q1 Define governance.</p></div>', false)
+            ->assertSee('var STARTS_FROM_COPY = true', false);
+    }
+
+    public function test_translate_then_edit_then_delete_the_translation(): void
+    {
+        $this->rajbhashaAction('translation.store', ['paper_html' => self::HINDI.'<script>alert(1)</script>'])
             ->assertOk()
             ->assertJson(['message' => 'Translated question paper uploaded.']);
 
         $paper = $this->paper->fresh();
         $this->assertSame(QuestionPaper::STATUS_TRANSLATED, $paper->status);
-        $this->assertSame($paper->paper_code.'_hindi.docx', $paper->translated_file_name);
+        $this->assertSame($paper->paper_code.'_hindi.html', $paper->translated_file_name);
         $this->assertSame((int) $this->rajbhasha->pk, (int) $paper->translated_by);
-        Storage::disk(QuestionPaper::DISK)->assertExists($paper->translated_file_path);
+        $stored = Storage::disk(QuestionPaper::DISK)->get($paper->translated_file_path);
+        $this->assertStringContainsString('लोक प्रशासन को परिभाषित कीजिए।', $stored);
+        $this->assertStringNotContainsString('<script', $stored);
 
         // Not sent yet: the faculty still sees Pending at Rajbhasha, without the file.
         $this->actingAs($this->faculty)
@@ -155,7 +189,16 @@ class RajbhashaQuestionPaperTest extends TestCase
             ->getJson(route('admin.coe.faculty-question-paper.translated', $this->map->id))
             ->assertNotFound();
 
-        $this->rajbhashaAction('translation.store', ['translated_paper' => $this->docx()])->assertStatus(422);
+        // Edit Translated Paper: the translation so far is in the editor; saving replaces the file.
+        $this->actingAs($this->rajbhasha)->get(route('admin.coe.my-question-paper.translate', $this->paper->id))
+            ->assertOk()
+            ->assertSee('लोक प्रशासन को परिभाषित कीजिए।')
+            ->assertSee('var STARTS_FROM_COPY = false', false);
+        $this->rajbhashaAction('translation.store', ['paper_html' => '<p>संशोधित अनुवाद</p>'])
+            ->assertOk()
+            ->assertJson(['message' => 'Translated question paper updated.']);
+        Storage::disk(QuestionPaper::DISK)->assertMissing($paper->translated_file_path);
+        $this->assertCount(2, Storage::disk(QuestionPaper::DISK)->allFiles());   // the original + the new translation
 
         $this->rajbhashaAction('translation.destroy')->assertOk();
         $paper = $this->paper->fresh();
@@ -165,13 +208,17 @@ class RajbhashaQuestionPaperTest extends TestCase
         $this->assertCount(1, Storage::disk(QuestionPaper::DISK)->allFiles());   // only the original is left
     }
 
-    public function test_translation_must_be_a_docx(): void
+    public function test_translation_must_have_text_and_a_file_is_not_accepted(): void
     {
-        $this->rajbhashaAction('translation.store', ['translated_paper' => UploadedFile::fake()->createWithContent('h.pdf', "%PDF-1.4\n")])
+        $this->rajbhashaAction('translation.store', ['paper_html' => '<p>&nbsp;</p>'])
             ->assertStatus(422)
-            ->assertJsonValidationErrors('translated_paper');
+            ->assertJsonValidationErrors('paper_html');
+        $this->rajbhashaAction('translation.store', ['translated_paper' => $this->docx()])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('paper_html');
 
         $this->assertSame(QuestionPaper::STATUS_PENDING_RAJBHASHA, $this->paper->fresh()->status);
+        $this->assertCount(1, Storage::disk(QuestionPaper::DISK)->allFiles());
     }
 
     public function test_send_needs_a_translation(): void
@@ -182,7 +229,7 @@ class RajbhashaQuestionPaperTest extends TestCase
 
     public function test_sent_translation_is_verified_and_published_by_the_faculty(): void
     {
-        $this->rajbhashaAction('translation.store', ['translated_paper' => $this->docx()])->assertOk();
+        $this->rajbhashaAction('translation.store', ['paper_html' => self::HINDI])->assertOk();
         $this->rajbhashaAction('send-for-approval')
             ->assertOk()
             ->assertJson(['message' => 'Translated question paper sent for approval.']);
@@ -193,7 +240,10 @@ class RajbhashaQuestionPaperTest extends TestCase
 
         // Sent: Rajbhasha can no longer change it.
         $this->rajbhashaAction('translation.destroy')->assertStatus(422);
+        $this->rajbhashaAction('translation.store', ['paper_html' => self::HINDI])->assertStatus(422);
         $this->rajbhashaAction('send-for-approval')->assertStatus(422);
+        $this->actingAs($this->rajbhasha)->get(route('admin.coe.my-question-paper.translate', $this->paper->id))
+            ->assertRedirect(route('admin.coe.my-question-paper.index'));
         $this->actingAs($this->rajbhasha)->get(route('admin.coe.my-question-paper.index'))
             ->assertSee('data-coe-state="sent"', false);
 
@@ -202,11 +252,11 @@ class RajbhashaQuestionPaperTest extends TestCase
             ->get(route('admin.coe.faculty-question-paper.index'))
             ->assertSee('data-coe-state="translated"', false)
             ->assertSee('Pending Verification');
-        // Shown in the viewer: the Word file goes to the browser to lay out, never as a download.
+        // Shown in the viewer, never as a download.
         $this->actingAs($this->faculty)
             ->getJson(route('admin.coe.faculty-question-paper.translated', $this->map->id))
             ->assertOk()
-            ->assertJson(['format' => 'docx']);
+            ->assertJson(['format' => 'html']);
 
         $otp = $this->sendFacultyOtp();
         $this->actingAs($this->faculty)
@@ -224,6 +274,57 @@ class RajbhashaQuestionPaperTest extends TestCase
         $this->actingAs($this->faculty)
             ->postJson(route('admin.coe.faculty-question-paper.freeze-otp', $this->map->id))
             ->assertStatus(422);
+    }
+
+    public function test_faculty_edit_before_freeze_goes_back_to_rajbhasha(): void
+    {
+        $this->rajbhashaAction('translation.store', ['paper_html' => self::HINDI])->assertOk();
+        $this->rajbhashaAction('send-for-approval')->assertOk();
+        $translation = $this->paper->fresh()->translated_file_path;
+
+        // Pending Verification: the faculty may still edit the original.
+        $create = route('admin.coe.faculty-question-paper.create', $this->map->id);
+        $this->actingAs($this->faculty)->get(route('admin.coe.faculty-question-paper.index'))
+            ->assertSee('data-coe-state="translated"', false)
+            ->assertSee($create, false);
+        $this->actingAs($this->faculty)->get($create)->assertOk();
+        $this->actingAs($this->faculty)
+            ->postJson(route('admin.coe.faculty-question-paper.upload', $this->map->id), ['paper_html' => '<p>Q1 Define governance (revised).</p>'])
+            ->assertOk()
+            ->assertJson(['message' => 'Question paper updated (V2) and sent to Rajbhasha for translation.']);
+
+        // Back with Rajbhasha, the earlier translation kept to correct.
+        $paper = $this->paper->fresh();
+        $this->assertSame(QuestionPaper::STATUS_PENDING_RAJBHASHA, $paper->status);
+        $this->assertSame(2, (int) $paper->version);
+        $this->assertNull($paper->sent_for_approval_at);
+        $this->assertSame($translation, $paper->translated_file_path);
+        $this->actingAs($this->faculty)->postJson(route('admin.coe.faculty-question-paper.freeze-otp', $this->map->id))->assertStatus(422);
+        $this->actingAs($this->faculty)
+            ->getJson(route('admin.coe.faculty-question-paper.translated', $this->map->id))
+            ->assertNotFound();
+        $this->actingAs($this->rajbhasha)->get(route('admin.coe.my-question-paper.translate', $this->paper->id))
+            ->assertOk()
+            ->assertSee('लोक प्रशासन को परिभाषित कीजिए।')
+            ->assertSee('var STARTS_FROM_COPY = false', false);
+
+        // Translated again and sent: the faculty can now freeze it.
+        $this->rajbhashaAction('translation.store', ['paper_html' => self::HINDI.'<p>संशोधित</p>'])->assertOk();
+        Storage::disk(QuestionPaper::DISK)->assertMissing($translation);
+        $this->rajbhashaAction('send-for-approval')->assertOk();
+        $otp = $this->sendFacultyOtp();
+        $this->actingAs($this->faculty)
+            ->postJson(route('admin.coe.faculty-question-paper.freeze', $this->map->id), ['otp' => $otp])
+            ->assertOk();
+
+        // Published is final: no more edits.
+        $this->actingAs($this->faculty)->get($create)
+            ->assertRedirect(route('admin.coe.faculty-question-paper.index'))
+            ->assertSessionHas('error', 'This question paper is published, so it can no longer be changed.');
+        $this->actingAs($this->faculty)
+            ->postJson(route('admin.coe.faculty-question-paper.upload', $this->map->id), ['paper_html' => '<p>Too late.</p>'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('paper');
     }
 
     private function rajbhashaAction(string $name, array $data = [])

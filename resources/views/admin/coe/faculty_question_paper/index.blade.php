@@ -236,10 +236,12 @@ $(function () {
             ['coe-act--create coe-act--wide', 'bi-pencil-square', 'Edit Original Paper', 'create']
         ],
         // Pending Verification: Rajbhasha sent the translation back; Freeze (OTP) publishes it.
-        // Papers are only ever viewed here, never downloaded.
+        // Papers are only ever viewed here, never downloaded. Pending Verification:
+        // Freeze publishes it; Edit Original Paper sends it back to Rajbhasha.
         'translated': [
             ['coe-act--download', 'bi-eye', 'View Original Paper', null, 'original'],
             ['coe-act--download', 'bi-translate', 'View Translated Paper', null, 'translated'],
+            ['coe-act--create coe-act--wide coe-act--resend', 'bi-pencil-square', 'Edit Original Paper', 'create'],
             ['coe-act--freeze', 'bi-snow', 'Freeze']
         ],
         'published': [
@@ -313,6 +315,20 @@ $(function () {
     };
 
     function url(name, $row) { return URLS[name].replace('__PAPER__', $row.attr('data-coe-id')); }
+
+    // Editing a translated paper undoes its translation: say so before the editor opens.
+    $table.on('click', 'a.coe-act--resend', function (e) {
+        e.preventDefault();
+        var href = this.href;
+        Swal.fire({
+            icon: 'warning',
+            title: 'Edit the original paper?',
+            text: 'After you upload the changes, the paper goes back to Rajbhasha to translate again. You can freeze it once the new translation is sent to you.',
+            showCancelButton: true,
+            confirmButtonText: 'Edit Paper',
+            cancelButtonText: 'Cancel'
+        }).then(function (r) { if (r.isConfirmed) { window.location.href = href; } });
+    });
 
     // See Attachment / View … Paper: read-only viewer, no download.
     $table.on('click', '[data-coe-view]', function (e) {

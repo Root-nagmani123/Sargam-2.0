@@ -1999,6 +1999,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
             ->whereNumber('paper')->name('my-question-paper.original');
         Route::get('my-question-paper/{paper}/translated', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'translated'])
             ->whereNumber('paper')->name('my-question-paper.translated');
+        Route::get('my-question-paper/{paper}/translate', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'translate'])
+            ->whereNumber('paper')->name('my-question-paper.translate');
         Route::post('my-question-paper/{paper}/translation', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'storeTranslation'])
             ->whereNumber('paper')->name('my-question-paper.translation.store');
         Route::delete('my-question-paper/{paper}/translation', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'destroyTranslation'])

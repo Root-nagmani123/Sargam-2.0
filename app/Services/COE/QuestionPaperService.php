@@ -15,8 +15,9 @@ use Illuminate\Validation\ValidationException;
 /**
  * COE question papers from the faculty's side: which papers they owe, writing
  * the original paper in the editor (V1, straight to Rajbhasha - no freeze),
- * editing it (V2, V3...) until Rajbhasha translates it, and - once the translation is sent
- * back - verifying it and freezing it with an OTP to publish.
+ * editing it (V2, V3...) while it waits on Rajbhasha, and - once the translation
+ * is sent back - verifying it and freezing it with an OTP to publish, or editing
+ * it again, which sends it back to Rajbhasha to translate the change.
  *
  * A faculty owes one paper per subject mapped to them on an examination drive
  * (examination_drive_faculty_maps). The question_papers row only exists once
@@ -52,8 +53,20 @@ class QuestionPaperService
         QuestionPaper::STATUS_SENT_FOR_APPROVAL => QuestionPaper::STATUS_PUBLISHED,
     ];
 
-    /** The original is fixed once Rajbhasha has a translation of it. */
-    private const LOCKED_MESSAGE = 'Rajbhasha has already translated this question paper, so it can no longer be changed.';
+    /**
+     * "Edit Original Paper": while it waits on Rajbhasha, and while the faculty
+     * verifies the translation (before the freeze) - an edit then sends it back
+     * to Rajbhasha to translate again. Not while Rajbhasha is translating it,
+     * nor once it is published.
+     */
+    private const EDITABLE = [
+        QuestionPaper::STATUS_PENDING_RAJBHASHA,
+        QuestionPaper::STATUS_SENT_FOR_APPROVAL,
+    ];
+
+    private const LOCKED_MESSAGE = 'Rajbhasha is translating this question paper. You can edit it again once the translation is sent to you for verification.';
+
+    private const PUBLISHED_MESSAGE = 'This question paper is published, so it can no longer be changed.';
 
     public function __construct(
         private PaperHtmlSanitizer $sanitizer,
@@ -142,27 +155,6 @@ class QuestionPaperService
         return $paper;
     }
 
-    /**
-     * A stored paper file for the read-only viewer, never as a file: an editor
-     * paper as its cleaned HTML, a Word file (an older upload, Rajbhasha's
-     * translation) as base64 for the browser to lay out.
-     *
-     * @return array{format:string, content:string}
-     *
-     * @throws ModelNotFoundException when the file is missing from the disk
-     */
-    public function forViewer(QuestionPaper $paper, ?string $path, string $fileName): array
-    {
-        $contents = $this->files->contents($path);
-        if ($contents === null) {
-            throw (new ModelNotFoundException())->setModel(QuestionPaper::class, [$paper->id]);
-        }
-
-        return str_ends_with(strtolower($fileName), '.html')
-            ? ['format' => 'html', 'content' => $this->sanitizer->fromDocument($contents)]
-            : ['format' => 'docx', 'content' => base64_encode($contents)];
-    }
-
     /** "+91 ******3274" — the number the freeze OTP goes to. */
     public function otpPhoneMasked(int $facultyPk): string
     {
@@ -176,7 +168,7 @@ class QuestionPaperService
      * Pending at Rajbhasha replaces it as the next version.
      *
      * @throws ModelNotFoundException when the paper is not this faculty's
-     * @throws ValidationException when Rajbhasha has already translated it, or the paper is blank
+     * @throws ValidationException when it cannot be edited now, or the paper is blank
      */
     public function saveOriginalPaper(int $facultyPk, int $paperId, string $html): QuestionPaper
     {
@@ -185,7 +177,7 @@ class QuestionPaperService
             throw (new ModelNotFoundException())->setModel(ExaminationDriveFacultyMap::class, [$paperId]);
         }
         if (! $row['editable']) {
-            throw ValidationException::withMessages(['paper' => self::LOCKED_MESSAGE]);
+            throw ValidationException::withMessages(['paper' => $this->lockedMessage($row['status'])]);
         }
 
         $clean = $this->sanitizer->clean($html);
@@ -197,6 +189,12 @@ class QuestionPaperService
         return $row['status'] === QuestionPaper::STATUS_PENDING_FACULTY
             ? $this->addFirstVersion($paperId, $row, $contents)
             : $this->addNextVersion($facultyPk, $paperId, $contents);
+    }
+
+    /** Why a paper cannot be edited now, by its faculty view status. */
+    public function lockedMessage(string $viewStatus): string
+    {
+        return $viewStatus === 'published' ? self::PUBLISHED_MESSAGE : self::LOCKED_MESSAGE;
     }
 
     /**
@@ -280,17 +278,26 @@ class QuestionPaperService
         try {
             $oldPath = DB::transaction(function () use ($paper, $path, $version) {
                 $locked = QuestionPaper::lockForUpdate()->findOrFail($paper->id);
-                $this->requireStatus($locked, QuestionPaper::STATUS_PENDING_RAJBHASHA, self::LOCKED_MESSAGE);
+                if (! in_array($locked->status, self::EDITABLE, true)) {
+                    throw ValidationException::withMessages(['paper' => $locked->status === QuestionPaper::STATUS_PUBLISHED
+                        ? self::PUBLISHED_MESSAGE
+                        : self::LOCKED_MESSAGE]);
+                }
                 if ((int) $locked->version + 1 !== $version) {
                     throw ValidationException::withMessages(['paper' => 'The paper changed meanwhile. Refresh the page and try again.']);
                 }
 
                 $oldPath = $locked->original_file_path;
+                // Back to Rajbhasha. A translation sent for approval stays on the
+                // paper, so Rajbhasha corrects it rather than starting again.
                 $locked->update([
                     'original_file_path' => $path,
                     'original_file_name' => $locked->paper_code.'_v'.$version.'.html',
                     'version' => $version,
                     'original_uploaded_at' => now(),
+                    'status' => QuestionPaper::STATUS_PENDING_RAJBHASHA,
+                    'sent_for_approval_at' => null,
+                    'sent_for_approval_by' => null,
                 ]);
 
                 return $oldPath;
@@ -417,8 +424,8 @@ class QuestionPaperService
             'comments' => $paper?->comments,
             'version' => $paper->version ?? 1,
             'status' => $paper ? (self::FACULTY_VIEW[$paper->status] ?? $paper->status) : QuestionPaper::STATUS_PENDING_FACULTY,
-            // Add, or Reupload / Edit until Rajbhasha uploads a translation.
-            'editable' => $paper === null || $paper->status === QuestionPaper::STATUS_PENDING_RAJBHASHA,
+            // Add; Edit while it waits on Rajbhasha or on the faculty's verification.
+            'editable' => $paper === null || in_array($paper->status, self::EDITABLE, true),
         ];
     }
 

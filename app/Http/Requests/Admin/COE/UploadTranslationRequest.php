@@ -5,9 +5,9 @@ namespace App\Http\Requests\Admin\COE;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Upload Translated Paper (Rajbhasha): the Hindi .docx, same file checks as
- * the faculty's paper. Who may upload, and to which paper, is checked by the
- * controller and RajbhashaPaperService.
+ * Translate Question Paper (Rajbhasha): the translation written in the editor -
+ * Rajbhasha no longer uploads a .docx. Which paper may be translated is checked
+ * by RajbhashaPaperService, not here.
  */
 class UploadTranslationRequest extends FormRequest
 {
@@ -21,7 +21,9 @@ class UploadTranslationRequest extends FormRequest
      */
     public function rules(): array
     {
-        return ['translated_paper' => UploadQuestionPaperRequest::paperFileRules()];
+        return [
+            'paper_html' => ['required', 'string', 'max:2000000'],
+        ];
     }
 
     /**
@@ -29,6 +31,8 @@ class UploadTranslationRequest extends FormRequest
      */
     public function messages(): array
     {
-        return UploadQuestionPaperRequest::paperFileMessages('translated_paper');
+        return [
+            'paper_html.required' => 'Write the translated paper before uploading it.',
+        ];
     }
 }

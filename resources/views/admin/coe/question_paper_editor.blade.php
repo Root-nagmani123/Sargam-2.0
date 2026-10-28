@@ -1,6 +1,13 @@
+{{-- COE question paper editor: the faculty's Add Question Paper and Rajbhasha's
+     Translate Question Paper. Pick a template or write from scratch; Upload Paper
+     posts paper_html to $saveUrl.
+     Params: $pageTitle, $paper (summary + template header), $editorHtml (the
+     document to start from, or null for a template), $templates, $listUrl,
+     $saveUrl, $startsFromCopy (optional: $editorHtml is someone else's paper,
+     to be changed before upload — Rajbhasha's first translation). --}}
 @extends('admin.layouts.master')
 
-@section('title', 'Add Question Paper')
+@section('title', $pageTitle)
 
 @push('styles')
 {{-- Summernote (lite: no Bootstrap dependency) — same build as the Notice screens. --}}
@@ -14,12 +21,13 @@
     // A new paper starts from the Standard template, ticked; an edit starts from
     // the saved paper, with no template ticked.
     $startTemplate = empty($editorHtml) ? array_key_first($templates) : null;
+    $startsFromCopy = ($startsFromCopy ?? false) && ! empty($editorHtml);
 @endphp
 
 @section('setup_content')
 <div class="container-fluid coe-page coe-qp-add">
-    <x-breadcrum title="Add Question Paper" :showBack="true"
-                 :items="['Setup', 'COE', 'Question Paper Management', 'Add Question Paper']" />
+    <x-breadcrum :title="$pageTitle" :showBack="true"
+                 :items="['Setup', 'COE', 'Question Paper Management', $pageTitle]" />
 
     <x-session_message />
 
@@ -91,7 +99,7 @@
             </div>
 
             <div class="coe-qp-actions">
-                <a href="{{ route('admin.coe.faculty-question-paper.index') }}" id="qpaperCancel"
+                <a href="{{ $listUrl }}" id="qpaperCancel"
                    class="btn coe-btn coe-btn-cancel coe-btn-cancel--brand">Cancel</a>
                 <button type="submit" id="qpaperSubmit" class="btn coe-btn coe-btn-primary" disabled>Upload Paper</button>
             </div>
@@ -106,9 +114,16 @@
 $(function () {
     'use strict';
 
-    var LIST_URL = @json(route('admin.coe.faculty-question-paper.index'));
-    var UPLOAD_URL = @json(route('admin.coe.faculty-question-paper.upload', $paper['id']));
+    var LIST_URL = @json($listUrl);
+    var UPLOAD_URL = @json($saveUrl);
+    var STARTS_FROM_COPY = @json($startsFromCopy);
     var BLANK = '<p><br></p>';
+
+    // Upload Paper with the starting document untouched: why that is refused.
+    var UNTOUCHED = {
+        template: 'Type your questions into the template before uploading the paper.',
+        copy: 'Translate the paper before uploading it.'
+    };
 
     var $form = $('#qpaperForm');
     var $submit = $('#qpaperSubmit');
@@ -116,7 +131,7 @@ $(function () {
     var $checks = $('.coe-tpl-card__check');
     var current = $checks.filter(':checked').val() || null;   // the ticked template
     var baseline = null;        // the editor's content as last loaded
-    var fromTemplate = false;   // baseline is a template or a blank page, not the saved paper
+    var loaded = 'saved';       // what baseline is: 'template' (or a blank page), 'copy' or 'saved'
     var submitting = false;
 
     function templateHtml(key) { return $('#qpaperTplHtml_' + key).html(); }
@@ -228,16 +243,16 @@ $(function () {
         return $('<div>').html(code()).text().replace(/\s+/g, ' ').trim();
     }
 
-    // The faculty has changed the editor since a template / the saved paper was loaded.
+    // The editor has changed since a template / the saved paper was loaded.
     function isEdited() { return code() !== baseline; }
 
-    // Switching templates would lose work: their own edits, or the saved paper.
-    function wouldLoseWork() { return editorText() !== '' && (isEdited() || !fromTemplate); }
+    // Switching templates would lose work: the user's own edits, or a paper.
+    function wouldLoseWork() { return editorText() !== '' && (isEdited() || loaded !== 'template'); }
 
-    function load(html, isTemplate) {
+    function load(html, kind) {
         $editor.summernote('code', html);
         baseline = code();                      // as Summernote normalised it
-        fromTemplate = isTemplate;
+        loaded = kind;
         refresh();
     }
 
@@ -268,7 +283,7 @@ $(function () {
         var apply = function () {
             current = key;
             syncCards();
-            load(key ? templateHtml(key) : BLANK, true);
+            load(key ? templateHtml(key) : BLANK, 'template');
         };
         syncCards();                            // until confirmed, the old choice stays ticked
         if (!wouldLoseWork()) { apply(); return; }
@@ -287,8 +302,9 @@ $(function () {
         if (!$(e.target).is('.coe-tpl-card__check')) { $(this).find('.coe-tpl-card__check').trigger('click'); }
     });
 
-    // Start: the ticked template for a new paper; the saved paper for an edit.
-    if (current) { load(templateHtml(current), true); } else { load(code(), false); }
+    // Start: the ticked template for a new paper; the saved paper for an edit
+    // (or, for a first translation, the faculty's paper to translate).
+    if (current) { load(templateHtml(current), 'template'); } else { load(code(), STARTS_FROM_COPY ? 'copy' : 'saved'); }
 
     /* ── Leaving with unsaved work ── */
     window.addEventListener('beforeunload', function (e) {
@@ -325,8 +341,8 @@ $(function () {
             showError('Write the question paper before uploading it.');
             return;
         }
-        if (fromTemplate && !isEdited()) {
-            showError('Type your questions into the template before uploading the paper.');
+        if (UNTOUCHED[loaded] && !isEdited()) {
+            showError(UNTOUCHED[loaded]);
             return;
         }
 

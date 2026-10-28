@@ -13,17 +13,21 @@ use Illuminate\Http\Request;
  * COE → Question Paper Management → My Question Paper, as the FACULTY sees it
  * (the setter writes the original paper in the editor - from a template or from
  * scratch - which goes straight to Rajbhasha for translation - no freeze - and
- * can edit it until Rajbhasha translates it).
+ * can edit it while it waits there).
  *
  * Once Rajbhasha sends the translation back, the faculty verifies it and
- * freezes it with an OTP to publish. The rows and their shape come from
+ * freezes it with an OTP to publish - or edits the original again, which sends
+ * it back to Rajbhasha. The rows and their shape come from
  * QuestionPaperService::papersForFaculty().
  */
 class FacultyQuestionPaperController extends Controller
 {
+    use ShowsPaperInViewer;
+
     /**
-     * Add Question Paper → Template cards, in order. Each key has a starting
-     * document in admin/coe/faculty_question_paper/templates/{key}.blade.php.
+     * Template cards on the paper editor (Add Question Paper, and Rajbhasha's
+     * Translate Question Paper), in order. Each key has a starting document in
+     * admin/coe/faculty_question_paper/templates/{key}.blade.php.
      */
     public const TEMPLATES = [
         'standard' => [
@@ -75,13 +79,16 @@ class FacultyQuestionPaperController extends Controller
 
         if (! $row['editable']) {
             return redirect()->route('admin.coe.faculty-question-paper.index')
-                ->with('error', 'Rajbhasha has already translated this question paper, so it can no longer be changed.');
+                ->with('error', $this->papers->lockedMessage($row['status']));
         }
 
-        return view('admin.coe.faculty_question_paper.create', [
+        return view('admin.coe.question_paper_editor', [
+            'pageTitle' => 'Add Question Paper',
             'paper' => $row,
             'editorHtml' => $this->papers->editorHtmlFor($facultyPk, $paper),
             'templates' => self::TEMPLATES,
+            'listUrl' => route('admin.coe.faculty-question-paper.index'),
+            'saveUrl' => route('admin.coe.faculty-question-paper.upload', $paper),
         ]);
     }
 
@@ -94,7 +101,7 @@ class FacultyQuestionPaperController extends Controller
         $qp = $this->papers->saveOriginalPaper($this->facultyPk(), $paper, $request->input('paper_html'));
 
         return response()->json(['message' => $qp->version > 1
-            ? 'Question paper updated (V'.$qp->version.').'
+            ? 'Question paper updated (V'.$qp->version.') and sent to Rajbhasha for translation.'
             : 'Question paper uploaded and sent for translation.']);
     }
 
@@ -117,38 +124,17 @@ class FacultyQuestionPaperController extends Controller
     /** See Attachment / View Original Paper — read-only viewer, never a download. */
     public function original(Request $request, int $paper): JsonResponse
     {
-        abort_unless($request->expectsJson(), 404);
         $qp = $this->papers->originalPaperFor($this->facultyPk(), $paper);
 
-        return $this->viewer($request, $this->papers->forViewer($qp, $qp->original_file_path, $qp->original_file_name));
+        return $this->paperViewer($request, $qp->original_file_path, $qp->original_file_name);
     }
 
     /** See Attachment / View Translated Paper, once Rajbhasha has sent it. */
     public function translated(Request $request, int $paper): JsonResponse
     {
-        abort_unless($request->expectsJson(), 404);
         $qp = $this->papers->translatedPaperFor($this->facultyPk(), $paper);
 
-        return $this->viewer($request, $this->papers->forViewer($qp, $qp->translated_file_path, $qp->translated_file_name));
-    }
-
-    /**
-     * The paper plus who is looking at it - the viewer stamps that across the
-     * page, so a screenshot or a phone photo still shows whose copy it was.
-     * Kept out of every cache: the paper is confidential until the exam.
-     */
-    private function viewer(Request $request, array $file): JsonResponse
-    {
-        $user = $request->user();
-        $name = trim(($user->first_name ?? '').' '.($user->last_name ?? '')) ?: ($user->name ?? 'User');
-
-        return response()->json($file + [
-            'watermark' => $name.' · ID '.$user->getAuthIdentifier().' · '.now()->format('d-m-Y H:i'),
-        ])->withHeaders([
-            'Cache-Control' => 'no-store, private, max-age=0',
-            'Pragma' => 'no-cache',
-            'X-Content-Type-Options' => 'nosniff',
-        ]);
+        return $this->paperViewer($request, $qp->translated_file_path, $qp->translated_file_name);
     }
 
     /** The logged-in faculty, or 404: no one else has papers here. */

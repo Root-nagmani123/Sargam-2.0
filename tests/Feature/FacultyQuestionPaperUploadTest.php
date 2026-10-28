@@ -129,7 +129,7 @@ class FacultyQuestionPaperUploadTest extends TestCase
 
         $this->upload(['paper_html' => '<p>Q1 Revised.</p>'])
             ->assertOk()
-            ->assertJson(['message' => 'Question paper updated (V2).']);
+            ->assertJson(['message' => 'Question paper updated (V2) and sent to Rajbhasha for translation.']);
 
         $paper = $this->paper();
         $this->assertSame(2, (int) $paper->version);
@@ -155,7 +155,7 @@ class FacultyQuestionPaperUploadTest extends TestCase
             ->assertSee('<p>Q1 Explain the Constitution.</p>', false);
     }
 
-    public function test_paper_is_locked_once_rajbhasha_translates_it(): void
+    public function test_paper_is_locked_while_rajbhasha_translates_it(): void
     {
         $this->write()->assertOk();
         $this->paper()->update(['status' => QuestionPaper::STATUS_TRANSLATED]);

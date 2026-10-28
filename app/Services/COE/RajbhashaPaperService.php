@@ -3,16 +3,16 @@
 namespace App\Services\COE;
 
 use App\Models\QuestionPaper;
+use App\Support\COE\PaperHtmlSanitizer;
 use Carbon\Carbon;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
  * COE question papers from Rajbhasha's (the Hindi translator's) side: every
- * paper a faculty has uploaded, uploading or discarding its translation, and
- * sending it back to the faculty to verify.
+ * paper a faculty has added, writing its translation in the editor (and
+ * editing or discarding it), and sending it back to the faculty to verify.
  *
  * Who is Rajbhasha is a permission, not a role: whichever role is given
  * PERMISSION (the menu permission of this screen; its routes check it).
@@ -32,8 +32,18 @@ class RajbhashaPaperService
         QuestionPaper::STATUS_PUBLISHED => 'published',
     ];
 
-    public function __construct(private QuestionPaperStorage $files)
-    {
+    /** Translate Paper (no translation yet) and Edit Translated Paper (not yet sent). */
+    private const TRANSLATABLE = [
+        QuestionPaper::STATUS_PENDING_RAJBHASHA,
+        QuestionPaper::STATUS_TRANSLATED,
+    ];
+
+    private const SENT_MESSAGE = 'This translation has already been sent for approval, so it can no longer be changed.';
+
+    public function __construct(
+        private QuestionPaperStorage $files,
+        private PaperHtmlSanitizer $sanitizer,
+    ) {
     }
 
     /**
@@ -69,38 +79,108 @@ class RajbhashaPaperService
         return QuestionPaper::whereIn('status', array_keys(self::VIEW))->findOrFail($paperId);
     }
 
+    /** Translate Paper / Edit Translated Paper: until it is sent for approval. */
+    public function isTranslatable(QuestionPaper $paper): bool
+    {
+        return in_array($paper->status, self::TRANSLATABLE, true);
+    }
+
     /**
-     * Upload Translated Paper: stores the Hindi .docx; the paper is Translated
-     * (still Rajbhasha's, not yet sent).
+     * The paper's facts for the editor page: the summary card, and the header
+     * of a template (admin/coe/faculty_question_paper/templates/_head).
      *
-     * @throws ValidationException when the paper is not waiting on a translation
+     * @return array{id:int, code:string, name:string, examination:string, course:string,
+     *     course_short:string, term:string, batch:string, max_marks:string, exam_date:Carbon}
      */
-    public function addTranslation(int $paperId, UploadedFile $file): QuestionPaper
+    public function editorRow(QuestionPaper $paper): array
+    {
+        $paper->loadMissing(['drive.course', 'drive.term']);
+        $drive = $paper->drive;
+
+        return [
+            'id' => $paper->id,
+            'code' => $paper->paper_code,
+            'name' => $paper->paper_name,
+            // "Mid Term Drive" is sat as the "Mid Term Examination".
+            'examination' => preg_replace('/\s*Drive$/i', '', (string) ($drive->drive_name ?? '')).' Examination',
+            'course' => $drive->course->course_name ?? '-',
+            'course_short' => trim((string) ($drive->course->couse_short_name ?? '')),
+            'term' => $drive->term->term_name ?? '-',
+            'batch' => (string) ($drive->academic_session ?? '-'),
+            'max_marks' => '-',
+            'exam_date' => $drive->start_date ?? Carbon::parse($paper->created_date),
+        ];
+    }
+
+    /**
+     * What the editor starts from: the translation so far, or else the faculty's
+     * paper itself (the templates are English and Hindi side by side, so it is
+     * translated in place). Null when neither was written in the editor (an older
+     * .docx upload) - the page then starts from a template.
+     */
+    public function editorHtmlFor(QuestionPaper $paper): ?string
+    {
+        foreach ([[$paper->translated_file_path, $paper->translated_file_name], [$paper->original_file_path, $paper->original_file_name]] as [$path, $name]) {
+            if ($path && str_ends_with(strtolower((string) $name), '.html')) {
+                $document = $this->files->contents($path);
+                if ($document !== null) {
+                    return $this->sanitizer->fromDocument($document);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Upload Paper on Translate Question Paper: stores the translation written in
+     * the editor as .html; the paper is Translated (still Rajbhasha's, not yet
+     * sent). Editing it again replaces the file.
+     *
+     * @throws ValidationException when it has been sent already, or the translation is blank
+     */
+    public function saveTranslation(int $paperId, string $html): QuestionPaper
     {
         $paper = $this->find($paperId);
-        $this->requireStatus($paper, QuestionPaper::STATUS_PENDING_RAJBHASHA, 'This paper already has a translation.');
+        if (! $this->isTranslatable($paper)) {
+            throw ValidationException::withMessages(['paper' => self::SENT_MESSAGE]);
+        }
 
-        $path = $this->files->store($paper->examination_drive_id, $paper->paper_code.'_hindi', 'docx', $file);
+        $clean = $this->sanitizer->clean($html);
+        if ($this->sanitizer->isBlank($clean)) {
+            throw ValidationException::withMessages(['paper_html' => 'Write the translated paper before uploading it.']);
+        }
+
+        $path = $this->files->store($paper->examination_drive_id, $paper->paper_code.'_hindi', 'html', null,
+            $this->sanitizer->toDocument($paper->paper_name.' (Hindi)', $clean));
 
         try {
-            return DB::transaction(function () use ($paper, $path) {
+            [$saved, $oldPath] = DB::transaction(function () use ($paper, $path) {
                 $locked = QuestionPaper::lockForUpdate()->findOrFail($paper->id);
-                $this->requireStatus($locked, QuestionPaper::STATUS_PENDING_RAJBHASHA, 'This paper already has a translation.');
+                if (! $this->isTranslatable($locked)) {
+                    throw ValidationException::withMessages(['paper' => self::SENT_MESSAGE]);
+                }
 
+                $oldPath = $locked->translated_file_path;
                 $locked->update([
                     'translated_file_path' => $path,
-                    'translated_file_name' => $locked->paper_code.'_hindi.docx',
+                    'translated_file_name' => $locked->paper_code.'_hindi.html',
                     'translated_by' => auth()->id(),
                     'translated_at' => now(),
                     'status' => QuestionPaper::STATUS_TRANSLATED,
                 ]);
 
-                return $locked;
+                return [$locked, $oldPath];
             });
         } catch (\Throwable $e) {
             $this->files->delete($path);
             throw $e;
         }
+
+        // Only once the row points at the new file.
+        $this->files->delete($oldPath);
+
+        return $saved;
     }
 
     /**
@@ -144,7 +224,7 @@ class RajbhashaPaperService
 
         return DB::transaction(function () use ($paper) {
             $locked = QuestionPaper::lockForUpdate()->findOrFail($paper->id);
-            $this->requireStatus($locked, QuestionPaper::STATUS_TRANSLATED, 'Upload the translated paper before sending it for approval.');
+            $this->requireStatus($locked, QuestionPaper::STATUS_TRANSLATED, 'Translate the paper before sending it for approval.');
 
             $locked->update([
                 'status' => QuestionPaper::STATUS_SENT_FOR_APPROVAL,
