@@ -5,19 +5,15 @@ namespace App\Http\Requests\Admin\COE;
 use App\Rules\SafeUploadedDocument;
 use App\Rules\SingleFileExtension;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 /**
- * Add Question Paper (faculty): either a .docx upload or the paper written in
- * the editor. Which paper the faculty may add is checked by the service, not
- * here - authorize() only gates the shape of the request.
+ * Add Question Paper (faculty): the paper written in the editor, from a
+ * template or from scratch - faculty no longer upload a file. Which paper the
+ * faculty may add is checked by the service, not here - authorize() only gates
+ * the shape of the request.
  */
 class UploadQuestionPaperRequest extends FormRequest
 {
-    public const MODE_UPLOAD = 'upload';
-
-    public const MODE_CREATE = 'create';
-
     private const MAX_FILE_KB = 10240;
 
     public function authorize(): bool
@@ -31,9 +27,7 @@ class UploadQuestionPaperRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'mode' => ['required', Rule::in([self::MODE_UPLOAD, self::MODE_CREATE])],
-            'question_paper' => array_merge(['exclude_unless:mode,'.self::MODE_UPLOAD], self::paperFileRules()),
-            'paper_html' => ['exclude_unless:mode,'.self::MODE_CREATE, 'required', 'string', 'max:2000000'],
+            'paper_html' => ['required', 'string', 'max:2000000'],
         ];
     }
 
@@ -42,13 +36,13 @@ class UploadQuestionPaperRequest extends FormRequest
      */
     public function messages(): array
     {
-        return self::paperFileMessages() + [
+        return [
             'paper_html.required' => 'Write the question paper before uploading it.',
         ];
     }
 
     /**
-     * A question paper .docx: shared by Add, Re-upload and Rajbhasha's translation.
+     * A question paper .docx: Rajbhasha's translation (UploadTranslationRequest).
      *
      * @return array<int, mixed>
      */
@@ -81,10 +75,5 @@ class UploadQuestionPaperRequest extends FormRequest
             $field.'.mimes' => 'Only .docx files are allowed.',
             $field.'.max' => 'The file may not be larger than '.SafeUploadedDocument::maxLabel(self::MAX_FILE_KB).'.',
         ];
-    }
-
-    public function isEditorPaper(): bool
-    {
-        return $this->input('mode') === self::MODE_CREATE;
     }
 }

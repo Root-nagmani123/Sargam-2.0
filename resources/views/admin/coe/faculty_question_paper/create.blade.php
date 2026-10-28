@@ -10,6 +10,12 @@
       href="{{ asset('css/coe-admin.css') }}?v={{ @filemtime(public_path('css/coe-admin.css')) ?: time() }}">
 @endpush
 
+@php
+    // A new paper starts from the Standard template, ticked; an edit starts from
+    // the saved paper, with no template ticked.
+    $startTemplate = empty($editorHtml) ? array_key_first($templates) : null;
+@endphp
+
 @section('setup_content')
 <div class="container-fluid coe-page coe-qp-add">
     <x-breadcrum title="Add Question Paper" :showBack="true"
@@ -39,41 +45,48 @@
         </dl>
     </div>
 
-    <form id="qpaperForm" class="card rounded-3" novalidate>
-        <input type="hidden" name="mode" id="qpaperMode" value="upload">
-
+    {{-- Template: tick one to start from it; untick to write from scratch. --}}
+    <section class="card rounded-3 mb-3" aria-labelledby="qpaperTplTitle">
         <div class="card-body p-3 p-md-4">
-            {{-- Upload a .docx, or write the paper here --}}
-            <div class="coe-seg coe-qp-seg" role="tablist" aria-label="How to add the question paper">
-                <button type="button" class="coe-seg__btn active" role="tab" id="qpaperTabUpload"
-                        aria-selected="true" aria-controls="qpaperPaneUpload" data-qpaper-mode="upload">Upload</button>
-                <button type="button" class="coe-seg__btn" role="tab" id="qpaperTabCreate"
-                        aria-selected="false" aria-controls="qpaperPaneCreate" data-qpaper-mode="create"
-                        tabindex="-1">Create</button>
+            <h2 class="coe-qp-block-title" id="qpaperTplTitle">Template</h2>
+            <p class="coe-qp-block-text">Choose a pre-defined template to speed up your question paper creation.</p>
+
+            <div class="coe-tpl-grid" role="group" aria-labelledby="qpaperTplTitle">
+                @foreach ($templates as $key => $template)
+                    <div class="coe-tpl-card {{ $startTemplate === $key ? 'is-selected' : '' }}">
+                        <div class="coe-tpl-card__head">
+                            <div>
+                                <h3 class="coe-tpl-card__title" id="qpaperTplName_{{ $key }}">{{ $template['title'] }}</h3>
+                                <p class="coe-tpl-card__desc">{{ $template['description'] }}</p>
+                            </div>
+                            <input type="checkbox" class="form-check-input coe-tpl-card__check"
+                                   value="{{ $key }}" data-title="{{ $template['title'] }}"
+                                   aria-labelledby="qpaperTplName_{{ $key }}"
+                                   @checked($startTemplate === $key)>
+                        </div>
+                        {{-- A miniature of the template, filled from its <template> below. --}}
+                        <div class="coe-tpl-card__preview" aria-hidden="true">
+                            <div class="coe-tpl-sheet" data-qpaper-preview="{{ $key }}"></div>
+                        </div>
+                        <p class="coe-tpl-card__meta">{{ $template['meta'] }}</p>
+                    </div>
+                @endforeach
             </div>
 
-            <div id="qpaperPaneUpload" role="tabpanel" aria-labelledby="qpaperTabUpload">
-                {{-- The file input is #qpaperUploadInput (dropzone id + "Input"). --}}
-                @include('admin.coe.partials.dropzone', [
-                    'id' => 'qpaperUpload',
-                    'field' => 'question_paper',
-                    'accept' => '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    'hint' => 'File type: .docx',
-                    'icon' => 'bi-file-earmark-word',
-                ])
-            </div>
+            @foreach ($templates as $key => $template)
+                <template id="qpaperTplHtml_{{ $key }}">
+                    @include('admin.coe.faculty_question_paper.templates.'.$key, ['paper' => $paper])
+                </template>
+            @endforeach
+        </div>
+    </section>
 
-            <div id="qpaperPaneCreate" class="coe-qp-editor" role="tabpanel" aria-labelledby="qpaperTabCreate" hidden>
-                {{-- Summernote takes this markup as its starting document: the paper
-                     being edited (already cleaned by PaperHtmlSanitizer), else the template. --}}
-                <div id="qpaperEditor">
-                    @if (! empty($editorHtml))
-                        {!! $editorHtml !!}
-                    @else
-                        @include('admin.coe.faculty_question_paper.partials.paper_template', ['paper' => $paper])
-                    @endif
-                </div>
-                <input type="hidden" name="paper_html" id="qpaperHtml">
+    <form id="qpaperForm" class="card rounded-3" novalidate>
+        <div class="card-body p-3 p-md-4">
+            <div class="coe-qp-editor">
+                {{-- Summernote's starting document: the paper being edited (already
+                     cleaned by PaperHtmlSanitizer); a new paper gets its template from the script. --}}
+                <div id="qpaperEditor">{!! $editorHtml ?? '' !!}</div>
                 <p class="coe-dropzone__error d-none" id="qpaperEditorError" role="alert"></p>
             </div>
 
@@ -89,33 +102,31 @@
 
 @push('scripts')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.js"></script>
-<script src="{{ asset('js/coe-grid.js') }}?v={{ @filemtime(public_path('js/coe-grid.js')) ?: time() }}"></script>
 <script>
 $(function () {
     'use strict';
 
     var LIST_URL = @json(route('admin.coe.faculty-question-paper.index'));
     var UPLOAD_URL = @json(route('admin.coe.faculty-question-paper.upload', $paper['id']));
+    var BLANK = '<p><br></p>';
 
     var $form = $('#qpaperForm');
     var $submit = $('#qpaperSubmit');
     var $editor = $('#qpaperEditor');
-    var $tabs = $('.coe-qp-seg [role="tab"]');
-    var mode = 'upload';
-    var chosenFile = null;
-    var editorReady = false;
-    var initialHtml = null;
+    var $checks = $('.coe-tpl-card__check');
+    var current = $checks.filter(':checked').val() || null;   // the ticked template
+    var baseline = null;        // the editor's content as last loaded
+    var fromTemplate = false;   // baseline is a template or a blank page, not the saved paper
     var submitting = false;
 
-    /* ── Upload pane ── */
-    CoeGrid.dropzone({
-        root: '#qpaperUpload',
-        accept: /\.docx$/i,
-        acceptText: 'Only .docx files are allowed.',
-        onChange: function (file) { chosenFile = file; refresh(); }
+    function templateHtml(key) { return $('#qpaperTplHtml_' + key).html(); }
+
+    /* ── Template previews: each card shows its template in miniature ── */
+    $('[data-qpaper-preview]').each(function () {
+        $(this).html(templateHtml($(this).data('qpaper-preview')));
     });
 
-    /* ── Create pane — Summernote starts on first use, while visible ── */
+    /* ── Editor toolbar, as designed: Normal ▾ · B I U S · align · lists · link · … ── */
 
     // Summernote 0.8.18 only offers alignment inside its 'paragraph' dropdown
     // (its justify* names are not toolbar buttons); the design shows four icons.
@@ -131,83 +142,166 @@ $(function () {
         };
     }
 
-    function startEditor() {
-        if (editorReady) { return; }
-        $editor.summernote({
-            minHeight: 520,
-            disableResizeEditor: true,
-            styleTags: ['p', 'h2', 'h3', 'h4'],
-            buttons: {
-                qpAlignLeft: alignButton('justifyLeft', 'alignLeft', 'Align left'),
-                qpAlignCenter: alignButton('justifyCenter', 'alignCenter', 'Align center'),
-                qpAlignRight: alignButton('justifyRight', 'alignRight', 'Align right'),
-                qpAlignJustify: alignButton('justifyFull', 'alignJustify', 'Justify')
-            },
-            toolbar: [
-                ['style', ['style']],
-                ['font', ['bold', 'italic', 'underline', 'strikethrough']],
-                ['para', ['qpAlignLeft', 'qpAlignCenter', 'qpAlignRight', 'qpAlignJustify']],
-                ['list', ['ul', 'ol']],
-                ['insert', ['link', 'table']],
-                ['history', ['undo', 'redo']]
-            ],
-            callbacks: {
-                onChange: function () { $('#qpaperEditorError').addClass('d-none'); refresh(); }
-            }
-        });
-        editorReady = true;
-        initialHtml = $editor.summernote('code');   // as Summernote normalised it
+    // The built-in style button shows a wand icon; the design shows the style's name.
+    var STYLES = [
+        { value: 'p', title: 'Normal' },
+        { value: 'h2', title: 'Title' },
+        { value: 'h3', title: 'Heading' },
+        { value: 'h4', title: 'Subheading' }
+    ];
+
+    function styleButton(context) {
+        var ui = $.summernote.ui;
+        return ui.buttonGroup([
+            ui.button({
+                className: 'dropdown-toggle coe-qp-style',
+                contents: '<span class="coe-qp-style__label">Normal</span> <span class="note-icon-caret"></span>',
+                tooltip: 'Text style',
+                container: context.options.container,
+                data: { toggle: 'dropdown' }
+            }),
+            ui.dropdown({
+                className: 'dropdown-style',
+                items: STYLES,
+                template: function (item) { return '<' + item.value + '>' + item.title + '</' + item.value + '>'; },
+                click: context.createInvokeHandler('editor.formatBlock')
+            })
+        ]).render();
     }
+
+    // "…" shows the less-used tools (table, line, undo, redo) — the 'more' group.
+    function moreButton(context) {
+        var ui = $.summernote.ui;
+        return ui.button({
+            className: 'coe-qp-more',
+            contents: '<i class="bi bi-three-dots" aria-hidden="true"></i>',
+            tooltip: 'More',
+            container: context.options.container,
+            click: function () {
+                var open = !context.layoutInfo.toolbar.hasClass('is-more-open');
+                context.layoutInfo.toolbar.toggleClass('is-more-open', open);
+                $(this).attr('aria-expanded', open ? 'true' : 'false');
+            }
+        }).render();
+    }
+
+    // Keeps "Normal ▾" naming the block the caret is in.
+    function syncStyleLabel() {
+        var sel = window.getSelection();
+        var $editable = $editor.next('.note-editor').find('.note-editable');
+        if (!sel || !sel.anchorNode || !$.contains($editable[0], sel.anchorNode)) { return; }
+        var tag = ($(sel.anchorNode).closest('p, h2, h3, h4', $editable[0]).prop('tagName') || 'P').toLowerCase();
+        var style = STYLES.filter(function (s) { return s.value === tag; })[0] || STYLES[0];
+        $('.coe-qp-style__label').text(style.title);
+    }
+
+    $editor.summernote({
+        minHeight: 520,
+        disableResizeEditor: true,
+        buttons: {
+            qpStyle: styleButton,
+            qpAlignLeft: alignButton('justifyLeft', 'alignLeft', 'Align left'),
+            qpAlignCenter: alignButton('justifyCenter', 'alignCenter', 'Align center'),
+            qpAlignRight: alignButton('justifyRight', 'alignRight', 'Align right'),
+            qpAlignJustify: alignButton('justifyFull', 'alignJustify', 'Justify'),
+            qpMore: moreButton
+        },
+        toolbar: [
+            ['style', ['qpStyle']],
+            ['font', ['bold', 'italic', 'underline', 'strikethrough']],
+            ['para', ['qpAlignLeft', 'qpAlignCenter', 'qpAlignRight', 'qpAlignJustify']],
+            ['list', ['ol', 'ul']],
+            ['insert', ['link']],
+            ['more', ['table', 'hr', 'undo', 'redo']],
+            ['toggle', ['qpMore']]
+        ],
+        callbacks: {
+            onChange: function () { $('#qpaperEditorError').addClass('d-none'); refresh(); },
+            onKeyup: syncStyleLabel,
+            onMouseup: syncStyleLabel
+        }
+    });
+
+    function code() { return $editor.summernote('code'); }
 
     function editorText() {
-        if (!editorReady) { return ''; }
-        return $('<div>').html($editor.summernote('code')).text().replace(/\s+/g, ' ').trim();
+        return $('<div>').html(code()).text().replace(/\s+/g, ' ').trim();
     }
 
-    function isDirty() {
-        return !!chosenFile || (editorReady && $editor.summernote('code') !== initialHtml);
-    }
+    // The faculty has changed the editor since a template / the saved paper was loaded.
+    function isEdited() { return code() !== baseline; }
 
-    /* Upload Paper is live once the active pane has something to send. */
-    function refresh() {
-        $submit.prop('disabled', mode === 'upload' ? !chosenFile : editorText() === '');
-    }
+    // Switching templates would lose work: their own edits, or the saved paper.
+    function wouldLoseWork() { return editorText() !== '' && (isEdited() || !fromTemplate); }
 
-    /* ── Upload / Create switch (tabs: click, ←/→, Home/End) ── */
-    function activate(next, focus) {
-        mode = next;
-        $('#qpaperMode').val(next);
-        $tabs.each(function () {
-            var on = $(this).data('qpaper-mode') === next;
-            $(this).toggleClass('active', on).attr({ 'aria-selected': on, tabindex: on ? 0 : -1 });
-            $('#' + $(this).attr('aria-controls')).prop('hidden', !on);
-            if (on && focus) { this.focus(); }
-        });
-        if (next === 'create') { startEditor(); }
+    function load(html, isTemplate) {
+        $editor.summernote('code', html);
+        baseline = code();                      // as Summernote normalised it
+        fromTemplate = isTemplate;
         refresh();
     }
 
-    $tabs.on('click', function () { activate($(this).data('qpaper-mode'), false); });
-    $tabs.on('keydown', function (e) {
-        var i = $tabs.index(this);
-        var to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: $tabs.length - 1 }[e.key];
-        if (to === undefined) { return; }
-        e.preventDefault();
-        activate($tabs.eq((to + $tabs.length) % $tabs.length).data('qpaper-mode'), true);
+    /* Upload Paper is live once the paper has some text. */
+    function refresh() {
+        $submit.prop('disabled', editorText() === '');
+    }
+
+    /* ── Template cards: one ticked at most; none = write from scratch ── */
+    function syncCards() {
+        $checks.prop('checked', false);
+        if (current) { $checks.filter('[value="' + current + '"]').prop('checked', true); }
+        $checks.each(function () { $(this).closest('.coe-tpl-card').toggleClass('is-selected', this.checked); });
+    }
+
+    function confirmLoss(title, text, confirmText) {
+        return Swal.fire({
+            icon: 'warning',
+            title: title,
+            text: text,
+            showCancelButton: true,
+            confirmButtonText: confirmText,
+            cancelButtonText: 'Keep my paper'
+        }).then(function (r) { return r.isConfirmed; });
+    }
+
+    function pick(key, title) {
+        var apply = function () {
+            current = key;
+            syncCards();
+            load(key ? templateHtml(key) : BLANK, true);
+        };
+        syncCards();                            // until confirmed, the old choice stays ticked
+        if (!wouldLoseWork()) { apply(); return; }
+        (key
+            ? confirmLoss('Use the ' + title + ' template?', 'Your paper in the editor will be replaced by this template.', 'Use Template')
+            : confirmLoss('Start from a blank page?', 'Your paper in the editor will be cleared.', 'Clear')
+        ).then(function (ok) { if (ok) { apply(); } });
+    }
+
+    $checks.on('change', function () {
+        pick(this.checked ? this.value : null, $(this).data('title'));
     });
+
+    // The whole card toggles its checkbox.
+    $('.coe-tpl-card').on('click', function (e) {
+        if (!$(e.target).is('.coe-tpl-card__check')) { $(this).find('.coe-tpl-card__check').trigger('click'); }
+    });
+
+    // Start: the ticked template for a new paper; the saved paper for an edit.
+    if (current) { load(templateHtml(current), true); } else { load(code(), false); }
 
     /* ── Leaving with unsaved work ── */
     window.addEventListener('beforeunload', function (e) {
-        if (!submitting && isDirty()) { e.preventDefault(); e.returnValue = ''; }
+        if (!submitting && isEdited()) { e.preventDefault(); e.returnValue = ''; }
     });
 
     $('#qpaperCancel').on('click', function (e) {
-        if (!isDirty()) { return; }
+        if (!isEdited()) { return; }
         e.preventDefault();
         Swal.fire({
             icon: 'warning',
             title: 'Discard this question paper?',
-            text: 'The file you chose and any changes in the editor will be lost.',
+            text: 'Your changes in the editor will be lost.',
             showCancelButton: true,
             confirmButtonText: 'Discard',
             cancelButtonText: 'Keep editing'
@@ -217,25 +311,23 @@ $(function () {
     });
 
     /* ── Submit ──────────────────────────────────────────────────────────────
-       Multipart POST (mode + question_paper | paper_html); the server cleans
-       paper_html. Back to the list only once the paper is stored. */
+       POST paper_html; the server cleans it. Back to the list only once the
+       paper is stored. */
+    function showError(text) {
+        $('#qpaperEditorError').text(text).removeClass('d-none');
+    }
+
     $form.on('submit', function (e) {
         e.preventDefault();
         if (submitting) { return; }
 
-        var body = new FormData();
-        body.append('mode', mode);
-
-        if (mode === 'upload') {
-            if (!chosenFile) { return; }
-            body.append('question_paper', chosenFile);
-        } else {
-            if (editorText() === '') {
-                $('#qpaperEditorError').text('Write the question paper before uploading it.').removeClass('d-none');
-                return;
-            }
-            $('#qpaperHtml').val($editor.summernote('code'));
-            body.append('paper_html', $('#qpaperHtml').val());
+        if (editorText() === '') {
+            showError('Write the question paper before uploading it.');
+            return;
+        }
+        if (fromTemplate && !isEdited()) {
+            showError('Type your questions into the template before uploading the paper.');
+            return;
         }
 
         submitting = true;
@@ -244,9 +336,7 @@ $(function () {
         $.ajax({
             url: UPLOAD_URL,
             method: 'POST',
-            data: body,
-            processData: false,
-            contentType: false,
+            data: { paper_html: code() },
             headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
         }).done(function (res) {
             Swal.fire({ icon: 'success', title: 'Success', text: (res && res.message) || 'Question paper uploaded.' })
@@ -259,8 +349,6 @@ $(function () {
             Swal.fire({ icon: 'error', title: 'Error', text: firstError || r.message || 'Could not upload the question paper.' });
         });
     });
-
-    refresh();
 });
 </script>
 @endpush

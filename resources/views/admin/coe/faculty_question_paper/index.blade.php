@@ -87,6 +87,10 @@
                     <table id="qpfTable" class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
                             <tr>
+                                <th scope="col" class="coe-col-check">
+                                    <input type="checkbox" class="form-check-input m-0" id="qpfCheckAll"
+                                           aria-label="Select all rows">
+                                </th>
                                 <th scope="col">S. No.</th>
                                 <th scope="col">Question paper Code</th>
                                 <th scope="col">Question Paper Name</th>
@@ -123,6 +127,10 @@
                                     data-coe-create-url="{{ $paper['editable'] ? route('admin.coe.faculty-question-paper.create', $paper['id']) : '' }}"
                                     data-coe-original-url="{{ $paper['original_file'] ? route('admin.coe.faculty-question-paper.original', $paper['id']) : '' }}"
                                     data-coe-translated-url="{{ $paper['translated_file'] ? route('admin.coe.faculty-question-paper.translated', $paper['id']) : '' }}">
+                                    <td class="coe-col-check">
+                                        <input type="checkbox" class="form-check-input m-0 qpf-row-check"
+                                               aria-label="Select {{ $paper['name'] }}">
+                                    </td>
                                     <td></td>
                                     <td>{{ $paper['code'] }}</td>
                                     <td>{{ $paper['name'] }}</td>
@@ -200,7 +208,7 @@ $(function () {
     'use strict';
 
     /* Column indexes — keep in step with the <thead>. */
-    var COL = { sno: 0, drive: 3, batch: 4, examDate: 6, status: 12, action: 13 };
+    var COL = { check: 0, sno: 1, drive: 4, batch: 5, examDate: 7, status: 13, action: 14 };
     var $table = $('#qpfTable');
 
     /* ── Row actions per state — the ONE place they are defined ─────────── */
@@ -215,14 +223,14 @@ $(function () {
     }
 
     var ACTIONS = {
-        // Opens the Add Question Paper page (Upload / Create).
+        // Opens the Add Question Paper page (written from a template).
         'pending-faculty': [
-            ['coe-act--create coe-act--wide', 'bi-upload', 'Upload or Create Original Paper', 'create']
+            ['coe-act--create coe-act--wide', 'bi-plus-lg', 'Create Original Paper', 'create']
         ],
-        // Uploaded: straight to Rajbhasha, no freeze. Replaceable (next version)
-        // until Rajbhasha uploads the translation - then the row has no create URL.
+        // Added: straight to Rajbhasha, no freeze. Editable (next version) until
+        // Rajbhasha uploads the translation - then the row has no create URL.
         'pending-rajbhasha': [
-            ['coe-act--create coe-act--wide', 'bi-upload', 'Reupload or Edit Original Paper', 'create']
+            ['coe-act--create coe-act--wide', 'bi-pencil-square', 'Edit Original Paper', 'create']
         ],
         // Pending Verification: Rajbhasha sent the translation back; Freeze (OTP) publishes it.
         'translated': [
@@ -257,9 +265,11 @@ $(function () {
     var dt = CoeGrid.init({
         table: '#qpfTable',
         title: 'My Question Paper',
+        snoCol: COL.sno,
         order: [[COL.examDate, 'asc']],
-        noSort: [COL.sno, COL.action],
-        exclude: [COL.action],
+        noSort: [COL.check, COL.sno, COL.action],
+        exclude: [COL.check, COL.action],
+        rowCheck: '.qpf-row-check',
         filters: { '#qpfFilterDrive': COL.drive, '#qpfFilterBatch': COL.batch, '#qpfFilterStatus': COL.status },
         reset: '#qpfResetFilters',
         download: '#qpfDownloadBtn',
@@ -270,6 +280,24 @@ $(function () {
         colvisKey: 'coeFacultyQuestionPaper:hiddenColumns:v1',
         empty: { title: 'No Question Papers', zeroTitle: 'No Question Papers Found', text: 'No question paper has been assigned to you yet.' }
     });
+
+    /* ── Row selection ───────────────────────────────────────────────────────
+       "Select all" ticks every row the current filters/search let through, not
+       just the visible page. Download / Print take only the ticked rows, if any. */
+    function syncSelection() {
+        var $all = dt.rows({ search: 'applied' }).nodes().to$();
+        var n = $all.find('.qpf-row-check:checked').length;
+        $('#qpfCheckAll')
+            .prop('checked', n > 0 && n === $all.length)
+            .prop('indeterminate', n > 0 && n < $all.length);
+    }
+
+    $('#qpfCheckAll').on('change', function () {
+        dt.rows({ search: 'applied' }).nodes().to$().find('.qpf-row-check').prop('checked', this.checked);
+        syncSelection();
+    });
+    $table.on('change', '.qpf-row-check', syncSelection);
+    dt.on('search.dt', function () { setTimeout(syncSelection, 0); });
 
     // Links with no file behind them yet (the translated paper) stay inert.
     $table.on('click', 'a.coe-act--download[href="#"], a.coe-attach[href="#"]', function (e) { e.preventDefault(); });

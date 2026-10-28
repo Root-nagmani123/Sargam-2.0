@@ -8,15 +8,14 @@ use App\Models\QuestionPaper;
 use App\Support\COE\PaperHtmlSanitizer;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * COE question papers from the faculty's side: which papers they owe, adding
- * the original paper (V1, straight to Rajbhasha - no freeze), replacing it
- * (V2, V3...) until Rajbhasha translates it, and - once the translation is sent
+ * COE question papers from the faculty's side: which papers they owe, writing
+ * the original paper in the editor (V1, straight to Rajbhasha - no freeze),
+ * editing it (V2, V3...) until Rajbhasha translates it, and - once the translation is sent
  * back - verifying it and freezing it with an OTP to publish.
  *
  * A faculty owes one paper per subject mapped to them on an examination drive
@@ -81,7 +80,7 @@ class QuestionPaperService
      * `id` is the mapping row's id, which changes when the drive is re-saved.
      *
      * @return Collection<int, array{id:int, code:string, name:string, drive:string, examination:string,
-     *     course:string, term:string, batch:string, max_marks:string, duration:string, exam_date:Carbon,
+     *     course:string, course_short:string, term:string, batch:string, max_marks:string, duration:string, exam_date:Carbon,
      *     original_file:?string, translated_file:?string, translated_by:?string, comments:?string,
      *     version:int, status:string, editable:bool}>
      */
@@ -150,15 +149,15 @@ class QuestionPaperService
     }
 
     /**
-     * Store the faculty's original paper - a .docx, or the editor's HTML as an
-     * .html file. The first one is V1 and goes straight to Rajbhasha (no freeze);
-     * "Reupload or Edit Original Paper" while it is still Pending at Rajbhasha
-     * replaces it as the next version.
+     * Store the faculty's original paper - written in the editor (from a template
+     * or from scratch), kept as an .html file. The first one is V1 and goes
+     * straight to Rajbhasha (no freeze); "Edit Original Paper" while it is still
+     * Pending at Rajbhasha replaces it as the next version.
      *
      * @throws ModelNotFoundException when the paper is not this faculty's
-     * @throws ValidationException when Rajbhasha has already translated it, or the editor paper is blank
+     * @throws ValidationException when Rajbhasha has already translated it, or the paper is blank
      */
-    public function saveOriginalPaper(int $facultyPk, int $paperId, ?UploadedFile $file, ?string $html): QuestionPaper
+    public function saveOriginalPaper(int $facultyPk, int $paperId, string $html): QuestionPaper
     {
         $row = $this->findForFaculty($facultyPk, $paperId);
         if ($row === null) {
@@ -168,24 +167,20 @@ class QuestionPaperService
             throw ValidationException::withMessages(['paper' => self::LOCKED_MESSAGE]);
         }
 
-        $contents = null;
-        if ($file === null) {
-            $clean = $this->sanitizer->clean((string) $html);
-            if ($this->sanitizer->isBlank($clean)) {
-                throw ValidationException::withMessages(['paper_html' => 'Write the question paper before uploading it.']);
-            }
-            $contents = $this->sanitizer->toDocument($row['name'], $clean);
+        $clean = $this->sanitizer->clean($html);
+        if ($this->sanitizer->isBlank($clean)) {
+            throw ValidationException::withMessages(['paper_html' => 'Write the question paper before uploading it.']);
         }
-        $ext = $file ? 'docx' : 'html';
+        $contents = $this->sanitizer->toDocument($row['name'], $clean);
 
         return $row['status'] === QuestionPaper::STATUS_PENDING_FACULTY
-            ? $this->addFirstVersion($paperId, $row, $file, $contents, $ext)
-            : $this->addNextVersion($facultyPk, $paperId, $file, $contents, $ext);
+            ? $this->addFirstVersion($paperId, $row, $contents)
+            : $this->addNextVersion($facultyPk, $paperId, $contents);
     }
 
     /**
      * The paper written in the editor, cleaned again, to start "Edit Original
-     * Paper" from - or null when it has none (not added yet, or a .docx).
+     * Paper" from - or null when it has none (not added yet, or an older .docx upload).
      */
     public function editorHtmlFor(int $facultyPk, int $paperId): ?string
     {
@@ -203,13 +198,13 @@ class QuestionPaperService
         return $document === null ? null : $this->sanitizer->fromDocument($document);
     }
 
-    private function addFirstVersion(int $paperId, array $row, ?UploadedFile $file, ?string $contents, string $ext): QuestionPaper
+    private function addFirstVersion(int $paperId, array $row, string $contents): QuestionPaper
     {
         $map = ExaminationDriveFacultyMap::findOrFail($paperId);
-        $path = $this->files->store($map->examination_drive_id, $row['code'].'_v1', $ext, $file, $contents);
+        $path = $this->files->store($map->examination_drive_id, $row['code'].'_v1', 'html', null, $contents);
 
         try {
-            return DB::transaction(function () use ($map, $row, $path, $ext) {
+            return DB::transaction(function () use ($map, $row, $path) {
                 // A row the admin soft-deleted is reused (drive + subject is unique),
                 // starting over: nothing of the deleted paper's progress carries across.
                 $paper = QuestionPaper::withTrashed()->firstOrNew([
@@ -226,7 +221,7 @@ class QuestionPaperService
                     'paper_name' => $row['name'],
                     'deadline' => $row['exam_date'],
                     'original_file_path' => $path,
-                    'original_file_name' => $row['code'].'_v1.'.$ext,
+                    'original_file_name' => $row['code'].'_v1.html',
                     'version' => 1,
                     'original_uploaded_at' => now(),
                     'status' => QuestionPaper::STATUS_PENDING_RAJBHASHA,
@@ -252,17 +247,17 @@ class QuestionPaperService
     }
 
     /**
-     * Reupload / Edit: the new file becomes the next version, still Pending at
-     * Rajbhasha. The previous version's file is removed once the new one is recorded.
+     * Edit: the new paper becomes the next version, still Pending at Rajbhasha.
+     * The previous version's file is removed once the new one is recorded.
      */
-    private function addNextVersion(int $facultyPk, int $paperId, ?UploadedFile $file, ?string $contents, string $ext): QuestionPaper
+    private function addNextVersion(int $facultyPk, int $paperId, string $contents): QuestionPaper
     {
         $paper = $this->ownPaper($facultyPk, $paperId);
         $version = (int) $paper->version + 1;
-        $path = $this->files->store($paper->examination_drive_id, $paper->paper_code.'_v'.$version, $ext, $file, $contents);
+        $path = $this->files->store($paper->examination_drive_id, $paper->paper_code.'_v'.$version, 'html', null, $contents);
 
         try {
-            $oldPath = DB::transaction(function () use ($paper, $path, $version, $ext) {
+            $oldPath = DB::transaction(function () use ($paper, $path, $version) {
                 $locked = QuestionPaper::lockForUpdate()->findOrFail($paper->id);
                 $this->requireStatus($locked, QuestionPaper::STATUS_PENDING_RAJBHASHA, self::LOCKED_MESSAGE);
                 if ((int) $locked->version + 1 !== $version) {
@@ -272,7 +267,7 @@ class QuestionPaperService
                 $oldPath = $locked->original_file_path;
                 $locked->update([
                     'original_file_path' => $path,
-                    'original_file_name' => $locked->paper_code.'_v'.$version.'.'.$ext,
+                    'original_file_name' => $locked->paper_code.'_v'.$version.'.html',
                     'version' => $version,
                     'original_uploaded_at' => now(),
                 ]);
@@ -387,6 +382,7 @@ class QuestionPaperService
             // "Mid Term Drive" is sat as the "Mid Term Examination".
             'examination' => preg_replace('/\s*Drive$/i', '', (string) $drive->drive_name).' Examination',
             'course' => $drive->course->course_name ?? '-',
+            'course_short' => trim((string) ($drive->course->couse_short_name ?? '')),
             'term' => $drive->term->term_name ?? '-',
             'batch' => (string) $drive->academic_session,
             'max_marks' => '-',

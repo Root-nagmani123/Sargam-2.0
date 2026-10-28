@@ -15,6 +15,7 @@
  *       filters: { '#qpFilterDrive': 3 },     // select -> column index
  *       rowFilters: { '#sel': 'service' },    // select -> <tr data-*> (no column needed)
  *       snoCol: 0,                            // S. No. column (default 0)
+ *       rowCheck: '.qp-row-check',            // optional: export only ticked rows, if any
  *       reset: '#qpResetFilters',
  *       download: '#qpDownloadBtn', print: '#qpPrintBtn',
  *       searchToggle: '#qpSearchToggle', searchSlot: '#qpDtSearch',
@@ -88,9 +89,14 @@
             dt.draw(false);
         }
 
-        /* Download (Excel) / Print — the rows and columns on screen. */
+        /* Download (Excel) / Print — the rows and columns on screen. With
+           rowCheck (a row checkbox selector), only the ticked rows when any are. */
+        var anyTicked = false;
         var exportOptions = {
             columns: function (idx) { return exclude.indexOf(idx) === -1 && dt.column(idx).visible(); },
+            rows: o.rowCheck
+                ? function (idx, data, node) { return !anyTicked || $(node).find(o.rowCheck).prop('checked'); }
+                : null,
             modifier: { search: 'applied', order: 'applied' },
             format: { body: function (data, row, column, node) { return $(node).text().replace(/\s+/g, ' ').trim(); } }
         };
@@ -102,8 +108,13 @@
                 { extend: 'print', title: o.title, exportOptions: exportOptions }
             ]
         });
-        $(o.download).on('click', function () { dt.button(0).trigger(); });
-        $(o.print).on('click', function () { dt.button(1).trigger(); });
+        function exportWith(button) {
+            anyTicked = !!o.rowCheck
+                && dt.rows({ search: 'applied' }).nodes().to$().find(o.rowCheck + ':checked').length > 0;
+            dt.button(button).trigger();
+        }
+        $(o.download).on('click', function () { exportWith(0); });
+        $(o.print).on('click', function () { exportWith(1); });
 
         /* Filters. Initialised here rather than through the global data-searchable
            hook: that one runs before admin_assets/js/custom.js, whose unscoped

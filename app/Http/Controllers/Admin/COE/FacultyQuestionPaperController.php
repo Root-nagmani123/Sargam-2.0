@@ -12,8 +12,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * COE → Question Paper Management → My Question Paper, as the FACULTY sees it
- * (the setter uploads the original paper, which goes straight to Rajbhasha for
- * translation - no freeze - and can replace it until Rajbhasha translates it).
+ * (the setter writes the original paper in the editor - from a template or from
+ * scratch - which goes straight to Rajbhasha for translation - no freeze - and
+ * can edit it until Rajbhasha translates it).
  *
  * Once Rajbhasha sends the translation back, the faculty verifies it and
  * freezes it with an OTP to publish. The rows and their shape come from
@@ -21,6 +22,28 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class FacultyQuestionPaperController extends Controller
 {
+    /**
+     * Add Question Paper → Template cards, in order. Each key has a starting
+     * document in admin/coe/faculty_question_paper/templates/{key}.blade.php.
+     */
+    public const TEMPLATES = [
+        'standard' => [
+            'title' => 'Standard Question Paper',
+            'description' => 'A clean, single-column layout for most exams.',
+            'meta' => '1 column • 100 marks',
+        ],
+        'multi_section' => [
+            'title' => 'Multi-Section Paper',
+            'description' => 'Best for exams with multiple sections and time allocations.',
+            'meta' => '3 sections • 150 marks',
+        ],
+        'case_study' => [
+            'title' => 'Case Study Format',
+            'description' => 'Ideal for long-form case studies and scenario-based questions.',
+            'meta' => '2 pages • 200 marks',
+        ],
+    ];
+
     public function __construct(
         private QuestionPaperService $papers,
         private QuestionPaperStorage $files,
@@ -42,8 +65,8 @@ class FacultyQuestionPaperController extends Controller
     }
 
     /**
-     * Add Question Paper — upload a .docx or write the paper in the editor. Also
-     * "Reupload or Edit Original Paper" while it is Pending at Rajbhasha; once
+     * Add Question Paper — pick a template or write the paper from scratch in the
+     * editor. Also "Edit Original Paper" while it is Pending at Rajbhasha; once
      * Rajbhasha has translated it, it goes back to the list.
      */
     public function create(int $paper)
@@ -60,21 +83,17 @@ class FacultyQuestionPaperController extends Controller
         return view('admin.coe.faculty_question_paper.create', [
             'paper' => $row,
             'editorHtml' => $this->papers->editorHtmlFor($facultyPk, $paper),
+            'templates' => self::TEMPLATES,
         ]);
     }
 
     /**
-     * Add Question Paper (submit): the first paper is V1 and goes to Rajbhasha;
-     * a reupload / edit before Rajbhasha translates it is the next version.
+     * Add Question Paper (Upload Paper): the first paper is V1 and goes to
+     * Rajbhasha; an edit before Rajbhasha translates it is the next version.
      */
     public function upload(UploadQuestionPaperRequest $request, int $paper): JsonResponse
     {
-        $qp = $this->papers->saveOriginalPaper(
-            $this->facultyPk(),
-            $paper,
-            $request->isEditorPaper() ? null : $request->file('question_paper'),
-            $request->isEditorPaper() ? $request->input('paper_html') : null
-        );
+        $qp = $this->papers->saveOriginalPaper($this->facultyPk(), $paper, $request->input('paper_html'));
 
         return response()->json(['message' => $qp->version > 1
             ? 'Question paper updated (V'.$qp->version.').'

@@ -19,9 +19,9 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * COE → My Question Paper (faculty): the list, Add Question Paper (upload a
- * .docx or write it in the editor → V1, straight to Rajbhasha - no freeze),
- * reupload / edit (next version) until Rajbhasha translates it, download, and
+ * COE → My Question Paper (faculty): the list, Add Question Paper (write it in
+ * the editor, from a template or from scratch → V1, straight to Rajbhasha - no
+ * freeze; no file upload), edit (next version) until Rajbhasha translates it, download, and
  * the OTP freeze that publishes a verified translation. Hits the
  * real routes; every rejection also checks that nothing reached the table or the disk.
  */
@@ -84,9 +84,22 @@ class FacultyQuestionPaperUploadTest extends TestCase
             ->assertSee('Test Question Paper Drive');
     }
 
-    public function test_docx_upload_is_stored_as_v1_and_goes_straight_to_rajbhasha(): void
+    public function test_add_page_offers_the_three_templates(): void
     {
-        $this->upload(['mode' => 'upload', 'question_paper' => $this->docx()])
+        $this->actingAs($this->faculty)
+            ->get(route('admin.coe.faculty-question-paper.create', $this->map->id))
+            ->assertOk()
+            ->assertSee('Standard Question Paper')
+            ->assertSee('Multi-Section Paper')
+            ->assertSee('Case Study Format')
+            ->assertSee('id="qpaperTplHtml_case_study"', false)
+            ->assertSee($this->code())
+            ->assertDontSee('name="question_paper"', false);
+    }
+
+    public function test_editor_paper_is_stored_as_v1_and_goes_straight_to_rajbhasha(): void
+    {
+        $this->write()
             ->assertOk()
             ->assertJson(['message' => 'Question paper uploaded and sent for translation.']);
 
@@ -95,7 +108,7 @@ class FacultyQuestionPaperUploadTest extends TestCase
         $this->assertSame(QuestionPaper::STATUS_PENDING_RAJBHASHA, $paper->status);
         $this->assertNull($paper->frozen_at);
         $this->assertSame(1, (int) $paper->version);
-        $this->assertSame($this->code().'_v1.docx', $paper->original_file_name);
+        $this->assertSame($this->code().'_v1.html', $paper->original_file_name);
         Storage::disk(QuestionPaper::DISK)->assertExists($paper->original_file_path);
 
         $this->actingAs($this->faculty)
@@ -104,17 +117,17 @@ class FacultyQuestionPaperUploadTest extends TestCase
             ->assertSee('Pending at Rajbhasha');
     }
 
-    public function test_reupload_while_pending_at_rajbhasha_makes_the_next_version(): void
+    public function test_edit_while_pending_at_rajbhasha_makes_the_next_version(): void
     {
-        $this->upload(['mode' => 'upload', 'question_paper' => $this->docx()])->assertOk();
+        $this->write()->assertOk();
         $oldPath = $this->paper()->original_file_path;
 
-        // "Reupload or Edit Original Paper" opens the same page.
+        // "Edit Original Paper" opens the same page.
         $this->actingAs($this->faculty)
             ->get(route('admin.coe.faculty-question-paper.create', $this->map->id))
             ->assertOk();
 
-        $this->upload(['mode' => 'create', 'paper_html' => '<p>Q1 Revised.</p>'])
+        $this->upload(['paper_html' => '<p>Q1 Revised.</p>'])
             ->assertOk()
             ->assertJson(['message' => 'Question paper updated (V2).']);
 
@@ -126,15 +139,15 @@ class FacultyQuestionPaperUploadTest extends TestCase
         Storage::disk(QuestionPaper::DISK)->assertMissing($oldPath);
         $this->assertCount(1, Storage::disk(QuestionPaper::DISK)->allFiles());
 
-        $this->upload(['mode' => 'upload', 'question_paper' => UploadedFile::fake()->createWithContent('p.pdf', "%PDF-1.4\n")])
+        $this->upload(['question_paper' => UploadedFile::fake()->createWithContent('p.pdf', "%PDF-1.4\n")])
             ->assertStatus(422)
-            ->assertJsonValidationErrors('question_paper');
+            ->assertJsonValidationErrors('paper_html');
         $this->assertSame(2, (int) $this->paper()->version);
     }
 
     public function test_edit_starts_from_the_paper_written_in_the_editor(): void
     {
-        $this->upload(['mode' => 'create', 'paper_html' => '<p>Q1 Explain the Constitution.</p>'])->assertOk();
+        $this->upload(['paper_html' => '<p>Q1 Explain the Constitution.</p>'])->assertOk();
 
         $this->actingAs($this->faculty)
             ->get(route('admin.coe.faculty-question-paper.create', $this->map->id))
@@ -144,13 +157,13 @@ class FacultyQuestionPaperUploadTest extends TestCase
 
     public function test_paper_is_locked_once_rajbhasha_translates_it(): void
     {
-        $this->upload(['mode' => 'upload', 'question_paper' => $this->docx()])->assertOk();
+        $this->write()->assertOk();
         $this->paper()->update(['status' => QuestionPaper::STATUS_TRANSLATED]);
 
         $this->actingAs($this->faculty)
             ->get(route('admin.coe.faculty-question-paper.create', $this->map->id))
             ->assertRedirect(route('admin.coe.faculty-question-paper.index'));
-        $this->upload(['mode' => 'upload', 'question_paper' => $this->docx()])
+        $this->write()
             ->assertStatus(422)
             ->assertJsonValidationErrors('paper');
         $this->actingAs($this->faculty)
@@ -168,7 +181,7 @@ class FacultyQuestionPaperUploadTest extends TestCase
         // Nothing uploaded yet.
         $this->actingAs($this->faculty)->get($url)->assertNotFound();
 
-        $this->upload(['mode' => 'create', 'paper_html' => '<p>Q1 Explain.</p>'])->assertOk();
+        $this->upload(['paper_html' => '<p>Q1 Explain.</p>'])->assertOk();
 
         $this->actingAs($this->faculty)
             ->get(route('admin.coe.faculty-question-paper.index'))
@@ -183,18 +196,18 @@ class FacultyQuestionPaperUploadTest extends TestCase
 
     public function test_non_faculty_cannot_download_the_paper(): void
     {
-        $this->upload(['mode' => 'create', 'paper_html' => '<p>Q1 Explain.</p>'])->assertOk();
+        $this->upload(['paper_html' => '<p>Q1 Explain.</p>'])->assertOk();
 
         $this->actingAs($this->nonFaculty())
             ->get(route('admin.coe.faculty-question-paper.original', $this->map->id))
             ->assertForbidden();
     }
 
-    public function test_an_uploaded_paper_cannot_be_frozen(): void
+    public function test_an_added_paper_cannot_be_frozen(): void
     {
-        $this->upload(['mode' => 'upload', 'question_paper' => $this->docx()])->assertOk();
+        $this->write()->assertOk();
 
-        // No freeze on upload: it is already with Rajbhasha.
+        // No freeze on adding: it is already with Rajbhasha.
         $this->action('freeze-otp')->assertStatus(422);
         $this->action('freeze', ['otp' => '12345'])->assertStatus(422);
         $this->assertSame(QuestionPaper::STATUS_PENDING_RAJBHASHA, $this->paper()->status);
@@ -203,7 +216,7 @@ class FacultyQuestionPaperUploadTest extends TestCase
 
     public function test_freeze_with_the_right_otp_publishes_the_verified_translation(): void
     {
-        $this->upload(['mode' => 'upload', 'question_paper' => $this->docx()])->assertOk();
+        $this->write()->assertOk();
         $this->paper()->update(['status' => QuestionPaper::STATUS_SENT_FOR_APPROVAL]);   // Rajbhasha sent it back
 
         $this->actingAs($this->faculty)
@@ -233,7 +246,7 @@ class FacultyQuestionPaperUploadTest extends TestCase
 
     public function test_freeze_without_an_otp_sent_is_refused(): void
     {
-        $this->upload(['mode' => 'upload', 'question_paper' => $this->docx()])->assertOk();
+        $this->write()->assertOk();
         $this->paper()->update(['status' => QuestionPaper::STATUS_SENT_FOR_APPROVAL]);
 
         $this->action('freeze', ['otp' => '12345'])->assertStatus(422)->assertJsonValidationErrors('otp');
@@ -243,7 +256,7 @@ class FacultyQuestionPaperUploadTest extends TestCase
 
     public function test_non_faculty_cannot_freeze(): void
     {
-        $this->upload(['mode' => 'upload', 'question_paper' => $this->docx()])->assertOk();
+        $this->write()->assertOk();
         $this->paper()->update(['status' => QuestionPaper::STATUS_SENT_FOR_APPROVAL]);
         $other = $this->nonFaculty();
 
@@ -253,21 +266,13 @@ class FacultyQuestionPaperUploadTest extends TestCase
         $this->assertSame(QuestionPaper::STATUS_SENT_FOR_APPROVAL, $this->paper()->status);
     }
 
-    public function test_non_docx_uploads_are_rejected(): void
+    public function test_a_file_upload_is_no_longer_accepted(): void
     {
-        $files = [
-            UploadedFile::fake()->createWithContent('paper.pdf', "%PDF-1.4\n%test"),
-            UploadedFile::fake()->createWithContent('paper.zip', $this->zipBytes()),          // real zip, wrong name
-            UploadedFile::fake()->createWithContent('paper.docx', 'plain text, not a Word file'),
-        ];
-
-        foreach ($files as $file) {
-            $this->upload(['mode' => 'upload', 'question_paper' => $file])
-                ->assertStatus(422)
-                ->assertJsonValidationErrors('question_paper');
-        }
-
-        $this->upload(['mode' => 'upload'])->assertStatus(422)->assertJsonValidationErrors('question_paper');
+        // Faculty write the paper in the editor; even a valid .docx is not stored.
+        $this->upload(['question_paper' => $this->docx()])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('paper_html');
+        $this->upload([])->assertStatus(422)->assertJsonValidationErrors('paper_html');
 
         $this->assertNull($this->paper());
         $this->assertSame([], Storage::disk(QuestionPaper::DISK)->allFiles());
@@ -279,7 +284,7 @@ class FacultyQuestionPaperUploadTest extends TestCase
             .'<p>Q1 <strong>Explain</strong>.<script>alert(1)</script></p>'
             .'<a href="javascript:evil()">bad</a><iframe src="x"></iframe><img src="x" onerror="alert(1)">';
 
-        $this->upload(['mode' => 'create', 'paper_html' => $html])->assertOk();
+        $this->upload(['paper_html' => $html])->assertOk();
 
         $paper = $this->paper();
         $this->assertSame($this->code().'_v1.html', $paper->original_file_name);
@@ -295,7 +300,7 @@ class FacultyQuestionPaperUploadTest extends TestCase
 
     public function test_blank_editor_paper_is_rejected(): void
     {
-        $this->upload(['mode' => 'create', 'paper_html' => '<p>&nbsp;</p><script>x</script>'])
+        $this->upload(['paper_html' => '<p>&nbsp;</p><script>x</script>'])
             ->assertStatus(422)
             ->assertJsonValidationErrors('paper_html');
 
@@ -311,7 +316,7 @@ class FacultyQuestionPaperUploadTest extends TestCase
             ->assertForbidden();
         $this->actingAs($other)
             ->postJson(route('admin.coe.faculty-question-paper.upload', $this->map->id),
-                ['mode' => 'upload', 'question_paper' => $this->docx()])
+                ['paper_html' => '<p>Q1 Explain.</p>'])
             ->assertForbidden();
 
         $this->assertNull($this->paper());
@@ -319,7 +324,7 @@ class FacultyQuestionPaperUploadTest extends TestCase
 
     public function test_super_admin_passes_the_menu_gate_but_owns_no_papers(): void
     {
-        $this->upload(['mode' => 'upload', 'question_paper' => $this->docx()])->assertOk();
+        $this->write()->assertOk();
         $admin = User::role('Super Admin')->get()->first(fn (User $u) => ! $u->hasRole('Faculty'))
             ?? $this->markTestSkipped('No Super Admin who is not also Faculty.');
 
@@ -361,6 +366,12 @@ class FacultyQuestionPaperUploadTest extends TestCase
         $this->assertMatchesRegularExpression('/^\d{5}$/', (string) $otp);
 
         return $otp;
+    }
+
+    /** Add Question Paper → Upload Paper, with a paper written in the editor. */
+    private function write()
+    {
+        return $this->upload(['paper_html' => '<h2>Mid Term Examination</h2><p>Q1 Explain the Constitution.</p>']);
     }
 
     private function upload(array $data)
