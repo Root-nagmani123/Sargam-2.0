@@ -305,7 +305,7 @@
                                     class="form-control @error('helper_one') is-invalid @enderror"
                                     id="helperOne"
                                     name="helper_one"
-                                    placeholder="Enter helper one"
+                                    placeholder="Enter helper one name"
                                     maxlength="255"
                                     value="{{ old('helper_one', $data->helper_one) }}"
                                 >
@@ -334,7 +334,7 @@
                                     class="form-control @error('helper_two') is-invalid @enderror"
                                     id="helperTwo"
                                     name="helper_two"
-                                    placeholder="Enter helper two"
+                                    placeholder="Enter helper two name"
                                     maxlength="255"
                                     value="{{ old('helper_two', $data->helper_two) }}"
                                 >
@@ -414,6 +414,10 @@
                                         Select Country
                                     </option>
 
+                                    @if ($data->country)
+                                        <option value="{{ $data->country->pk }}" selected>{{ $data->country->country_name }}</option>
+                                    @endif
+
                                     {{-- Populated dynamically by AJAX --}}
 
                                 </select>
@@ -442,12 +446,16 @@
                                     class="form-select @error('state_id') is-invalid @enderror"
                                     id="stateId"
                                     name="state_id"
-                                    disabled
+                                    @disabled(! $data->state)
                                 >
 
                                     <option value="">
                                         Select State
                                     </option>
+
+                                    @if ($data->state)
+                                        <option value="{{ $data->state->pk }}" selected>{{ $data->state->state_name }}</option>
+                                    @endif
 
                                     {{-- Populated dynamically by AJAX --}}
 
@@ -477,12 +485,16 @@
                                     class="form-select @error('city_id') is-invalid @enderror"
                                     id="cityId"
                                     name="city_id"
-                                    disabled
+                                    @disabled(! $data->city)
                                 >
 
                                     <option value="">
                                         Select City
                                     </option>
+
+                                    @if ($data->city)
+                                        <option value="{{ $data->city->pk }}" selected>{{ $data->city->city_name }}</option>
+                                    @endif
 
                                     {{-- Populated dynamically by AJAX --}}
 

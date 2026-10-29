@@ -6,36 +6,48 @@
 
 
 @section('setup_content')
+  @include('protocol::partials.style')
+  <div class="container-fluid profile-page">
+    <x-breadcrum
+        title="Dashboard"
+        :items="[
+            'Home',
+            ['label' => 'Protocol', 'url' => route('protocol.dashboard')],
+            'Dashboard',
+        ]"
+    />
+
+  @php
+    $cardStyles = [
+      'guesthouse' => ['icon' => 'bi-building', 'style' => 'background:#EFEBFF;color:#5B3FD9;'],
+      'vehicle' => ['icon' => 'bi-truck-front', 'style' => 'background:#FFF0E0;color:#E6802A;'],
+      'ticket' => ['icon' => 'bi-ticket-perforated', 'style' => 'background:#E0F5F0;color:#0E8F73;'],
+    ];
+  @endphp
 
   <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-      <div class="stat-card">
-        <div class="icon-badge" style="background:#EFEBFF;color:#5B3FD9;"><i class="bi bi-building"></i></div>
-        <div class="num mt-2">{{ $counts['guesthouse'] }}</div>
-        <div class="lbl">Guest House Requests</div>
+    @foreach ($cards as $card)
+      <div class="col-6 col-md-3">
+        <a href="{{ $card['url'] }}" class="d-block h-100 text-reset text-decoration-none">
+          <div class="stat-card">
+            <div class="icon-badge" style="{{ $cardStyles[$card['type']]['style'] }}"><i class="bi {{ $cardStyles[$card['type']]['icon'] }}"></i></div>
+            <div class="num mt-2">{{ $card['count'] }}</div>
+            <div class="lbl">{{ $card['label'] }}</div>
+          </div>
+        </a>
       </div>
-    </div>
+    @endforeach
+    @if ($pending)
     <div class="col-6 col-md-3">
-      <div class="stat-card">
-        <div class="icon-badge" style="background:#FFF0E0;color:#E6802A;"><i class="bi bi-truck-front"></i></div>
-        <div class="num mt-2">{{ $counts['vehicle'] }}</div>
-        <div class="lbl">Vehicle Pass Requests</div>
-      </div>
+      <a href="{{ $pending['url'] }}" class="d-block h-100 text-reset text-decoration-none">
+        <div class="stat-card">
+          <div class="icon-badge" style="background:#FFF4E0;color:#B8720A;"><i class="bi bi-hourglass-split"></i></div>
+          <div class="num mt-2">{{ $pending['count'] }}</div>
+          <div class="lbl">Pending My Action</div>
+        </div>
+      </a>
     </div>
-    <div class="col-6 col-md-3">
-      <div class="stat-card">
-        <div class="icon-badge" style="background:#E0F5F0;color:#0E8F73;"><i class="bi bi-ticket-perforated"></i></div>
-        <div class="num mt-2">{{ $counts['ticket'] }}</div>
-        <div class="lbl">Ticket Requests</div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="stat-card">
-        <div class="icon-badge" style="background:#FFF4E0;color:#B8720A;"><i class="bi bi-hourglass-split"></i></div>
-        <div class="num mt-2">{{ $counts['pending_mine'] }}</div>
-        <div class="lbl">Pending My Action</div>
-      </div>
-    </div>
+    @endif
   </div>
 
   <div class="card-clean p-3">
@@ -73,6 +85,7 @@
         </tbody>
       </table>
     </div>
+  </div>
   </div>
 
 @endsection

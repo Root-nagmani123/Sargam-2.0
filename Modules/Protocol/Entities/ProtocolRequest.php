@@ -181,7 +181,7 @@ class ProtocolRequest extends Model
     public function recommendTo(int $protocolStaffId, int $recommendedToId, ?string $remarks = null): void
     {
         DB::transaction(function () use ($protocolStaffId, $recommendedToId, $remarks) {
-            $recommendedToName = User::find($recommendedToId)->name ?? "User #{$recommendedToId}";
+            $recommendedToName = self::userDisplayName(User::find($recommendedToId)) ?? "User #{$recommendedToId}";
             $this->update([
                 'status' => self::STATUS_RECOMMENDED,
                 'current_stage' => "Recommended to {$recommendedToName}",
@@ -339,5 +339,26 @@ class ProtocolRequest extends Model
     public function getIsFacultyAttribute(): bool
     {
         return (bool) $this->batch?->is_faculty;
+    }
+
+    /**
+     * Rows recommended before the name fix stored "Recommended to User #<id>";
+     * rebuild the label from the approver so those show the name too.
+     */
+    public function getCurrentStageAttribute($value): ?string
+    {
+        if ($this->status === self::STATUS_RECOMMENDED && $this->recommended_to_id && str_contains((string) $value, 'User #')) {
+            $name = self::userDisplayName($this->recommendedTo);
+            return $name ? "Recommended to {$name}" : $value;
+        }
+
+        return $value;
+    }
+
+    /** user_credentials has no name column — it is first_name + last_name */
+    public static function userDisplayName(?User $user): ?string
+    {
+        $name = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
+        return $name !== '' ? $name : null;
     }
 }

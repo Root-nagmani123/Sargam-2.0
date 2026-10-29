@@ -4,7 +4,7 @@ namespace Modules\Protocol\Entities;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Models\EmployeeMaster;
+use App\Models\{EmployeeMaster,User};
 
 class ProtocolApprovalLog extends Model
 {
@@ -34,8 +34,9 @@ class ProtocolApprovalLog extends Model
         return $this->belongsTo(EmployeeMaster::class, 'action_by_id');
     }
 
+    /** recommended_to_id is a user_credentials pk (same value as on protocol_requests), not an employee pk */
     public function recommendedTo(): BelongsTo
     {
-        return $this->belongsTo(EmployeeMaster::class, 'recommended_to_id');
+        return $this->belongsTo(User::class, 'recommended_to_id');
     }
 }

@@ -5,6 +5,7 @@ namespace Modules\Protocol\Entities;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\{State,Country,City};
 class ProtocolDriverMaster extends Model
 {
    use SoftDeletes; 
@@ -33,4 +34,19 @@ class ProtocolDriverMaster extends Model
         'licence_expiry_date' => 'date',
         'hiring_date' => 'date',
     ];
+
+    public function country()
+    {
+        return $this->belongsTo(Country::class, 'country_id', 'pk');
+    }
+
+    public function state()
+    {
+        return $this->belongsTo(State::class, 'state_id', 'pk');
+    }
+
+    public function city()
+    {
+        return $this->belongsTo(City::class, 'city_id', 'pk');
+    }
 }

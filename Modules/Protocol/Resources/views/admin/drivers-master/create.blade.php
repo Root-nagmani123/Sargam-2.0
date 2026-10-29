@@ -239,7 +239,7 @@
                                 </label>
 
                                 <input type="text" class="form-control @error('helper_one') is-invalid @enderror"
-                                    id="helperOne" name="helper_one" placeholder="Enter helper one" maxlength="255"
+                                    id="helperOne" name="helper_one" placeholder="Enter helper one name" maxlength="255"
                                     value="{{ old('helper_one') }}">
 
                                 @error('helper_one')
@@ -258,11 +258,11 @@
                             <div class="col-md-4 mb-3">
 
                                 <label for="helperTwo" class="form-label">
-                                    Helper Two  (Name)
+                                    Helper Two (Name)
                                 </label>
 
                                 <input type="text" class="form-control @error('helper_two') is-invalid @enderror"
-                                    id="helperTwo" name="helper_two" placeholder="Enter helper two" maxlength="255"
+                                    id="helperTwo" name="helper_two" placeholder="Enter helper two name" maxlength="255"
                                     value="{{ old('helper_two') }}">
 
                                 @error('helper_two')

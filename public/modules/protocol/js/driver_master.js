@@ -194,12 +194,12 @@ $(document).ready(function () {
             },
 
             helper_one: {
-                maxlength: "Helper One cannot exceed 255 characters.",
+                maxlength: "Helper One (Name) cannot exceed 255 characters.",
                 nameRegex: "Please enter a valid helper name."
             },
 
             helper_two: {
-                maxlength: "Helper Two cannot exceed 255 characters.",
+                maxlength: "Helper Two (Name) cannot exceed 255 characters.",
                 nameRegex: "Please enter a valid helper name."
             },
 

@@ -199,15 +199,12 @@
                             data-name="{{ $employee->employee_name }}"
                             data-designation="{{ $employee->designation_name }}"
                             data-email="{{ $employee->email ?? '' }}"
-                            data-image="{{ !empty($employee->image_path) ? asset('images/'.$employee->image_path) : '' }}"
+                            data-image="{{ $employee->photo_url }}"
                             data-initials="{{ substr($employee->employee_name, 0, 2) }}"
                             data-avatar-class="a{{ (($loop->iteration - 1) % 3) + 1 }}"
                             onclick="selectEmployee(this)">
-                            @if(!empty($employee->image_path))
-                            <img src="{{ asset('images/'.$employee->image_path) }}" class="avatar-circle a{{ (($loop->iteration - 1) % 3) + 1}}" alt="User Image">
-                            @else
-                            <div class="avatar-circle a{{ (($loop->iteration - 1) % 3) + 1}}">{{ substr($employee->employee_name, 0, 2) }}</div>
-                            @endif
+                            <img src="{{ $employee->photo_url }}" class="avatar-circle a{{ (($loop->iteration - 1) % 3) + 1}}" style="object-fit:cover;" alt="{{ $employee->employee_name }}"
+                                onerror="this.onerror=null;this.src='{{ asset('images/dummypic.jpeg') }}';">
                             <div class="text-start">
                                 <div class="fw-semibold small">{{ $employee->employee_name }}</div>
                                 <div class="text-muted" style="font-size:0.75rem;">{{ $employee->designation_name }}</div>
@@ -307,7 +304,8 @@
         const avatarWrap = document.getElementById('selectedUserAvatarWrap');
         avatarWrap.className = 'avatar-circle lg ' + avatarClass;
         if (image) {
-            avatarWrap.innerHTML = `<img src="${image}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+            avatarWrap.innerHTML = `<img src="${image}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;"
+                onerror="this.onerror=null;this.src='{{ asset('images/dummypic.jpeg') }}';">`;
         } else {
             avatarWrap.textContent = initials;
         }
@@ -374,11 +372,18 @@
             },
             body: JSON.stringify({ permissions: checked })
         })
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) throw new Error('save failed');
+            return res.json();
+        })
         .then(() => {
             alert('Permissions saved');
         })
-        .catch(() => alert('Could not save permissions. Try again.'));
+        .catch(() => {
+            alert('Could not save permissions. Try again.');
+            // Show what is actually stored, not the unsaved ticks
+            loadPermissions(selectedEmployeeId);
+        });
     }
  
 

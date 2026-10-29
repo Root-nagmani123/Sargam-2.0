@@ -24,69 +24,73 @@ class ApprovalService
             'categories' => [],
             'groups' => [],
             'parent_menus' => [],
-            'tabs' => $this->tabs(),
+            'tabs' => $this->activateRequestedTab($this->tabs()),
         ];
+    }
+
+    # @ Open the tab named in ?type= (dashboard cards link here with it)
+    private function activateRequestedTab(array $tabs): array
+    {
+        $requested = request('type');
+        if (! collect($tabs)->contains('type', $requested)) {
+            return $tabs;
+        }
+
+        return array_map(fn ($tab) => array_merge($tab, ['active' => $tab['type'] === $requested]), $tabs);
+    }
+
+    # @ Direct + role permissions of the logged-in user
+    private function userPermissions(): array
+    {
+        return Auth::user()->getAllPermissions()->pluck('name')->toArray();
+    }
+
+    # @ Request types this user can see in All Requests
+    public function allowedRequestTypes(): array
+    {
+        $userPermissions = $this->userPermissions();
+
+        if (in_array('protocol.all_booking', $userPermissions) || in_array('protocol.recommended_booking', $userPermissions)) {
+            return array_keys(config('protocol.request_types'));
+        }
+
+        $map = [
+            'guesthouse' => 'protocol.guest_house_booking',
+            'vehicle' => 'protocol.vehicle_booking',
+            'ticket' => 'protocol.ticket_booking',
+        ];
+
+        return array_keys(array_filter($map, fn ($permission) => in_array($permission, $userPermissions)));
+    }
+
+    # @ Same scope as the All Requests list, for dashboard counts
+    public function scopedQuery()
+    {
+        return $this->baseQuery(request());
     }
 
     private function tabs(): array
     {
-        $userPermissions = Auth::user()->getDirectPermissions()->pluck('name')->toArray();
-
-        // Full access
-        if (in_array('protocol.all_booking', $userPermissions)) {
-            return [
-                [
-                    'type' => 'all',
-                    'label' => 'All',
-                    'count' => $this->getCounts('all'),
-                    'active' => true,
-                ],
-                [
-                    'type' => 'guesthouse',
-                    'label' => 'Guest House',
-                    'count' => $this->getCounts('guesthouse'),
-                    'active' => false,
-                ],
-                [
-                    'type' => 'vehicle',
-                    'label' => 'Vehicle',
-                    'count' => $this->getCounts('vehicle'),
-                    'active' => false,
-                ],
-                [
-                    'type' => 'ticket',
-                    'label' => 'Ticket',
-                    'count' => $this->getCounts('ticket'),
-                    'active' => false,
-                ],
-            ];
-        }
+        $userPermissions = $this->userPermissions();
+        $labels = ['guesthouse' => 'Guest House', 'vehicle' => 'Vehicle', 'ticket' => 'Ticket'];
 
         $tabs = [];
 
-        if (in_array('protocol.guest_house_booking', $userPermissions)) {
+        // Full access and recommended bookings cover every type, so they get an "All" tab
+        if (in_array('protocol.all_booking', $userPermissions) || in_array('protocol.recommended_booking', $userPermissions)) {
             $tabs[] = [
-                'type' => 'guesthouse',
-                'label' => 'Guest House',
-                'count' => $this->getCounts('guesthouse'),
-                'active' => empty($tabs),
+                'type' => 'all',
+                'label' => 'All',
+                'count' => $this->getCounts('all'),
+                'active' => true,
             ];
         }
 
-        if (in_array('protocol.vehicle_booking', $userPermissions)) {
+        foreach ($this->allowedRequestTypes() as $type) {
             $tabs[] = [
-                'type' => 'vehicle',
-                'label' => 'Vehicle',
-                'count' => $this->getCounts('vehicle'),
-                'active' => empty($tabs),
-            ];
-        }
-
-        if (in_array('protocol.ticket_booking', $userPermissions)) {
-            $tabs[] = [
-                'type' => 'ticket',
-                'label' => 'Ticket',
-                'count' => $this->getCounts('ticket'),
+                'type' => $type,
+                'label' => $labels[$type],
+                'count' => $this->getCounts($type),
                 'active' => empty($tabs),
             ];
         }
@@ -96,7 +100,7 @@ class ApprovalService
 
     private function getCounts(string $type): int
     {
-        $query = ProtocolRequest::query();
+        $query = $this->scopedQuery();
 
         switch ($type) {
             case 'guesthouse':
@@ -134,43 +138,42 @@ class ApprovalService
     # @ Base Query
     protected function baseQuery(Request $request)
     {
-        $user = Auth::user();
-
-        // Direct user permissions only
-        // $userPermissions = $user->permissions()->pluck('name')->toArray();
-        $rolePermissions = $user->getPermissionsViaRoles()->pluck('name');
-        $uPermissions = $user->getDirectPermissions()->pluck('name');
-        $userPermissions = $rolePermissions->merge($uPermissions)->unique()->values()->toArray();
+        $userPermissions = $this->userPermissions();
 
         // Full access
         if (in_array('protocol.all_booking', $userPermissions)) {
             return ProtocolRequest::query();
         }
-        
-        if (in_array('protocol.recommended_booking', $userPermissions)) {
-            return ProtocolRequest::where('status', 'recommended');
-        }
 
-        $requestTypes = [];
+        // Booking permissions decide the scope; requests recommended to this user
+        // (the approver) are always included on top, whatever their permissions
+        return ProtocolRequest::where(function ($q) use ($userPermissions) {
+            $q->where(function ($scope) use ($userPermissions) {
+                if (in_array('protocol.recommended_booking', $userPermissions)) {
+                    $scope->where('status', 'recommended');
+                    return;
+                }
 
-        if (in_array('protocol.guest_house_booking', $userPermissions)) {
-            $requestTypes[] = 'guesthouse';
-        }
+                $requestTypes = [];
 
-        if (in_array('protocol.ticket_booking', $userPermissions)) {
-            $requestTypes[] = 'ticket';
-        }
+                if (in_array('protocol.guest_house_booking', $userPermissions)) {
+                    $requestTypes[] = 'guesthouse';
+                }
 
-        if (in_array('protocol.vehicle_booking', $userPermissions)) {
-            $requestTypes[] = 'vehicle';
-        }
+                if (in_array('protocol.ticket_booking', $userPermissions)) {
+                    $requestTypes[] = 'ticket';
+                }
 
-        // No valid permission
-        if (empty($requestTypes)) {
-            return ProtocolRequest::whereRaw('1 = 0');
-        }
-        
-        return ProtocolRequest::whereIn('request_type', $requestTypes);
+                if (in_array('protocol.vehicle_booking', $userPermissions)) {
+                    $requestTypes[] = 'vehicle';
+                }
+
+                // No valid permission
+                empty($requestTypes)
+                    ? $scope->whereRaw('1 = 0')
+                    : $scope->whereIn('request_type', $requestTypes);
+            })->orWhere('recommended_to_id', Auth::id());
+        });
     }
 
 
@@ -214,7 +217,10 @@ class ApprovalService
 
     private function actionButtons($data)
     {
-        $editUrl = route('protocol.approval.review', $data->id);
+        // A request awaiting this user's final decision opens the approver screen
+        $editUrl = $data->status === ProtocolRequest::STATUS_RECOMMENDED && (int) $data->recommended_to_id === (int) Auth::id()
+            ? route('protocol.manager.review', $data->id)
+            : route('protocol.approval.review', $data->id);
         return '<a href="' . $editUrl . '" class="btn btn-sm btn-outline-saffron">Review <i class="bi bi-chevron-right"></i></a>';
     }
 

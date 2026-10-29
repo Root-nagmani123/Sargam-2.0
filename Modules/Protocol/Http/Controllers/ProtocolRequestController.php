@@ -25,7 +25,7 @@ use Modules\Protocol\Entities\Vehicle;
 use Modules\Protocol\Entities\VehiclePassRequest;
 use Modules\Protocol\Http\Requests\{StoreCombinedRequest,UpdateCombinedRequest};
 use App\Models\CourseMaster;
-use Modules\Protocol\Services\RequestService;
+use Modules\Protocol\Services\{RequestService,ApprovalService};
 
 class ProtocolRequestController extends Controller
 {
@@ -37,21 +37,45 @@ class ProtocolRequestController extends Controller
     /**
     * Dashboard — quick counts + recent activity. Shared lan  ding page.
     */
-    public function dashboard()
+    public function dashboard(ApprovalService $approvalService)
     {
-        $counts = [
-            'guesthouse' => ProtocolRequest::where('request_type', 'guesthouse')->count(),
-            'vehicle' => ProtocolRequest::where('request_type', 'vehicle')->count(),
-            'ticket' => ProtocolRequest::where('request_type', 'ticket')->count(),
-            'pending_mine' => ProtocolRequest::forEmployee(Auth::id())->pending()->count(),
-        ];
+        // Protocol Staff see the All Requests scope; employees see only their own requests
+        $isStaff = Auth::user()->can('protocol.protocol_requests');
 
-        $recent = ProtocolRequest::with('requestable', 'batch')
+        $scoped = fn () => $isStaff
+            ? $approvalService->scopedQuery()
+            : ProtocolRequest::forUser(Auth::id());
+
+        $types = $isStaff
+            ? $approvalService->allowedRequestTypes()
+            : array_keys(config('protocol.request_types'));
+
+        // Employees get one "My Pending" card per type; staff get type totals plus their approval queue
+        $cards = [];
+        foreach ($types as $type) {
+            $typeLabel = config('protocol.request_types.' . $type . '.label');
+            $cards[] = [
+                'type' => $type,
+                'label' => $isStaff ? $typeLabel . ' Requests' : 'My Pending ' . $typeLabel . ' Requests',
+                'count' => $isStaff
+                    ? $scoped()->where('request_type', $type)->count()
+                    : $scoped()->pending()->where('request_type', $type)->count(),
+                'url' => $isStaff
+                    ? route('protocol.requests.all', ['type' => $type])
+                    : route('protocol.requests.my', ['type' => $type]),
+            ];
+        }
+
+        $pending = $isStaff
+            ? ['count' => ProtocolRequest::awaitingProtocolStaff(Auth::id())->count(), 'url' => route('protocol.approval.queue')]
+            : null;
+
+        $recent = $scoped()->with('requestable', 'batch')
             ->latest()
             ->limit(10)
             ->get();
 
-        return view('protocol::dashboard', compact('counts', 'recent'));
+        return view('protocol::dashboard', compact('cards', 'pending', 'recent'));
     }
 
     /**
@@ -59,7 +83,7 @@ class ProtocolRequestController extends Controller
      */
     public function create()
     {
-        $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name', 'asc')->pluck('course_name', 'pk');
+        $courses = CourseMaster::activeRunning()->orderBy('course_name', 'asc')->pluck('course_name', 'pk');
         $vehicles = Vehicle::orderBy('vehicle_name', 'asc')->pluck('vehicle_name', 'id');
         return view('protocol::requests.create', compact('courses', 'vehicles'));
     }
@@ -95,7 +119,12 @@ class ProtocolRequestController extends Controller
     {
         $protocolRequest->loadFullRequestable();
         $protocolRequest->load('batch.guests', 'logs.actionBy');
-        $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name', 'asc')->pluck('course_name', 'pk');
+        // Running courses only, but keep the one already saved even if it has since ended
+        $courses = CourseMaster::where(function ($q) use ($protocolRequest) {
+                $q->activeRunning()->orWhere('pk', $protocolRequest->course_team_to_notify);
+            })
+            ->orderBy('course_name', 'asc')
+            ->pluck('course_name', 'pk');
         $vehicles = Vehicle::orderBy('vehicle_name', 'asc')->pluck('vehicle_name', 'id');
         return view('protocol::requests.edit', compact('protocolRequest', 'courses', 'vehicles'));
     }

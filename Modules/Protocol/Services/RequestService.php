@@ -24,8 +24,19 @@ class RequestService
             'categories' => [],
             'groups' => [],
             'parent_menus' => [],
-            'tabs' => $this->tabs(),
+            'tabs' => $this->activateRequestedTab($this->tabs()),
         ];
+    }
+
+    # @ Open the tab named in ?type= (dashboard cards link here with it)
+    private function activateRequestedTab(array $tabs): array
+    {
+        $requested = request('type');
+        if (! collect($tabs)->contains('type', $requested)) {
+            return $tabs;
+        }
+
+        return array_map(fn ($tab) => array_merge($tab, ['active' => $tab['type'] === $requested]), $tabs);
     }
 
     private function tabs(): array

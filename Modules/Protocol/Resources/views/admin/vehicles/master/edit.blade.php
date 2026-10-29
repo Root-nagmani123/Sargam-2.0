@@ -219,6 +219,9 @@
                         <label class="form-label required">Country</label>
                         <select name="country_id" id="countryId" class="form-select">
                             <option value="">Select Country</option>
+                            @if ($vehicle->country)
+                                <option value="{{ $vehicle->country->pk }}" selected>{{ $vehicle->country->country_name }}</option>
+                            @endif
                         </select>
                     </div>
                 </div>
@@ -228,12 +231,18 @@
                         <label class="form-label required">State</label>
                         <select name="state_id" id="stateId" class="form-select">
                             <option value="">Select State</option>
+                            @if ($vehicle->state)
+                                <option value="{{ $vehicle->state->pk }}" selected>{{ $vehicle->state->state_name }}</option>
+                            @endif
                         </select>
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label required">City</label>
                         <select name="city_id" id="cityId" class="form-select">
                             <option value="">Select City</option>
+                            @if ($vehicle->city)
+                                <option value="{{ $vehicle->city->pk }}" selected>{{ $vehicle->city->city_name }}</option>
+                            @endif
                         </select>
                     </div>
                 </div>

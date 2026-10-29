@@ -91,9 +91,7 @@ namespace Modules\Protocol\Entities;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\State;
-// use App\Models\Country; // aapke country model ka namespace daal dena
-// use App\Models\City;    // aapke city model ka namespace daal dena
+use App\Models\{State,Country,City};
 
 class ProtocolVehicleMaster extends Model
 {
@@ -138,5 +136,13 @@ class ProtocolVehicleMaster extends Model
         return $this->belongsTo(State::class, 'state_id', 'pk');
     }
 
-    // country() aur city() bhi isi tarah apne Country/City model ke hisaab se add kar lena
+    public function country()
+    {
+        return $this->belongsTo(Country::class, 'country_id', 'pk');
+    }
+
+    public function city()
+    {
+        return $this->belongsTo(City::class, 'city_id', 'pk');
+    }
 }

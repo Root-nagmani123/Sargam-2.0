@@ -152,7 +152,9 @@ class DriverMasterController extends Controller
     public function edit($id){
       //  dd('done');
        try {
-        $data = ProtocolDriverMaster::findOrFail($id);
+        // Saved country/state/city are rendered as selected options so the form can be
+        // re-submitted even if the AJAX dropdown loading does not complete
+        $data = ProtocolDriverMaster::with('country', 'state', 'city')->findOrFail($id);
         return view('protocol::admin.drivers-master.edit',compact('data'));
        } catch (\Throwable $th) {
          return redirect()->back()->with('error', $th->getMessage());

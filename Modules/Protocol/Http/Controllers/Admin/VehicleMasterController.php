@@ -107,7 +107,9 @@ class VehicleMasterController extends Controller
 
     public function edit($id)
     {
-        $vehicle = ProtocolVehicleMaster::findOrFail($id);
+        // Saved country/state/city are rendered as selected options so the form can be
+        // re-submitted even if the AJAX dropdown loading does not complete
+        $vehicle = ProtocolVehicleMaster::with('country', 'state', 'city')->findOrFail($id);
         $drivers = ProtocolDriverMaster::select('id', 'name', 'driving_licence_no')->orderBy('name')->get();
 
         return view('protocol::admin.vehicles.master.edit', compact('vehicle', 'drivers'));

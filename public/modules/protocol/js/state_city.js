@@ -286,6 +286,9 @@ $(document).ready(function () {
                 stateId
             ),
 
+            // Lets the server keep the saved "Other" row when de-duplicating
+            data: selectedCityId ? { selected: selectedCityId } : {},
+
             type: "GET",
 
             dataType: "json",
