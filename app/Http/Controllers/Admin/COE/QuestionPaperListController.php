@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\COE;
 
 use App\Http\Controllers\Controller;
 use App\Services\COE\AdminPaperService;
+use App\Services\COE\QuestionPaperLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -38,8 +39,10 @@ class QuestionPaperListController extends Controller
 
     public const SCOPES = ['all', 'translated'];
 
-    public function __construct(private AdminPaperService $papers)
-    {
+    public function __construct(
+        private AdminPaperService $papers,
+        private QuestionPaperLogger $log,
+    ) {
     }
 
     public function index(Request $request)
@@ -61,26 +64,31 @@ class QuestionPaperListController extends Controller
         ]);
     }
 
-    /** See Attachment / Print Original Paper — read-only viewer, never a download. */
+    /** See Attachment / Print Original Paper (?print=1) — never a download. */
     public function original(Request $request, int $paper): JsonResponse
     {
         $qp = $this->papers->originalFor($paper);
+        $response = $this->paperViewer($request, $qp->original_file_path, $qp->original_file_name);
+        $this->log->record(QuestionPaperLogger::ROLE_COE, QuestionPaperLogger::MODULE_PAPER, $this->viewAction($request), $qp, 'V'.$qp->version);
 
-        return $this->paperViewer($request, $qp->original_file_path, $qp->original_file_name);
+        return $response;
     }
 
-    /** See Attachment / Print Translated Paper — read-only viewer, never a download. */
+    /** See Attachment / Print Translated Paper (?print=1) — never a download. */
     public function translated(Request $request, int $paper): JsonResponse
     {
         $qp = $this->papers->translationFor($paper);
+        $response = $this->paperViewer($request, $qp->translated_file_path, $qp->translated_file_name);
+        $this->log->record(QuestionPaperLogger::ROLE_COE, QuestionPaperLogger::MODULE_TRANSLATION, $this->viewAction($request), $qp);
 
-        return $this->paperViewer($request, $qp->translated_file_path, $qp->translated_file_name);
+        return $response;
     }
 
     /** Unfreeze (Published only) → back to the faculty's Pending Verification. */
     public function unfreeze(int $paper): JsonResponse
     {
-        $this->papers->unfreeze($paper);
+        $qp = $this->papers->unfreeze($paper);
+        $this->log->record(QuestionPaperLogger::ROLE_COE, QuestionPaperLogger::MODULE_PAPER, QuestionPaperLogger::UNFROZEN, $qp, 'V'.$qp->version);
 
         return response()->json(['message' => 'Question paper unfrozen. It is back with the faculty for verification.']);
     }
@@ -89,7 +97,14 @@ class QuestionPaperListController extends Controller
     public function destroy(int $paper): JsonResponse
     {
         $this->papers->delete($paper);
+        $this->log->record(QuestionPaperLogger::ROLE_COE, QuestionPaperLogger::MODULE_PAPER, QuestionPaperLogger::DELETED, $paper);
 
         return response()->json(['message' => 'Question paper deleted.']);
+    }
+
+    /** The Print buttons ask with ?print=1; See Attachment does not. */
+    private function viewAction(Request $request): string
+    {
+        return $request->boolean('print') ? QuestionPaperLogger::PRINTED : QuestionPaperLogger::VIEWED;
     }
 }

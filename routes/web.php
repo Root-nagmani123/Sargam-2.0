@@ -2023,6 +2023,12 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
             ->whereNumber('paper')->name('question-paper.destroy');
     });
 
+    // Question Paper Management Logs
+    Route::middleware('menu.permission:coe_question_paper_logs')->group(function () {
+        Route::get('question-paper-logs', [\App\Http\Controllers\Admin\COE\QuestionPaperLogController::class, 'index'])
+            ->name('question-paper-logs.index');
+    });
+
     // My Question Paper (faculty)
     Route::middleware('menu.permission:coe_my_question_paper_faculty')->group(function () {
         Route::get('faculty-question-paper', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'index'])

@@ -1283,6 +1283,24 @@
 .coe-viewer.is-shielded .coe-viewer__stage { visibility: hidden; }
 .coe-viewer.is-shielded .coe-viewer__shield { display: flex; }
 
+/* ── Question Paper Management Logs: Role and Action badges ── */
+.coe-page .coe-log-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+.coe-page .coe-log-badge--blue   { background: #e7eefb; color: var(--coe-brand); }
+.coe-page .coe-log-badge--green  { background: var(--coe-success-soft); color: #067647; }
+.coe-page .coe-log-badge--amber  { background: var(--coe-warn-soft); color: var(--coe-warn-strong); }
+.coe-page .coe-log-badge--red    { background: var(--coe-danger-soft); color: var(--coe-danger); }
+.coe-page .coe-log-badge--teal   { background: #ccfbef; color: #0e9384; }
+.coe-page .coe-log-badge--purple { background: #f4ebff; color: #6941c6; }
+.coe-page .coe-log-badge--grey   { background: #f2f4f7; color: #475467; }
+
 /* Printing while a paper is on screen (viewer open, editor page) gives a blank page. */
 @media print {
     body.coe-paper-guarded { display: none !important; }

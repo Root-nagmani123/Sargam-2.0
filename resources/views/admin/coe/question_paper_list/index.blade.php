@@ -309,7 +309,7 @@ $(function () {
         var which = $btn.attr('data-coe-print');
         $btn.addClass('is-busy');
         CoePaperViewer.print({
-            url: url(which, $row),
+            url: url(which, $row) + '?print=1',              // logged as Printed, not Viewed
             title: rowLabel($row) + (which === 'translated' ? ' (Hindi)' : '')
         }).fail(function (message) {
             Swal.fire({ icon: 'error', title: 'Error', text: message });

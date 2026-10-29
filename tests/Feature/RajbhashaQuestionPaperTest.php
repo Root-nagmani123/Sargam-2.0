@@ -319,6 +319,18 @@ class RajbhashaQuestionPaperTest extends TestCase
             ->postJson(route('admin.coe.faculty-question-paper.freeze', $this->map->id), ['otp' => $otp])
             ->assertOk();
 
+        // Every step is in the log, by whom it was done; the refused ones are not.
+        $this->assertSame([
+            ['Rajbhasha', 'Translation', 'Created'],
+            ['Rajbhasha', 'Translation', 'Sent for Approval'],
+            ['Faculty', 'Exam Paper', 'Updated'],
+            ['Rajbhasha', 'Translation', 'Opened in Editor'],
+            ['Rajbhasha', 'Translation', 'Updated'],
+            ['Rajbhasha', 'Translation', 'Sent for Approval'],
+            ['Faculty', 'Exam Paper', 'Frozen'],
+        ], \App\Models\QuestionPaperLog::where('question_paper_id', $this->paper->id)->orderBy('id')->get()
+            ->map(fn ($l) => [$l->role, $l->module, $l->action])->all());
+
         // Published is final: no more edits.
         $this->actingAs($this->faculty)->get($create)
             ->assertRedirect(route('admin.coe.faculty-question-paper.index'))

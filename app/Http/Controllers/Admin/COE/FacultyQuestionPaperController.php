@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\COE;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\COE\FreezeQuestionPaperRequest;
 use App\Http\Requests\Admin\COE\UploadQuestionPaperRequest;
+use App\Services\COE\QuestionPaperLogger;
 use App\Services\COE\QuestionPaperService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -49,6 +50,7 @@ class FacultyQuestionPaperController extends Controller
 
     public function __construct(
         private QuestionPaperService $papers,
+        private QuestionPaperLogger $log,
     ) {
     }
 
@@ -100,6 +102,8 @@ class FacultyQuestionPaperController extends Controller
     public function upload(UploadQuestionPaperRequest $request, int $paper): JsonResponse
     {
         $qp = $this->papers->saveOriginalPaper($this->facultyPk(), $paper, $request->input('paper_html'));
+        $this->log->record(QuestionPaperLogger::ROLE_FACULTY, QuestionPaperLogger::MODULE_PAPER,
+            $qp->version > 1 ? QuestionPaperLogger::UPDATED : QuestionPaperLogger::CREATED, $qp, 'V'.$qp->version);
 
         return response()->json(['message' => $qp->version > 1
             ? 'Question paper updated (V'.$qp->version.') and sent to Rajbhasha for translation.'
@@ -117,7 +121,8 @@ class FacultyQuestionPaperController extends Controller
     /** Freeze, step 2: the right OTP publishes a translation the faculty has verified. */
     public function freeze(FreezeQuestionPaperRequest $request, int $paper): JsonResponse
     {
-        $this->papers->freeze($this->facultyPk(), $paper, $request->input('otp'));
+        $qp = $this->papers->freeze($this->facultyPk(), $paper, $request->input('otp'));
+        $this->log->record(QuestionPaperLogger::ROLE_FACULTY, QuestionPaperLogger::MODULE_PAPER, QuestionPaperLogger::FROZEN, $qp, 'V'.$qp->version);
 
         return response()->json(['message' => 'Question paper verified and published.']);
     }
@@ -126,16 +131,20 @@ class FacultyQuestionPaperController extends Controller
     public function original(Request $request, int $paper): JsonResponse
     {
         $qp = $this->papers->originalPaperFor($this->facultyPk(), $paper);
+        $response = $this->paperViewer($request, $qp->original_file_path, $qp->original_file_name);
+        $this->log->record(QuestionPaperLogger::ROLE_FACULTY, QuestionPaperLogger::MODULE_PAPER, QuestionPaperLogger::VIEWED, $qp, 'V'.$qp->version);
 
-        return $this->paperViewer($request, $qp->original_file_path, $qp->original_file_name);
+        return $response;
     }
 
     /** See Attachment / View Translated Paper, once Rajbhasha has sent it. */
     public function translated(Request $request, int $paper): JsonResponse
     {
         $qp = $this->papers->translatedPaperFor($this->facultyPk(), $paper);
+        $response = $this->paperViewer($request, $qp->translated_file_path, $qp->translated_file_name);
+        $this->log->record(QuestionPaperLogger::ROLE_FACULTY, QuestionPaperLogger::MODULE_TRANSLATION, QuestionPaperLogger::VIEWED, $qp);
 
-        return $this->paperViewer($request, $qp->translated_file_path, $qp->translated_file_name);
+        return $response;
     }
 
     /** The logged-in faculty, or 404: no one else has papers here. */

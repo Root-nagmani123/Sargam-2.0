@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\COE;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\COE\UploadTranslationRequest;
+use App\Services\COE\QuestionPaperLogger;
 use App\Services\COE\RajbhashaPaperService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -37,8 +38,10 @@ class MyQuestionPaperController extends Controller
         self::STATUS_PUBLISHED => 'Published',
     ];
 
-    public function __construct(private RajbhashaPaperService $papers)
-    {
+    public function __construct(
+        private RajbhashaPaperService $papers,
+        private QuestionPaperLogger $log,
+    ) {
     }
 
     public function index()
@@ -57,8 +60,10 @@ class MyQuestionPaperController extends Controller
     public function original(Request $request, int $paper): JsonResponse
     {
         $qp = $this->papers->find($paper);
+        $response = $this->paperViewer($request, $qp->original_file_path, $qp->original_file_name);
+        $this->log->record(QuestionPaperLogger::ROLE_RAJBHASHA, QuestionPaperLogger::MODULE_PAPER, QuestionPaperLogger::VIEWED, $qp, 'V'.$qp->version);
 
-        return $this->paperViewer($request, $qp->original_file_path, $qp->original_file_name);
+        return $response;
     }
 
     /** View Translated Paper / See Attachment (translated) — read-only viewer. */
@@ -66,8 +71,10 @@ class MyQuestionPaperController extends Controller
     {
         $qp = $this->papers->find($paper);
         abort_unless($qp->translated_file_path, 404);
+        $response = $this->paperViewer($request, $qp->translated_file_path, $qp->translated_file_name);
+        $this->log->record(QuestionPaperLogger::ROLE_RAJBHASHA, QuestionPaperLogger::MODULE_TRANSLATION, QuestionPaperLogger::VIEWED, $qp);
 
-        return $this->paperViewer($request, $qp->translated_file_path, $qp->translated_file_name);
+        return $response;
     }
 
     /**
@@ -82,6 +89,9 @@ class MyQuestionPaperController extends Controller
             return redirect()->route('admin.coe.my-question-paper.index')
                 ->with('error', 'This translation has already been sent for approval, so it can no longer be changed.');
         }
+
+        // The page holds the paper (or the translation so far): logged like a view.
+        $this->log->record(QuestionPaperLogger::ROLE_RAJBHASHA, QuestionPaperLogger::MODULE_TRANSLATION, QuestionPaperLogger::OPENED, $qp, 'V'.$qp->version);
 
         return view('admin.coe.question_paper_editor', [
             'pageTitle' => 'Translate Question Paper',
@@ -100,7 +110,9 @@ class MyQuestionPaperController extends Controller
     public function storeTranslation(UploadTranslationRequest $request, int $paper): JsonResponse
     {
         $wasTranslated = $this->papers->find($paper)->translated_file_path !== null;
-        $this->papers->saveTranslation($paper, $request->input('paper_html'));
+        $qp = $this->papers->saveTranslation($paper, $request->input('paper_html'));
+        $this->log->record(QuestionPaperLogger::ROLE_RAJBHASHA, QuestionPaperLogger::MODULE_TRANSLATION,
+            $wasTranslated ? QuestionPaperLogger::UPDATED : QuestionPaperLogger::CREATED, $qp, 'of V'.$qp->version);
 
         return response()->json(['message' => $wasTranslated
             ? 'Translated question paper updated.'
@@ -111,6 +123,7 @@ class MyQuestionPaperController extends Controller
     public function destroyTranslation(int $paper): JsonResponse
     {
         $this->papers->deleteTranslation($paper);
+        $this->log->record(QuestionPaperLogger::ROLE_RAJBHASHA, QuestionPaperLogger::MODULE_TRANSLATION, QuestionPaperLogger::DELETED, $paper);
 
         return response()->json(['message' => 'Translated question paper deleted.']);
     }
@@ -118,7 +131,8 @@ class MyQuestionPaperController extends Controller
     /** Send for Approval → back to the faculty to verify. */
     public function sendForApproval(int $paper): JsonResponse
     {
-        $this->papers->sendForApproval($paper);
+        $qp = $this->papers->sendForApproval($paper);
+        $this->log->record(QuestionPaperLogger::ROLE_RAJBHASHA, QuestionPaperLogger::MODULE_TRANSLATION, QuestionPaperLogger::SENT, $qp, 'of V'.$qp->version);
 
         return response()->json(['message' => 'Translated question paper sent for approval.']);
     }
