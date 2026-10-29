@@ -203,6 +203,19 @@ return [
         ],
     ],
 
+    // COE Examination Drive: faculty mapped to a subject opens their Map Faculty setup page.
+    'exam_drive' => [
+        'ExaminationDrive' => [
+            'route' => 'admin.coe.faculty-examination-drive.setup',
+            'params' => ['id' => 'reference_pk'],
+        ],
+        // Course Coordinator: a drive sent for approval opens their CC list.
+        'ExaminationDriveCc' => [
+            'route' => 'admin.coe.cc-examination-drive.index',
+            'params' => [],
+        ],
+    ],
+
     // Default fallback route
     'default' => [
         'route' => 'admin.dashboard',

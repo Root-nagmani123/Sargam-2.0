@@ -7,7 +7,6 @@
 <link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
 <link rel="stylesheet" href="{{ asset('css/coe-admin.css') }}?v={{ @filemtime(public_path('css/coe-admin.css')) ?: time() }}">
 <style>
-.edc-status-pending-faculty { background:#fff3cd;color:#856404; }
 /* Complete Setup action link */
 .edc-setup-link { display:inline-flex;flex-direction:column;align-items:center;gap:3px;
                   text-decoration:none;color:#004384;font-size:11px;font-weight:600; }

@@ -2123,6 +2123,14 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->whereNumber('id')->name('examination-drive.coordinates');
     Route::get('faculty-examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'facultyIndex'])
         ->name('faculty-examination-drive.index');
+    Route::get('coe-examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'coeIndex'])
+        ->name('coe-examination-drive.index');
+    Route::get('cc-examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'ccIndex'])
+        ->name('cc-examination-drive.index');
+    Route::put('cc-examination-drive/{id}/approve', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'ccApprove'])
+        ->whereNumber('id')->name('cc-examination-drive.approve');
+    Route::put('cc-examination-drive/{id}/reject', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'ccReject'])
+        ->whereNumber('id')->name('cc-examination-drive.reject');
     Route::get('faculty-examination-drive/{id}/setup', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'facultySetup'])
         ->whereNumber('id')->name('faculty-examination-drive.setup');
     // COE -> Laptop Management

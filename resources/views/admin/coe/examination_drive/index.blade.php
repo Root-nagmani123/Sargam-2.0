@@ -8,10 +8,6 @@
 <link rel="stylesheet"
       href="{{ asset('css/coe-admin.css') }}?v={{ @filemtime(public_path('css/coe-admin.css')) ?: time() }}">
 <style>
-.edc-status-pending { background:#fff3cd;color:#856404; }
-.edc-status-active  { background:#d1f0e0;color:#0d6832; }
-.edc-status-closed  { background:#f8d7da;color:#842029; }
-.edc-status-draft   { background:#e2e8f0;color:#475569; }
 /* Subject/Faculty mapping table in modal */
 .edc-map-table       { width:100%;border-collapse:collapse; }
 .edc-map-table th    { padding:8px 10px;background:var(--ds-surface-2);font-size:12px;
@@ -531,10 +527,11 @@ $(function () {
             method: isEdit ? 'PUT' : 'POST',
             headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
             data: payload
-        }).done(function () {
+        }).done(function (res) {
             bootstrap.Modal.getOrCreateInstance($modal[0]).hide();
             dt.ajax.reload(null, false);
-            Swal.fire({ icon: 'success', title: isEdit ? 'Updated' : 'Created', text: isEdit ? 'Drive updated.' : 'Examination drive created.' });
+            // The message says how many faculty were notified.
+            Swal.fire({ icon: 'success', title: isEdit ? 'Updated' : 'Created', text: (res && res.message) || (isEdit ? 'Drive updated.' : 'Examination drive created.') });
         }).fail(function (xhr) {
             var msg = (xhr.responseJSON && xhr.responseJSON.message) || ('Could not ' + (isEdit ? 'update' : 'create') + ' the examination drive.');
             Swal.fire({ icon: 'error', title: 'Error', text: msg });

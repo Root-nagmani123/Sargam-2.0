@@ -63,6 +63,8 @@
 .fedc-total-row td  { background:#e5ecfb;padding:14px 8px;font-size:15px;color:var(--ds-ink); }
 .fedc-total-row td:first-child { border-radius:0 0 0 10px; }
 .fedc-total-row td:last-child  { border-radius:0 0 10px 0; }
+.fedc-total-row .is-over { color:#e5141a;font-weight:600; }
+.fedc-map-table .fedc-pass-marks[readonly] { background:var(--ds-surface-2); }
 .fedc-footer        { display:flex;justify-content:flex-end;gap:16px;margin-top:28px; }
 .fedc-footer .btn   { min-width:116px;height:48px;font-size:17px; }
 /* Assign Faculty modal tabs */
@@ -96,6 +98,13 @@
 @endpush
 
 @section('setup_content')
+@php
+    // Passing marks come from Service Passing Marks; total max marks is capped by
+    // Subject Max Marks on a single-subject drive (ExaminationDriveController::marksLimits).
+    $passFixed = $limits['passing_marks'];
+    $missingMaster = $passFixed === null || $limits['subject_max'] === null;
+    $num = fn ($v) => $v === null ? '' : rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
+@endphp
 <div class="container-fluid coe-page">
 
     <x-breadcrum title="Map Faculty to Examination Drive" :showBack="true"
@@ -131,13 +140,37 @@
         </div>
         <div class="fedc-info-item">
             <span class="fedc-info-label">Subject</span>
-            <span class="fedc-info-value">{{ implode(', ', $drive['subjects']) ?: '—' }}</span>
+            <span class="fedc-info-value">{{ $subjectTabs[$subjectPk] ?? '—' }}</span>
         </div>
         <div class="fedc-info-item">
             <span class="fedc-info-label">Service</span>
             <span class="fedc-info-value" title="{{ $drive['service_name'] }}">{{ $drive['service'] }}</span>
         </div>
     </div>
+
+    @if ($passFixed === null)
+        <div class="alert alert-warning">
+            @if ($limits['service_name'])
+                Passing marks for <strong>{{ $limits['service_name'] }}</strong> are not set. Ask the COE admin to add them in Master Data › Service Passing Marks.
+            @else
+                This drive has no Service yet. Ask the COE admin to set it in Edit Examination Drive.
+            @endif
+        </div>
+    @endif
+    @if ($limits['subject_max'] === null)
+        <div class="alert alert-warning">Max marks for <strong>{{ $limits['subject_name'] }}</strong> are not set. Ask the COE admin to add them in Master Data › Subject Max Marks.</div>
+    @endif
+
+    {{-- One subject per page: a faculty sees only their own; an admin can switch. --}}
+    @if (count($subjectTabs) > 1)
+        <div class="d-flex flex-wrap gap-2 mb-3" role="tablist" aria-label="Subjects">
+            @foreach ($subjectTabs as $pk => $name)
+                <a href="{{ route('admin.coe.faculty-examination-drive.setup', ['id' => $drive['id'], 'subject' => $pk]) }}"
+                   class="btn {{ $pk === $subjectPk ? 'btn-primary' : 'btn-outline-primary' }}" role="tab"
+                   aria-selected="{{ $pk === $subjectPk ? 'true' : 'false' }}">{{ $name }}</a>
+            @endforeach
+        </div>
+    @endif
 
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
@@ -172,8 +205,8 @@
                                        min="0" max="1000" step="0.01" value="{{ $row['max_marks'] }}">
                             </td>
                             <td>
-                                <input type="number" class="form-control fedc-pass-marks"
-                                       min="0" max="1000" step="0.01" value="{{ $row['passing_marks'] }}">
+                                <input type="number" class="form-control fedc-pass-marks" readonly
+                                       title="From Service Passing Marks" value="{{ $passFixed === null ? $row['passing_marks'] : $num($passFixed) }}">
                             </td>
                             <td>
                                 <select class="form-select fedc-source">
@@ -242,8 +275,10 @@
                     </tbody>
                     <tfoot>
                         <tr class="fedc-total-row">
-                            <td colspan="5" class="text-end pe-4">Total Weightage:</td>
-                            <td id="fedcTotalWeightage" class="ps-3">{{ array_sum(array_column($drive['component_rows'], 'weightage')) }}</td>
+                            <td class="text-end pe-2">Total Max Marks:</td>
+                            <td class="ps-2"><span id="fedcTotalMax">{{ $num(array_sum(array_column($drive['component_rows'], 'max_marks'))) }}</span>@if ($limits['subject_max'] !== null) / {{ $num($limits['subject_max']) }}@endif</td>
+                            <td colspan="3" class="text-end pe-4">Total Weightage:</td>
+                            <td class="ps-3"><span id="fedcTotalWeightage">{{ $num(array_sum(array_column($drive['component_rows'], 'weightage'))) }}</span> / 100</td>
                             <td colspan="4"></td>
                         </tr>
                     </tfoot>
@@ -253,7 +288,7 @@
             <div class="fedc-footer">
                 <a href="{{ route('admin.coe.faculty-examination-drive.index') }}"
                    class="btn coe-btn coe-btn-cancel">Cancel</a>
-                <button type="button" class="btn coe-btn coe-btn-primary" id="fedcSaveBtn">Save</button>
+                <button type="button" class="btn coe-btn coe-btn-primary" id="fedcSaveBtn" @disabled($missingMaster)>Save</button>
             </div>
         </div>
     </div>
@@ -413,14 +448,24 @@ $(function () {
     var FACULTY    = @json($faculty);
     var EXAM_MODES = @json($examModes);
     var EXAM_TYPES = @json($componentExamTypes);
+    // null = no limit / not set; see the warnings above the table.
+    var SUBJECT_MAX  = @json($limits['subject_max']);
+    var PASS_FIXED   = @json($passFixed);
+    var SUBJECT_PK   = @json($subjectPk);
 
     /* ── Total Weightage live update ──────────────────────────────────── */
-    function recalcTotal() {
+    function sum(sel) {
         var total = 0;
-        $('#fedcMapBody .fedc-weightage').each(function () { total += parseFloat($(this).val()) || 0; });
-        $('#fedcTotalWeightage').text(total % 1 === 0 ? total : total.toFixed(2));
+        $('#fedcMapBody ' + sel).each(function () { total += parseFloat($(this).val()) || 0; });
+        return Math.round(total * 100) / 100;
     }
-    $('#fedcMapBody').on('input', '.fedc-weightage', recalcTotal);
+    function recalcTotal() {
+        var weight = sum('.fedc-weightage'), max = sum('.fedc-max-marks');
+        $('#fedcTotalWeightage').text(weight).toggleClass('is-over', weight > 100);
+        $('#fedcTotalMax').text(max).toggleClass('is-over', SUBJECT_MAX !== null && max > SUBJECT_MAX);
+    }
+    $('#fedcMapBody').on('input', '.fedc-weightage, .fedc-max-marks', recalcTotal);
+    recalcTotal();
 
     /* ── Build a new component row ────────────────────────────────────── */
     function componentOptions(sel) {
@@ -466,8 +511,8 @@ $(function () {
     function buildRow() {
         return '<tr class="fedc-map-row">' +
             '<td><select class="form-select fedc-sel-component"><option value="">Component</option>' + componentOptions('') + '</select></td>' +
-            '<td><input type="number" class="form-control fedc-max-marks" min="0" max="1000" step="0.01" value="100"></td>' +
-            '<td><input type="number" class="form-control fedc-pass-marks" min="0" max="1000" step="0.01" value="40"></td>' +
+            '<td><input type="number" class="form-control fedc-max-marks" min="0" step="0.01" value=""></td>' +
+            '<td><input type="number" class="form-control fedc-pass-marks" readonly title="From Service Passing Marks" value="' + (PASS_FIXED === null ? '' : PASS_FIXED) + '"></td>' +
             '<td><select class="form-select fedc-source">' + sourceOptions(SOURCES[0]) + '</select></td>' +
             '<td><button type="button" class="fedc-fac-open-btn" data-faculty="" data-sub="[]" data-codes="{}">' +
             '<span class="fedc-fac-text"><span class="fedc-fac-placeholder">Click to add Faculty &amp; Sub coordinates.</span></span></button></td>' +
@@ -516,6 +561,17 @@ $(function () {
 
     /* ── Save ─────────────────────────────────────────────────────────── */
     $('#fedcSaveBtn').on('click', function () {
+        // Same limits the server enforces, checked first for a quicker message.
+        var weight = sum('.fedc-weightage'), max = sum('.fedc-max-marks');
+        if (weight > 100) {
+            Swal.fire({ icon: 'warning', title: 'Weightage over 100%', text: 'Total weightage is ' + weight + '%. It cannot exceed 100%.' });
+            return;
+        }
+        if (SUBJECT_MAX !== null && max > SUBJECT_MAX) {
+            Swal.fire({ icon: 'warning', title: 'Max marks over the limit', text: 'Total max marks is ' + max + '. It cannot exceed ' + SUBJECT_MAX + ' for this subject.' });
+            return;
+        }
+
         var rows = [];
         $('#fedcMapBody .fedc-map-row').each(function () {
             var $r = $(this);
@@ -540,7 +596,7 @@ $(function () {
             url: '{{ url("admin/coe/examination-drive") }}/{{ (int) $drive["id"] }}/components',
             method: 'PUT',
             headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-            data: { rows: rows }
+            data: { subject_master_pk: SUBJECT_PK, rows: rows }
         }).done(function () {
             Swal.fire({ icon: 'success', title: 'Saved', text: 'Faculty mapping saved.' });
         }).fail(function (xhr) {
@@ -663,7 +719,7 @@ $(function () {
             url: '{{ url("admin/coe/examination-drive") }}/{{ (int) $drive["id"] }}/components/assign-faculty',
             method: 'PUT',
             headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-            data: { component: component, faculty: names[0] || '', sub_faculty: names.slice(1),
+            data: { subject_master_pk: SUBJECT_PK, component: component, faculty: names[0] || '', sub_faculty: names.slice(1),
                     codes: $.isEmptyObject($btn.data('codes') || {}) ? '' : $btn.data('codes') }
         }).done(function () {
             if (announce) {

@@ -39,7 +39,7 @@ class ExaminationDriveFacultyDataTable extends ExaminationDriveDataTable
             ->addColumn('components', fn ($row) => $this->plainCountCell($row->component_maps_count))
             ->editColumn('start_date', fn ($row) => optional($row->start_date)->format('d-m-Y'))
             ->editColumn('end_date', fn ($row) => optional($row->end_date)->format('d-m-Y'))
-            ->addColumn('status', fn () => '<span class="coe-state edc-status-pending">Pending at Faculty</span>')
+            ->addColumn('status', fn ($row) => $this->statusCell($row))
             ->addColumn('actions', fn ($row) => $this->actionsCell($row))
             ->setRowAttr(['data-coe-id' => fn ($row) => $row->id])
             ->filterColumn('course', fn ($q, $kw) => $q->whereHas('course', fn ($qq) => $qq->where('course_name', 'REGEXP', $kw)))

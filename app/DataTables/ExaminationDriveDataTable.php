@@ -154,16 +154,14 @@ class ExaminationDriveDataTable extends DataTable
         return '<a href="' . route('admin.coe.examination-drive.coordinates', $row->id) . '" class="text-primary fw-semibold">' . $count . '</a>';
     }
 
+    /** The drive's workflow status (ExaminationDrive::progress()), the same on every drive list. */
     protected function statusCell(ExaminationDrive $row): string
     {
-        $label = $row->statusLabel();
-        $class = match ($row->status) {
-            ExaminationDrive::STATUS_ACTIVE => 'edc-status-active',
-            ExaminationDrive::STATUS_CLOSED => 'edc-status-closed',
-            default => 'edc-status-draft',
-        };
+        [$label, $class] = $row->progress();
+        $title = $row->cc_status === ExaminationDrive::CC_REJECTED && filled($row->cc_remarks)
+            ? ' title="' . e('Reason: ' . $row->cc_remarks) . '"' : '';
 
-        return '<span class="coe-state ' . $class . '">' . $label . '</span>';
+        return '<span class="coe-state ' . $class . '"' . $title . '>' . e($label) . '</span>';
     }
 
     protected function actionsCell(ExaminationDrive $row): string

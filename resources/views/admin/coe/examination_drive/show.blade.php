@@ -94,13 +94,24 @@
         </div>
         <div class="edc-info-item">
             <span class="edc-info-label">Subject</span>
-            <span class="edc-info-value">{{ implode(', ', $drive['subjects']) ?: '—' }}</span>
+            <span class="edc-info-value">{{ $subjectTabs[$subjectPk] ?? '—' }}</span>
         </div>
         <div class="edc-info-item">
             <span class="edc-info-label">Status</span>
             <span class="edc-info-value">{{ $drive['status'] }}</span>
         </div>
     </div>
+
+    {{-- One subject per page; switch subjects here. --}}
+    @if (count($subjectTabs) > 1)
+        <div class="d-flex flex-wrap gap-2 mb-3" role="tablist" aria-label="Subjects">
+            @foreach ($subjectTabs as $pk => $name)
+                <a href="{{ route('admin.coe.examination-drive.show', ['id' => $drive['id'], 'subject' => $pk]) }}"
+                   class="btn {{ $pk === $subjectPk ? 'btn-primary' : 'btn-outline-primary' }}" role="tab"
+                   aria-selected="{{ $pk === $subjectPk ? 'true' : 'false' }}">{{ $name }}</a>
+            @endforeach
+        </div>
+    @endif
 
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
@@ -196,6 +207,7 @@ $(function () {
     var FACULTY    = @json($faculty);
     var EXAM_MODES = @json($examModes);
     var SYSTEM_SOURCES = @json($systemSources);
+    var SUBJECT_PK = @json($subjectPk);
 
     var $body = $('#edcCompBody');
 
@@ -285,7 +297,7 @@ $(function () {
             url: '{{ url("admin/coe/examination-drive") }}/{{ (int) $drive["id"] }}/components',
             method: 'PUT',
             headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-            data: { rows: collectRows() }
+            data: { subject_master_pk: SUBJECT_PK, rows: collectRows() }
         }).done(function () {
             Swal.fire({ icon: 'success', title: 'Saved', text: 'Component mapping saved.' });
         }).fail(function (xhr) {

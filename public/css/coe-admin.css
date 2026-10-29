@@ -142,6 +142,13 @@
 .coe-page .coe-state--translated,
 .coe-page .coe-state--draft      { background: #e7eefb; border-color: #c7d7fe; color: var(--coe-brand); }
 
+/* Examination drive workflow status (ExaminationDrive::progress()), shared by
+   the admin, faculty, COE and CC drive lists. */
+.coe-page .edc-status-pending { background: #fff3cd; border-color: #ffe69c; color: #856404; }
+.coe-page .edc-status-active  { background: #d1f0e0; border-color: #abefc6; color: #0d6832; }
+.coe-page .edc-status-closed  { background: #f8d7da; border-color: #f1aeb5; color: #842029; }
+.coe-page .edc-status-draft   { background: #e2e8f0; border-color: #cbd5e1; color: #475569; }
+
 /* Free-text reviewer comments: wrap, and cap the width so one long note
    can't push Action off the row. */
 .coe-page .programme-dt-table td.coe-col-comment {

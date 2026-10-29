@@ -25,6 +25,17 @@ class ExaminationDrive extends Model
     public const STATUS_ACTIVE = 1;
     public const STATUS_CLOSED = 2;
 
+    // Course Coordinator approval (cc_status); null = not sent to the CC yet.
+    public const CC_PENDING = 'pending';
+    public const CC_APPROVED = 'approved';
+    public const CC_REJECTED = 'rejected';
+
+    public const CC_STATUSES = [
+        self::CC_PENDING => 'Pending at CC',
+        self::CC_APPROVED => 'Approved by CC',
+        self::CC_REJECTED => 'Rejected by CC',
+    ];
+
     public const STATUSES = [
         self::STATUS_DRAFT => 'Draft',
         self::STATUS_ACTIVE => 'Active',
@@ -35,6 +46,9 @@ class ExaminationDrive extends Model
         'status' => 'integer',
         'start_date' => 'date',
         'end_date' => 'date',
+        'proposed_start_date' => 'date',
+        'proposed_end_date' => 'date',
+        'cc_action_at' => 'datetime',
     ];
 
     public function examinationType(): BelongsTo
@@ -96,6 +110,30 @@ class ExaminationDrive extends Model
             ->unique()
             ->values()
             ->all();
+    }
+
+    public function ccStatusLabel(): string
+    {
+        return self::CC_STATUSES[$this->cc_status] ?? 'Not sent to CC';
+    }
+
+    /**
+     * Where the drive is in its workflow, shown on every drive list (admin,
+     * faculty, COE, CC) and the Map Faculty header: Draft / Closed first, then
+     * the CC decision, else waiting for faculty setup.
+     *
+     * @return array{0: string, 1: string} [label, badge class]
+     */
+    public function progress(): array
+    {
+        return match (true) {
+            $this->status === self::STATUS_DRAFT => ['Draft', 'edc-status-draft'],
+            $this->status === self::STATUS_CLOSED => ['Closed', 'edc-status-closed'],
+            $this->cc_status === self::CC_APPROVED => [self::CC_STATUSES[self::CC_APPROVED], 'edc-status-active'],
+            $this->cc_status === self::CC_REJECTED => [self::CC_STATUSES[self::CC_REJECTED], 'edc-status-closed'],
+            $this->cc_status === self::CC_PENDING => [self::CC_STATUSES[self::CC_PENDING], 'edc-status-pending'],
+            default => ['Pending at Faculty', 'edc-status-pending'],
+        };
     }
 
     public function statusLabel(): string
