@@ -2,6 +2,7 @@
 
 namespace App\Services\COE;
 
+use App\Models\ExaminationDrive;
 use App\Models\ExaminationDriveFacultyMap;
 use App\Models\FacultyMaster;
 use App\Models\QuestionPaper;
@@ -37,8 +38,12 @@ class QuestionPaperService
         QuestionPaper::STATUS_PUBLISHED => 'published',
     ];
 
+    /** Not added yet, and the drive still waits on the Course Coordinator's approval. */
+    public const STATUS_PENDING_CC = 'pending-cc';
+
     /** Badge key → label, in the faculty view's order (also the Status filter). */
     public const FACULTY_STATUS_LABELS = [
+        self::STATUS_PENDING_CC => 'Pending CC Approval',
         'pending-faculty' => 'Pending at Faculty',
         'pending-rajbhasha' => 'Pending at Rajbhasha',
         'translated' => 'Pending Verification',
@@ -68,6 +73,8 @@ class QuestionPaperService
 
     private const PUBLISHED_MESSAGE = 'This question paper is published, so it can no longer be changed.';
 
+    private const DRIVE_NOT_APPROVED_MESSAGE = 'The Course Coordinator has not approved this examination drive yet. You can upload the question paper once it is approved.';
+
     public function __construct(
         private PaperHtmlSanitizer $sanitizer,
         private FreezeOtpService $otp,
@@ -95,7 +102,7 @@ class QuestionPaperService
      * @return Collection<int, array{id:int, code:string, name:string, drive:string, examination:string,
      *     course:string, course_short:string, term:string, batch:string, max_marks:string, duration:string, exam_date:Carbon,
      *     original_file:?string, translated_file:?string, translated_by:?string, comments:?string,
-     *     version:int, status:string, editable:bool}>
+     *     version:int, status:string, drive_approved:bool, editable:bool}>
      */
     public function papersForFaculty(int $facultyPk): Collection
     {
@@ -177,7 +184,7 @@ class QuestionPaperService
             throw (new ModelNotFoundException())->setModel(ExaminationDriveFacultyMap::class, [$paperId]);
         }
         if (! $row['editable']) {
-            throw ValidationException::withMessages(['paper' => $this->lockedMessage($row['status'])]);
+            throw ValidationException::withMessages(['paper' => $this->lockedMessage($row)]);
         }
 
         $clean = $this->sanitizer->clean($html);
@@ -191,10 +198,14 @@ class QuestionPaperService
             : $this->addNextVersion($facultyPk, $paperId, $contents);
     }
 
-    /** Why a paper cannot be edited now, by its faculty view status. */
-    public function lockedMessage(string $viewStatus): string
+    /** Why a paper cannot be added or edited now, for one of papersForFaculty()'s rows. */
+    public function lockedMessage(array $row): string
     {
-        return $viewStatus === 'published' ? self::PUBLISHED_MESSAGE : self::LOCKED_MESSAGE;
+        if (! $row['drive_approved']) {
+            return self::DRIVE_NOT_APPROVED_MESSAGE;
+        }
+
+        return $row['status'] === 'published' ? self::PUBLISHED_MESSAGE : self::LOCKED_MESSAGE;
     }
 
     /**
@@ -204,7 +215,7 @@ class QuestionPaperService
     public function editorHtmlFor(int $facultyPk, int $paperId): ?string
     {
         $row = $this->findForFaculty($facultyPk, $paperId);
-        if ($row === null || $row['status'] === QuestionPaper::STATUS_PENDING_FACULTY) {
+        if ($row === null || in_array($row['status'], [QuestionPaper::STATUS_PENDING_FACULTY, self::STATUS_PENDING_CC], true)) {
             return null;
         }
 
@@ -401,6 +412,7 @@ class QuestionPaperService
     {
         $drive = $map->drive;
         $showsTranslation = $this->showsTranslation($paper);
+        $driveApproved = $drive?->cc_status === ExaminationDrive::CC_APPROVED;
 
         return [
             'id' => $map->id,
@@ -423,9 +435,15 @@ class QuestionPaperService
                 : null,
             'comments' => $paper?->comments,
             'version' => $paper->version ?? 1,
-            'status' => $paper ? (self::FACULTY_VIEW[$paper->status] ?? $paper->status) : QuestionPaper::STATUS_PENDING_FACULTY,
+            'status' => match (true) {
+                $paper !== null => self::FACULTY_VIEW[$paper->status] ?? $paper->status,
+                $driveApproved => QuestionPaper::STATUS_PENDING_FACULTY,
+                default => self::STATUS_PENDING_CC,
+            },
+            // Nothing is uploaded on a drive the Course Coordinator has not approved.
+            'drive_approved' => $driveApproved,
             // Add; Edit while it waits on Rajbhasha or on the faculty's verification.
-            'editable' => $paper === null || in_array($paper->status, self::EDITABLE, true),
+            'editable' => $driveApproved && ($paper === null || in_array($paper->status, self::EDITABLE, true)),
         ];
     }
 

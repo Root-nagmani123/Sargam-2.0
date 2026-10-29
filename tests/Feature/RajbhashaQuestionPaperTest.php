@@ -82,6 +82,7 @@ class RajbhashaQuestionPaperTest extends TestCase
             'status' => 1,
             'start_date' => '2026-12-01',
             'end_date' => '2026-12-05',
+            'cc_status' => ExaminationDrive::CC_APPROVED,   // papers are only uploaded on an approved drive
             'created_date' => now(),
         ]);
 

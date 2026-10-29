@@ -139,6 +139,7 @@
 .coe-page .coe-state--pending,
 .coe-page .coe-state--pending-faculty,
 .coe-page .coe-state--pending-rajbhasha { background: #fef7c3; border-color: #fde68a; color: #b54708; }
+.coe-page .coe-state--pending-cc { background: #e2e8f0; border-color: #cbd5e1; color: #475569; }
 .coe-page .coe-state--translated,
 .coe-page .coe-state--draft      { background: #e7eefb; border-color: #c7d7fe; color: var(--coe-brand); }
 

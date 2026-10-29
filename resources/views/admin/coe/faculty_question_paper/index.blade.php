@@ -115,7 +115,7 @@
                             @foreach ($papers as $paper)
                                 @php
                                     // Exam day reached and the paper is still with the faculty.
-                                    $isOverdue = $paper['status'] === 'pending-faculty'
+                                    $isOverdue = in_array($paper['status'], ['pending-cc', 'pending-faculty'], true)
                                         && $paper['exam_date']->isPast();
                                 @endphp
                                 <tr data-coe-id="{{ $paper['id'] }}"
@@ -125,7 +125,8 @@
                                     data-coe-version="{{ $paper['version'] }}"
                                     data-coe-original="{{ $paper['original_file'] ? '1' : '0' }}"
                                     data-coe-translated="{{ $paper['translated_file'] ? '1' : '0' }}"
-                                    data-coe-create-url="{{ $paper['editable'] ? route('admin.coe.faculty-question-paper.create', $paper['id']) : '' }}">
+                                    data-coe-create-url="{{ $paper['editable'] ? route('admin.coe.faculty-question-paper.create', $paper['id']) : '' }}"
+                                    data-coe-drive-approved="{{ $paper['drive_approved'] ? '1' : '0' }}">
                                     <td class="coe-col-check">
                                         <input type="checkbox" class="form-check-input m-0 qpf-row-check"
                                                aria-label="Select {{ $paper['name'] }}">
@@ -226,6 +227,10 @@ $(function () {
     }
 
     var ACTIONS = {
+        // Drive not approved by the Course Coordinator yet: shown greyed (see paintActions).
+        'pending-cc': [
+            ['coe-act--create coe-act--wide', 'bi-plus-lg', 'Create Original Paper', 'create']
+        ],
         // Opens the Add Question Paper page (written from a template).
         'pending-faculty': [
             ['coe-act--create coe-act--wide', 'bi-plus-lg', 'Create Original Paper', 'create']
@@ -250,14 +255,26 @@ $(function () {
         ]
     };
 
+    // Drive not approved by the Course Coordinator yet: Add / Edit is shown, but greyed and inert.
+    var WAIT_FOR_CC = 'Available once the Course Coordinator approves the examination drive';
+
+    function waitingAct(icon, label) {
+        return $('<span class="coe-act is-disabled" aria-disabled="true"></span>').attr('title', WAIT_FOR_CC).append(
+            '<span class="coe-act__icon"><i class="bi ' + icon + '" aria-hidden="true"></i></span>',
+            $('<span class="coe-act__label"></span>').text(label)
+        ).prop('outerHTML');
+    }
+
     function paintActions($row) {
+        var waitsForCc = $row.attr('data-coe-drive-approved') !== '1';
         var list = (ACTIONS[$row.attr('data-coe-state')] || []).filter(function (a) {
-            if (a[3] === 'create') { return !!$row.attr('data-coe-create-url'); }   // locked: no Add / Edit
+            if (a[3] === 'create') { return waitsForCc || !!$row.attr('data-coe-create-url'); }   // locked: no Add / Edit
             return !a[4] || $row.attr('data-coe-' + a[4]) === '1';
         });
         $row.find('.coe-cell-actions').html(
             '<div class="coe-act-group" role="group" aria-label="Row actions">' +
             list.map(function (a) {
+                if (a[3] === 'create' && waitsForCc) { return waitingAct(a[1], a[2]); }
                 var href = a[3] === 'create' ? $row.attr('data-coe-create-url') : a[3];
                 return act(a[0], a[1], a[2], href, a[4]);
             }).join('') + '</div>'

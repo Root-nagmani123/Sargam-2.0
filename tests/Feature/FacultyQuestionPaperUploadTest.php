@@ -60,6 +60,7 @@ class FacultyQuestionPaperUploadTest extends TestCase
             'status' => 1,
             'start_date' => '2026-12-01',
             'end_date' => '2026-12-05',
+            'cc_status' => ExaminationDrive::CC_APPROVED,   // papers are only uploaded on an approved drive
             'created_date' => now(),
         ]);
 
@@ -81,7 +82,33 @@ class FacultyQuestionPaperUploadTest extends TestCase
             ->get(route('admin.coe.faculty-question-paper.index'))
             ->assertOk()
             ->assertSee($this->code())
-            ->assertSee('Test Question Paper Drive');
+            ->assertSee('Test Question Paper Drive')
+            ->assertSee('coe-state--pending-faculty">Pending at Faculty', false);
+    }
+
+    public function test_nothing_is_uploaded_until_the_course_coordinator_approves_the_drive(): void
+    {
+        foreach ([null, ExaminationDrive::CC_PENDING, ExaminationDrive::CC_REJECTED] as $ccStatus) {
+            $this->map->drive->update(['cc_status' => $ccStatus]);
+
+            $this->actingAs($this->faculty)
+                ->get(route('admin.coe.faculty-question-paper.index'))
+                ->assertOk()
+                ->assertSee('data-coe-drive-approved="0"', false)
+                ->assertSee('coe-state--pending-cc">Pending CC Approval', false)
+                ->assertDontSee(route('admin.coe.faculty-question-paper.create', $this->map->id), false);
+
+            $this->actingAs($this->faculty)
+                ->get(route('admin.coe.faculty-question-paper.create', $this->map->id))
+                ->assertRedirect(route('admin.coe.faculty-question-paper.index'))
+                ->assertSessionHas('error', fn ($m) => str_contains($m, 'Course Coordinator has not approved'));
+
+            $this->write()
+                ->assertStatus(422)
+                ->assertJsonValidationErrors('paper');
+            $this->assertNull($this->paper());
+        }
+        $this->assertSame([], Storage::disk(QuestionPaper::DISK)->allFiles());
     }
 
     public function test_add_page_offers_the_three_templates(): void

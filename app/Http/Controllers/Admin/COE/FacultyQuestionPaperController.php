@@ -81,7 +81,7 @@ class FacultyQuestionPaperController extends Controller
 
         if (! $row['editable']) {
             return redirect()->route('admin.coe.faculty-question-paper.index')
-                ->with('error', $this->papers->lockedMessage($row['status']));
+                ->with('error', $this->papers->lockedMessage($row));
         }
 
         return view('admin.coe.question_paper_editor', [
