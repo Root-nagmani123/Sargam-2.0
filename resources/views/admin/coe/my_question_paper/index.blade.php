@@ -123,7 +123,8 @@
                                     data-coe-code="{{ $paper['code'] }}"
                                     data-coe-name="{{ $paper['name'] }}"
                                     data-coe-state="{{ $status }}"
-                                    data-coe-original-url="{{ route('admin.coe.my-question-paper.original', $paper['id']) }}">
+                                    data-coe-translated="{{ $paper['translated_file'] ? '1' : '0' }}"
+                                    data-coe-translate-url="{{ in_array($status, [$QP::STATUS_PENDING, $QP::STATUS_TRANSLATED], true) ? route('admin.coe.my-question-paper.translate', $paper['id']) : '' }}">
                                     <td></td>
                                     <td>{{ $paper['code'] }}</td>
                                     <td>{{ $paper['name'] }}</td>
@@ -137,11 +138,11 @@
                                     </td>
                                     <td>{{ $paper['faculty'] }}</td>
                                     <td>
-                                        <a href="{{ route('admin.coe.my-question-paper.original', $paper['id']) }}" class="coe-attach" title="{{ $paper['original_file'] }}">See Attachment</a>
+                                        <a href="#" role="button" class="coe-attach" data-coe-view="original">See Attachment</a>
                                     </td>
                                     <td class="coe-cell-translated">
                                         @if ($paper['translated_file'])
-                                            <a href="{{ route('admin.coe.my-question-paper.translated', $paper['id']) }}" class="coe-attach" title="{{ $paper['translated_file'] }}">See Attachment</a>
+                                            <a href="#" role="button" class="coe-attach" data-coe-view="translated">See Attachment</a>
                                         @else
                                             <span class="coe-muted">-</span>
                                         @endif
@@ -166,14 +167,11 @@
     </div>
 </div>
 
-{{-- Upload Translated Question Paper (shared) --}}
-@include('admin.coe.partials.upload_modal', ['title' => 'Upload Translated Question Paper', 'field' => 'translated_paper'])
-
-{{-- Confirm Delete (shared) --}}
-@include('admin.coe.partials.confirm_delete_modal')
-
 {{-- Send for Approval (shared) --}}
 @include('admin.coe.partials.confirm_approval_modal')
+
+{{-- View Original / Translated Paper — read-only, no download (shared) --}}
+@include('admin.coe.partials.paper_viewer_modal')
 
 {{-- Column Visibility --}}
 <div class="modal fade" id="qpColumnVisibilityModal" tabindex="-1" aria-labelledby="qpColumnVisibilityLabel" aria-hidden="true">
@@ -197,6 +195,7 @@
 
 @push('scripts')
 <script src="{{ asset('js/coe-grid.js') }}?v={{ @filemtime(public_path('js/coe-grid.js')) ?: time() }}"></script>
+<script src="{{ asset('js/coe-paper-viewer.js') }}?v={{ @filemtime(public_path('js/coe-paper-viewer.js')) ?: time() }}"></script>
 <script>
 $(function () {
     'use strict';
@@ -207,22 +206,26 @@ $(function () {
     var $table = $('#qpTable');
 
     /* ── Row actions per state — the ONE place they are defined ─────────── */
-    // [class, icon, label, href]: href 'original' → the row's data-coe-original-url, none → a button.
-    var DOWNLOAD = ['coe-act--download', 'bi-download', 'Download Original Paper', 'original'];
+    // [class, icon, label, href, view]: href 'translate' → the row's Translate
+    // Question Paper page (data-coe-translate-url), none → a button. view:
+    // 'original' / 'translated' → that paper in the read-only viewer, no download.
+    var VIEW_ORIGINAL = ['coe-act--download', 'bi-eye', 'View Original Paper', null, 'original'];
+    var VIEW_TRANSLATED = ['coe-act--download', 'bi-eye', 'View Translated Paper', null, 'translated'];
     var ACTIONS = {
-        'pending': [DOWNLOAD, ['coe-act--upload', 'bi-upload', 'Upload Translated Paper']],
+        'pending': [VIEW_ORIGINAL, ['coe-act--create', 'bi-plus-lg', 'Translate Paper', 'translate']],
         'translated': [
-            DOWNLOAD,
-            ['coe-act--del', 'bi-trash3', 'Delete Translated Paper'],
+            VIEW_ORIGINAL,
+            ['coe-act--create', 'bi-pencil', 'Edit Translated Paper', 'translate'],
             ['coe-act--approve', 'bi-send-check', 'Send for Approval']
         ],
-        'sent': [DOWNLOAD],
-        'published': [DOWNLOAD]
+        'sent': [VIEW_ORIGINAL, VIEW_TRANSLATED],
+        'published': [VIEW_ORIGINAL, VIEW_TRANSLATED]
     };
 
     function act(a, $row) {
-        var href = a[3] === 'original' ? ($row.attr('data-coe-original-url') || '#') : a[3];
+        var href = a[3] === 'translate' ? $row.attr('data-coe-translate-url') : a[3];
         var $el = href ? $('<a></a>').attr('href', href) : $('<button type="button"></button>');
+        if (a[4]) { $el.attr('data-coe-view', a[4]); }
         return $el.addClass('coe-act ' + a[0]).append(
             '<span class="coe-act__icon"><i class="bi ' + a[1] + '" aria-hidden="true"></i></span>',
             $('<span class="coe-act__label"></span>').text(a[2])
@@ -230,9 +233,13 @@ $(function () {
     }
 
     function paintActions($row) {
+        var list = (ACTIONS[$row.attr('data-coe-state')] || []).filter(function (a) {
+            if (a[3] === 'translate') { return !!$row.attr('data-coe-translate-url'); }
+            return a[4] !== 'translated' || $row.attr('data-coe-translated') === '1';
+        });
         $row.find('.coe-cell-actions').html(
             '<div class="coe-act-group" role="group" aria-label="Row actions">' +
-            (ACTIONS[$row.attr('data-coe-state')] || []).map(function (a) { return act(a, $row); }).join('') + '</div>'
+            list.map(function (a) { return act(a, $row); }).join('') + '</div>'
         );
     }
 
@@ -262,18 +269,28 @@ $(function () {
         return $row.data('coe-code') + ' — ' + $row.data('coe-name');
     }
 
-    $table.on('click', 'a.coe-act--download[href="#"], a.coe-attach[href="#"]', function (e) { e.preventDefault(); });
-
     /* ── Row actions → server ────────────────────────────────────────────────
        Every change is sent first; on success the page reloads, so a row is
        always repainted from the database, never from the client alone. */
     var URLS = {
-        upload: @json(route('admin.coe.my-question-paper.translation.store', ['paper' => '__PAPER__'])),
-        destroy: @json(route('admin.coe.my-question-paper.translation.destroy', ['paper' => '__PAPER__'])),
+        original: @json(route('admin.coe.my-question-paper.original', ['paper' => '__PAPER__'])),
+        translated: @json(route('admin.coe.my-question-paper.translated', ['paper' => '__PAPER__'])),
         send: @json(route('admin.coe.my-question-paper.send-for-approval', ['paper' => '__PAPER__']))
     };
 
     function url(name, $row) { return URLS[name].replace('__PAPER__', $row.attr('data-coe-id')); }
+
+    // See Attachment / View … Paper: read-only viewer, no download.
+    $table.on('click', '[data-coe-view]', function (e) {
+        e.preventDefault();
+        var $row = $(this).closest('tr');
+        var which = $(this).attr('data-coe-view');
+        CoePaperViewer.open({
+            url: url(which, $row),
+            title: rowLabel($row),
+            subtitle: which === 'original' ? 'Original Paper' : 'Translated Paper (Rajbhasha)'
+        });
+    });
 
     function errorText(xhr) {
         var r = (xhr && xhr.responseJSON) || {};
@@ -309,23 +326,7 @@ $(function () {
         return request;
     }
 
-    /* ── Upload / Delete / Send for Approval — shared modal behaviour (coe-grid.js) ── */
-    CoeGrid.upload({
-        table: '#qpTable',
-        trigger: '.coe-act--upload',
-        meta: rowLabel,
-        onSubmit: function ($row, file) {
-            var body = new FormData();
-            body.append('translated_paper', file);
-            return run(send('POST', url('upload', $row), body));
-        }
-    });
-
-    CoeGrid.confirmDelete({
-        table: '#qpTable',
-        onConfirm: function ($row) { return run(send('DELETE', url('destroy', $row))); }
-    });
-
+    /* ── Send for Approval — shared modal behaviour (coe-grid.js) ── */
     CoeGrid.confirm({
         table: '#qpTable',
         trigger: '.coe-act--approve',

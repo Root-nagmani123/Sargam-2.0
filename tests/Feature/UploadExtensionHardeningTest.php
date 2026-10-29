@@ -32,9 +32,6 @@ class UploadExtensionHardeningTest extends TestCase
         // "No Excel" guard, now paired with a content check on the same line's branch;
         // the stored path is written by store(), which names from content.
         'app/Http/Controllers/Admin/Registration/FrontPageController.php',
-        // Rejection only: a real .zip passes mimes:docx,zip and the magic-byte check, so
-        // the name must also say .docx. QuestionPaperStorage names the stored file itself.
-        'app/Http/Requests/Admin/COE/UploadQuestionPaperRequest.php',
     ];
 
     /**

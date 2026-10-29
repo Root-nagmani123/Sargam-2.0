@@ -1999,6 +1999,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
             ->whereNumber('paper')->name('my-question-paper.original');
         Route::get('my-question-paper/{paper}/translated', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'translated'])
             ->whereNumber('paper')->name('my-question-paper.translated');
+        Route::get('my-question-paper/{paper}/translate', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'translate'])
+            ->whereNumber('paper')->name('my-question-paper.translate');
         Route::post('my-question-paper/{paper}/translation', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'storeTranslation'])
             ->whereNumber('paper')->name('my-question-paper.translation.store');
         Route::delete('my-question-paper/{paper}/translation', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'destroyTranslation'])
@@ -2015,8 +2017,16 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
             ->whereNumber('paper')->name('question-paper.original');
         Route::get('question-paper/{paper}/translated', [\App\Http\Controllers\Admin\COE\QuestionPaperListController::class, 'translated'])
             ->whereNumber('paper')->name('question-paper.translated');
+        Route::post('question-paper/{paper}/unfreeze', [\App\Http\Controllers\Admin\COE\QuestionPaperListController::class, 'unfreeze'])
+            ->whereNumber('paper')->name('question-paper.unfreeze');
         Route::delete('question-paper/{paper}', [\App\Http\Controllers\Admin\COE\QuestionPaperListController::class, 'destroy'])
             ->whereNumber('paper')->name('question-paper.destroy');
+    });
+
+    // Question Paper Management Logs
+    Route::middleware('menu.permission:coe_question_paper_logs')->group(function () {
+        Route::get('question-paper-logs', [\App\Http\Controllers\Admin\COE\QuestionPaperLogController::class, 'index'])
+            ->name('question-paper-logs.index');
     });
 
     // My Question Paper (faculty)

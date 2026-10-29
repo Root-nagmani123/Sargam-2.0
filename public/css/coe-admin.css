@@ -251,6 +251,8 @@
 .coe-page .coe-act.is-disabled:hover .coe-act__label { text-decoration: none; }
 .coe-page .coe-act--freeze { color: #0e9384; }
 .coe-page .coe-act--approve { color: #067647; }
+.coe-page .coe-act--unfreeze { color: #344054; }   /* dark, as designed: undoes a release */
+.coe-page .coe-act.is-busy { opacity: 0.5; pointer-events: none; }
 
 /* ── Empty state ── */
 .coe-page .coe-empty {
@@ -358,6 +360,7 @@
 .coe-modal .coe-confirm__icon--danger { background: var(--coe-danger-soft); color: var(--coe-danger); }
 .coe-modal .coe-confirm__icon--freeze { background: var(--coe-success-soft); color: var(--coe-success); }
 .coe-modal .coe-confirm__icon--approve { background: var(--coe-success-soft); color: var(--coe-success); }
+.coe-modal .coe-confirm__icon--unfreeze { background: var(--coe-warn-soft); color: var(--coe-warn-strong); }
 
 .coe-modal .coe-confirm__title {
     font-size: 1.25rem;
@@ -796,7 +799,7 @@
 
 /* ============================================================================
    Add Question Paper (faculty) — admin/coe/faculty-question-paper/{id}/create
-   Upload a .docx or write the paper in the editor (Summernote lite).
+   Pick a template (or none) and write the paper in the editor (Summernote lite).
    ========================================================================= */
 
 /* ── The paper being added: four labelled facts in a row ── */
@@ -827,19 +830,97 @@
 /* Last fact (Total Marks) sits at the right edge, as designed. */
 .coe-qp-add .coe-qp-summary > div:last-child { justify-self: end; }
 
-/* ── Upload / Create switch: full width, bordered ── */
-.coe-qp-add .coe-qp-seg {
-    border: 1px solid var(--coe-control-line);
-    background: #e4e7ec;
+/* ── Template: title, line of help, three cards ── */
+.coe-qp-add .coe-qp-block-title {
+    margin: 0 0 0.25rem;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #101828;
 }
 
-.coe-qp-add .coe-qp-seg .coe-seg__btn:focus-visible {
-    outline: 2px solid var(--coe-brand);
-    outline-offset: 2px;
+.coe-qp-add .coe-qp-block-text {
+    margin: 0 0 1.25rem;
+    font-size: 0.9375rem;
+    color: #475467;
 }
 
-/* The page dropzone fills the card. */
-.coe-qp-add .coe-dropzone { min-height: 400px; }
+.coe-qp-add .coe-tpl-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.coe-qp-add .coe-tpl-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem 1.25rem;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: #f2f4f7;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.coe-qp-add .coe-tpl-card:hover { border-color: #c9d7ea; }
+.coe-qp-add .coe-tpl-card:focus-within { border-color: var(--coe-brand); }
+
+.coe-qp-add .coe-tpl-card__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.coe-qp-add .coe-tpl-card__title {
+    margin: 0 0 0.25rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #101828;
+}
+
+.coe-qp-add .coe-tpl-card__desc {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #475467;
+}
+
+.coe-qp-add .coe-tpl-card__check {
+    flex-shrink: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0.125rem 0 0;
+    cursor: pointer;
+}
+
+/* The template in miniature: an A4-ish sheet scaled down, top of the page only. */
+.coe-qp-add .coe-tpl-card__preview {
+    position: relative;
+    height: 150px;
+    overflow: hidden;
+    border-radius: 6px;
+    background: #e9edf3;
+}
+
+.coe-qp-add .coe-tpl-sheet {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 820px;
+    padding: 28px 36px;
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(16, 24, 40, 0.18);
+    transform: translateX(-50%) scale(0.2);
+    transform-origin: top center;
+    pointer-events: none;
+    user-select: none;
+}
+
+.coe-qp-add .coe-tpl-card__meta {
+    margin: auto 0 0;
+    font-size: 0.875rem;
+    color: #475467;
+}
 
 .coe-qp-add .coe-qp-actions {
     display: flex;
@@ -855,7 +936,8 @@
     justify-content: center;
 }
 
-/* ── Editor chrome: toolbar on the right, no frame — the page is the sheet ── */
+/* ── Editor chrome: a framed toolbar on the right, no frame round the editor —
+   the page is the sheet ── */
 .coe-qp-add .coe-qp-editor .note-editor.note-frame {
     border: 0;
     box-shadow: none;
@@ -864,29 +946,59 @@
 .coe-qp-add .coe-qp-editor .note-toolbar {
     display: flex;
     flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 0.25rem;
-    padding: 0 0 0.75rem;
-    border-bottom: 0;
-    background: transparent;
+    align-items: center;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 0 1.25rem auto;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 10px;
+    background: #fff;
 }
 
-.coe-qp-add .coe-qp-editor .note-toolbar .note-btn-group { margin: 0; }
+.coe-qp-add .coe-qp-editor .note-toolbar .note-btn-group {
+    margin: 0;
+    padding: 0 0.375rem;
+}
+
+/* A thin rule between groups, as designed. */
+.coe-qp-add .coe-qp-editor .note-toolbar .note-btn-group + .note-btn-group { border-left: 1px solid #e4e7ec; }
+
+.coe-qp-add .coe-qp-editor .note-toolbar .note-btn {
+    border: 0;
+    background: transparent;
+    color: #344054;
+}
+
+.coe-qp-add .coe-qp-editor .note-toolbar .note-btn:hover,
+.coe-qp-add .coe-qp-editor .note-toolbar .note-btn.active { background: #f2f4f7; }
+
+/* "Normal ▾": the style's name in a small bordered select. */
+.coe-qp-add .coe-qp-editor .note-toolbar .note-btn.coe-qp-style {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    min-width: 108px;
+    border: 1px solid #d0d5dd;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+}
+
+/* The 'more' group (table, line, undo, redo) shows once "…" is pressed. */
+.coe-qp-add .coe-qp-editor .note-toolbar .note-more { display: none; }
+.coe-qp-add .coe-qp-editor .note-toolbar.is-more-open .note-more { display: inline-flex; }
 
 .coe-qp-add .coe-qp-editor .note-editing-area { background: transparent; }
 
 .coe-qp-add .coe-qp-editor .note-editor .note-editing-area .note-editable {
-    max-width: 880px;
+    max-width: 960px;
     margin: 0 auto;
-    padding: 2rem 2.5rem 2.5rem;
+    padding: 2.5rem 3rem 3rem;
     border: 1px solid #c9d7ea;
-    border-radius: 10px;
+    border-radius: 16px;
     background: #fff;
     box-shadow: 0 2px 10px rgba(16, 24, 40, 0.06);
-    color: #1d3461;
-    font-family: var(--bs-body-font-family);   /* the page face; Summernote sets sans-serif */
-    font-size: 0.9375rem;
-    line-height: 1.55;
 }
 
 /* Typing in the sheet: a firmer border, not a heavy ring around the page. */
@@ -898,135 +1010,342 @@
 /* The resize bar is off (disableResizeEditor); drop its empty strip too. */
 .coe-qp-add .coe-qp-editor .note-statusbar { display: none; }
 
+.coe-qp-add #qpaperEditorError { text-align: center; }
 
-/* ── The paper ──
-   Four classes deep so these beat summernote-lite.css, which borders and pads
-   every table cell inside the editor. */
-.coe-page.coe-qp-add .coe-qp-editor .note-editable table {
+
+/* ── The paper — in the editor, the template previews and the read-only viewer ──
+   :is() keeps them in step; four classes deep so these beat
+   summernote-lite.css, which borders and pads every table cell in the editor. */
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) {
+    color: #1d3461;
+    font-family: "Times New Roman", Georgia, serif;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+}
+
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table {
     width: 100%;
     margin: 0 0 1rem;
     border-collapse: collapse;
 }
 
-.coe-page.coe-qp-add .coe-qp-editor .note-editable table td {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table td {
     border: 0;
-    padding: 0.2rem 0.35rem;
+    padding: 0.25rem 0.4rem;
     vertical-align: top;
 }
 
 /* !important only because the admin theme (styles.css) forces tbody, tr and td
    to 500 / 0.75rem with it; the paper is body text, not a data grid. All three
    levels, or td would inherit the forced size from tr. */
-.coe-page.coe-qp-add .coe-qp-editor .note-editable table tbody,
-.coe-page.coe-qp-add .coe-qp-editor .note-editable table tr,
-.coe-page.coe-qp-add .coe-qp-editor .note-editable table td {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table tbody,
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table tr,
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table td {
     font-size: inherit !important;
     font-weight: inherit !important;
 }
 
-.coe-page.coe-qp-add .coe-qp-editor .note-editable h2,
-.coe-page.coe-qp-add .coe-qp-editor .note-editable h3,
-.coe-page.coe-qp-add .coe-qp-editor .note-editable h4 {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) :is(h2, h3, h4) {
     color: #0b2a5b;
+    font-family: inherit;
     font-weight: 700;
 }
 
-.coe-page.coe-qp-add .coe-qp-editor .note-editable h3 { font-size: 1.125rem; margin: 0; }
-.coe-page.coe-qp-add .coe-qp-editor .note-editable h4 { font-size: 0.9375rem; margin: 0.25rem 0 0.5rem; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) h3 { margin: 0; font-size: 1.125rem; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) h4 { margin: 0.75rem 0 0.5rem; font-size: 1.0625rem; }
 
-/* Header: emblem · title · time and marks */
-.coe-page.coe-qp-add .coe-qp-editor .note-editable table.coe-paper-head {
-    border-bottom: 1px solid #c9d7ea;
+/* Candidate line (Multi-Section): name left, roll number right, dashed rule under. */
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-candidate {
+    border-bottom: 1px dashed #c9d7ea;
 }
 
-.coe-page.coe-qp-add .coe-qp-editor .note-editable table.coe-paper-head td { vertical-align: middle; padding-bottom: 1rem; }
-.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__emblem { width: 80px; }
-.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__emblem img { width: 64px; height: auto; }
-.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__title { text-align: center; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-candidate__roll { text-align: right; }
 
-.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__title h2 {
-    margin: 0;
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 1.75rem;
+/* Header: भारत सरकार · title · time and marks, ruled off below */
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-head {
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #c9d7ea;
 }
 
-.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__title p { margin: 0.15rem 0 0; }
-.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__subject { font-size: 1.125rem; }
-.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__code { font-weight: 600; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-head td {
+    padding-bottom: 1.25rem;
+    vertical-align: middle;
+}
 
-.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__time {
-    width: 190px;
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-head__gov { width: 22%; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-head__title { text-align: center; }
+
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-head__title h2 {
+    margin: 0 0 0.25rem;
+    font-size: 2rem;
+}
+
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-head__title p { margin: 0.1rem 0 0; }
+
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-head__subject {
+    font-size: 1.375rem;
+    font-weight: 700;
+    color: #0b2a5b;
+}
+
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-head__code {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #0b2a5b;
+}
+
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-head__time { width: 24%; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-head__time p { margin: 0; }
+
+/* Particulars and instructions: tinted, ruled boxes */
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table:is(.coe-paper-meta, .coe-paper-instructions) {
+    margin-bottom: 1.5rem;
+    border: 1px solid #b9cde8;
+    background: #f6f9fd;
+}
+
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table:is(.coe-paper-meta, .coe-paper-instructions) td {
+    width: 50%;
+    padding: 0.45rem 0.85rem;
+}
+
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-meta td { border: 1px solid #dce6f3; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-instructions td { padding: 0.75rem 0.85rem; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-instructions h4 { margin: 0 0 0.75rem; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-instructions ol { margin: 0; padding-left: 1.25rem; }
+
+/* Section band: English · Hindi · marks each, on a light tint */
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-section {
+    margin: 1.5rem 0 0.5rem;
+    border: 1px solid #e1eaf6;
+    background: #eef4fb;
+}
+
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-section td {
+    padding: 0.6rem 0.85rem;
+    vertical-align: middle;
+}
+
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-section__en { width: 34%; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-section__hi { width: 30%; }
+
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-marks {
+    width: 140px;
     text-align: right;
-    white-space: nowrap;
 }
 
-.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__time p { margin: 0.15rem 0; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-section .coe-paper-marks { width: auto; }
 
-/* Particulars and instructions: tinted boxes */
-.coe-page.coe-qp-add .coe-qp-editor .note-editable table.coe-paper-meta,
-.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-box {
-    border: 1px solid #d6e2f2;
+/* Questions: number, English over Hindi, marks right */
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-questions td { padding: 0.4rem 0.25rem; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-questions__no { width: 36px; }
+
+/* Case Study: the passage box and its exhibit table */
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-box {
+    margin: 0 0 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid #dce6f3;
     border-radius: 6px;
     background: #f6f9fd;
 }
 
-.coe-page.coe-qp-add .coe-qp-editor .note-editable table.coe-paper-meta { border-collapse: separate; padding: 0.5rem 0.75rem; }
-.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-meta__key { width: 90px; font-weight: 600; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-box p { margin: 0 0 0.35rem; }
 
-.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-box {
-    margin: 0 0 1.25rem;
-    padding: 0.75rem 1rem;
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-exhibit td {
+    border: 1px solid #c9d7ea;
+    padding: 0.35rem 0.6rem;
 }
 
-.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-box p { margin: 0 0 0.25rem; }
-.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-box ol { margin: 0; padding-left: 1.5rem; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) table.coe-paper-exhibit tr:first-child td { background: #eef4fb; }
 
-/* Section heading row and questions: marks right-aligned */
-.coe-page.coe-qp-add .coe-qp-editor .note-editable table.coe-paper-section {
-    margin: 1.25rem 0 0;
-    border-top: 1px solid #d6e2f2;
+/* Case Study: where the second page starts */
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) hr.coe-paper-break {
+    margin: 2rem 0;
+    border: 0;
+    border-top: 2px dashed #c9d7ea;
+    opacity: 1;
 }
 
-.coe-page.coe-qp-add .coe-qp-editor .note-editable table.coe-paper-section td { padding-top: 0.75rem; }
-
-.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-marks {
-    width: 130px;
-    text-align: right;
-    white-space: nowrap;
-}
-
-.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-questions__no { width: 40px; }
-
-.coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-end {
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-paper-end {
     margin: 2rem 0 0;
     text-align: center;
     font-style: italic;
     color: #475467;
 }
 
-.coe-qp-add #qpaperEditorError { text-align: center; }
+@media (max-width: 991.98px) {
+    .coe-qp-add .coe-tpl-grid { grid-template-columns: minmax(0, 1fr); }
+}
 
 @media (max-width: 767.98px) {
     .coe-qp-add .coe-qp-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 1rem; }
     .coe-qp-add .coe-qp-summary > div:last-child { justify-self: start; }
-    .coe-qp-add .coe-dropzone { min-height: 280px; }
+    .coe-qp-add .coe-qp-editor .note-toolbar { width: 100%; }
     .coe-qp-add .coe-qp-editor .note-editor .note-editing-area .note-editable { padding: 1.25rem 1rem; }
-    /* Header stacks: emblem, title, then time and marks — all centred. */
-    .coe-page.coe-qp-add .coe-qp-editor .note-editable table.coe-paper-head td {
+    /* Header, particulars, instructions and section bands stack: one cell per line. */
+    .coe-page.coe-qp-add .coe-qp-editor .note-editable table:is(.coe-paper-head, .coe-paper-meta, .coe-paper-instructions, .coe-paper-section, .coe-paper-candidate) td {
         display: block;
         width: auto;
-        padding-bottom: 0.5rem;
-        text-align: center;
+        text-align: left;
     }
+    .coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__title { text-align: center; }
     .coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__title h2 { font-size: 1.375rem; }
-    .coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-head__time { white-space: normal; }
-    /* Particulars: one key/value pair per line. */
-    .coe-page.coe-qp-add .coe-qp-editor .note-editable table.coe-paper-meta tr {
-        display: grid;
-        grid-template-columns: 72px minmax(0, 1fr);
-    }
-    .coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-meta__key { width: auto; }
     .coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-marks { width: auto; }
     .coe-page.coe-qp-add .coe-qp-editor .note-editable .coe-paper-questions__no { width: 28px; }
     .coe-qp-add .coe-qp-actions .coe-btn { flex: 1; min-width: 0; }
+}
+
+/* ============================================================================
+   Read-only paper viewer (See Attachment / View … Paper) — coe-paper-viewer.js
+   ========================================================================== */
+.coe-viewer .coe-viewer__head {
+    gap: 0.75rem;
+    border-bottom: 1px solid #e4e7ec;
+}
+.coe-viewer .coe-viewer__head .btn-close { margin: 0; }
+.coe-viewer__heading { min-width: 0; }
+.coe-viewer__heading .modal-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.coe-viewer__sub {
+    margin: 0.15rem 0 0;
+    color: var(--ds-ink-muted, #667085);
+    font-size: 0.8125rem;
+}
+.coe-viewer__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: auto;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    background: #fef3f2;
+    color: #b42318;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Nothing in the viewer can be selected, dragged or long-pressed to save. */
+.coe-viewer__body {
+    min-height: 60vh;
+    background: #f2f4f7;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+.coe-viewer__state {
+    margin: 3rem 0;
+    text-align: center;
+    color: var(--ds-ink-muted, #667085);
+}
+.coe-viewer__stage {
+    position: relative;
+    max-width: 860px;
+    margin: 0 auto;
+}
+.coe-viewer__sheet img { pointer-events: none; }
+.coe-viewer__sheet.coe-paper-view {
+    padding: 2.5rem 3rem;
+    border: 1px solid #dce6f3;
+    border-radius: 0.5rem;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
+}
+/* docx-preview: its pages on the viewer's own grey, not a second grey frame. */
+.coe-viewer__sheet .docx-wrapper {
+    padding: 0;
+    background: transparent;
+}
+.coe-viewer__sheet .docx-wrapper > section.docx { margin-bottom: 1.25rem; }
+
+/* The viewer's name, ID and time, tiled over the whole paper (set by the script). */
+.coe-viewer__mark {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background-repeat: repeat;
+    pointer-events: none;
+}
+
+.coe-viewer__shield {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: inherit;
+    background: #fff;
+    color: var(--ds-ink-muted, #667085);
+    text-align: center;
+    cursor: pointer;
+}
+.coe-viewer__shield .bi { font-size: 2rem; }
+.coe-viewer__shield p { margin: 0; }
+.coe-viewer.is-shielded .coe-viewer__stage { visibility: hidden; }
+.coe-viewer.is-shielded .coe-viewer__shield { display: flex; }
+
+/* ── Question Paper Management Logs: Role and Action badges ── */
+.coe-page .coe-log-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+.coe-page .coe-log-badge--blue   { background: #e7eefb; color: var(--coe-brand); }
+.coe-page .coe-log-badge--green  { background: var(--coe-success-soft); color: #067647; }
+.coe-page .coe-log-badge--amber  { background: var(--coe-warn-soft); color: var(--coe-warn-strong); }
+.coe-page .coe-log-badge--red    { background: var(--coe-danger-soft); color: var(--coe-danger); }
+.coe-page .coe-log-badge--teal   { background: #ccfbef; color: #0e9384; }
+.coe-page .coe-log-badge--purple { background: #f4ebff; color: #6941c6; }
+.coe-page .coe-log-badge--grey   { background: #f2f4f7; color: #475467; }
+
+/* Printing while a paper is on screen (viewer open, editor page) gives a blank page. */
+@media print {
+    body.coe-paper-guarded { display: none !important; }
+}
+
+/* ── The paper editor, guarded like the viewer (CoePaperGuard) ──
+   The writer's name, ID and time tiled over the sheet - it never takes a
+   click, so typing is untouched - and a cover while the window is not in use. */
+.coe-qp-add .coe-qp-editor .note-editing-area { position: relative; }
+.coe-qp-add .coe-qp-mark {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background-repeat: repeat;
+    pointer-events: none;
+}
+.coe-qp-add .coe-qp-form { position: relative; }
+.coe-qp-add .coe-qp-shield {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: inherit;
+    background: #fff;
+    color: var(--ds-ink-muted, #667085);
+    text-align: center;
+    cursor: pointer;
+}
+.coe-qp-add .coe-qp-shield .bi { font-size: 2rem; }
+.coe-qp-add .coe-qp-shield p { margin: 0; }
+.coe-qp-add .coe-qp-form.is-shielded .card-body { visibility: hidden; }
+.coe-qp-add .coe-qp-form.is-shielded .coe-qp-shield { display: flex; }
+
+@media (max-width: 767.98px) {
+    .coe-viewer__badge { display: none; }
+    .coe-viewer__sheet.coe-paper-view { padding: 1.25rem 1rem; }
 }

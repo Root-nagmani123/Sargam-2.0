@@ -132,11 +132,13 @@
                         <tbody>
                             @foreach ($papers as $paper)
                                 @php
-                                    $originalUrl = $paper['original_file'] ? route('admin.coe.question-paper.original', $paper['paper_id']) : null;
-                                    $translatedUrl = $paper['translated_file'] ? route('admin.coe.question-paper.translated', $paper['paper_id']) : null;
+                                    $isPublished = $paper['status'] === 'published';
                                 @endphp
                                 <tr data-coe-id="{{ $paper['id'] }}"
-                                    data-coe-delete-url="{{ $paper['paper_id'] ? route('admin.coe.question-paper.destroy', $paper['paper_id']) : '' }}">
+                                    data-coe-paper="{{ $paper['paper_id'] }}"
+                                    data-coe-code="{{ $paper['code'] }}"
+                                    data-coe-name="{{ $paper['name'] }}"
+                                    data-coe-version="{{ $paper['version'] }}">
                                     <td></td>
                                     <td>{{ $paper['code'] }}</td>
                                     <td>{{ $paper['name'] }}</td>
@@ -147,15 +149,15 @@
                                         <span class="coe-deadline">{{ $paper['deadline']->format('d/m/Y') }}</span>
                                     </td>
                                     <td>
-                                        @if ($originalUrl)
-                                            <a href="{{ $originalUrl }}" class="coe-attach" title="{{ $paper['original_file'] }}">See Attachment</a>
+                                        @if ($paper['original_file'])
+                                            <a href="#" role="button" class="coe-attach" data-coe-view="original">See Attachment</a>
                                         @else
                                             <span class="coe-muted">-</span>
                                         @endif
                                     </td>
                                     <td>
-                                        @if ($translatedUrl)
-                                            <a href="{{ $translatedUrl }}" class="coe-attach" title="{{ $paper['translated_file'] }}">See Attachment</a>
+                                        @if ($paper['translated_file'])
+                                            <a href="#" role="button" class="coe-attach" data-coe-view="translated">See Attachment</a>
                                         @else
                                             <span class="coe-muted">-</span>
                                         @endif
@@ -166,32 +168,28 @@
                                     </td>
                                     <td>
                                         <div class="coe-act-group" role="group" aria-label="Row actions">
-                                            {{-- Greyed, not hidden, when there is nothing to act on yet —
-                                                 keeps the action column the same shape on every row. --}}
-                                            @if ($paper['paper_id'])
-                                                <button type="button" class="coe-act coe-act--del">
-                                                    <span class="coe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
-                                                    <span class="coe-act__label">Delete</span>
+                                            {{-- Unfreeze: a published paper only. --}}
+                                            @if ($isPublished)
+                                                <button type="button" class="coe-act coe-act--unfreeze">
+                                                    <span class="coe-act__icon"><i class="bi bi-unlock" aria-hidden="true"></i></span>
+                                                    <span class="coe-act__label">Unfreeze</span>
                                                 </button>
-                                            @else
-                                                <span class="coe-act is-disabled" aria-disabled="true" title="Faculty has not added the paper yet">
-                                                    <span class="coe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
-                                                    <span class="coe-act__label">Delete</span>
-                                                </span>
                                             @endif
 
+                                            {{-- Print: the final paper only, so once it is published. Greyed,
+                                                 not hidden, before that — keeps the column the same shape. --}}
                                             @foreach ([
-                                                [$originalUrl, $paper['original_file'], 'bi-download', 'Download Original Paper', 'Faculty has not uploaded the paper yet'],
-                                                [$translatedUrl, $paper['translated_file'], 'bi-translate', 'Download Translated Paper', 'No translation sent yet'],
-                                            ] as [$url, $file, $icon, $label, $why])
-                                                @if ($url)
-                                                    <a href="{{ $url }}" class="coe-act coe-act--download" title="{{ $file }}">
-                                                        <span class="coe-act__icon"><i class="bi {{ $icon }}" aria-hidden="true"></i></span>
+                                                ['original', $paper['original_file'], 'Print Original Paper'],
+                                                ['translated', $paper['translated_file'], 'Print Translated Paper'],
+                                            ] as [$which, $file, $label])
+                                                @if ($isPublished && $file)
+                                                    <button type="button" class="coe-act coe-act--print" data-coe-print="{{ $which }}">
+                                                        <span class="coe-act__icon"><i class="bi bi-printer" aria-hidden="true"></i></span>
                                                         <span class="coe-act__label">{{ $label }}</span>
-                                                    </a>
+                                                    </button>
                                                 @else
-                                                    <span class="coe-act is-disabled" aria-disabled="true" title="{{ $why }}">
-                                                        <span class="coe-act__icon"><i class="bi {{ $icon }}" aria-hidden="true"></i></span>
+                                                    <span class="coe-act is-disabled" aria-disabled="true" title="Can be printed once the paper is published">
+                                                        <span class="coe-act__icon"><i class="bi bi-printer" aria-hidden="true"></i></span>
                                                         <span class="coe-act__label">{{ $label }}</span>
                                                     </span>
                                                 @endif
@@ -213,8 +211,11 @@
     </div>
 </div>
 
-{{-- Confirm Delete (shared) --}}
-@include('admin.coe.partials.confirm_delete_modal', ['id' => 'qplDeleteModal', 'confirmId' => 'qplDeleteConfirm'])
+{{-- Unfreeze (shared) --}}
+@include('admin.coe.partials.confirm_unfreeze_modal')
+
+{{-- See Attachment — read-only, no download (shared) --}}
+@include('admin.coe.partials.paper_viewer_modal')
 
 {{-- Column Visibility --}}
 <div class="modal fade" id="qplColumnVisibilityModal" tabindex="-1" aria-labelledby="qplColumnVisibilityLabel" aria-hidden="true">
@@ -238,6 +239,7 @@
 
 @push('scripts')
 <script src="{{ asset('js/coe-grid.js') }}?v={{ @filemtime(public_path('js/coe-grid.js')) ?: time() }}"></script>
+<script src="{{ asset('js/coe-paper-viewer.js') }}?v={{ @filemtime(public_path('js/coe-paper-viewer.js')) ?: time() }}"></script>
 {{-- Built first: the json directive splits its argument on commas. --}}
 @php
     $emptyState = $isTranslatedScope
@@ -275,27 +277,68 @@ $(function () {
 
     var $table = $('#qplTable');
 
-    /* ── Delete ──────────────────────────────────────────────────────────────
+    var URLS = {
+        original: @json(route('admin.coe.question-paper.original', ['paper' => '__PAPER__'])),
+        translated: @json(route('admin.coe.question-paper.translated', ['paper' => '__PAPER__'])),
+        unfreeze: @json(route('admin.coe.question-paper.unfreeze', ['paper' => '__PAPER__']))
+    };
+
+    function url(name, $row) { return URLS[name].replace('__PAPER__', $row.attr('data-coe-paper')); }
+
+    function rowLabel($row) { return $row.attr('data-coe-code') + ' · ' + $row.attr('data-coe-name'); }
+
+    // See Attachment: read-only viewer, no download.
+    $table.on('click', '[data-coe-view]', function (e) {
+        e.preventDefault();
+        var $row = $(this).closest('tr');
+        var which = $(this).attr('data-coe-view');
+        CoePaperViewer.open({
+            url: url(which, $row),
+            title: rowLabel($row),
+            subtitle: which === 'original'
+                ? 'Original Paper · V' + $row.attr('data-coe-version')
+                : 'Translated Paper (Rajbhasha)'
+        });
+    });
+
+    // Print Original / Translated Paper: straight to the browser's print dialog.
+    $table.on('click', '.coe-act--print', function () {
+        var $btn = $(this);
+        if ($btn.hasClass('is-busy')) { return; }
+        var $row = $btn.closest('tr');
+        var which = $btn.attr('data-coe-print');
+        $btn.addClass('is-busy');
+        CoePaperViewer.print({
+            url: url(which, $row) + '?print=1',              // logged as Printed, not Viewed
+            title: rowLabel($row) + (which === 'translated' ? ' (Hindi)' : '')
+        }).fail(function (message) {
+            Swal.fire({ icon: 'error', title: 'Error', text: message });
+        }).always(function () { $btn.removeClass('is-busy'); });
+    });
+
+    /* ── Unfreeze (Published only) ───────────────────────────────────────────
        Sent first; on success the page reloads, so the row is repainted from the
-       database (the subject stays listed, back to Pending at Faculty). */
-    CoeGrid.confirmDelete({
+       database (back to Pending at Faculty, for the faculty to verify). */
+    CoeGrid.confirm({
         table: '#qplTable',
-        modal: '#qplDeleteModal',
-        confirm: '#qplDeleteConfirm',
+        trigger: '.coe-act--unfreeze',
+        modal: '#qpUnfreezeModal',
+        confirm: '#qpUnfreezeConfirm',
         onConfirm: function ($row) {
             var d = $.Deferred();
             $.ajax({
-                url: $row.attr('data-coe-delete-url'),
-                method: 'DELETE',
+                url: url('unfreeze', $row),
+                method: 'POST',
                 headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
             }).done(function (res) {
                 d.resolve();
-                Swal.fire({ icon: 'success', title: 'Success', text: (res && res.message) || 'Question paper deleted.' })
+                Swal.fire({ icon: 'success', title: 'Success', text: (res && res.message) || 'Question paper unfrozen.' })
                     .then(function () { window.location.reload(); });
             }).fail(function (xhr) {
                 d.reject();
                 var r = xhr.responseJSON || {};
-                Swal.fire({ icon: 'error', title: 'Error', text: r.message || 'Could not delete the question paper.' });
+                var keys = r.errors ? Object.keys(r.errors) : [];
+                Swal.fire({ icon: 'error', title: 'Error', text: keys.length ? r.errors[keys[0]][0] : (r.message || 'Could not unfreeze the question paper.') });
             });
             return d.promise();
         }

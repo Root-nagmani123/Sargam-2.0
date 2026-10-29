@@ -17,8 +17,8 @@ use Tests\TestCase;
 
 /**
  * COE → Question Paper (administrator): every subject owed on a drive, where its
- * paper stands, the files the admin may download (never Rajbhasha's unsent
- * translation), and delete.
+ * paper stands, the files the admin may view and print (never Rajbhasha's unsent
+ * translation, never as a download), unfreeze, and delete.
  */
 class AdminQuestionPaperTest extends TestCase
 {
@@ -92,9 +92,10 @@ class AdminQuestionPaperTest extends TestCase
         $paper = $this->paperFor(3);
 
         $this->actingAs($this->outsider)->get(route('admin.coe.question-paper.index'))->assertForbidden();
-        $this->actingAs($this->outsider)->get(route('admin.coe.question-paper.original', $paper->id))->assertForbidden();
+        $this->actingAs($this->outsider)->getJson(route('admin.coe.question-paper.original', $paper->id))->assertForbidden();
+        $this->actingAs($this->outsider)->postJson(route('admin.coe.question-paper.unfreeze', $paper->id))->assertForbidden();
         $this->actingAs($this->outsider)->deleteJson(route('admin.coe.question-paper.destroy', $paper->id))->assertForbidden();
-        $this->assertNotNull($this->paperFor(3));
+        $this->assertSame(QuestionPaper::STATUS_PUBLISHED, $this->paperFor(3)->status);
     }
 
     public function test_lists_every_owed_subject_with_its_admin_status(): void
@@ -124,14 +125,65 @@ class AdminQuestionPaperTest extends TestCase
     public function test_admin_never_gets_rajbhashas_draft(): void
     {
         // Rajbhasha's unsent translation.
-        $this->actingAs($this->admin)->get(route('admin.coe.question-paper.translated', $this->paperFor(2)->id))->assertNotFound();
+        $this->actingAs($this->admin)->getJson(route('admin.coe.question-paper.translated', $this->paperFor(2)->id))->assertNotFound();
 
         // An uploaded original, and a sent / published translation.
-        $this->actingAs($this->admin)->get(route('admin.coe.question-paper.original', $this->paperFor(1)->id))->assertOk();
-        $this->actingAs($this->admin)->get(route('admin.coe.question-paper.original', $this->paperFor(2)->id))->assertOk();
-        $this->actingAs($this->admin)->get(route('admin.coe.question-paper.original', $this->paperFor(3)->id))->assertOk();
-        $response = $this->actingAs($this->admin)->get(route('admin.coe.question-paper.translated', $this->paperFor(3)->id))->assertOk();
-        $this->assertStringContainsString('attachment', $response->headers->get('Content-Disposition'));
+        $this->actingAs($this->admin)->getJson(route('admin.coe.question-paper.original', $this->paperFor(1)->id))->assertOk();
+        $this->actingAs($this->admin)->getJson(route('admin.coe.question-paper.original', $this->paperFor(2)->id))->assertOk();
+        $this->actingAs($this->admin)->getJson(route('admin.coe.question-paper.original', $this->paperFor(3)->id))->assertOk();
+        $this->actingAs($this->admin)->getJson(route('admin.coe.question-paper.translated', $this->paperFor(3)->id))
+            ->assertOk()
+            ->assertJson(['format' => 'docx', 'content' => base64_encode('hindi 3')]);
+    }
+
+    public function test_papers_are_viewed_and_printed_never_downloaded(): void
+    {
+        $url = route('admin.coe.question-paper.original', $this->paperFor(3)->id);
+
+        $response = $this->actingAs($this->admin)->getJson($url)->assertOk();
+        $this->assertNull($response->headers->get('Content-Disposition'));
+        $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+        // Opening the address in the browser gets no file.
+        $this->actingAs($this->admin)->get($url)->assertNotFound();
+
+        // Unfreeze on the published row only; Print enabled there only; no Delete or Download.
+        $html = $this->actingAs($this->admin)->get(route('admin.coe.question-paper.index'))->getContent();
+        foreach ([0, 1, 2, 3] as $i) {
+            $row = $this->rowOf($html, $i);
+            $this->assertSame($i === 3, str_contains($row, 'coe-act--unfreeze'), "Unfreeze on row $i");
+            $this->assertSame($i === 3 ? 2 : 0, substr_count($row, 'data-coe-print='), "Print on row $i");
+            $this->assertStringNotContainsString('coe-act--del', $row);
+            $this->assertStringNotContainsString('Download', $row);
+        }
+    }
+
+    public function test_unfreeze_sends_a_published_paper_back_to_the_faculty(): void
+    {
+        $paper = $this->paperFor(3);
+        $paper->update(['frozen_at' => now(), 'frozen_by' => $this->admin->pk]);
+
+        // Not published: refused.
+        $this->actingAs($this->admin)->postJson(route('admin.coe.question-paper.unfreeze', $this->paperFor(2)->id))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('paper');
+        $this->assertSame(QuestionPaper::STATUS_TRANSLATED, $this->paperFor(2)->status);
+
+        $this->actingAs($this->admin)->postJson(route('admin.coe.question-paper.unfreeze', $paper->id))
+            ->assertOk()
+            ->assertJson(['message' => 'Question paper unfrozen. It is back with the faculty for verification.']);
+
+        $paper = $this->paperFor(3);
+        $this->assertSame(QuestionPaper::STATUS_SENT_FOR_APPROVAL, $paper->status);
+        $this->assertNull($paper->frozen_at);
+        $this->assertNull($paper->frozen_by);
+        $this->assertNotNull($paper->translated_file_path);   // the faculty verifies the same translation
+
+        $html = $this->actingAs($this->admin)->get(route('admin.coe.question-paper.index'))->getContent();
+        $this->assertSame('pending-faculty', $this->statusOf($html, 3));
+        $this->assertStringNotContainsString('coe-act--unfreeze', $this->rowOf($html, 3));
+
+        // Only once.
+        $this->actingAs($this->admin)->postJson(route('admin.coe.question-paper.unfreeze', $paper->id))->assertStatus(422);
     }
 
     public function test_delete_removes_the_paper_and_files_and_the_faculty_starts_over(): void
@@ -183,14 +235,19 @@ class AdminQuestionPaperTest extends TestCase
     /** The badge key on the list row of subject $i (the page lists every drive, not just this one). */
     private function statusOf(string $html, int $i): ?string
     {
+        return preg_match('/coe-state coe-state--([a-z-]+)/', $this->rowOf($html, $i), $m) ? $m[1] : null;
+    }
+
+    /** The list row of subject $i, as HTML. */
+    private function rowOf(string $html, int $i): string
+    {
         foreach (explode('</tr>', $html) as $row) {
-            if (str_contains($row, '<td>'.$this->code($i).'</td>')
-                && preg_match('/coe-state coe-state--([a-z-]+)/', $row, $m)) {
-                return $m[1];
+            if (str_contains($row, '<td>'.$this->code($i).'</td>')) {
+                return $row;
             }
         }
 
-        return null;
+        return '';
     }
 
     private function paperFor(int $i): ?QuestionPaper

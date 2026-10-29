@@ -3,6 +3,7 @@
 namespace App\Services\COE;
 
 use App\Models\QuestionPaper;
+use App\Support\COE\PaperHtmlSanitizer;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -10,10 +11,14 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Question paper files (original and translation) on the private disk. They
- * are only ever handed out through download(), never by URL.
+ * are only ever handed out through forViewer() or download(), never by URL.
  */
 class QuestionPaperStorage
 {
+    public function __construct(private PaperHtmlSanitizer $sanitizer)
+    {
+    }
+
     /**
      * Writes under a name unique on disk, so a second submit racing this one can
      * never overwrite (and then, on its failure, delete) this file.
@@ -48,6 +53,23 @@ class QuestionPaperStorage
         $disk = Storage::disk(QuestionPaper::DISK);
 
         return $path && $disk->exists($path) ? $disk->get($path) : null;
+    }
+
+    /**
+     * A stored paper for the read-only viewer, never as a file: an editor paper
+     * as its cleaned HTML, a Word file (an older upload or translation) as base64
+     * for the browser to lay out.
+     *
+     * @return array{format:string, content:string}
+     */
+    public function forViewer(?string $path, string $name): array
+    {
+        $contents = $this->contents($path);
+        abort_if($contents === null, 404);
+
+        return str_ends_with(strtolower($name), '.html')
+            ? ['format' => 'html', 'content' => $this->sanitizer->fromDocument($contents)]
+            : ['format' => 'docx', 'content' => base64_encode($contents)];
     }
 
     /**
