@@ -29,6 +29,9 @@ paths, in the server config (not in a gitignored `.htaccess` that a deploy can
 drop). If something other than the application's web server serves `/storage/`,
 the block has to be added there instead.
 
+Do not apply either rule yet: steps 1-3 of "Verify" below must pass first, on
+the same server, while direct access is still open.
+
 Apache (vhost or `httpd.conf`). The path is the site's `DocumentRoot` (the
 release's `public/` directory, written exactly as `DocumentRoot` writes it)
 followed by `/storage/notice_docs`:
@@ -58,42 +61,127 @@ location ^~ /storage/notice_docs/ { return 404; }
 The nginx rule has not been executed against a server; verify it with the
 checks below before relying on it.
 
-Reload the server, then verify on production and record the results (date,
-environment, who ran it, and the printed output). Laravel's test suite cannot
-check this: its test kernel never serves `/storage/` files, so only a request
-to the deployed server proves the block.
+### Verify
 
-Pick an existing notice file (read-only):
+Record every step's printed output with the date, environment and who ran it.
+Laravel's test suite cannot check this: its test kernel never serves
+`/storage/` files, so only requests to the deployed server prove the block.
 
-```sql
-SELECT document FROM notices_notification
-WHERE document LIKE 'notice_docs/%' ORDER BY pk DESC LIMIT 1;
+A 403 or 404 proves nothing by itself: a missing file, a wrong host or a URL
+variant the server rejects anyway also returns 404. So the check first shows
+that the same file is publicly served without the rule, and fails if it is not.
+
+Save this as `notice-direct-access-check.sh` on a host that can read the
+release's `storage/` directory and reach the public URL users use (through the
+proxy or CDN, if there is one):
+
+```sh
+#!/bin/sh
+# Usage: sh notice-direct-access-check.sh before|after
+set -u
+set -f
+BASE=${BASE:-'https://<production host>'}       # the URL users reach, no trailing slash
+APP=${APP:-'/path/to/Sargam-2.0'}               # release root on this server
+DOC=${DOC:-'notice_docs/<file from the query>'}
+NAME=${DOC#notice_docs/}
+FILE="$APP/storage/app/public/$DOC"
+
+fail() { echo "FAIL: $*"; exit 1; }
+
+# The selected file must be on the public disk, or no response proves anything.
+[ -f "$FILE" ] && [ -s "$FILE" ] || fail "$DOC is not on the public disk ($FILE); pick another file"
+SIZE=$(wc -c < "$FILE" | tr -d ' ')
+
+# --path-as-is: without it curl rewrites /./ and /../ before sending.
+get() { curl -s --path-as-is -o /dev/null -w '%{http_code} %{size_download}' "$BASE$1"; }
+
+variants() {
+  printf '%s\n' "/storage/$DOC" "//storage//$DOC" "/storage/./$DOC" \
+    "/storage/notice_docs/../$DOC" "/storage/NOTICE_DOCS/$NAME" "/storage/notice_docs%2F$NAME"
+}
+
+case "${1:-}" in
+before)
+  set -- $(get "/storage/$DOC")
+  if [ "$1" != 200 ] || [ "$2" != "$SIZE" ]; then
+    fail "positive control: /storage/$DOC returned $1 ($2 bytes; file is $SIZE bytes)"
+  fi
+  echo "PASS positive control: 200 $2 bytes  /storage/$DOC"
+  for p in $(variants); do
+    set -- $(get "$p")
+    if [ "$1" = 200 ] && [ "$2" = "$SIZE" ]; then
+      echo "variant tested       ($1 without the rule)  $p"
+    else
+      echo "variant NOT A TEST here ($1 without the rule)  $p"
+    fi
+  done
+  ;;
+after)
+  rc=0
+  for p in $(variants); do
+    set -- $(get "$p")
+    case "$1" in
+      403|404) echo "PASS $1  $p" ;;
+      *)       echo "FAIL $1 ($2 bytes)  $p"; rc=1 ;;
+    esac
+  done
+  [ "$rc" = 0 ] && echo "PASS: every direct request refused" || echo "FAIL: direct access is open"
+  exit "$rc"
+  ;;
+*)
+  fail "usage: sh $0 before|after"
+  ;;
+esac
 ```
 
-1. Direct access is blocked. Run with no cookie; every line must print 403 or
-   404, never 200:
+1. Select a notice file that is on the public disk (read-only). Take the newest
+   row whose file exists under `storage/app/public/`; older notices may be on
+   the `private` disk or have no file at all. Start from:
 
-   ```sh
-   BASE=https://<production host>
-   DOC=notice_docs/<file from the query>
-   NAME=${DOC#notice_docs/}
-   for p in "/storage/$DOC" "/storage/NOTICE_DOCS/$NAME" "//storage//$DOC" \
-            "/storage/./$DOC" "/storage/notice_docs%2F$NAME"; do
-     curl -s -o /dev/null -w "%{http_code}  $p\n" "$BASE$p"
-   done
+   ```sql
+   SELECT pk, document FROM notices_notification
+   WHERE document LIKE 'notice_docs/%' ORDER BY pk DESC LIMIT 20;
    ```
 
-2. Other public files are still served: `curl -s -o /dev/null -w "%{http_code}\n"
-   "$BASE/storage/<a non-notice file under storage/app/public>"` prints 200.
-   Without this control a blanket `/storage/` outage would look like a pass.
-3. The authorized route still works (signed-in browser): an audience member
-   opening the notice attachment from the dashboard
-   (`/admin/notice/<pk>/attachment`) gets the file; a login outside the
-   notice's audience gets 404; a logged-out request to that route redirects to
-   login. The route reads the disk directly, so the block does not affect it.
+   Set `BASE`, `APP` and `DOC` (the `document` value) in the script. The script
+   stops with `FAIL: … is not on the public disk` if the file is not there; move
+   to the next row.
+2. Positive control, **before** applying the rule: `sh
+   notice-direct-access-check.sh before`. It must print `PASS positive control:
+   200 <bytes>`, where the byte count equals the file's size. Any other result
+   exits 1, and the verification cannot proceed: fix `BASE`/`APP`/`DOC` or pick
+   another file. Do not apply the rule until this passes.
+3. Record the `before` output. Its variant lines say which variants this server
+   actually serves: a variant marked `NOT A TEST here` is rejected even without
+   the rule, so its later 403/404 is not evidence. Expect `%2F` to be `NOT A
+   TEST` on Apache, which refuses encoded slashes by default (`AllowEncodedSlashes
+   Off`), and `/storage/NOTICE_DOCS/…` to be `NOT A TEST` on a case-sensitive
+   (Linux) filesystem.
+4. Apply the rule for the server (above) and reload it.
+5. Re-run the **same file**: `sh notice-direct-access-check.sh after`. Every
+   line must print 403 or 404 and the script must exit 0 with `PASS: every
+   direct request refused`. A 200, or any other code, exits 1: direct access is
+   still open. Remove nothing from the variant list to make it pass.
 
-Repeat check 1 after any web-server, proxy or CDN change, and on every new
-environment, before it serves users.
+Then check that the rule did not over-block, and that the route still works:
+
+- Check 2 — other public files are still served: `curl -s -o /dev/null -w
+  "%{http_code}\n" "$BASE/storage/<a non-notice file under storage/app/public>"`
+  prints 200. Without this control a blanket `/storage/` outage would look like
+  a pass.
+- Check 3 — the authorized route still works (signed-in browser): an audience
+  member opening the notice attachment from the dashboard
+  (`/admin/notice/<pk>/attachment`) gets the file; a login outside the notice's
+  audience gets 404; a logged-out request to that route redirects to login. The
+  route reads the disk directly, so the block does not affect it.
+
+Repeat steps 1-5 on every new environment, before it serves users. After a
+web-server, proxy or CDN change on an environment that already has the rule,
+`before` cannot pass, because the rule is in place. Run `after` with the file
+from that environment's recorded positive control (the script still fails if
+the file has left the public disk), and record it with a reference to that
+positive control. An environment with no recorded positive control has not been
+verified.
 
 Notice files uploaded while notices were kept on the `private` disk stay there
 and are still served by the route. `attachments:migrate-sensitive` does not move
