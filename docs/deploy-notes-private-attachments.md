@@ -2,7 +2,8 @@
 
 Leave application attachments are served from the `private` filesystem disk.
 Notice documents are stored on the `public` disk (`notice_docs/`, a client
-requirement) but must only be read through the audience-checked
+requirement; its source is recorded with the Engineering lead's risk acceptance,
+not in this repository) but must only be read through the audience-checked
 `admin.notice.attachment` route. Because `public/storage` is a symlink to
 `storage/app/public`, the web server would otherwise serve
 `/storage/notice_docs/<file>` to anyone, with no login and no audience check.
@@ -57,17 +58,42 @@ location ^~ /storage/notice_docs/ { return 404; }
 The nginx rule has not been executed against a server; verify it with the
 checks below before relying on it.
 
-Reload the server, then verify on production and record the results:
+Reload the server, then verify on production and record the results (date,
+environment, who ran it, and the printed output). Laravel's test suite cannot
+check this: its test kernel never serves `/storage/` files, so only a request
+to the deployed server proves the block.
 
-1. Direct access is blocked: an unauthenticated
-   `GET /storage/notice_docs/<an existing file>` returns 403 or 404, not 200.
-   Repeat with `/storage/NOTICE_DOCS/<file>` and `//storage//notice_docs/<file>`.
-2. Other public files are still served: a `GET` for a file elsewhere under
-   `/storage/` still returns 200.
-3. The authorized route still works: an audience member opening the notice
-   attachment from the dashboard (`admin.notice.attachment`) gets the file, and
-   a logged-out request to that route redirects to login. The route reads the
-   disk directly, so the block does not affect it.
+Pick an existing notice file (read-only):
+
+```sql
+SELECT document FROM notices_notification
+WHERE document LIKE 'notice_docs/%' ORDER BY pk DESC LIMIT 1;
+```
+
+1. Direct access is blocked. Run with no cookie; every line must print 403 or
+   404, never 200:
+
+   ```sh
+   BASE=https://<production host>
+   DOC=notice_docs/<file from the query>
+   NAME=${DOC#notice_docs/}
+   for p in "/storage/$DOC" "/storage/NOTICE_DOCS/$NAME" "//storage//$DOC" \
+            "/storage/./$DOC" "/storage/notice_docs%2F$NAME"; do
+     curl -s -o /dev/null -w "%{http_code}  $p\n" "$BASE$p"
+   done
+   ```
+
+2. Other public files are still served: `curl -s -o /dev/null -w "%{http_code}\n"
+   "$BASE/storage/<a non-notice file under storage/app/public>"` prints 200.
+   Without this control a blanket `/storage/` outage would look like a pass.
+3. The authorized route still works (signed-in browser): an audience member
+   opening the notice attachment from the dashboard
+   (`/admin/notice/<pk>/attachment`) gets the file; a login outside the
+   notice's audience gets 404; a logged-out request to that route redirects to
+   login. The route reads the disk directly, so the block does not affect it.
+
+Repeat check 1 after any web-server, proxy or CDN change, and on every new
+environment, before it serves users.
 
 Notice files uploaded while notices were kept on the `private` disk stay there
 and are still served by the route. `attachments:migrate-sensitive` does not move
