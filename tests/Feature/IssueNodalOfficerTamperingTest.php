@@ -756,6 +756,48 @@ class IssueNodalOfficerTamperingTest extends TestCase
         $this->assertSame((string) $this->nodalA, (string) $issue->fresh()->employee_master_pk);
     }
 
+    // ── F-002: the Level 2/3 fallback the edit form offers is what update() saves ──
+
+    public function test_update_saves_the_level_two_fallback_the_edit_form_offers(): void
+    {
+        $issue = $this->seedIssue();
+        $this->setMatrix($this->categoryPk, [1 => [$this->officerWithNoLogin()], 2 => [$this->nodalB]]);
+
+        $offer = $this->actingAs($this->actor)
+            ->getJson(route('admin.issue-management.nodal-employees', $this->categoryPk)
+                . '?' . http_build_query(['complainant' => $this->actor->user_id, 'logger' => $this->actor->user_id]))
+            ->assertOk()
+            ->json();
+        $this->assertSame([(string) $this->nodalB], array_map('strval', array_column($offer['level1'], 'employee_pk')), 'the form does not offer the Level 2 officer');
+        $this->assertSame((string) $this->nodalB, (string) $offer['level1_auto_select']);
+        $this->assertSame(2, $offer['assigned_level']);
+
+        $this->actingAs($this->actor)
+            ->put(route('admin.issue-management.update', $issue->pk), $this->editPayload([
+                'nodal_employee_id' => $offer['level1_auto_select'],
+            ]))
+            ->assertRedirect(route('admin.issue-management.show', $issue->pk))
+            ->assertSessionHas('success', 'Issue updated successfully.');
+
+        $this->assertSame((string) $this->nodalB, (string) $issue->fresh()->employee_master_pk, 'update() discarded the officer the form offered');
+    }
+
+    public function test_update_says_so_when_it_does_not_save_the_officer_sent(): void
+    {
+        $issue = $this->seedIssue();
+        $levelOne = $this->officerWithNoLogin();
+        $this->setMatrix($this->categoryPk, [1 => [$levelOne], 2 => [$this->nodalB]]);
+
+        // Never offered (cannot sign in): a stale or tampered pick.
+        $this->actingAs($this->actor)
+            ->put(route('admin.issue-management.update', $issue->pk), $this->editPayload([
+                'nodal_employee_id' => $levelOne,
+            ]))
+            ->assertSessionHas('success', fn ($message) => str_contains($message, 'cannot take this complaint'));
+
+        $this->assertSame((string) $this->nodalA, (string) $issue->fresh()->employee_master_pk);
+    }
+
     public function test_store_accepts_a_level_one_officer_the_complainant_picked(): void
     {
         $building = DB::table('building_master')->value('pk');

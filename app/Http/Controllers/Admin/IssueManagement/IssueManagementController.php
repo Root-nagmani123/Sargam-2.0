@@ -1251,10 +1251,18 @@ class IssueManagementController extends Controller
      * taken from the request let a complainant or logger make themselves nodal
      * and step around the status lock in status_update().
      *
-     * The requested officer is honoured only when the matrix lists them at
-     * Level 1, they are not one of $excludedIds (the complainant / logger) and
-     * they can sign in. Otherwise the first eligible officer is used, walking
-     * Level 1, then Level 2, then Level 3. Null when no level has an eligible officer; the
+     * Levels are walked in order (Level 1, then 2, then 3) and resolution
+     * stops at the first level with at least one eligible officer: listed at
+     * that level, not one of $excludedIds (the complainant / logger), and able
+     * to sign in (see eligibleNodalOfficers()). Level 2 is used only when no
+     * Level 1 officer is eligible, Level 3 only when neither 1 nor 2 has one.
+     *
+     * At that level, the requested officer is honoured when they are one of
+     * its eligible officers; otherwise the level's first eligible officer is
+     * used. (getNodalEmployees() offers every eligible Level 1 officer, or at
+     * Level 2 / 3 only this method's own choice.) A requested officer from
+     * any other level, or an ineligible one, is ignored. Null when no level
+     * has an eligible officer; the
      * caller must then refuse the complaint, because status_update() admits
      * nobody to a complaint without a nodal officer or assignee. An excluded
      * person is never returned: falling back to them would hand the
@@ -1267,15 +1275,18 @@ class IssueManagementController extends Controller
         $rows = $this->escalationMatrixRows($categoryId);
 
         $requested = ($requested === null || $requested === '') ? null : (string) $requested;
-        if ($requested !== null && $this->eligibleNodalOfficers($rows, 1, $excludedIds)->contains($requested)) {
-            return $requested;
-        }
 
         foreach ([1, 2, 3] as $level) {
             $eligible = $this->eligibleNodalOfficers($rows, $level, $excludedIds);
-            if ($eligible->isNotEmpty()) {
-                return $eligible->first();
+            if ($eligible->isEmpty()) {
+                continue;
             }
+            // getNodalEmployees() offers this level's officer(s) once no
+            // higher level is eligible; honour the one actually offered.
+            if ($requested !== null && $eligible->contains($requested)) {
+                return $requested;
+            }
+            return $eligible->first();
         }
 
         return null;
@@ -1300,6 +1311,27 @@ class IssueManagementController extends Controller
             ->reject(fn ($pk) => in_array($pk, $excludedIds, true))
             ->filter(fn ($pk) => User::employeeCanSignIn($pk))
             ->values();
+    }
+
+    /**
+     * The sentence store() / update() append to their success message when
+     * the officer saved is not the one the form sent, so a stale or tampered
+     * pick is never replaced silently. Empty when they match.
+     */
+    private function nodalOverrideNote($requested, $savedPk): string
+    {
+        if ($requested === null || $requested === ''
+            || in_array((string) $savedPk, $this->employeeIdsFor($requested), true)) {
+            return '';
+        }
+
+        $officer = EmployeeMaster::findByIdOrPkOld($savedPk);
+        $name = $officer
+            ? trim(preg_replace('/\s+/', ' ', ($officer->first_name ?? '') . ' ' . ($officer->middle_name ?? '') . ' ' . ($officer->last_name ?? '')))
+            : '';
+
+        return ' The nodal officer you picked cannot take this complaint (they cannot sign in, or they are its complainant or logger), so it was assigned to '
+            . ($name !== '' ? $name : 'the next eligible officer in the escalation matrix') . ' instead.';
     }
 
     /** The error for a category in which no level has an eligible nodal officer. */
@@ -1456,17 +1488,7 @@ class IssueManagementController extends Controller
             // The form lists only officers the resolver accepts, but it can be
             // stale (e.g. the complainant changed after it loaded). Say so
             // rather than file the complaint under someone else silently.
-            $successMessage = 'Complaint submitted successfully!';
-            $requestedNodal = $request->nodal_employee_id;
-            if ($requestedNodal !== null && $requestedNodal !== ''
-                && ! in_array((string) $nodalEmployeePk, $this->employeeIdsFor($requestedNodal), true)) {
-                $assignedOfficer = EmployeeMaster::findByIdOrPkOld($nodalEmployeePk);
-                $assignedName = $assignedOfficer
-                    ? trim(preg_replace('/\s+/', ' ', ($assignedOfficer->first_name ?? '') . ' ' . ($assignedOfficer->middle_name ?? '') . ' ' . ($assignedOfficer->last_name ?? '')))
-                    : '';
-                $successMessage .= ' The nodal officer you picked cannot take this complaint (they cannot sign in, or they are its complainant or logger), so it was assigned to '
-                    . ($assignedName !== '' ? $assignedName : 'the next eligible officer in the escalation matrix') . ' instead.';
-            }
+            $successMessage = 'Complaint submitted successfully!' . $this->nodalOverrideNote($request->nodal_employee_id, $nodalEmployeePk);
 
             $data = array(
                 'issue_category_master_pk' => $request->issue_category_id,
@@ -1812,21 +1834,23 @@ class IssueManagementController extends Controller
             'description' => 'required|string|max:1000',
         ]);
 
-        // The nodal officer is decided server-side (resolveNodalOfficer()).
-        // Same category: a different Level 1 officer may be picked, but never
-        // the complainant / logger; anything else keeps the current officer.
-        // New category: the matrix decides, as in store().
+        // The nodal officer is decided server-side (resolveNodalOfficer()),
+        // the same resolution getNodalEmployees() used to offer it, so a
+        // fallback (Level 2/3) selection is honoured instead of silently
+        // discarded. Same category: a different eligible officer may be
+        // picked, but never the complainant / logger. New category: the
+        // matrix decides, as in store().
         $excludedIds = $this->employeeIdsFor($issue->created_by, $issue->issue_logger, Auth::user()->user_id ?? null);
         if ((int) $request->issue_category_id === (int) $issue->issue_category_master_pk) {
             $requested = (string) $request->nodal_employee_id;
-            $levelOne = $this->eligibleNodalOfficers($this->escalationMatrixRows($request->issue_category_id), 1, $excludedIds);
             if ($requested !== '' && $requested === User::resolveEmployeePk($issue->employee_master_pk)) {
                 // The form offers the current officer under their pk (edit());
                 // picking them again keeps the stored key, pk_old or not.
                 $nodalEmployeePk = $issue->employee_master_pk;
             } else {
-                $nodalEmployeePk = ($requested !== '' && $levelOne->contains($requested))
-                    ? $requested
+                $resolved = $this->resolveNodalOfficer($request->issue_category_id, $request->nodal_employee_id, $excludedIds);
+                $nodalEmployeePk = ($resolved !== null && $resolved === $requested)
+                    ? $resolved
                     : $issue->employee_master_pk;
             }
         } else {
@@ -1894,11 +1918,12 @@ class IssueManagementController extends Controller
             static::bumpIndexListCacheEpoch();
 
             $showUrl = route('admin.issue-management.show', $issue->pk);
+            $successMessage = 'Issue updated successfully.' . $this->nodalOverrideNote($request->nodal_employee_id, $nodalEmployeePk);
             if ($request->filled('from_modal')) {
-                session()->flash('success', 'Issue updated successfully.');
+                session()->flash('success', $successMessage);
                 return response()->view('admin.issue_management.close_modal_redirect', ['url' => $showUrl]);
             }
-            return redirect()->to($showUrl)->with('success', 'Issue updated successfully.');
+            return redirect()->to($showUrl)->with('success', $successMessage);
         // \Throwable, not \Exception: a PHP Error (TypeError and friends) would
         // otherwise skip this handler and leave the transaction open, holding
         // locks for the rest of the request.
