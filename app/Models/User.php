@@ -191,6 +191,20 @@ class User extends Authenticatable
     }
 
     /**
+     * The employee_master.pk a login IS, for Issue Management access checks:
+     * the employee complaintLoginRows() joins it to, so a signed-in login is
+     * identified by the same category rule as the complaint dropdowns. Null
+     * for a student, for a NULL-category login whose user_id only matches
+     * some employee's pk, and for a pk_old several employees share (F-006).
+     */
+    public static function complaintEmployeePkForLogin($loginPk): ?string
+    {
+        $pk = self::complaintLoginRows()->where('uc.pk', $loginPk)->value('e.pk');
+
+        return $pk === null ? null : (string) $pk;
+    }
+
+    /**
      * True for a user_credentials row (alias uc) that passes LoginController's
      * inactive-account check, which refuses a login only when user_category is
      * 'E' AND employee_master looked up by pk = user_id (never pk_old) has
@@ -215,19 +229,14 @@ class User extends Authenticatable
      *
      * A login reached through pk_old counts only when that key is
      * unambiguous: no employee has it as pk (`lu` is empty) and no other
-     * employee has it as pk_old. Once signed in, getEmployeeIdsForUser() maps
-     * the login to ONE employee with that pk or pk_old (->first(), no order).
-     * When the key is shared, that may be someone else, whose ids do not
-     * include this employee's pk, so a complaint stored under this employee
-     * would reach a login that cannot act on it. A login joined on the
-     * employee's own pk has no such problem: whichever employee it resolves
-     * to, the ids include user_id, which is that pk.
+     * employee has it as pk_old. A shared key does not say which employee
+     * the login belongs to.
      *
-     * These exclusions apply only here, to "can this employee sign in". They
-     * are not how a signed-in login is identified elsewhere: LoginController
-     * admits these logins, and getEmployeeIdsForUser() then maps their user_id
-     * to whichever employee has that pk or pk_old, so Issue Management access
-     * checks (e.g. status_update()) treat the login as that employee.
+     * The same rows identify a signed-in login in Issue Management (see
+     * complaintEmployeePkForLogin()). getEmployeeIdsForUser() maps a bare
+     * user_id to whichever employee has that pk or pk_old, whatever the
+     * login's category; Issue Management no longer uses it for the signed-in
+     * user (F-006). Its other callers (Estate) still do.
      */
     private static function complaintLoginRows()
     {

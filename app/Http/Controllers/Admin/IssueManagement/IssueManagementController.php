@@ -167,10 +167,8 @@ class IssueManagementController extends Controller
 
         $applyUserScope = function ($builder) {
             if (! hasRole('Admin') && ! hasRole('SuperAdmin')) {
-                $ids = getEmployeeIdsForUser(Auth::user()->user_id);
-                if (empty($ids)) {
-                    $ids = [Auth::user()->user_id];
-                }
+                // Empty (whereIn [] matches nothing) for a login that is nobody.
+                $ids = $this->signedInEmployeeIds();
                 // Everything the employee is party to: raised by them, logged by
                 // them, nodal officer on it, or handed to them. assigned_to is a
                 // VARCHAR carrying the employee pk as a string (or a free-text
@@ -192,8 +190,7 @@ class IssueManagementController extends Controller
         // Raised by: "all" = raised by himself or other employee, "self" = raised by himself only
         $applyRaisedBy = function ($builder) use ($request) {
             if ($request->get('raised_by') === 'self') {
-                $ids = getEmployeeIdsForUser(Auth::user()->user_id);
-                $builder->whereIn('created_by', empty($ids) ? [Auth::user()->user_id] : $ids);
+                $builder->whereIn('created_by', $this->signedInEmployeeIds());
             }
         };
 
@@ -549,10 +546,13 @@ class IssueManagementController extends Controller
         $epoch = DataTableRedisCache::readListEpoch(
             $variant === 'centcom' ? self::CENTCOM_LISTING_CACHE_EPOCH_KEY : self::LISTING_CACHE_EPOCH_KEY
         );
-        $cacheKey = 'admin_issue_management_records_total:v3:' . md5(json_encode([
+        // v4 + scoped_ids: logins sharing a user_id across categories no
+        // longer share an identity (F-006), so they must not share a count.
+        $cacheKey = 'admin_issue_management_records_total:v4:' . md5(json_encode([
             'epoch' => $epoch,
             'variant' => $variant,
             'user_id' => $userId,
+            'scoped_ids' => $this->signedInEmployeeIds(),
             'is_admin' => hasRole('Admin') || hasRole('SuperAdmin'),
             'raised_by' => $request->get('raised_by'),
             'status' => $request->get('status'),
@@ -597,11 +597,7 @@ class IssueManagementController extends Controller
         $userId = Auth::user()->user_id;
         $scopedIds = null;
         if (! $isAdmin) {
-            $scopedIds = getEmployeeIdsForUser($userId);
-            if (empty($scopedIds)) {
-                $scopedIds = [$userId];
-            }
-            $scopedIds = array_map('strval', $scopedIds);
+            $scopedIds = $this->signedInEmployeeIds();
             sort($scopedIds);
         }
 
@@ -884,10 +880,7 @@ class IssueManagementController extends Controller
         // Centcom listing: show only issues where the logged-in employee
         // is either the configured nodal officer (employee_master_pk)
         // or currently assigned handler (assigned_to).
-        $ids = getEmployeeIdsForUser(Auth::user()->user_id);
-        if (empty($ids)) {
-            $ids = [Auth::user()->user_id];
-        }
+        $ids = $this->signedInEmployeeIds();
 
         $query->where(function ($q) use ($ids) {
             $q->whereIn('employee_master_pk', $ids)
@@ -1015,11 +1008,7 @@ class IssueManagementController extends Controller
     private function issueManagementCentcomCachedSnapshot(Request $request, int $page, int $perPage): array
     {
         $userId = Auth::user()->user_id;
-        $scopedIds = getEmployeeIdsForUser($userId);
-        if (empty($scopedIds)) {
-            $scopedIds = [$userId];
-        }
-        $scopedIds = array_map('strval', $scopedIds);
+        $scopedIds = $this->signedInEmployeeIds();
         sort($scopedIds);
 
         $epoch = DataTableRedisCache::readListEpoch(self::CENTCOM_LISTING_CACHE_EPOCH_KEY);
@@ -1366,26 +1355,41 @@ class IssueManagementController extends Controller
 
     /**
      * Every employee id (pk and pk_old) the signed-in user goes by, for the
-     * in_array() ownership checks in show(), edit(), update() and
-     * status_update(). A login that names no employee gets its own user_id.
+     * list / Centcom scopes and the in_array() ownership checks in show(),
+     * edit(), update() and status_update().
      *
-     * Empty for a login whose user_id is NULL or empty. The old fallback,
-     * [(string) $userId], made that [""], and a NULL assigned_to /
-     * employee_master_pk / created_by / issue_logger casts to "" too — so such
-     * a login matched every complaint with one of those fields unset.
+     * The login is an employee only as User::complaintEmployeePkForLogin()
+     * says, i.e. by its category (F-006): a student, or a NULL-category login
+     * whose user_id merely equals an employee's pk, is nobody's employee even
+     * though the numbers match. getEmployeeIdsForUser() ignored the category.
+     *
+     * A non-student login that is no employee keeps its own user_id, which
+     * then matches only what it logged — unless that number is some
+     * employee's pk or pk_old, when it would match that employee's complaints.
+     *
+     * Empty for a login whose user_id is NULL or empty: [""] would match every
+     * complaint with a NULL identity field, since NULL casts to "" too.
      *
      * @return array<int, string>
      */
     private function signedInEmployeeIds(): array
     {
-        $userId = Auth::user()->user_id ?? null;
-        if ($userId === null || $userId === '') {
+        $user = Auth::user();
+        $userId = $user->user_id ?? null;
+        if ($userId === null || $userId === '' || $user->user_category === 'S') {
             return [];
         }
 
-        $ids = getEmployeeIdsForUser($userId) ?: [(string) $userId];
+        $employeePk = User::complaintEmployeePkForLogin($user->pk);
+        if ($employeePk !== null) {
+            $row = DB::table('employee_master')->where('pk', $employeePk)->first(['pk', 'pk_old']);
 
-        return array_values(array_filter(array_map('strval', $ids), fn ($id) => $id !== ''));
+            return array_values(array_filter(array_map('strval', [$row->pk, $row->pk_old]), fn ($id) => $id !== ''));
+        }
+
+        $isEmployeeKey = DB::table('employee_master')->where('pk', $userId)->orWhere('pk_old', $userId)->exists();
+
+        return $isEmployeeKey ? [] : [(string) $userId];
     }
 
     /** An employee id from the query string, or null unless it is all digits. */
