@@ -1283,10 +1283,42 @@
 .coe-viewer.is-shielded .coe-viewer__stage { visibility: hidden; }
 .coe-viewer.is-shielded .coe-viewer__shield { display: flex; }
 
-/* Printing while a paper is open gives a blank page. */
+/* Printing while a paper is on screen (viewer open, editor page) gives a blank page. */
 @media print {
-    body.coe-viewer-open { display: none !important; }
+    body.coe-paper-guarded { display: none !important; }
 }
+
+/* ── The paper editor, guarded like the viewer (CoePaperGuard) ──
+   The writer's name, ID and time tiled over the sheet - it never takes a
+   click, so typing is untouched - and a cover while the window is not in use. */
+.coe-qp-add .coe-qp-editor .note-editing-area { position: relative; }
+.coe-qp-add .coe-qp-mark {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background-repeat: repeat;
+    pointer-events: none;
+}
+.coe-qp-add .coe-qp-form { position: relative; }
+.coe-qp-add .coe-qp-shield {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: inherit;
+    background: #fff;
+    color: var(--ds-ink-muted, #667085);
+    text-align: center;
+    cursor: pointer;
+}
+.coe-qp-add .coe-qp-shield .bi { font-size: 2rem; }
+.coe-qp-add .coe-qp-shield p { margin: 0; }
+.coe-qp-add .coe-qp-form.is-shielded .card-body { visibility: hidden; }
+.coe-qp-add .coe-qp-form.is-shielded .coe-qp-shield { display: flex; }
 
 @media (max-width: 767.98px) {
     .coe-viewer__badge { display: none; }

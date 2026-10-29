@@ -71,7 +71,7 @@ class FacultyQuestionPaperController extends Controller
      * editor. Also "Edit Original Paper" while it is Pending at Rajbhasha; once
      * Rajbhasha has translated it, it goes back to the list.
      */
-    public function create(int $paper)
+    public function create(Request $request, int $paper)
     {
         $facultyPk = $this->facultyPk();
         $row = $this->papers->findForFaculty($facultyPk, $paper);
@@ -89,6 +89,7 @@ class FacultyQuestionPaperController extends Controller
             'templates' => self::TEMPLATES,
             'listUrl' => route('admin.coe.faculty-question-paper.index'),
             'saveUrl' => route('admin.coe.faculty-question-paper.upload', $paper),
+            'watermark' => $this->paperStamp($request),
         ]);
     }
 

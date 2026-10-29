@@ -154,7 +154,9 @@ class RajbhashaQuestionPaperTest extends TestCase
             ->assertOk()
             ->assertSee('Translate Question Paper')
             ->assertSee('Standard Question Paper')
-            ->assertSee('var STARTS_FROM_COPY = false', false);
+            ->assertSee('var STARTS_FROM_COPY = false', false)
+            ->assertSee('CoePaperGuard.guard(', false)
+            ->assertSee('ID '.$this->rajbhasha->getAuthIdentifier());
 
         // A paper written in the editor: translated in place.
         $path = 'coe/question-papers/'.$this->paper->examination_drive_id.'/orig.html';

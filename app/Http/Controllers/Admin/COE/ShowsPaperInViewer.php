@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 /**
  * See Attachment / View … Paper on the COE question paper screens: the paper
  * goes to the read-only viewer (public/js/coe-paper-viewer.js), never as a file.
+ * The paper editor pages stamp the same watermark (paperStamp()).
  */
 trait ShowsPaperInViewer
 {
@@ -22,15 +23,21 @@ trait ShowsPaperInViewer
     {
         abort_unless($request->expectsJson(), 404);
 
-        $user = $request->user();
-        $viewer = trim(($user->first_name ?? '').' '.($user->last_name ?? '')) ?: ($user->name ?? 'User');
-
         return response()->json(app(QuestionPaperStorage::class)->forViewer($path, $name) + [
-            'watermark' => $viewer.' · ID '.$user->getAuthIdentifier().' · '.now()->format('d-m-Y H:i'),
+            'watermark' => $this->paperStamp($request),
         ])->withHeaders([
             'Cache-Control' => 'no-store, private, max-age=0',
             'Pragma' => 'no-cache',
             'X-Content-Type-Options' => 'nosniff',
         ]);
+    }
+
+    /** "Name · ID 12 · 29-10-2026 10:15" — stamped over the viewer and the paper editor. */
+    protected function paperStamp(Request $request): string
+    {
+        $user = $request->user();
+        $name = trim(($user->first_name ?? '').' '.($user->last_name ?? '')) ?: ($user->name ?? 'User');
+
+        return $name.' · ID '.$user->getAuthIdentifier().' · '.now()->format('d-m-Y H:i');
     }
 }

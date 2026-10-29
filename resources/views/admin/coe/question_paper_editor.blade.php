@@ -3,8 +3,9 @@
      posts paper_html to $saveUrl.
      Params: $pageTitle, $paper (summary + template header), $editorHtml (the
      document to start from, or null for a template), $templates, $listUrl,
-     $saveUrl, $startsFromCopy (optional: $editorHtml is someone else's paper,
-     to be changed before upload — Rajbhasha's first translation). --}}
+     $saveUrl, $watermark (who is writing: stamped over the sheet), $startsFromCopy
+     (optional: $editorHtml is someone else's paper, to be changed before upload —
+     Rajbhasha's first translation). Guarded like the viewer: CoePaperGuard. --}}
 @extends('admin.layouts.master')
 
 @section('title', $pageTitle)
@@ -89,7 +90,12 @@
         </div>
     </section>
 
-    <form id="qpaperForm" class="card rounded-3" novalidate>
+    <form id="qpaperForm" class="card rounded-3 coe-qp-form" novalidate>
+        {{-- Covers the paper while the window is not in use (screen capture tools, Alt+Tab). --}}
+        <div class="coe-qp-shield" aria-hidden="true">
+            <i class="bi bi-eye-slash" aria-hidden="true"></i>
+            <p>The paper is hidden while this window is not in use.<br>Click here to continue.</p>
+        </div>
         <div class="card-body p-3 p-md-4">
             <div class="coe-qp-editor">
                 {{-- Summernote's starting document: the paper being edited (already
@@ -110,6 +116,7 @@
 
 @push('scripts')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.js"></script>
+<script src="{{ asset('js/coe-paper-viewer.js') }}?v={{ @filemtime(public_path('js/coe-paper-viewer.js')) ?: time() }}"></script>
 <script>
 $(function () {
     'use strict';
@@ -117,6 +124,7 @@ $(function () {
     var LIST_URL = @json($listUrl);
     var UPLOAD_URL = @json($saveUrl);
     var STARTS_FROM_COPY = @json($startsFromCopy);
+    var WATERMARK = @json($watermark);
     var BLANK = '<p><br></p>';
 
     // Upload Paper with the starting document untouched: why that is refused.
@@ -235,6 +243,21 @@ $(function () {
             onKeyup: syncStyleLabel,
             onMouseup: syncStyleLabel
         }
+    });
+
+    /* ── Guarded like the viewer: name stamped over the sheet, covered while the
+       window is not in use, no save / print / source keys, copy stays in the paper ── */
+    var $editing = $editor.next('.note-editor').find('.note-editing-area');
+    $('<div class="coe-qp-mark" aria-hidden="true"></div>')
+        .css('background-image', CoePaperGuard.watermark(WATERMARK))
+        .appendTo($editing);
+    document.body.classList.add(CoePaperGuard.NO_PRINT);
+
+    function shield(on) { $form.toggleClass('is-shielded', on); }
+    CoePaperGuard.guard({ active: function () { return true; }, shield: shield, copyKeys: true });
+    $form.find('.coe-qp-shield').on('click', function () { shield(false); });
+    CoePaperGuard.keepClipboard($editing.find('.note-editable')[0], function (html) {
+        $editor.summernote('pasteHTML', html);
     });
 
     function code() { return $editor.summernote('code'); }

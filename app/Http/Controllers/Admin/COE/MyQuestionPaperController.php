@@ -74,7 +74,7 @@ class MyQuestionPaperController extends Controller
      * Translate Question Paper — Translate Paper, or Edit Translated Paper until
      * it is sent. The same editor and templates as the faculty's Add Question Paper.
      */
-    public function translate(int $paper)
+    public function translate(Request $request, int $paper)
     {
         $qp = $this->papers->find($paper);
 
@@ -92,6 +92,7 @@ class MyQuestionPaperController extends Controller
             'templates' => FacultyQuestionPaperController::TEMPLATES,
             'listUrl' => route('admin.coe.my-question-paper.index'),
             'saveUrl' => route('admin.coe.my-question-paper.translation.store', $paper),
+            'watermark' => $this->paperStamp($request),
         ]);
     }
 

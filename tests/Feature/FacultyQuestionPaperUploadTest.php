@@ -97,6 +97,22 @@ class FacultyQuestionPaperUploadTest extends TestCase
             ->assertDontSee('name="question_paper"', false);
     }
 
+    public function test_editor_page_is_guarded_and_stamped_with_the_writer(): void
+    {
+        $html = $this->actingAs($this->faculty)
+            ->get(route('admin.coe.faculty-question-paper.create', $this->map->id))
+            ->assertOk()
+            ->assertSee('js/coe-paper-viewer.js', false)
+            ->assertSee('CoePaperGuard.guard(', false)
+            ->assertSee('class="coe-qp-shield"', false)
+            ->getContent();
+
+        $this->assertMatchesRegularExpression(
+            '/var WATERMARK = ".*? \\\\u00b7 ID '.$this->faculty->getAuthIdentifier().' \\\\u00b7 /u',
+            $html
+        );
+    }
+
     public function test_editor_paper_is_stored_as_v1_and_goes_straight_to_rajbhasha(): void
     {
         $this->write()

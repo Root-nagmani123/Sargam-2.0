@@ -9,6 +9,13 @@
  * paper as its cleaned HTML, a Word file as base64 that docx-preview lays out
  * (loaded on first use). The paper is never offered as a file.
  *
+ * The same deterrents guard the paper editor (Add / Edit Original Paper,
+ * Translate Question Paper) through CoePaperGuard:
+ *
+ *   CoePaperGuard.guard({ active: fn, shield: fn(on), copyKeys: bool });
+ *   CoePaperGuard.keepClipboard(editableEl, function (html) { … insert … });
+ *   el.style.backgroundImage = CoePaperGuard.watermark('Name · ID 12 · 29-10-2026 10:15');
+ *
  * These are deterrents: no browser can stop a phone camera or a capture tool
  * outside it. What makes a leak traceable is the viewer's name, ID and time
  * stamped across the whole page.
@@ -19,9 +26,17 @@
     var JSZIP = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
     var DOCX_PREVIEW = 'https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js';
 
-    // Save, print, copy, select all, view source, devtools.
-    var BLOCKED_KEYS = ['s', 'p', 'c', 'x', 'a', 'u'];
+    // With Ctrl (Cmd on a Mac): save, print, view source; copy, cut, select all
+    // where the paper is only shown; devtools with Shift.
+    var SAVE_KEYS = ['s', 'p', 'u'];
+    var COPY_KEYS = ['c', 'x', 'a'];
     var DEVTOOLS_KEYS = ['i', 'j', 'c'];
+
+    // On <body>, printing gives a blank page (coe-admin.css).
+    var NO_PRINT = 'coe-paper-guarded';
+
+    // What the system clipboard holds after a copy inside the editor.
+    var CLIPBOARD_MARK = '[Question paper text - it can only be pasted inside the paper]';
 
     var scripts = {};
     var el = null;
@@ -210,13 +225,77 @@
             });
     }
 
-    // Keys pressed with Ctrl (Cmd on a Mac) that would save, print or copy the paper.
-    function blocksKey(e) {
-        var key = (e.key || '').toLowerCase();
-        var ctrl = e.ctrlKey || e.metaKey;
-        return key === 'printscreen' || key === 'f12'
-            || (ctrl && e.shiftKey && DEVTOOLS_KEYS.indexOf(key) !== -1)
-            || (ctrl && BLOCKED_KEYS.indexOf(key) !== -1);
+    /**
+     * Screen-capture deterrents for a paper on screen, while o.active() says so:
+     * o.shield(true) covers it whenever this window is not the one in use
+     * (Win+Shift+S, Snipping Tool, Alt+Tab, another tab) or PrintScreen is
+     * pressed, and o.shield(false) uncovers it on return; save / print / source
+     * / devtools keys are swallowed, and copy keys too unless o.copyKeys.
+     */
+    function guard(o) {
+        function blocks(e) {
+            var key = (e.key || '').toLowerCase();
+            var ctrl = e.ctrlKey || e.metaKey;
+            return key === 'printscreen' || key === 'f12'
+                || (ctrl && e.shiftKey && DEVTOOLS_KEYS.indexOf(key) !== -1)
+                || (ctrl && SAVE_KEYS.indexOf(key) !== -1)
+                || (ctrl && !o.copyKeys && COPY_KEYS.indexOf(key) !== -1);
+        }
+
+        // Capture phase, so nothing on the page sees these first.
+        document.addEventListener('keydown', function (e) {
+            if (!o.active() || !blocks(e)) { return; }
+            e.preventDefault();
+            e.stopPropagation();
+            if ((e.key || '').toLowerCase() === 'printscreen') { o.shield(true); }
+        }, true);
+        // Windows takes the PrintScreen shot on key down and only reports key up:
+        // empty the clipboard and keep the paper covered until the user returns.
+        document.addEventListener('keyup', function (e) {
+            if (!o.active() || (e.key || '').toLowerCase() !== 'printscreen') { return; }
+            o.shield(true);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText('').catch(function () {});
+            }
+        }, true);
+
+        window.addEventListener('blur', function () { if (o.active()) { o.shield(true); } });
+        window.addEventListener('focus', function () { o.shield(false); });
+        document.addEventListener('visibilitychange', function () {
+            if (o.active() && document.hidden) { o.shield(true); }
+        });
+    }
+
+    /**
+     * Copy and cut inside `el` (the editor) stay inside the page: the system
+     * clipboard only gets CLIPBOARD_MARK, and pasting that back into `el` calls
+     * insert(html) with what was copied. Pasting from outside (Word) still works.
+     * Dragging text out is blocked.
+     */
+    function keepClipboard(el, insert) {
+        var held = null;
+
+        function take(e, cut) {
+            var sel = window.getSelection();
+            if (!sel || sel.isCollapsed || !sel.rangeCount) { return; }
+            var box = document.createElement('div');
+            box.appendChild(sel.getRangeAt(0).cloneContents());
+            held = box.innerHTML;
+            e.preventDefault();
+            if (e.clipboardData) { e.clipboardData.setData('text/plain', CLIPBOARD_MARK); }
+            if (cut) { document.execCommand('delete'); }
+        }
+
+        el.addEventListener('copy', function (e) { take(e, false); });
+        el.addEventListener('cut', function (e) { take(e, true); });
+        el.addEventListener('paste', function (e) {
+            var text = e.clipboardData ? e.clipboardData.getData('text/plain') : '';
+            if (held !== null && text === CLIPBOARD_MARK) {
+                e.preventDefault();
+                insert(held);
+            }
+        }, true);
+        el.addEventListener('dragstart', function (e) { e.preventDefault(); });
     }
 
     function setup() {
@@ -236,12 +315,12 @@
 
         root.addEventListener('show.bs.modal', function () {
             isOpen = true;
-            document.body.classList.add('coe-viewer-open');      // print → blank page (coe-admin.css)
+            document.body.classList.add(NO_PRINT);
         });
         // Nothing of the paper stays in the page once it is closed.
         root.addEventListener('hidden.bs.modal', function () {
             isOpen = false;
-            document.body.classList.remove('coe-viewer-open');
+            document.body.classList.remove(NO_PRINT);
             clear();
             state('');
         });
@@ -250,32 +329,10 @@
             root.addEventListener(type, function (e) { e.preventDefault(); });
         });
 
-        // Capture phase, so nothing on the page sees these first.
-        document.addEventListener('keydown', function (e) {
-            if (!isOpen || !blocksKey(e)) { return; }
-            e.preventDefault();
-            e.stopPropagation();
-            if ((e.key || '').toLowerCase() === 'printscreen') { shield(true); }
-        }, true);
-        // Windows takes the PrintScreen shot on key down and only reports key up:
-        // empty the clipboard and keep the paper covered until the user returns.
-        document.addEventListener('keyup', function (e) {
-            if (!isOpen || (e.key || '').toLowerCase() !== 'printscreen') { return; }
-            shield(true);
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText('').catch(function () {});
-            }
-        }, true);
-
-        // Covered whenever this window is not the one in use: capture tools
-        // (Win+Shift+S, Snipping Tool), Alt+Tab, another tab.
-        window.addEventListener('blur', function () { if (isOpen) { shield(true); } });
-        window.addEventListener('focus', function () { shield(false); });
-        document.addEventListener('visibilitychange', function () {
-            if (isOpen && document.hidden) { shield(true); }
-        });
+        guard({ active: function () { return isOpen; }, shield: shield });
         el.content.addEventListener('click', function () { shield(false); });
     }
 
     window.CoePaperViewer = { open: open, print: print };
+    window.CoePaperGuard = { guard: guard, keepClipboard: keepClipboard, watermark: watermark, NO_PRINT: NO_PRINT };
 })(window, document, jQuery);
