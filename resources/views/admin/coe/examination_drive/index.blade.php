@@ -415,7 +415,7 @@ $(function () {
     var $term    = $('#edcTerm');
     var $status  = $('#edcStatus');
     [$course, $service, $type, $term, $status].forEach(function ($s) {
-        $s.select2({ width: '100%', dropdownParent: $modalBody });
+        $s.select2({ width: '100%', dropdownParent: $modal });
     });
 
     function fieldError($el, msg) {
