@@ -50,7 +50,7 @@ class IssueSignedInIdentityTest extends TestCase
     private function login(int $userId, ?string $category): User
     {
         $pk = DB::table('user_credentials')->insertGetId([
-            'user_name' => 'f006-probe-' . uniqid(),
+            'user_name' => 'f006-probe-'.uniqid(),
             'user_id' => $userId,
             'user_category' => $category,
         ]);

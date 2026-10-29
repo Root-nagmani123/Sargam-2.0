@@ -156,7 +156,7 @@ class IssueNodalFormAndShowIdentityTest extends TestCase
     private function nodalEmployees(array $query = []): array
     {
         return $this->actingAs($this->actor)
-            ->getJson(route('admin.issue-management.nodal-employees', $this->categoryPk) . ($query ? '?' . http_build_query($query) : ''))
+            ->getJson(route('admin.issue-management.nodal-employees', $this->categoryPk).($query ? '?'.http_build_query($query) : ''))
             ->assertOk()
             ->json();
     }
@@ -208,7 +208,7 @@ class IssueNodalFormAndShowIdentityTest extends TestCase
         $this->assertSame(2, $response['assigned_level']);
 
         // Submitting what the form preselected stores exactly that officer, with no substitution notice.
-        $description = 'Form fallback probe ' . uniqid();
+        $description = 'Form fallback probe '.uniqid();
         $this->actingAs($this->actor)
             ->post(route('admin.issue-management.store'), $this->storePayload($description, $response['level1_auto_select']))
             ->assertSessionHasNoErrors()
@@ -244,7 +244,7 @@ class IssueNodalFormAndShowIdentityTest extends TestCase
     {
         $noLogin = $this->officerWithNoLogin();
         $this->setMatrix([1 => [$noLogin, $this->nodalB]]);
-        $description = 'Form substitution notice probe ' . uniqid();
+        $description = 'Form substitution notice probe '.uniqid();
 
         $this->actingAs($this->actor)
             ->post(route('admin.issue-management.store'), $this->storePayload($description, $noLogin))
@@ -253,7 +253,7 @@ class IssueNodalFormAndShowIdentityTest extends TestCase
         $stored = IssueLogManagement::where('description', $description)->first();
         $this->assertNotNull($stored);
         $this->assertSame((string) $this->nodalB, (string) $stored->employee_master_pk);
-        $this->assertStringContainsString('cannot take this complaint', (string) session('success'), 'the complaint went to another officer without saying so');
+        $this->assertStringContainsString('is not on offer for this complaint, so it was assigned to', (string) session('success'), 'the complaint went to another officer without saying so');
     }
 
     // ── F-007 / F-010: the detail page knows a pk_old-keyed officer ───────────

@@ -72,7 +72,7 @@ class IssueNodalLoginKeyCollisionTest extends TestCase
     private function login(int $userId, ?string $category): int
     {
         return (int) DB::table('user_credentials')->insertGetId([
-            'user_name' => 'f021-probe-' . uniqid(),
+            'user_name' => 'f021-probe-'.uniqid(),
             'user_id' => $userId,
             'user_category' => $category,
         ]);
@@ -155,13 +155,13 @@ class IssueNodalLoginKeyCollisionTest extends TestCase
         }
 
         $offered = $this->actingAs($actor)
-            ->getJson('/admin/issue-management/nodal-employees/' . $category)
+            ->getJson('/admin/issue-management/nodal-employees/'.$category)
             ->assertOk()
             ->json();
         $this->assertNotContains((string) $b, array_map(fn ($r) => (string) $r['employee_pk'], $offered['level1'] ?? []), 'the form offers B');
         $this->assertSame((string) $c, (string) ($offered['level1_auto_select'] ?? ''), 'the form does not preselect the Level 2 officer');
 
-        $description = 'F-021 collision probe ' . uniqid();
+        $description = 'F-021 collision probe '.uniqid();
         $this->actingAs($actor)
             ->post(route('admin.issue-management.store'), [
                 'description' => $description,

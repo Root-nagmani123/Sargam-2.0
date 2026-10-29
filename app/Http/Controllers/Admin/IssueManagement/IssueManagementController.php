@@ -1305,9 +1305,10 @@ class IssueManagementController extends Controller
     /**
      * The sentence store() / update() append to their success message when
      * the officer saved is not the one the form sent, so a stale or tampered
-     * pick is never replaced silently. Empty when they match.
+     * pick is never replaced silently. Empty when they match. $kept: update()
+     * kept the stored officer rather than resolving a new one.
      */
-    private function nodalOverrideNote($requested, $savedPk): string
+    private function nodalOverrideNote($requested, $savedPk, bool $kept = false): string
     {
         if ($requested === null || $requested === ''
             || in_array((string) $savedPk, $this->employeeIdsFor($requested), true)) {
@@ -1319,7 +1320,13 @@ class IssueManagementController extends Controller
             ? trim(preg_replace('/\s+/', ' ', ($officer->first_name ?? '') . ' ' . ($officer->middle_name ?? '') . ' ' . ($officer->last_name ?? '')))
             : '';
 
-        return ' The nodal officer you picked cannot take this complaint (they cannot sign in, or they are its complainant or logger), so it was assigned to '
+        // No cause is named: the pick may be ineligible, or eligible at a level the matrix does not use yet.
+        if ($kept) {
+            return ' The nodal officer you picked is not on offer for this complaint, so its current nodal officer'
+                . ($name !== '' ? ', ' . $name . ',' : '') . ' was kept.';
+        }
+
+        return ' The nodal officer you picked is not on offer for this complaint, so it was assigned to '
             . ($name !== '' ? $name : 'the next eligible officer in the escalation matrix') . ' instead.';
     }
 
@@ -1845,6 +1852,7 @@ class IssueManagementController extends Controller
         // picked, but never the complainant / logger. New category: the
         // matrix decides, as in store().
         $excludedIds = $this->employeeIdsFor($issue->created_by, $issue->issue_logger, Auth::user()->user_id ?? null);
+        $keptStored = false;
         if ((int) $request->issue_category_id === (int) $issue->issue_category_master_pk) {
             $requested = (string) $request->nodal_employee_id;
             if ($requested !== '' && $requested === User::resolveEmployeePk($issue->employee_master_pk)) {
@@ -1853,9 +1861,8 @@ class IssueManagementController extends Controller
                 $nodalEmployeePk = $issue->employee_master_pk;
             } else {
                 $resolved = $this->resolveNodalOfficer($request->issue_category_id, $request->nodal_employee_id, $excludedIds);
-                $nodalEmployeePk = ($resolved !== null && $resolved === $requested)
-                    ? $resolved
-                    : $issue->employee_master_pk;
+                $keptStored = ! ($resolved !== null && $resolved === $requested);
+                $nodalEmployeePk = $keptStored ? $issue->employee_master_pk : $resolved;
             }
         } else {
             $nodalEmployeePk = $this->resolveNodalOfficer($request->issue_category_id, $request->nodal_employee_id, $excludedIds);
@@ -1922,7 +1929,7 @@ class IssueManagementController extends Controller
             static::bumpIndexListCacheEpoch();
 
             $showUrl = route('admin.issue-management.show', $issue->pk);
-            $successMessage = 'Issue updated successfully.' . $this->nodalOverrideNote($request->nodal_employee_id, $nodalEmployeePk);
+            $successMessage = 'Issue updated successfully.' . $this->nodalOverrideNote($request->nodal_employee_id, $nodalEmployeePk, $keptStored);
             if ($request->filled('from_modal')) {
                 session()->flash('success', $successMessage);
                 return response()->view('admin.issue_management.close_modal_redirect', ['url' => $showUrl]);

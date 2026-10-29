@@ -7,7 +7,9 @@ use App\Models\IssueCategoryMaster;
 use App\Models\IssueLogManagement;
 use App\Models\IssueLogStatus;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
 use Tests\TestCase;
 
 /**
@@ -152,7 +154,7 @@ class CentcomAssignedVisibilityTest extends TestCase
         ], $extra);
 
         $payload = $this->actingAs($actor)
-            ->getJson(route($routeName) . '?' . http_build_query($query))
+            ->getJson(route($routeName).'?'.http_build_query($query))
             ->assertOk()
             ->json();
 
@@ -337,7 +339,7 @@ class CentcomAssignedVisibilityTest extends TestCase
 
         // Give that employee a faculty login; the test transaction rolls it back.
         DB::table('user_credentials')->insert([
-            'user_name' => 'pr337-faculty-probe-' . $pk,
+            'user_name' => 'pr337-faculty-probe-'.$pk,
             'user_id' => $pk,
             'user_category' => 'F',
         ]);
@@ -397,13 +399,13 @@ class CentcomAssignedVisibilityTest extends TestCase
         $employeeFirstName = (string) DB::table('employee_master')->where('pk', $pk)->value('first_name');
         $strangerFirstName = strcasecmp(trim($employeeFirstName), 'Collision') === 0 ? 'Stranger' : 'Collision';
         DB::table('user_credentials')->insert([
-            'user_name' => 'pr337-null-collision-probe-' . $pk,
+            'user_name' => 'pr337-null-collision-probe-'.$pk,
             'user_id' => $pk,
             'user_category' => null,
             'first_name' => $strangerFirstName,
             'last_name' => 'Probe',
         ]);
-        $collision = DB::table('user_credentials')->where('user_name', 'pr337-null-collision-probe-' . $pk)->first();
+        $collision = DB::table('user_credentials')->where('user_name', 'pr337-null-collision-probe-'.$pk)->first();
 
         // LoginController would let the colliding login in - the reason it does
         // not count is identity, not sign-in.
@@ -450,7 +452,7 @@ class CentcomAssignedVisibilityTest extends TestCase
      * checked, the employee is found by pk = user_id (never pk_old), and only
      * status 2 is refused.
      *
-     * @param  \Illuminate\Support\Collection|null  $employees  employee_master rows keyed by (string) pk
+     * @param  Collection|null  $employees  employee_master rows keyed by (string) pk
      */
     private function loginControllerAdmits(object $credential, $employees = null): bool
     {
@@ -503,7 +505,7 @@ class CentcomAssignedVisibilityTest extends TestCase
      * pk, and nobody else has it as pk_old. Otherwise the signed-in login may
      * resolve to the other employee (PR #337 F-021).
      *
-     * @param  \Illuminate\Support\Collection|null  $employees  employee_master rows keyed by (string) pk
+     * @param  Collection|null  $employees  employee_master rows keyed by (string) pk
      */
     private function isEmployeesOwnLogin(object $credential, ?object $employee = null, $employees = null): bool
     {
@@ -596,7 +598,7 @@ class CentcomAssignedVisibilityTest extends TestCase
         $view = app(IssueManagementController::class)->show($issue->pk);
 
         $this->assertInstanceOf(
-            \Illuminate\View\View::class,
+            View::class,
             $view,
             'The nodal officer was redirected away from their own issue.'
         );
@@ -617,7 +619,7 @@ class CentcomAssignedVisibilityTest extends TestCase
     {
         $this->actingAs($actor);
         $view = app(IssueManagementController::class)->show($issueId);
-        $this->assertInstanceOf(\Illuminate\View\View::class, $view, 'Actor was redirected away from the issue.');
+        $this->assertInstanceOf(View::class, $view, 'Actor was redirected away from the issue.');
 
         // The show blade leaves an output buffer open; unwind whatever it adds
         // so PHPUnit does not flag the test as risky.

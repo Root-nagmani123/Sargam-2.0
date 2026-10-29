@@ -304,7 +304,7 @@ class IssueNodalOfficerTamperingTest extends TestCase
 
         $this->actingAs($this->actor)
             ->post(route('admin.issue-management.store'), [
-                'description' => 'Store tamper probe ' . uniqid(),
+                'description' => 'Store tamper probe '.uniqid(),
                 'issue_category_id' => $this->categoryPk,
                 'issue_sub_category_id' => $this->subCategoryPk,
                 'issue_priority_id' => (int) DB::table('issue_priority_master')->value('pk'),
@@ -462,7 +462,7 @@ class IssueNodalOfficerTamperingTest extends TestCase
             2 => [$this->nodalB],
             3 => [$this->nodalA],
         ]);
-        $description = 'Store sole-officer probe ' . uniqid();
+        $description = 'Store sole-officer probe '.uniqid();
 
         $this->actingAs($this->actor)
             ->post(route('admin.issue-management.store'), $this->storePayload($description))
@@ -499,7 +499,7 @@ class IssueNodalOfficerTamperingTest extends TestCase
             2 => [(int) $this->actor->user_id],
             3 => [$this->nodalA],
         ]);
-        $description = 'Store level-three probe ' . uniqid();
+        $description = 'Store level-three probe '.uniqid();
 
         $this->actingAs($this->actor)
             ->post(route('admin.issue-management.store'), $this->storePayload($description))
@@ -513,7 +513,7 @@ class IssueNodalOfficerTamperingTest extends TestCase
     public function test_store_assigns_level_two_when_the_category_has_no_level_one(): void
     {
         $this->setMatrix($this->categoryPk, [2 => [$this->nodalB]]);
-        $description = 'Store no-level-one probe ' . uniqid();
+        $description = 'Store no-level-one probe '.uniqid();
 
         $this->actingAs($this->actor)
             ->post(route('admin.issue-management.store'), array_merge($this->storePayload($description), ['nodal_employee_id' => null]))
@@ -527,7 +527,7 @@ class IssueNodalOfficerTamperingTest extends TestCase
     public function test_store_is_refused_when_the_logger_is_the_only_officer_at_every_level(): void
     {
         $this->setMatrix($this->categoryPk, [1 => [(int) $this->actor->user_id]]);
-        $description = 'Store refused probe ' . uniqid();
+        $description = 'Store refused probe '.uniqid();
 
         $this->actingAs($this->actor)
             ->post(route('admin.issue-management.store'), $this->storePayload($description))
@@ -539,7 +539,7 @@ class IssueNodalOfficerTamperingTest extends TestCase
     public function test_store_is_refused_when_the_category_has_no_escalation_matrix(): void
     {
         $this->setMatrix($this->categoryPk, []);
-        $description = 'Store no-matrix probe ' . uniqid();
+        $description = 'Store no-matrix probe '.uniqid();
 
         $this->actingAs($this->actor)
             ->post(route('admin.issue-management.store'), $this->storePayload($description))
@@ -611,7 +611,7 @@ class IssueNodalOfficerTamperingTest extends TestCase
             2 => [$levelTwo],
             3 => [$this->nodalA],
         ]);
-        $description = 'Store no-login level-two probe ' . uniqid();
+        $description = 'Store no-login level-two probe '.uniqid();
 
         $this->actingAs($this->actor)
             ->post(route('admin.issue-management.store'), $this->storePayload($description))
@@ -628,7 +628,7 @@ class IssueNodalOfficerTamperingTest extends TestCase
             2 => [$levelTwo],
             3 => [$this->nodalA],
         ]);
-        $description = 'Store deactivated level-two probe ' . uniqid();
+        $description = 'Store deactivated level-two probe '.uniqid();
 
         $this->actingAs($this->actor)
             ->post(route('admin.issue-management.store'), $this->storePayload($description))
@@ -646,7 +646,7 @@ class IssueNodalOfficerTamperingTest extends TestCase
             2 => [$levelTwo],
             3 => [$levelThree],
         ]);
-        $description = 'Store nobody-can-sign-in probe ' . uniqid();
+        $description = 'Store nobody-can-sign-in probe '.uniqid();
 
         $this->actingAs($this->actor)
             ->post(route('admin.issue-management.store'), $this->storePayload($description))
@@ -659,7 +659,7 @@ class IssueNodalOfficerTamperingTest extends TestCase
     {
         $requested = $this->officerWithNoLogin();
         $this->setMatrix($this->categoryPk, [1 => [$requested, $this->nodalB]]);
-        $description = 'Store no-login requested probe ' . uniqid();
+        $description = 'Store no-login requested probe '.uniqid();
 
         $this->actingAs($this->actor)
             ->post(route('admin.issue-management.store'), array_merge($this->storePayload($description), ['nodal_employee_id' => $requested]))
@@ -672,7 +672,7 @@ class IssueNodalOfficerTamperingTest extends TestCase
     {
         $levelOne = $this->officerWithNoLogin();
         $this->setMatrix($this->categoryPk, [1 => [$levelOne], 2 => [$this->nodalB]]);
-        $description = 'Store no-login level-one probe ' . uniqid();
+        $description = 'Store no-login level-one probe '.uniqid();
 
         $this->actingAs($this->actor)
             ->post(route('admin.issue-management.store'), array_merge($this->storePayload($description), ['nodal_employee_id' => null]))
@@ -765,7 +765,7 @@ class IssueNodalOfficerTamperingTest extends TestCase
 
         $offer = $this->actingAs($this->actor)
             ->getJson(route('admin.issue-management.nodal-employees', $this->categoryPk)
-                . '?' . http_build_query(['complainant' => $this->actor->user_id, 'logger' => $this->actor->user_id]))
+                .'?'.http_build_query(['complainant' => $this->actor->user_id, 'logger' => $this->actor->user_id]))
             ->assertOk()
             ->json();
         $this->assertSame([(string) $this->nodalB], array_map('strval', array_column($offer['level1'], 'employee_pk')), 'the form does not offer the Level 2 officer');
@@ -793,9 +793,34 @@ class IssueNodalOfficerTamperingTest extends TestCase
             ->put(route('admin.issue-management.update', $issue->pk), $this->editPayload([
                 'nodal_employee_id' => $levelOne,
             ]))
-            ->assertSessionHas('success', fn ($message) => str_contains($message, 'cannot take this complaint'));
+            ->assertSessionHas('success', fn ($message) => str_contains($message, 'is not on offer for this complaint')
+                && str_contains($message, 'was kept') && ! str_contains($message, 'assigned to'));
 
         $this->assertSame((string) $this->nodalA, (string) $issue->fresh()->employee_master_pk);
+    }
+
+    // ── F-007: keeping the stored officer is not reported as a reassignment ──
+
+    public function test_update_says_the_current_officer_was_kept_when_an_unused_level_is_picked(): void
+    {
+        $issue = $this->seedIssue();
+        $stored = $this->officerWithNoLogin();
+        $issue->update(['employee_master_pk' => $stored]);
+        $this->setMatrix($this->categoryPk, [1 => [$this->nodalA], 2 => [$this->nodalB]]);
+
+        // nodalB can sign in, but Level 2 is not on offer while Level 1 is eligible.
+        $this->actingAs($this->actor)
+            ->put(route('admin.issue-management.update', $issue->pk), $this->editPayload([
+                'nodal_employee_id' => $this->nodalB,
+            ]))
+            ->assertSessionHas('success', function ($message) {
+                return str_contains($message, 'is not on offer for this complaint')
+                    && str_contains($message, 'was kept')
+                    && ! str_contains($message, 'assigned to')
+                    && ! str_contains($message, 'cannot sign in');
+            });
+
+        $this->assertSame((string) $stored, (string) $issue->fresh()->employee_master_pk);
     }
 
     public function test_store_accepts_a_level_one_officer_the_complainant_picked(): void

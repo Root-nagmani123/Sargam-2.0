@@ -85,7 +85,7 @@ class IssueEditNodalPkOldPrefillTest extends TestCase
             'status' => 1,
         ]);
         DB::table('user_credentials')->insert([
-            'user_name' => 'f022-probe-' . uniqid(),
+            'user_name' => 'f022-probe-'.uniqid(),
             'user_id' => $this->officerPk,
             'user_category' => 'E',
         ]);
@@ -132,13 +132,13 @@ class IssueEditNodalPkOldPrefillTest extends TestCase
         $page = $this->actingAs($this->actor)
             ->get(route('admin.issue-management.edit', $issue->pk))
             ->assertOk();
-        $page->assertSee('nodal: "' . $this->officerPk . '"', false);
-        $page->assertDontSee('nodal: "' . $this->officerPkOld . '"', false);
+        $page->assertSee('nodal: "'.$this->officerPk.'"', false);
+        $page->assertDontSee('nodal: "'.$this->officerPkOld.'"', false);
 
         // The same request the edit form sends (complainant and logger excluded).
         $offered = $this->actingAs($this->actor)
-            ->getJson('/admin/issue-management/nodal-employees/' . $this->categoryPk
-                . '?complainant=' . $this->actor->user_id . '&logger=' . $this->actor->user_id)
+            ->getJson('/admin/issue-management/nodal-employees/'.$this->categoryPk
+                .'?complainant='.$this->actor->user_id.'&logger='.$this->actor->user_id)
             ->assertOk()
             ->json();
         $offeredPks = array_map(fn ($r) => (string) $r['employee_pk'], $offered['level1'] ?? []);

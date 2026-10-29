@@ -130,7 +130,7 @@ class User extends Authenticatable
                 DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
                 DB::raw("COALESCE(e.mobile, '') as mobile"),
                 'd.designation_name',
-                DB::raw('MAX(' . self::LOGIN_ALLOWED_SQL . ') as can_login')
+                DB::raw('MAX('.self::LOGIN_ALLOWED_SQL.') as can_login')
             )
             ->orderByDesc('can_login')
             ->orderBy('e.first_name')

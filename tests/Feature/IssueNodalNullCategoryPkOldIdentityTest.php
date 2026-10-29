@@ -83,7 +83,7 @@ class IssueNodalNullCategoryPkOldIdentityTest extends TestCase
     private function nullCategoryLogin(int $userId): int
     {
         return (int) DB::table('user_credentials')->insertGetId([
-            'user_name' => 'f017-probe-' . uniqid(),
+            'user_name' => 'f017-probe-'.uniqid(),
             'user_id' => $userId,
             'user_category' => null,
         ]);
@@ -136,7 +136,7 @@ class IssueNodalNullCategoryPkOldIdentityTest extends TestCase
         $employee = $this->employee($pkOld);
 
         DB::table('user_credentials')->insert([
-            'user_name' => 'f017-probe-' . uniqid(),
+            'user_name' => 'f017-probe-'.uniqid(),
             'user_id' => $pkOld,
             'user_category' => 'S',
         ]);
@@ -185,7 +185,7 @@ class IssueNodalNullCategoryPkOldIdentityTest extends TestCase
             ]);
         }
 
-        $description = 'F-017 pk_old nodal probe ' . uniqid();
+        $description = 'F-017 pk_old nodal probe '.uniqid();
         $this->actingAs($actor)
             ->post(route('admin.issue-management.store'), [
                 'description' => $description,
