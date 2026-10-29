@@ -133,35 +133,55 @@
                                 </li>
                             </ul>
 
-                            <li class="sidebar-item mb-1">
-                                <a class="sidebar-link sidebar-link-collapse d-flex align-items-center justify-content-between rounded-2 px-3 py-2"
-                                    data-bs-toggle="collapse" href="#userManagementCollapse" role="button"
-                                    aria-expanded="false" aria-controls="userManagementCollapse">
-                                    <span class="d-flex align-items-center gap-2 min-w-0">
-                                        <i class="material-icons material-symbols-rounded sidebar-panel-menu__icon" aria-hidden="true">admin_panel_settings</i>
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Roles &amp; Permissions</span>
-                                    </span>
-                                    <i class="material-icons material-symbols-rounded sidebar-panel-menu__chevron menu-icon" aria-hidden="true">chevron_right</i>
-                                </a>
-                            </li>
-                            <ul class="collapse list-unstyled mb-2" id="userManagementCollapse">
-                                <li class="sidebar-panel-submenu-tree">
-                                    <ul class="list-unstyled mb-0">
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('admin.roles.*') ? 'active' : '' }}"
-                                                href="{{ route('admin.roles.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Roles</span>
-                                            </a>
-                                        </li>
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"
-                                                href="{{ route('admin.users.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">User Permissions</span>
-                                            </a>
-                                        </li>
-                                    </ul>
+                            {{-- Navigation must agree with the route gate. On this branch the assign-role
+                                 routes carry EnsureMenuPermission:users (by class - there is no
+                                 `menu.permission` alias here) and role writes are Super Admin only
+                                 (EnsureRoleAdmin). Originally the block around them was gated on
+                                 role NAMES - and the two disagreed (PR #311 review F-017): a Training-Induction
+                                 holder was shown both links and got 403 on both. Three of the five role names
+                                 above ('Admin', 'Training-MCTP', 'IST') do not exist in this database, so the
+                                 same 403 was waiting for whoever created one of them next. hasMenuPermission()
+                                 is the predicate EnsureMenuPermission itself applies, so these cannot drift
+                                 apart again. --}}
+                            @php
+                                $canAdministerRoles = hasMenuPermission('roles');
+                                $canAdministerUsers = hasMenuPermission('users');
+                            @endphp
+                            @if ($canAdministerRoles || $canAdministerUsers)
+                                <li class="sidebar-item mb-1">
+                                    <a class="sidebar-link sidebar-link-collapse d-flex align-items-center justify-content-between rounded-2 px-3 py-2"
+                                        data-bs-toggle="collapse" href="#userManagementCollapse" role="button"
+                                        aria-expanded="false" aria-controls="userManagementCollapse">
+                                        <span class="d-flex align-items-center gap-2 min-w-0">
+                                            <i class="material-icons material-symbols-rounded sidebar-panel-menu__icon" aria-hidden="true">admin_panel_settings</i>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Roles &amp; Permissions</span>
+                                        </span>
+                                        <i class="material-icons material-symbols-rounded sidebar-panel-menu__chevron menu-icon" aria-hidden="true">chevron_right</i>
+                                    </a>
                                 </li>
-                            </ul>
+                                <ul class="collapse list-unstyled mb-2" id="userManagementCollapse">
+                                    <li class="sidebar-panel-submenu-tree">
+                                        <ul class="list-unstyled mb-0">
+                                        @if ($canAdministerRoles)
+                                            <li class="sidebar-item mb-1">
+                                                <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('admin.roles.*') ? 'active' : '' }}"
+                                                    href="{{ route('admin.roles.index') }}">
+                                                    <span class="hide-menu small small-sm-normal text-nowrap">Roles</span>
+                                                </a>
+                                            </li>
+                                        @endif
+                                        @if ($canAdministerUsers)
+                                            <li class="sidebar-item mb-1">
+                                                <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"
+                                                    href="{{ route('admin.users.index') }}">
+                                                    <span class="hide-menu small small-sm-normal text-nowrap">User Permissions</span>
+                                                </a>
+                                            </li>
+                                        @endif
+                                        </ul>
+                                    </li>
+                                </ul>
+                            @endif
                             @if (hasRole('Admin') || hasRole('Super Admin'))
                                 <li class="sidebar-item mb-1">
                                     <a class="sidebar-link d-flex align-items-center gap-2 rounded-2 px-3 py-2 {{ request()->routeIs('admin.setup.quick_links.*') ? 'active' : '' }}"

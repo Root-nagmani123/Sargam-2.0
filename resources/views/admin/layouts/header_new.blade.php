@@ -289,12 +289,29 @@
                 </div>
             </li>
             <li><hr class="dropdown-divider mt-1 mb-2"></li>
+            {{-- Rendered only for an account the gate will actually admit.
+
+                 member.profile.edit is object-level (EnsureMemberRecordAccess):
+                 an entitled account reaches any record, everybody else reaches
+                 exactly the one they can be SHOWN to own - user_category 'E'
+                 plus a contact-detail match, since user_id alone named a
+                 different person for 327 of the 1,547 credentials that resolve
+                 to an employee row (PR #309 F-024).
+
+                 Without this guard those accounts keep an "Edit Profile" item
+                 that answers 403 - a dead button that reads as a fault rather
+                 than as a boundary, which is the same reason the member grid's
+                 Action column resolves its links up front. Same method as the
+                 gate, so the menu and the route cannot disagree. --}}
+            @if (\App\Http\Middleware\EnsureMemberRecordAccess::ownedMemberPk() !== null
+                || \App\Http\Middleware\EnsureMemberPiiAccess::grantsAccess())
             <li>
                 <a class="dropdown-item profile-dd-item d-flex align-items-center gap-3" href="{{ route('member.profile.edit', Auth::user()->user_id ?? 0) }}">
                     <i class="material-icons material-symbols-rounded">edit</i>
                     <span>Edit Profile</span>
                 </a>
             </li>
+            @endif
             <li>
                 <a class="dropdown-item profile-dd-item d-flex align-items-center gap-3" href="{{ route('admin.password.change_password') }}">
                     <i class="material-icons material-symbols-rounded">lock</i>

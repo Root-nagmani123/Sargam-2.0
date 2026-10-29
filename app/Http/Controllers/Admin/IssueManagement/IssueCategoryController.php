@@ -17,6 +17,7 @@ use App\Support\ExportCsvHeader;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Support\PdfPageNumbers;
 
 class IssueCategoryController extends Controller
 {
@@ -329,7 +330,7 @@ class IssueCategoryController extends Controller
         }
 
         if ($format === 'pdf') {
-            return Pdf::loadView('admin.issue_management.categories.export_pdf', [
+            $pdf = Pdf::loadView('admin.issue_management.categories.export_pdf', [
                 'columns' => $columns,
                 'rows' => $rows,
                 'search' => $search,
@@ -339,10 +340,15 @@ class IssueCategoryController extends Controller
                 ->setOptions([
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    // The page-number script in the view needs this.
-                    'isPhpEnabled' => true,
-                ])
-                ->download('ManageCategories_' . $stamp . '.pdf');
+                    // Never true: isPhpEnabled makes the renderer a PHP
+                    // execution context for the whole view, so any raw
+                    // block that later appears in an export blade would
+                    // execute. Page numbers are stamped on the canvas
+                    // after render instead - see PdfPageNumbers.
+                    'isPhpEnabled' => false,
+                ]);
+
+            return PdfPageNumbers::stamp($pdf)->download('ManageCategories_' . $stamp . '.pdf');
         }
 
         $filename = 'ManageCategories_' . $stamp . '.csv';

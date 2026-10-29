@@ -157,7 +157,7 @@
 
     <!-- Footer -->
     <footer class="mt-auto text-white py-2" style="background-color: #101808;">
-        <div class="container-lg p-0">
+        <div class="container-lg px-3">
             <div class="row align-items-center gy-2">
                 <div class="col-md-8 mb-2 mb-md-0">
                     <p class="mb-0 text-white small fw-semibold">&copy; {{ date('Y') }} Lal Bahadur Shastri National Academy of Administration, Mussoorie, Uttarakhand</p>
