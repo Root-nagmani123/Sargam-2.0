@@ -233,13 +233,17 @@ class User extends Authenticatable
     {
         $hasPkOld = Schema::hasColumn('employee_master', 'pk_old');
 
+        // Every key an employee answers to (pk, and pk_old when set), so e is
+        // reached by two equi-joins instead of `ON uc.user_id = e.pk OR
+        // uc.user_id = e.pk_old`, which MySQL re-plans for every login row (F-003).
+        $keys = DB::table('employee_master')->select('pk as emp_pk', 'pk as emp_key');
+        if ($hasPkOld) {
+            $keys->union(DB::table('employee_master')->select('pk', 'pk_old')->whereNotNull('pk_old'));
+        }
+
         return DB::table('user_credentials as uc')
-            ->join('employee_master as e', function ($join) use ($hasPkOld) {
-                $join->on('uc.user_id', '=', 'e.pk');
-                if ($hasPkOld) {
-                    $join->orOn('uc.user_id', '=', 'e.pk_old');
-                }
-            })
+            ->joinSub($keys, 'ek', 'ek.emp_key', '=', 'uc.user_id')
+            ->join('employee_master as e', 'e.pk', '=', 'ek.emp_pk')
             ->leftJoin('employee_master as lu', 'lu.pk', '=', 'uc.user_id')
             ->where(function ($q) use ($hasPkOld) {
                 // On the employee's own pk: any category but 'S' and NULL.
