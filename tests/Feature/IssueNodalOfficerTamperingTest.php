@@ -816,11 +816,105 @@ class IssueNodalOfficerTamperingTest extends TestCase
             ->assertSessionHas('success', function ($message) {
                 return str_contains($message, 'is not on offer for this complaint')
                     && str_contains($message, 'was kept')
+                    && ! str_contains($message, 'current')
                     && ! str_contains($message, 'assigned to')
                     && ! str_contains($message, 'cannot sign in');
             });
 
         $this->assertSame((string) $stored, (string) $issue->fresh()->employee_master_pk);
+    }
+
+    // ── A Level 2 officer the form never offered is not saved ────────────────
+
+    public function test_store_and_update_ignore_a_level_two_officer_the_form_did_not_offer(): void
+    {
+        $this->setMatrix($this->categoryPk, [1 => [$this->officerWithNoLogin()], 2 => [$this->nodalA, $this->nodalB]]);
+        $offer = $this->actingAs($this->actor)
+            ->getJson(route('admin.issue-management.nodal-employees', $this->categoryPk)
+                .'?'.http_build_query(['complainant' => $this->actor->user_id]))
+            ->assertOk()
+            ->json();
+        $offered = (string) $offer['level1_auto_select'];
+        $this->assertSame([$offered], array_map('strval', array_column($offer['level1'], 'employee_pk')), 'the form offers more than one Level 2 officer');
+        $notOffered = $offered === (string) $this->nodalA ? $this->nodalB : $this->nodalA;
+
+        $description = 'Store unoffered Level 2 probe '.uniqid();
+        $this->actingAs($this->actor)
+            ->post(route('admin.issue-management.store'), array_merge($this->storePayload($description), ['nodal_employee_id' => $notOffered]))
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', fn ($message) => str_contains($message, 'so it was assigned to'));
+        $this->assertStoredWithNodal($description, (int) $offered);
+
+        $issue = $this->seedIssue();
+        $stored = $this->officerWithNoLogin();
+        $issue->update(['employee_master_pk' => $stored]);
+        $this->actingAs($this->actor)
+            ->put(route('admin.issue-management.update', $issue->pk), $this->editPayload(['nodal_employee_id' => $notOffered]))
+            ->assertSessionHas('success', fn ($message) => str_contains($message, 'was kept'));
+        $this->assertSame((string) $stored, (string) $issue->fresh()->employee_master_pk);
+    }
+
+    // ── F-009: a complaint with no nodal officer has none to keep ────────────
+
+    public function test_update_gives_a_complaint_with_no_nodal_officer_the_matrix_officer_and_says_so(): void
+    {
+        $issue = $this->seedIssue();
+        $issue->update(['employee_master_pk' => null]);
+        $this->setMatrix($this->categoryPk, [1 => [$this->nodalA], 2 => [$this->nodalB]]);
+
+        // nodalB is not on offer while Level 1 is eligible: a stale or crafted pick.
+        $this->actingAs($this->actor)
+            ->put(route('admin.issue-management.update', $issue->pk), $this->editPayload([
+                'nodal_employee_id' => $this->nodalB,
+            ]))
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success', fn ($message) => str_contains($message, 'is not on offer for this complaint, so it was assigned to')
+                && ! str_contains($message, 'was kept'));
+
+        $fresh = $issue->fresh();
+        $this->assertSame((string) $this->nodalA, (string) $fresh->employee_master_pk, 'the complaint was left with no nodal officer');
+        $this->assertSame('Edited description', $fresh->description);
+    }
+
+    public function test_update_saves_the_officer_the_form_preselects_on_a_complaint_with_no_nodal_officer(): void
+    {
+        $issue = $this->seedIssue();
+        $issue->update(['employee_master_pk' => null]);
+        $this->setMatrix($this->categoryPk, [1 => [$this->officerWithNoLogin()], 2 => [$this->deactivatedOfficer()], 3 => [$this->nodalB]]);
+
+        $offer = $this->actingAs($this->actor)
+            ->getJson(route('admin.issue-management.nodal-employees', $this->categoryPk)
+                .'?'.http_build_query(['complainant' => $this->actor->user_id, 'logger' => $this->actor->user_id]))
+            ->assertOk()
+            ->json();
+        $this->assertSame(3, $offer['assigned_level']);
+
+        $this->actingAs($this->actor)
+            ->put(route('admin.issue-management.update', $issue->pk), $this->editPayload([
+                'nodal_employee_id' => $offer['level1_auto_select'],
+            ]))
+            ->assertSessionHas('success', 'Issue updated successfully.');
+
+        $this->assertSame((string) $this->nodalB, (string) $issue->fresh()->employee_master_pk, 'the Level 3 officer the form showed was not saved');
+    }
+
+    public function test_update_of_a_complaint_with_no_nodal_officer_is_refused_when_no_level_has_one(): void
+    {
+        $issue = $this->seedIssue();
+        $issue->update(['employee_master_pk' => null]);
+        $levelOne = $this->officerWithNoLogin();
+        $this->setMatrix($this->categoryPk, [1 => [$levelOne]]);
+
+        $this->actingAs($this->actor)
+            ->put(route('admin.issue-management.update', $issue->pk), $this->editPayload([
+                'nodal_employee_id' => $levelOne,
+            ]))
+            ->assertSessionHasErrors('nodal_employee_id')
+            ->assertSessionMissing('success');
+
+        $fresh = $issue->fresh();
+        $this->assertNull($fresh->employee_master_pk, 'an officer who cannot sign in was assigned');
+        $this->assertSame('Nodal tampering regression probe', $fresh->description);
     }
 
     public function test_store_accepts_a_level_one_officer_the_complainant_picked(): void

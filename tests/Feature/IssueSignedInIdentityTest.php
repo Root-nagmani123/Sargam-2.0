@@ -219,4 +219,87 @@ class IssueSignedInIdentityTest extends TestCase
         $this->assertContains((string) $issue->pk, $this->listed($login, 'admin.issue-management.data', $issue));
         $this->actingAs($login)->get(route('admin.issue-management.show', $issue->pk))->assertOk();
     }
+
+    // ── L-69: what a colliding login writes is not attributed to the employee ──
+
+    /** A category whose matrix lists only $officer, at Level 1. @return array{0: int, 1: int} [category pk, sub-category pk] */
+    private function categoryWithOfficer(int $officer): array
+    {
+        $row = DB::table('issue_sub_category_master')->whereNotNull('issue_category_master_pk')->first(['pk', 'issue_category_master_pk']);
+        if (! $row) {
+            $this->markTestSkipped('Needs an issue sub-category.');
+        }
+        DB::table('issue_category_employee_map')->where('issue_category_master_pk', $row->issue_category_master_pk)->delete();
+        DB::table('issue_category_employee_map')->insert([
+            'issue_category_master_pk' => $row->issue_category_master_pk,
+            'employee_master_pk' => $officer,
+            'priority' => 1,
+            'days_notify' => 1,
+        ]);
+
+        return [(int) $row->issue_category_master_pk, (int) $row->pk];
+    }
+
+    public function test_a_null_category_login_sharing_an_employees_pk_does_not_log_complaints_as_that_employee(): void
+    {
+        $officer = $this->employee();
+        $this->login($officer, 'E');
+        [$category, $subCategory] = $this->categoryWithOfficer($officer);
+        $victim = $this->employee();
+        $victimLogin = $this->login($victim, 'E');
+        $building = DB::table('building_master')->value('pk');
+        if (! $building) {
+            $this->markTestSkipped('Needs a building_master row.');
+        }
+        $description = 'L-69 logger probe '.uniqid();
+
+        $this->actingAs($this->login($victim, null))
+            ->post(route('admin.issue-management.store'), [
+                'description' => $description,
+                'issue_category_id' => $category,
+                'issue_sub_category_id' => $subCategory,
+                'issue_priority_id' => (int) DB::table('issue_priority_master')->value('pk'),
+                'sub_category_name' => 'probe',
+                'created_by' => $this->employee(),
+                'nodal_employee_id' => $officer,
+                'location' => 'O',
+                'building_master_pk' => $building,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $issue = IssueLogManagement::where('description', $description)->firstOrFail();
+        $this->assertNotSame((string) $victim, (string) $issue->issue_logger, 'the complaint was logged in the colliding employee\'s name');
+        $this->actingAs($victimLogin)->get(route('admin.issue-management.edit', $issue->pk))
+            ->assertRedirect(route('admin.issue-management.show', $issue->pk))
+            ->assertSessionHas('error');
+    }
+
+    public function test_a_student_sharing_an_employees_pk_does_not_drop_that_employee_from_the_nodal_officers(): void
+    {
+        $officer = $this->employee();
+        $this->login($officer, 'E');
+        [$category] = $this->categoryWithOfficer($officer);
+
+        $offer = $this->actingAs($this->login($officer, 'S'))
+            ->getJson(route('admin.issue-management.nodal-employees', $category))
+            ->assertOk()
+            ->json();
+
+        $this->assertSame((string) $officer, (string) $offer['level1_auto_select'], 'the employee was excluded as if they were the signed-in student');
+    }
+
+    public function test_the_create_form_does_not_preselect_the_employee_a_colliding_login_shares_a_pk_with(): void
+    {
+        $employee = $this->employee();
+
+        $this->actingAs($this->login($employee, null))
+            ->get(route('admin.issue-management.create'))
+            ->assertOk()
+            // A closure: assertViewHas($key, null) only checks the key exists.
+            ->assertViewHas('currentUserEmployeeId', fn ($id) => $id === null);
+
+        $this->actingAs($this->login($employee, 'E'))
+            ->get(route('admin.issue-management.create'))
+            ->assertViewHas('currentUserEmployeeId', (string) $employee);
+    }
 }

@@ -1117,7 +1117,8 @@ class IssueManagementController extends Controller
             $employees = collect([]);
         }
 
-        $currentUserEmployeeId = Auth::user()->user_id ?? null;
+        // Preselects the complainant; a login that is no employee preselects nobody.
+        $currentUserEmployeeId = $this->signedInEmployeeIds()[0] ?? null;
 
         return view('admin.issue_management.create', compact(
             'categories',
@@ -1157,7 +1158,7 @@ class IssueManagementController extends Controller
             $excludedIds = $this->employeeIdsFor(
                 $this->employeeIdQuery($request, 'complainant'),
                 $this->employeeIdQuery($request, 'logger'),
-                Auth::user()->user_id ?? null
+                ...$this->signedInEmployeeIds()
             );
 
             $default = $this->resolveNodalOfficer($categoryId, null, $excludedIds);
@@ -1231,6 +1232,8 @@ class IssueManagementController extends Controller
                 DB::raw("TRIM(CONCAT(COALESCE(d.first_name, ''), ' ', COALESCE(d.middle_name, ''), ' ', COALESCE(d.last_name, ''))) as employee_name")
             )
             ->orderBy('b.priority', 'asc')
+            // A level's "first" officer is the one offered and saved; keep it stable between requests.
+            ->orderBy('b.pk', 'asc')
             ->get();
     }
 
@@ -1246,12 +1249,12 @@ class IssueManagementController extends Controller
      * to sign in (see eligibleNodalOfficers()). Level 2 is used only when no
      * Level 1 officer is eligible, Level 3 only when neither 1 nor 2 has one.
      *
-     * At that level, the requested officer is honoured when they are one of
-     * its eligible officers; otherwise the level's first eligible officer is
-     * used. (getNodalEmployees() offers every eligible Level 1 officer, or at
-     * Level 2 / 3 only this method's own choice.) A requested officer from
-     * any other level, or an ineligible one, is ignored. Null when no level
-     * has an eligible officer; the
+     * The requested officer is honoured only when getNodalEmployees() offers
+     * them: any eligible officer at Level 1, but at Level 2 / 3 only that
+     * level's first eligible officer, the one this method chooses. Any other
+     * request (another level, an ineligible officer, or a Level 2 / 3 officer
+     * the form never offered) is ignored and that choice is used. Null when
+     * no level has an eligible officer; the
      * caller must then refuse the complaint, because status_update() admits
      * nobody to a complaint without a nodal officer or assignee. An excluded
      * person is never returned: falling back to them would hand the
@@ -1270,9 +1273,9 @@ class IssueManagementController extends Controller
             if ($eligible->isEmpty()) {
                 continue;
             }
-            // getNodalEmployees() offers this level's officer(s) once no
-            // higher level is eligible; honour the one actually offered.
-            if ($requested !== null && $eligible->contains($requested)) {
+            // Honour only what getNodalEmployees() offers: every eligible
+            // Level 1 officer, or at Level 2 / 3 just the first.
+            if ($requested !== null && $level === 1 && $eligible->contains($requested)) {
                 return $requested;
             }
             return $eligible->first();
@@ -1322,8 +1325,8 @@ class IssueManagementController extends Controller
 
         // No cause is named: the pick may be ineligible, or eligible at a level the matrix does not use yet.
         if ($kept) {
-            return ' The nodal officer you picked is not on offer for this complaint, so its current nodal officer'
-                . ($name !== '' ? ', ' . $name . ',' : '') . ' was kept.';
+            return ' The nodal officer you picked is not on offer for this complaint, so '
+                . ($name !== '' ? $name . ' was kept as its nodal officer.' : 'its nodal officer was kept unchanged.');
         }
 
         return ' The nodal officer you picked is not on offer for this complaint, so it was assigned to '
@@ -1487,10 +1490,14 @@ class IssueManagementController extends Controller
             // Nor may anyone who cannot sign in.
             // With no eligible officer at any level the complaint is refused:
             // stored without one, nobody could ever change its status.
+            // The logger is who the login is by signedInEmployeeIds(), not its
+            // raw user_id: a student or NULL-category login sharing an employee's
+            // pk would otherwise hand that employee the logger's rights (L-69).
+            $loggerIds = $this->signedInEmployeeIds();
             $nodalEmployeePk = $this->resolveNodalOfficer(
                 $request->issue_category_id,
                 $request->nodal_employee_id,
-                $this->employeeIdsFor($request->created_by, Auth::user()->user_id ?? null)
+                $this->employeeIdsFor($request->created_by, ...$loggerIds)
             );
             if ($nodalEmployeePk === null) {
                 throw $this->noNodalOfficerError($request->issue_category_id, 'the complaint cannot be logged');
@@ -1508,7 +1515,7 @@ class IssueManagementController extends Controller
                 'description' => $request->description,
                 'created_by' => $request->created_by,
                 'employee_master_pk' => $nodalEmployeePk,
-                'issue_logger' => Auth::user()->user_id ?? $request->created_by,
+                'issue_logger' => $loggerIds[0] ?? $request->created_by,
                 'issue_status' => 0,
                 'created_date' => now()->setTimezone('Asia/Kolkata')->format('Y-m-d H:i:s'),
             );
@@ -1848,12 +1855,14 @@ class IssueManagementController extends Controller
         // The nodal officer is decided server-side (resolveNodalOfficer()),
         // the same resolution getNodalEmployees() used to offer it, so a
         // fallback (Level 2/3) selection is honoured instead of silently
-        // discarded. Same category: a different eligible officer may be
-        // picked, but never the complainant / logger. New category: the
-        // matrix decides, as in store().
-        $excludedIds = $this->employeeIdsFor($issue->created_by, $issue->issue_logger, Auth::user()->user_id ?? null);
+        // discarded. Same category: a different officer the form offers may be
+        // picked, but never the complainant / logger. New category, or a
+        // complaint with no officer to keep (F-009): the matrix decides, as in
+        // store().
+        $excludedIds = $this->employeeIdsFor($issue->created_by, $issue->issue_logger, ...$this->signedInEmployeeIds());
         $keptStored = false;
-        if ((int) $request->issue_category_id === (int) $issue->issue_category_master_pk) {
+        $sameCategory = (int) $request->issue_category_id === (int) $issue->issue_category_master_pk;
+        if ($sameCategory && (string) ($issue->employee_master_pk ?? '') !== '') {
             $requested = (string) $request->nodal_employee_id;
             if ($requested !== '' && $requested === User::resolveEmployeePk($issue->employee_master_pk)) {
                 // The form offers the current officer under their pk (edit());
@@ -1867,7 +1876,7 @@ class IssueManagementController extends Controller
         } else {
             $nodalEmployeePk = $this->resolveNodalOfficer($request->issue_category_id, $request->nodal_employee_id, $excludedIds);
             if ($nodalEmployeePk === null) {
-                throw $this->noNodalOfficerError($request->issue_category_id, 'the complaint cannot be moved there');
+                throw $this->noNodalOfficerError($request->issue_category_id, $sameCategory ? 'the complaint cannot be saved without one' : 'the complaint cannot be moved there');
             }
         }
 
