@@ -3,83 +3,38 @@
 @section('title', 'PT Exemption Master')
 
 @push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+@include('admin.layouts.partials.select2-assets')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
 <style>
-    .pt-exemption-page .pt-filter-select {
-        width: 180px;
-        min-height: 40px;
-        height: 40px;
-        border: 1px solid #d0d5dd;
-        border-radius: 8px;
-        font-size: 0.9375rem;
-        color: #344054;
-        padding: 0.5rem 2.25rem 0.5rem 0.875rem;
-        background-position: right 0.75rem center;
-    }
-
-    .pt-exemption-page .pt-filter-select:focus {
-        border-color: #004a93;
-        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
-    }
-
-    /* Time-period date-range input */
-    .pt-exemption-page .pt-daterange-wrap {
+    /* Time Period: a read-only date-range input with a calendar glyph. Same
+       rules on PT Exemption Master and Stationed Leave Master (.lm-page). */
+    .mst-page.lm-page .lm-daterange {
         position: relative;
+        width: 13.5rem;
+        max-width: 100%;
     }
 
-    .pt-exemption-page .pt-daterange-input {
-        width: 215px;
+    .mst-page.lm-page .lm-daterange .mst-control {
         padding-left: 2.25rem;
-        padding-right: 0.875rem;
         cursor: pointer;
-        background-image: none;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
-    .pt-exemption-page .pt-daterange-input::placeholder {
-        color: #344054;
-    }
-
-    .pt-exemption-page .pt-daterange-icon {
+    .mst-page.lm-page .lm-daterange__icon {
         position: absolute;
         left: 0.75rem;
         top: 50%;
         transform: translateY(-50%);
-        color: #667085;
-        font-size: 0.95rem;
+        color: var(--ds-ink-muted);
         pointer-events: none;
     }
 
-    .pt-exemption-page .pt-download-btn {
-        height: 40px;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0 1.1rem;
-        font-size: 0.9375rem;
-        font-weight: 500;
-        color: #004a93;
-        border-radius: 8px;
-        background: #fff;
-    }
-
-    .pt-exemption-page .pt-download-btn:hover {
-        background: #fff;
-
-        color: #004a93;
-    }
-
-    .pt-exemption-page .pt-download-btn i {
-        font-size: 1rem;
-        line-height: 1;
-    }
-
     @media (max-width: 767.98px) {
-        .pt-exemption-page .pt-filter-select,
-        .pt-exemption-page .pt-daterange-input {
+        .mst-page.lm-page .lm-daterange,
+        .mst-page.lm-page .programme-dt-filter-select {
             width: 100%;
         }
     }
@@ -87,134 +42,179 @@
 @endpush
 
 @section('setup_content')
-<div class="container-fluid pt-exemption-page">
-    <x-breadcrum
-        title="PT Exemption Master"
-        buttonText="Configure PT Exemption"
-        :buttonUrl="route('admin.pt-exemption-master.create')"
-        buttonIcon="add"
-        buttonClass="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm" />
+<div class="container-fluid mst-page lm-page ptx-page">
+    <x-breadcrum title="PT Exemption Master" :showBack="false">
+        <a href="{{ route('admin.pt-exemption-master.create') }}" data-mst-modal-form
+           class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Configure PT Exemption</span>
+        </a>
+    </x-breadcrum>
 
     <x-session_message />
 
+    {{-- Hidden state the grid's AJAX payload has always carried (d.pk /
+         d.active_inactive); kept so the request is unchanged. --}}
+    <input type="hidden" id="pk" value="">
+    <input type="hidden" id="active_inactive" value="">
+
+    {{-- Status pills (course lifecycle) left · Download right, above the card. --}}
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white" role="group"
-            aria-label="Filter by status">
+        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0" role="group"
+            aria-label="Filter by course status">
             <li class="nav-item" role="presentation">
                 <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill active"
-                    id="filterActive" aria-pressed="true" aria-current="true">Active</button>
+                        id="filterActive" aria-pressed="true" aria-current="true">Active</button>
             </li>
             <li class="nav-item" role="presentation">
                 <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill"
-                    id="filterArchive" aria-pressed="false">Archive</button>
+                        id="filterArchive" aria-pressed="false">Archived</button>
             </li>
         </ul>
-        <div class="dropdown">
-            <button type="button" id="exemptionDownload" class="btn pt-download-btn dropdown-toggle"
-                data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-download" aria-hidden="true"></i>
-                <span>Download</span>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end shadow-sm py-2" aria-labelledby="exemptionDownload">
-                <li>
-                    <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="exemptionExportPdf">
-                        <i class="bi bi-file-earmark-pdf text-danger" aria-hidden="true"></i>
-                        <span>Download PDF</span>
-                    </button>
-                </li>
-                <li>
-                    <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="exemptionExportExcel">
-                        <i class="bi bi-file-earmark-excel text-success" aria-hidden="true"></i>
-                        <span>Download Excel</span>
-                    </button>
-                </li>
-            </ul>
+
+        <div class="d-flex flex-wrap justify-content-end gap-2 mst-secondary-actions">
+            <div class="dropdown">
+                <button type="button" id="exemptionDownload"
+                        class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                        data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                    <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm py-2" aria-labelledby="exemptionDownload">
+                    <li>
+                        <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="exemptionExportPdf">
+                            <i class="bi bi-file-earmark-pdf text-danger" aria-hidden="true"></i>
+                            <span>Download PDF</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="exemptionExportExcel">
+                            <i class="bi bi-file-earmark-excel text-success" aria-hidden="true"></i>
+                            <span>Download Excel</span>
+                        </button>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
 
-    <section class="datatables" aria-labelledby="pt-exemption-heading">
-        <div class="card border-0 shadow-sm overflow-hidden rounded-3">
-            <div class="card-body p-3 p-md-4">
+    {{-- No overflow-hidden on this card: the searchable course filter opens its
+         dropdown inside .card-body, and a short grid would clip it. --}}
+    <div class="card rounded-3">
+        <div class="card-body p-3 p-md-4">
 
-                <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
-                    <div class="d-flex flex-wrap align-items-center gap-3">
-                        <span class="programme-dt-filters-label">Filters</span>
-                        <select id="courseFilter" class="form-select pt-filter-select" aria-label="Filter by course">
+            {{-- The two groups wrap as wholes: on a narrow card Columns + Search drop
+                 to their own right-aligned line instead of splitting apart. --}}
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filters</span>
+
+                    <div class="programme-dt-filter-select">
+                        <label for="courseFilter" class="visually-hidden">Course</label>
+                        <select id="courseFilter" class="form-select mst-control mst-searchable"
+                                data-placeholder="Course Name">
                             <option value="">Course Name</option>
                             @foreach ($coursesActive ?? [] as $pk => $name)
                                 <option value="{{ $pk }}">{{ $name }}</option>
                             @endforeach
                         </select>
-                        <div class="pt-daterange-wrap">
-                            <i class="bi bi-calendar3 pt-daterange-icon" aria-hidden="true"></i>
-                            <input type="text" id="timePeriodFilter"
-                                class="form-control pt-filter-select pt-daterange-input"
-                                placeholder="Time Period" autocomplete="off" readonly
-                                aria-label="Filter by effective-from date range">
-                        </div>
-                        <button type="button" class="btn programme-dt-btn-reset" id="resetFilters">
-                            Reset Filters
-                        </button>
                     </div>
-                    <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
-                        <button type="button" class="btn programme-dt-btn-columns" id="btnExemptionColumns"
+
+                    <div class="lm-daterange">
+                        <label for="timePeriodFilter" class="visually-hidden">Time Period (effective from)</label>
+                        <i class="bi bi-calendar3 lm-daterange__icon" aria-hidden="true"></i>
+                        <input type="text" id="timePeriodFilter" class="form-control mst-control"
+                               placeholder="Time Period" autocomplete="off" readonly>
+                    </div>
+
+                    <button type="button" class="btn programme-dt-btn-reset" id="resetFilters">
+                        Reset Filters
+                    </button>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="btnExemptionColumns"
                             data-bs-toggle="modal" data-bs-target="#exemptionColumnVisibilityModal"
                             title="Show / hide columns">
-                            <span>Columns</span>
-                            <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
-                        </button>
-                        <div id="exemptionDtSearch" class="programme-dt-search"
-                            data-dt-search-for="exemption-master-table"></div>
-                    </div>
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="exemptionDtSearch" class="programme-dt-search"
+                         data-dt-search-for="exemption-master-table"></div>
                 </div>
-
-                <p class="small text-secondary d-lg-none mb-2" role="note">
-                    Scroll inside the table area to see all rows and columns.
-                </p>
-
-                <div class="programme-dt-panel">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0 text-nowrap w-100 programme-dt-table"
-                            id="exemption-master-table">
-                            <thead>
-                                <tr>
-                                    <th>S. No.</th>
-                                    <th>Course</th>
-                                    <th>Effective From</th>
-                                    <th>PT Timing</th>
-                                    <th>Gender</th>
-                                    <th>PT Exemption Count (Days)</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                        </table>
-                    </div>
-                    <div id="exemptionDtFooter"
-                        class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
-                        data-dt-footer-for="exemption-master-table"></div>
-                </div>
-
             </div>
+
+            <p class="small text-secondary d-lg-none mb-2" role="note">
+                Scroll inside the table area to see all rows and columns.
+            </p>
+
+            {{-- Search, pager and "Showing N of M items" are relocated into the
+                 slots by public/js/datatable-global-ui.js. --}}
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table"
+                           id="exemption-master-table">
+                        <caption class="visually-hidden">PT exemption configurations</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col" class="text-nowrap">S. No.</th>
+                                <th scope="col">Course</th>
+                                <th scope="col" class="text-nowrap">Effective From</th>
+                                <th scope="col" class="text-nowrap">PT Timing</th>
+                                <th scope="col">Gender</th>
+                                <th scope="col">PT Exemption Count (Days)</th>
+                                <th scope="col" class="text-nowrap">Status</th>
+                                <th scope="col" class="text-nowrap">Action</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+                <div id="exemptionDtFooter"
+                     class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                     data-dt-footer-for="exemption-master-table"></div>
+            </div>
+
         </div>
-    </section>
+    </div>
+
+    {{-- Row markup comes from the shared partials, printed once here and filled
+         per row by the grid's render callbacks (the feed is built in the
+         controller, which this redesign does not touch). __LM_*__ are
+         placeholders replaced client-side with escaped row values. --}}
+    <template id="exemptionStatusOn">@include('admin.master.partials.grid-status', ['active' => true])</template>
+    <template id="exemptionStatusOff">@include('admin.master.partials.grid-status', ['active' => false])</template>
+    <template id="exemptionActionsOn">
+        @include('admin.master.partials.grid-actions', [
+            'name'   => '__LM_NAME__',
+            'edit'   => ['href' => '__LM_EDIT__', 'attrs' => ['data-mst-modal-form' => true]],
+            'toggle' => ['active' => true, 'id' => '__LM_ID__', 'class' => 'plain-status-toggle exemption-status-toggle'],
+            'delete' => ['disabled' => true, 'reason' => 'Only inactive records can be deleted. Deactivate it first.'],
+        ])
+    </template>
+    <template id="exemptionActionsOff">
+        @include('admin.master.partials.grid-actions', [
+            'name'   => '__LM_NAME__',
+            'edit'   => ['href' => '__LM_EDIT__', 'attrs' => ['data-mst-modal-form' => true]],
+            'toggle' => ['active' => false, 'id' => '__LM_ID__', 'class' => 'plain-status-toggle exemption-status-toggle'],
+            'delete' => ['class' => 'exemption-delete-btn', 'attrs' => ['data-id' => '__LM_ID__']],
+        ])
+    </template>
 </div>
 
-<!-- Column Visibility Modal -->
+<!-- Column Visibility -->
 <div class="modal fade" id="exemptionColumnVisibilityModal" tabindex="-1"
-    aria-labelledby="exemptionColumnVisibilityLabel" aria-hidden="true">
+     aria-labelledby="exemptionColumnVisibilityLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
+        <div class="modal-content rounded-3 border-0 shadow">
             <div class="modal-header border-0 pb-2">
                 <h5 class="modal-title fw-bold" id="exemptionColumnVisibilityLabel">Column Visibility</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body pt-0">
                 <hr class="mt-0">
-                <div class="row g-3" id="exemptionColumnToggleGrid"></div>
+                <div class="row g-3 mst-colvis-grid" id="exemptionColumnToggleGrid"></div>
             </div>
             <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -224,6 +224,7 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
 <script>
 $(function () {
     const exportUrl = "{{ route('admin.pt-exemption-master.export') }}";
@@ -233,10 +234,81 @@ $(function () {
     };
     let currentStatus = 'active';
 
+    /* ── Row templates (shared grid-status / grid-actions partials) ── */
+    function lmTemplate(id) {
+        const tpl = document.getElementById(id);
+        if (!tpl) {
+            return '';
+        }
+        const box = document.createElement('div');
+        box.innerHTML = tpl.innerHTML.trim();
+        // custom.js binds every .status-toggle to the generic table/column
+        // endpoint. This switch posts to the module's own status route (the
+        // handler below), so it must not also match that global handler.
+        box.querySelectorAll('.status-toggle').forEach(function (el) {
+            el.classList.remove('status-toggle');
+        });
+        return box.innerHTML;
+    }
+
+    function lmEscape(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // Feed columns arrive HTML-escaped (config/datatables.php 'escape' => '*');
+    // decode to plain text before lmEscape() so "A & B" is not shown as "A &amp; B".
+    // DOMParser builds an inert document: nothing in the value runs.
+    function lmDecode(value) {
+        return new DOMParser().parseFromString(String(value == null ? '' : value), 'text/html').documentElement.textContent;
+    }
+
+    // The Edit link is read from the controller's own action HTML so it stays
+    // exactly the URL the server built (course + effective-from date).
+    function lmEditHref(serverHtml) {
+        const doc = new DOMParser().parseFromString(String(serverHtml || ''), 'text/html');
+        const link = doc.querySelector('a[href]');
+        return link ? link.getAttribute('href') : '#';
+    }
+
+    const tpl = {
+        statusOn: lmTemplate('exemptionStatusOn'),
+        statusOff: lmTemplate('exemptionStatusOff'),
+        actionsOn: lmTemplate('exemptionActionsOn'),
+        actionsOff: lmTemplate('exemptionActionsOff'),
+    };
+
+    function isActiveRow(row) {
+        return parseInt(row && row.active_inactive, 10) === 1;
+    }
+
+    function renderStatus(data, type, row) {
+        if (type !== 'display') {
+            return data;
+        }
+        return isActiveRow(row) ? tpl.statusOn : tpl.statusOff;
+    }
+
+    function renderActions(data, type, row) {
+        if (type !== 'display') {
+            return data;
+        }
+        const name = lmDecode(row.course_name || '') + (row.gender ? ' (' + lmDecode(row.gender) + ')' : '');
+        return (isActiveRow(row) ? tpl.actionsOn : tpl.actionsOff)
+            .split('__LM_ID__').join(lmEscape(row.pk))
+            .split('__LM_EDIT__').join(lmEscape(lmEditHref(data)))
+            .split('__LM_NAME__').join(lmEscape(name));
+    }
+
     const table = $('#exemption-master-table').DataTable({
         processing: true,
         serverSide: true,
         searching: true,
+        // The layout's global default is responsive:true, which collapses the
+        // (wide) Action stack into a "+" child row. .table-responsive scrolls instead.
+        responsive: false,
+        autoWidth: false,
         order: [[0, 'desc']],
         ajax: {
             url: "{{ route('admin.pt-exemption-master.index') }}",
@@ -256,8 +328,8 @@ $(function () {
             { data: 'apply_cutoff_time_display', name: 'apply_cutoff_time', orderable: false, searchable: false },
             { data: 'gender', name: 'gender' },
             { data: 'exemption_days_display', name: 'exemption_days' },
-            { data: 'status', name: 'status', orderable: false, searchable: false },
-            { data: 'action', name: 'action', orderable: false, searchable: false },
+            { data: 'status', name: 'status', orderable: false, searchable: false, render: renderStatus },
+            { data: 'action', name: 'action', orderable: false, searchable: false, render: renderActions },
         ],
         language: {
             emptyTable: 'No PT exemption configuration found.',
@@ -306,7 +378,7 @@ $(function () {
         $.each(data, function (pk, name) {
             $sel.append($('<option>', { value: pk, text: name }));
         });
-        $sel.val('');
+        $sel.val('').trigger('change.select2');
     }
 
     function setStatusTab($btn, status) {
@@ -326,22 +398,47 @@ $(function () {
         setStatusTab($(this), 'archive');
     });
 
-    /* ── Course filter → reload table ── */
+    /* ── Course filter → reload table (jQuery binding: Select2 fires a jQuery change) ── */
     $('#courseFilter').on('change', function () {
         table.ajax.reload();
     });
 
     $('#resetFilters').on('click', function () {
-        $('#courseFilter').val('');
+        $('#courseFilter').val('').trigger('change.select2');
         $period.val('').removeData('from').removeData('to');
         table.search('');
         setStatusTab($('#filterActive'), 'active');
     });
 
     /* ── Download: export current filters/search to PDF/Excel ── */
+    // Grid column (DataTables `data`) → export column key
+    // (PtExemptionMasterExport::COLUMNS). Action has no export column.
+    const exemptionExportKeys = {
+        DT_RowIndex: 'sno',
+        course_name: 'course',
+        effective_from_display: 'effective_from',
+        apply_cutoff_time_display: 'pt_timing',
+        gender: 'gender',
+        exemption_days_display: 'days',
+        status: 'status',
+    };
+
+    // Only the columns switched on in Column Visibility go into the file.
+    function exemptionExportCols() {
+        const keys = [];
+        table.columns().every(function () {
+            const key = exemptionExportKeys[this.dataSrc()];
+            if (key && this.visible()) {
+                keys.push(key);
+            }
+        });
+        return keys.join(',');
+    }
+
     function exemptionExportUrl(format) {
         const params = $.param({
             format: format,
+            cols: exemptionExportCols(),
             status_filter: currentStatus,
             course_filter: $('#courseFilter').val() || '',
             from_date: $period.data('from') || '',
@@ -359,7 +456,7 @@ $(function () {
         window.location.href = exemptionExportUrl('excel');
     });
 
-    /* ── Status toggle ── */
+    /* ── Status toggle (own route: POST status/{id}) ── */
     $(document).on('change', '.exemption-status-toggle', function () {
         const id = $(this).data('id');
         const active = $(this).is(':checked') ? 1 : 0;
@@ -483,7 +580,7 @@ $(function () {
 
             const inputId = 'exemptioncolvis_' + idx;
             const $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
-            const $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+            const $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-1 px-3 py-2 mb-0 w-100"></label>')
                 .attr('for', inputId);
             const $cb = $('<input type="checkbox" class="form-check-input m-0">')
                 .attr('id', inputId)
@@ -520,6 +617,3 @@ $(function () {
 });
 </script>
 @endpush
-
-<input type="hidden" id="pk" value="">
-<input type="hidden" id="active_inactive" value="">

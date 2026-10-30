@@ -20,6 +20,9 @@
                 if (!empty($filterSummary['faculty_name'])) {
                     $filterParts[] = 'Faculty: ' . $filterSummary['faculty_name'];
                 }
+                if (!empty($filterSummary['faculty_role'])) {
+                    $filterParts[] = 'Faculty Role: ' . $filterSummary['faculty_role'];
+                }
                 if (!empty($filterSummary['faculty_type'])) {
                     $filterParts[] = 'Faculty Type: ' . $filterSummary['faculty_type'];
                 }

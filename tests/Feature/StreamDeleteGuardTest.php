@@ -9,23 +9,20 @@ use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
- * The stream listing must not offer Delete on an ACTIVE stream.
+ * An ACTIVE stream must not be deletable — not from the listing, and not by
+ * posting DELETE by hand.
  *
- * The guard read `$stream->status`, and stream_master has no `status` column —
- * its status lives in `active_inactive`, which is the column this PR's own
- * status switch and toggle allow-list already use. An undefined attribute is
- * null, `null == 1` is false, so the guard fell through to the else branch and
- * rendered the live Delete form for every row, including the active ones it was
- * written to protect.
+ * The listing is the StreamMasterDataTable server-side grid: GET /stream
+ * renders an empty table and the rows arrive from the same URL as an XHR JSON
+ * feed. So the listing guard is asserted on the feed's `actions` cell — the
+ * HTML the browser injects into each row — not on the page.
  *
- * Asserted through the rendered page rather than by reading the template, so it
- * still holds if the markup is restyled.
+ * stream_master has no `status` column; its status lives in `active_inactive`.
+ * An earlier guard read `$stream->status` (always null) and offered Delete on
+ * every row, which is what the schema test below pins down.
  */
 class StreamDeleteGuardTest extends TestCase
 {
-    /** Output-buffer nesting level on entry, so tearDown can unwind to it. */
-    private int $obLevel = 0;
-
     private bool $inTransaction = false;
 
     /**
@@ -41,8 +38,6 @@ class StreamDeleteGuardTest extends TestCase
     {
         parent::setUp();
 
-        $this->obLevel = ob_get_level();
-
         try {
             DB::connection()->getPdo();
         } catch (\Throwable $e) {
@@ -53,18 +48,8 @@ class StreamDeleteGuardTest extends TestCase
         $this->inTransaction = true;
     }
 
-    /**
-     * Rendering the admin layout leaves an output buffer open (a pre-existing
-     * property of the layout, not of this PR), which PHPUnit reports as a risky
-     * test. Unwind to the level we started at, the same way MasterGridExportTest
-     * does around a streamed response.
-     */
     protected function tearDown(): void
     {
-        while (ob_get_level() > $this->obLevel) {
-            ob_end_clean();
-        }
-
         if ($this->inTransaction) {
             DB::rollBack();
             $this->inTransaction = false;
@@ -84,6 +69,16 @@ class StreamDeleteGuardTest extends TestCase
         return $user;
     }
 
+    private function probe(string $name, int $active): Stream
+    {
+        $stream = new Stream();
+        $stream->stream_name     = $name;
+        $stream->active_inactive = $active;
+        $stream->save();
+
+        return $stream;
+    }
+
     public function test_stream_master_has_no_status_column_so_the_guard_must_not_read_one(): void
     {
         $this->assertTrue(
@@ -98,78 +93,79 @@ class StreamDeleteGuardTest extends TestCase
 
     public function test_an_active_stream_cannot_be_deleted_from_the_listing(): void
     {
-        $stream = new Stream();
-        $stream->stream_name     = 'Delete Guard Probe (active)';
-        $stream->active_inactive = 1;
-        $stream->save();
+        $stream = $this->probe('Delete Guard Probe (active)', 1);
 
-        $html = $this->actingAs($this->admin())->get('/stream')->assertOk()->getContent();
+        $actions = $this->actionsCellFor($stream);
 
-        $row = $this->rowFor($html, 'Delete Guard Probe (active)');
-
-        $this->assertStringContainsString('Cannot delete active stream', $row);
+        $this->assertStringContainsString('Cannot delete an active stream', $actions);
 
         // Assert on the DELETE form, not on the row's URL: the Edit link is
         // /stream/{pk}/edit, so a bare "stream/{pk}" match is satisfied by a row
         // that offers no delete at all.
-        $this->assertStringNotContainsString('value="DELETE"', $row);
+        $this->assertStringNotContainsString('value="DELETE"', $actions);
+        $this->assertStringNotContainsString('action="' . route('stream.destroy', $stream->pk) . '"', $actions);
     }
 
     public function test_an_inactive_stream_still_offers_delete(): void
     {
-        $stream = new Stream();
-        $stream->stream_name     = 'Delete Guard Probe (inactive)';
-        $stream->active_inactive = 0;
-        $stream->save();
+        $stream = $this->probe('Delete Guard Probe (inactive)', 0);
 
-        $html = $this->actingAs($this->admin())->get('/stream')->assertOk()->getContent();
+        $actions = $this->actionsCellFor($stream);
 
-        $row = $this->rowFor($html, 'Delete Guard Probe (inactive)');
+        $this->assertStringContainsString('value="DELETE"', $actions);
+        $this->assertStringContainsString('action="' . route('stream.destroy', $stream->pk) . '"', $actions);
+        $this->assertStringNotContainsString('Cannot delete an active stream', $actions);
+    }
 
-        $this->assertStringContainsString('value="DELETE"', $row);
-        $this->assertStringContainsString('stream/' . $stream->pk . '"', $row);
-        $this->assertStringNotContainsString('Cannot delete active stream', $row);
+    public function test_destroy_refuses_an_active_stream_and_deletes_an_inactive_one(): void
+    {
+        $active   = $this->probe('Delete Guard Probe (active, direct)', 1);
+        $inactive = $this->probe('Delete Guard Probe (inactive, direct)', 0);
+
+        $this->actingAs($this->admin())->delete(route('stream.destroy', $active->pk))
+            ->assertRedirect(route('stream.index'))
+            ->assertSessionHas('error');
+        $this->assertTrue(Stream::where('pk', $active->pk)->exists(), 'An active stream must survive a direct DELETE.');
+
+        $this->actingAs($this->admin())->delete(route('stream.destroy', $inactive->pk))
+            ->assertRedirect(route('stream.index'))
+            ->assertSessionHas('success');
+        $this->assertFalse(Stream::where('pk', $inactive->pk)->exists(), 'An inactive stream is still deletable.');
     }
 
     /**
-     * The single <tr> that carries $name.
-     *
-     * The listing paginates at 10, so a probe row can land on a later page;
-     * walk the pages until the row is found rather than assuming page 1.
+     * The `actions` HTML of $stream's row in the grid's XHR feed, found with the
+     * grid's own search box so the probe row is on the first page.
      */
-    private function rowFor(string $html, string $name): string
+    private function actionsCellFor(Stream $stream): string
     {
-        $page = 1;
+        $query = http_build_query([
+            'draw'    => 1,
+            'start'   => 0,
+            'length'  => 100,
+            'search'  => ['value' => $stream->stream_name, 'regex' => 'false'],
+            'columns' => [
+                ['data' => 'DT_RowIndex', 'name' => 'DT_RowIndex', 'searchable' => 'false', 'orderable' => 'false'],
+                ['data' => 'stream_name', 'name' => 'stream_master.stream_name', 'searchable' => 'true', 'orderable' => 'true'],
+                ['data' => 'status', 'name' => 'status', 'searchable' => 'false', 'orderable' => 'true'],
+                ['data' => 'actions', 'name' => 'actions', 'searchable' => 'false', 'orderable' => 'false'],
+            ],
+        ]);
 
-        while (true) {
-            if (str_contains($html, $name)) {
-                // Bound each chunk at the CLOSING tag: splitting on the opening
-                // tag leaves the final row running to the end of the document,
-                // which swallows the rest of the page into the "row".
-                foreach (preg_split('#</tr>#i', $html) as $row) {
-                    if (str_contains($row, $name)) {
-                        return $row;
-                    }
-                }
-            }
+        $json = $this->actingAs($this->admin())
+            ->withHeaders(['X-Requested-With' => 'XMLHttpRequest', 'Accept' => 'application/json'])
+            ->get('/stream?' . $query)
+            ->assertOk()
+            ->json();
 
-            $page++;
+        $this->assertIsArray($json['data'] ?? null, 'GET /stream as XHR must return the DataTables feed.');
 
-            if ($page > 40) {
-                $this->fail('Probe stream row "' . $name . '" was not found in the listing.');
-            }
-
-            $next = $this->actingAs($this->admin())->get('/stream?page=' . $page);
-
-            if ($next->getStatusCode() !== 200) {
-                $this->fail('Probe stream row "' . $name . '" was not found in the listing.');
-            }
-
-            $html = $next->getContent();
-
-            if (! str_contains($html, '<tbody')) {
-                $this->fail('Probe stream row "' . $name . '" was not found in the listing.');
+        foreach ($json['data'] as $row) {
+            if (($row['stream_name'] ?? null) === $stream->stream_name) {
+                return (string) $row['actions'];
             }
         }
+
+        $this->fail('Probe stream "' . $stream->stream_name . '" was not found in the grid feed.');
     }
 }

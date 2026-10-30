@@ -203,7 +203,11 @@
         ];
     @endphp
 
-    <table class="data-table">
+    {{-- Dompdf lays out one <table> as a single cell map in memory: ~900 rows in one
+         table needed ~760 MB and died at the 512M limit. Separate tables per chunk
+         keep the peak near 360 MB. Header repeats on each chunk. --}}
+    @foreach(array_chunk($rows, 100, true) as $chunk)
+    <table class="data-table"@unless($loop->first) style="margin-top: 0;"@endunless>
         <colgroup>
             <col style="width: 3%;">
             <col style="width: 14%;">
@@ -243,7 +247,7 @@
         </tr>
         </thead>
         <tbody>
-        @foreach($rows as $index => $item)
+        @foreach($chunk as $index => $item)
             <tr>
                 <td class="text-center">{{ $index + 1 }}</td>
                 <td>{{ $item['item_name'] ?? '' }}</td>
@@ -263,6 +267,7 @@
                 <td class="text-end">&#8377;{{ number_format((float) ($item['closing_amount'] ?? 0), 2) }}</td>
             </tr>
         @endforeach
+        @if($loop->last)
         <tr class="totals-row">
             <td colspan="4" class="text-end"><strong>Total</strong></td>
             <td class="text-end">-</td>
@@ -278,8 +283,10 @@
             <td class="text-end">-</td>
             <td class="text-end"><strong>&#8377;{{ number_format($totals['closing_amount'], 2) }}</strong></td>
         </tr>
+        @endif
         </tbody>
     </table>
+    @endforeach
 @endif
 
 <p style="font-size: 11px; color: #555; margin: 8px 0 0;">

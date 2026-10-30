@@ -31,6 +31,8 @@ class LeaveApplication extends Model
         'leave_nature_master_pk',
         'from_date',
         'to_date',
+        'time_from',
+        'time_to',
         'total_days',
         'reason',
         'contact_number',
@@ -39,6 +41,7 @@ class LeaveApplication extends Model
         'approved_by_faculty_pk',
         'approved_at',
         'rejection_remarks',
+        'applied_by_user_pk',
         'active_inactive',
         'created_date',
         'modified_date',
@@ -77,12 +80,55 @@ class LeaveApplication extends Model
         return $this->belongsTo(FacultyMaster::class, 'approved_by_faculty_pk', 'pk');
     }
 
+    /**
+     * Training-section operator who recorded this leave for the officer trainee.
+     * Null for the normal case where the officer trainee applied for themselves.
+     */
+    public function appliedByUser()
+    {
+        return $this->belongsTo(User::class, 'applied_by_user_pk', 'pk');
+    }
+
+    public function getAppliedOnBehalfAttribute(): bool
+    {
+        return ! empty($this->applied_by_user_pk);
+    }
+
+    /**
+     * "<name> (Training Section)" for leave entered on behalf of an officer trainee,
+     * or null when the officer trainee applied for themselves.
+     */
+    protected function onBehalfActorName(): ?string
+    {
+        if (empty($this->applied_by_user_pk)) {
+            return null;
+        }
+
+        $actor = $this->appliedByUser;
+
+        if (! $actor) {
+            return 'Training Section';
+        }
+
+        $name = trim(implode(' ', array_filter([
+            $actor->first_name ?? '',
+            $actor->last_name ?? '',
+        ]))) ?: ($actor->user_name ?? '');
+
+        return trim($name) === ''
+            ? 'Training Section'
+            : $name . ' (Training Section)';
+    }
+
     public function getActionByFacultyNameAttribute(): string
     {
         $faculty = $this->approvedByFaculty;
 
         if (! $faculty) {
-            return '-';
+            // Leave recorded by the training section carries no faculty approver —
+            // the Course Coordinator approved it offline. Name the operator who
+            // entered it rather than showing a bare "-" against an approved record.
+            return $this->onBehalfActorName() ?? '-';
         }
 
         $name = trim((string) ($faculty->full_name ?? ''));
@@ -94,6 +140,35 @@ class LeaveApplication extends Model
             $faculty->first_name ?? '',
             $faculty->last_name ?? '',
         ]))) ?: '-';
+    }
+
+    /**
+     * Departure / return time as "hh:mm AM" for display, or "-" when the
+     * application carries none (PT exemptions, and anything recorded before the
+     * time fields existed). One accessor keeps the two lists, the detail view and
+     * both exports showing the same thing.
+     */
+    public function getTimeFromDisplayAttribute(): string
+    {
+        return $this->formatTime($this->time_from);
+    }
+
+    public function getTimeToDisplayAttribute(): string
+    {
+        return $this->formatTime($this->time_to);
+    }
+
+    protected function formatTime($value): string
+    {
+        if (blank($value)) {
+            return '-';
+        }
+
+        try {
+            return \Carbon\Carbon::parse($value)->format('h:i A');
+        } catch (\Throwable $e) {
+            return '-';
+        }
     }
 
     public function getLeaveTypeLabelAttribute(): string

@@ -27,6 +27,13 @@ $documentCount = $documents->count();
     <div class="container-fluid px-3 px-md-4 py-4" id="cru-user-main">
         <x-breadcrum :title="$repository->course_repository_name" :items="$crumbItems" />
 
+        {{-- Universal search, pre-scoped to this category and everything under it. --}}
+        @include('admin.course-repository.user.partials.search-launcher', [
+            'inputId' => 'cruShowSearch',
+            'folder' => $repository->pk,
+            'placeholder' => 'Search inside ' . Str::limit($repository->course_repository_name, 45) . '…',
+        ])
+
         @include('admin.course-repository.user.partials.flash-alert')
 
         <div id="cruFilterResults">

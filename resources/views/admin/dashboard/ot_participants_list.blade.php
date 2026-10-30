@@ -81,6 +81,20 @@
     .ot-list-page .programme-dt-table th:nth-child(2), .ot-list-page .programme-dt-table td:nth-child(2) { left: var(--sl-pin-left-1); }
     .ot-list-page .programme-dt-table th:nth-child(3), .ot-list-page .programme-dt-table td:nth-child(3) { left: var(--sl-pin-left-2); }
     .ot-list-page .programme-dt-table th:nth-child(3), .ot-list-page .programme-dt-table td:nth-child(3) { box-shadow: 1px 0 0 #e5e7eb; }
+
+    /* Cadre / House view toggle — same visual weight as the status pills. */
+    .ot-list-page .ot-view-btn {
+        display: inline-flex; align-items: center; gap: 0.45rem;
+        background: #fff; border: 1px solid #d0d5dd; border-radius: 0.25rem;
+        padding: 0.5rem 1.15rem; font-size: 0.875rem; font-weight: 600; color: #475467;
+    }
+    .ot-list-page .ot-view-btn i { font-size: 1rem; }
+    .ot-list-page .ot-view-btn:hover { background: #f9fafb; color: #004a93; }
+    .ot-list-page .ot-view-btn.active {
+        background: #004a93; border-color: #004a93; color: #fff;
+    }
+    .ot-list-page .ot-view-btn.active:hover { background: #003b76; color: #fff; }
+    .ot-list-page .ot-view-btn:focus-visible { outline: 2px solid #004a93; outline-offset: 2px; }
 </style>
 @endpush
 
@@ -88,6 +102,19 @@
 @php
     $filters = $filters ?? [];
     $activeStatus = ($filters['status'] ?? 'active') === 'archive' ? 'archive' : 'active';
+    // Cadre or House. The page shows ONE Course Group Mapping pair at a time.
+    // $filters['view'] is the URL value: 'cadre', 'house_group' (the toggle's
+    // House view) or 'house' (the House Wise Details card) — both of the last
+    // two are the House group view.
+    $viewParam = (string) ($filters['view'] ?? 'cadre');
+    $activeView = in_array($viewParam, ['house', 'house_group'], true) ? 'house' : 'cadre';
+    // Which group types this viewer's role reaches — a view (and its columns)
+    // outside it is not offered at all.
+    $typeScope = $typeScope ?? ['cadre' => true, 'house' => true];
+    // Both view buttons are always offered. Opening the one this viewer's role
+    // does not reach shows a "not available" notice in place of the list.
+    $viewAvailable = ! empty($typeScope[$activeView]);
+    $activeViewLabel = $activeView === 'house' ? 'House' : 'Cadre';
 @endphp
 <div class="container-fluid ot-list-page">
     <x-breadcrum title="OT/ Participants List" :showBack="true" :items="[
@@ -98,8 +125,13 @@
     ]" />
     <x-session_message />
 
-    {{-- Active / Archived tabs + Print --}}
+    {{-- Active / Archived tabs + Print. The counsellee view is the faculty's
+         Counsellor Groups whatever state their courses are in, so the tabs would
+         be a control that changes nothing — it shows a heading instead. --}}
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        @if(($isCounselleeView ?? false) || ($isHouseView ?? false))
+        <h2 class="h6 fw-semibold mb-0">{{ ($isHouseView ?? false) ? 'House Wise Details' : 'My Counsellees' }}</h2>
+        @else
         <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white" role="group" aria-label="Course status">
             <li class="nav-item" role="presentation">
                 <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $activeStatus === 'active' ? 'active' : '' }}"
@@ -110,7 +142,8 @@
                     data-status="archive">Archived</button>
             </li>
         </ul>
-        <div class="d-flex flex-wrap align-items-center gap-2">
+        @endif
+        <div class="d-flex flex-wrap align-items-center gap-2 {{ $viewAvailable ? '' : 'd-none' }}">
             <button type="button" class="btn sl-toolbar-btn border-0" id="otListPrintBtn" >
                 <i class="bi bi-printer" aria-hidden="true"></i>
                 <span>Print</span>
@@ -128,6 +161,38 @@
         </div>
     </div>
 
+    {{-- Cadre / House view toggle. The list shows ONE Course Group Mapping pair at
+         a time — Cadre + Cadre Counsellor, or House Group + House Group Faculty —
+         and the filters follow it, so a Cadre view carries no House data and vice
+         versa. The roster itself, the layout and the total participant count are
+         the same in both views; only which mapping is on show changes.
+
+         Switching is a full reload, like the Active/Archived tabs and the Course
+         filter: which filters exist at all is rendered server-side. --}}
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3 ot-view-toggle" role="group" aria-label="Group view">
+        <button type="button" class="btn ot-view-btn {{ $activeView === 'cadre' ? 'active' : '' }}"
+            data-view="cadre" aria-pressed="{{ $activeView === 'cadre' ? 'true' : 'false' }}">
+            <i class="bi bi-geo-alt-fill" aria-hidden="true"></i><span>Cadre</span>
+        </button>
+        <button type="button" class="btn ot-view-btn {{ $activeView === 'house' ? 'active' : '' }}"
+            data-view="house_group" aria-pressed="{{ $activeView === 'house' ? 'true' : 'false' }}">
+            <i class="bi bi-house-door-fill" aria-hidden="true"></i><span>House</span>
+        </button>
+    </div>
+
+    @if (! $viewAvailable)
+    {{-- The viewer's Course Group Mapping has no group of this type, so there is
+         nothing to list here. --}}
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body p-4 p-md-5 text-center" role="status">
+            <i class="bi bi-info-circle text-secondary d-block mb-2" style="font-size: 2rem;" aria-hidden="true"></i>
+            <h2 class="h5 fw-semibold mb-1">{{ $activeViewLabel }} not available</h2>
+            <p class="text-muted mb-0">
+                You are not mapped to any {{ $activeView === 'house' ? 'House Group' : 'Counsellor Group' }} in Course Group Mapping.
+            </p>
+        </div>
+    </div>
+    @else
     <div class="card border-0 shadow-sm overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
 
@@ -154,10 +219,13 @@
                     </div>
                     @endif
 
-                    @if(($cadreOptions ?? collect())->isNotEmpty())
+                    {{-- Cadre and House list only what this viewer's participants
+                         actually belong to, and both default to "All" so the page
+                         opens on the whole set. --}}
+                    @if(! ($isHouseView ?? false) && ($cadreOptions ?? collect())->isNotEmpty())
                     <div class="sl-filter-item">
                         <select id="cadreFilter" class="form-select sl-filter-select" aria-label="Filter by cadre">
-                            <option value="">Cadre</option>
+                            <option value="">Cadre: All</option>
                             @foreach($cadreOptions as $cadre)
                                 <option value="{{ $cadre }}" {{ (string)($filters['cadre'] ?? '') === (string)$cadre ? 'selected' : '' }}>{{ $cadre }}</option>
                             @endforeach
@@ -192,6 +260,21 @@
                     <div class="sl-filter-item" id="otItemHouseFaculty" style="display:none;">
                         <select id="houseFacultyFilter" class="form-select sl-filter-select" aria-label="Filter by house group faculty">
                             <option value="">House Group Faculty</option>
+                        </select>
+                    </div>
+                    @endif
+
+                    {{-- On the House view these are the faculty's House Groups (the House
+                         Group column). Everywhere else they are hostel rooms, which no
+                         column shows — so say so, rather than call a room a "House"
+                         beside a House Group column (PR #334 F-043). --}}
+                    @if(! ($isCounselleeView ?? false) && ($houseOptions ?? collect())->isNotEmpty())
+                    <div class="sl-filter-item">
+                        <select id="houseFilter" class="form-select sl-filter-select" aria-label="{{ ($isHouseView ?? false) ? 'Filter by house' : 'Filter by hostel room' }}">
+                            <option value="">{{ ($isHouseView ?? false) ? 'House: All' : 'Hostel Room: All' }}</option>
+                            @foreach($houseOptions as $house)
+                                <option value="{{ $house }}" {{ (string)($filters['house'] ?? '') === (string)$house ? 'selected' : '' }}>{{ $house }}</option>
+                            @endforeach
                         </select>
                     </div>
                     @endif
@@ -236,10 +319,9 @@
                                     <th>Email</th>
                                     <th>Mobile No</th>
                                     <th>User Name</th>
-                                    <th>Cadre</th>
-                                    <th>Cadre Counsellor</th>
-                                    <th>House Group Faculty</th>
-                                    <th>House Group</th>
+                                    @foreach ($groupColumns as $gc)
+                                        <th>{{ $gc[1] }}</th>
+                                    @endforeach
                                     <th>MDO Duty</th>
                                     <th>Duty Type</th>
                                     <th>Medical Exemption</th>
@@ -259,6 +341,7 @@
             </div>
         </div>
     </div>
+    @endif
 </div>
 
 <!-- Column Visibility Modal -->
@@ -333,6 +416,31 @@
 </div>
 
 @push('scripts')
+@if (! $viewAvailable)
+{{-- No list on screen: only the view toggle and the Active / Archived tabs
+     need to work. --}}
+<script>
+    $(function() {
+        const baseUrl = "{{ route('admin.dashboard.ot-participants') }}";
+        const GROUP_VIEW = @json($activeView);
+        const VIEW_PARAM = @json($viewParam);
+        function go(key, value) {
+            const p = new URLSearchParams(window.location.search);
+            p.set(key, value);
+            if (key === 'status') { p.set('view', VIEW_PARAM); p.delete('course_id'); }
+            ['cadre', 'counsellor_faculty', 'house_group', 'house_faculty'].forEach(k => p.delete(k));
+            window.location.href = baseUrl + '?' + p.toString();
+        }
+        $('.ot-view-toggle .ot-view-btn[data-view]').on('click', function() {
+            const v = $(this).data('view');
+            if ((v === 'cadre' ? 'cadre' : 'house') !== GROUP_VIEW) { go('view', v); }
+        });
+        $('.programme-status-tabs .programme-status-pill[data-status]').on('click', function() {
+            if (!$(this).hasClass('active')) { go('status', $(this).data('status')); }
+        });
+    });
+</script>
+@else
 @php
     // Official letterhead logos embedded as base64 so the print window (a blank
     // about:blank document) can render them without extra network requests.
@@ -369,6 +477,19 @@
         let COUNSELLORS_BY_CADRE = @json($counsellorsByCadre ?? new stdClass);
         let FACULTY_BY_HOUSE_GROUP = @json($facultyByHouseGroup ?? new stdClass);
         const LOCKED_COLUMNS = [0, 1, 2]; // S.No, OT Code, Name — frozen & always visible
+        const GROUP_VIEW = @json($activeView ?? 'cadre');
+        // The URL value of the view (see $viewParam) — what every reload carries.
+        const VIEW_PARAM = @json($viewParam);
+        // The dashboard card views, decided server-side.
+        const IS_COUNSELLEE_VIEW = @json((bool) ($isCounselleeView ?? false));
+        // The four Course Group Mapping columns (thead indexes 6–9), in this view's
+        // order — the active view's pair first. Each entry is [data key, title, width].
+        const GROUP_COLUMNS = @json($groupColumns);
+        // The table index of a group column in this view (6–9).
+        function groupColumnIndex(key) {
+            const i = GROUP_COLUMNS.findIndex(c => c[0] === key);
+            return 6 + Math.max(i, 0);
+        }
         // Index tracks the <thead> order above — bump it when a column is inserted before it.
         const DUTY_TYPE_COL = 11; // "Duty Type" — only meaningful for a single-day filter
         let dt = null;
@@ -396,6 +517,10 @@
                 status: currentStatus,
                 course_id: $('#courseFilter').val() || '',
                 cadre: $('#cadreFilter').val() || '',
+                house: $('#houseFilter').val() || '',
+                // Decides which mapping pair the server resolves and returns, and
+                // keeps a dashboard card's scope.
+                view: (filters.view || '').toString(),
                 // Only meaningful alongside a cadre — cleared with it below.
                 counsellor_faculty: $('#counsellorFacultyFilter').val() || '',
                 house_group: $('#houseGroupFilter').val() || '',
@@ -449,7 +574,11 @@
             searchDelay: 400,
             pageLength: 10,
             lengthMenu: [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
-            order: [[0, 'asc']],
+            // The House Wise Details card opens this list with ?sort=house, so it
+            // lands grouped by house (col 9) instead of by serial number; the My
+            // Counsellees card lands grouped by cadre (col 6).
+            order: (filters.sort === 'house') ? [[groupColumnIndex('house'), 'asc']]
+                : IS_COUNSELLEE_VIEW ? [[groupColumnIndex('cadre'), 'asc']] : [[0, 'asc']],
             language: { emptyTable: 'Data not found.' },
             responsive: false,
             autoWidth: false,
@@ -473,10 +602,7 @@
                 { data: 'email', name: 'email' },
                 { data: 'mobile', name: 'mobile' },
                 { data: 'user_name', name: 'user_name' },
-                { data: 'cadre', name: 'cadre' },
-                { data: 'counsellor', name: 'counsellor' },
-                { data: 'house_faculty', name: 'house_faculty' },
-                { data: 'house', name: 'house' },
+                ...GROUP_COLUMNS.map(c => ({ data: c[0], name: c[0] })),
                 { data: 'duty_count', name: 'duty_count', orderable: false, searchable: false },
                 { data: 'duty_type', name: 'duty_type', orderable: false, searchable: false },
                 { data: 'medical', name: 'medical', orderable: false, searchable: false },
@@ -494,12 +620,25 @@
           .on('error.dt', function() { setTableLoading(false); })
           .on('draw.dt column-visibility.dt', function() { relayoutPinnedColumns(); });
 
+        /* ── Cadre / House view toggle (full reload — the filters are server-rendered) ── */
+        $('.ot-view-toggle .ot-view-btn[data-view]').on('click', function() {
+            const v = $(this).data('view');
+            if ((v === 'cadre' ? 'cadre' : 'house') === GROUP_VIEW) { return; }
+            const p = new URLSearchParams(window.location.search);
+            p.set('view', v);
+            // The group selections belong to the view being left; carrying them
+            // over would filter the new view by a dropdown it does not show.
+            ['cadre', 'counsellor_faculty', 'house_group', 'house_faculty'].forEach(k => p.delete(k));
+            window.location.href = baseUrl + (p.toString() ? '?' + p.toString() : '');
+        });
+
         /* ── Active / Archived tabs (full reload — course options + data are status-specific) ── */
         $('.programme-status-tabs .programme-status-pill[data-status]').on('click', function() {
             const st = $(this).data('status');
             if (st === currentStatus) { return; }
             const p = new URLSearchParams(window.location.search);
             p.set('status', st);
+            p.set('view', VIEW_PARAM); // stay in the view the viewer is on
             p.delete('course_id'); // the course list differs per status
             window.location.href = baseUrl + (p.toString() ? '?' + p.toString() : '');
         });
@@ -514,6 +653,7 @@
         $('#courseFilter').on('change', function() {
             const p = new URLSearchParams(window.location.search);
             p.set('status', currentStatus);
+            p.set('view', VIEW_PARAM); // a course change does not leave the view
             if (this.value) { p.set('course_id', this.value); } else { p.delete('course_id'); }
             ['cadre', 'counsellor_faculty', 'house_group', 'house_faculty'].forEach(k => p.delete(k));
             window.location.href = baseUrl + (p.toString() ? '?' + p.toString() : '');
@@ -617,6 +757,7 @@
             applyFilter({ house_group: this.value });
         });
         $('#houseFacultyFilter').on('change', function() { applyFilter({ house_faculty: this.value }); });
+        $('#houseFilter').on('change', function() { applyFilter({ house: this.value }); });
         // First paint: restore the faculty carried in the URL, and pre-select the
         // parent's only faculty when the URL names a parent but no faculty —
         // ?cadre=AGMUT picks that cadre's lone counsellor, ?house_group=Kangchendjunga
@@ -630,7 +771,10 @@
         }
         $('#sessionFilter').on('change', function() { applyFilter({ session: this.value }); });
         $('#participantFilter').on('change', function() { applyFilter({ participant: this.value }); });
-        $('#resetFilters').on('click', function() { window.location.href = baseUrl; });
+        $('#resetFilters').on('click', function() {
+            // Reset clears the filters, not the scope the page was opened in.
+            window.location.href = baseUrl + (filters.view ? '?view=' + encodeURIComponent(filters.view) : '');
+        });
 
         /* ── Time Period date-range ── */
         const $period = $('#timePeriodFilter');
@@ -663,10 +807,9 @@
             { title: 'Email', data: 'email', w: 14 },
             { title: 'Mobile No', data: 'mobile', w: 8 },
             { title: 'User Name', data: 'user_name', w: 10 },
-            { title: 'Cadre', data: 'cadre', w: 8 },
-            { title: 'Cadre Counsellor', data: 'counsellor', w: 10 },
-            { title: 'House Group Faculty', data: 'house_faculty', w: 10 },
-            { title: 'House Group', data: 'house', w: 8 },
+            // Index-aligned with the table; role-hidden columns are skipped because
+            // they are never visible there.
+            ...GROUP_COLUMNS.map(c => ({ title: c[1], data: c[0], w: c[2] })),
             { title: 'MDO Duty', data: 'duty_count', w: 6 },
             { title: 'Duty Type', data: 'duty_type', w: 8 },
             { title: 'Medical Exemption', data: 'medical', w: 7 },
@@ -901,14 +1044,28 @@
         // past it shifted — a v4 list would hide the wrong columns.
         // v6: the default set below was introduced, so v5 entries (which meant
         // "everything visible") must not survive as a saved preference.
-        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v6';
+        // v7: the Cadre/House view toggle. The active view's pair is now visible by
+        // default (showing it is the point of the view) and the other view's pair is
+        // force-hidden, so a v6 list — which hid all four mapping columns — must not
+        // survive as a saved preference.
+        // v8: both views show all four mapping columns, ordered per view, so index
+        // 6–9 means a different column in each view — the preference is kept per view.
+        // v9: the four mapping columns joined the default-hidden set below, so v8
+        // lists (which showed them) must not survive as a saved preference.
+        const otColStorageKey = 'otParticipantsGrid:hiddenColumns:v9:' + GROUP_VIEW;
         // What the page opens with: the frozen identity columns plus the counts
         // the list exists for. The contact / mapping columns are one click away in
         // Column Visibility, so a viewer who wants them turns them on — and that
         // choice is then saved and wins over this default for good.
-        //   3 Email · 4 Mobile No · 5 User Name · 6 Cadre
-        //   7 Cadre Counsellor · 8 House Group Faculty · 9 House Group
+        //   3 Email · 4 Mobile No · 5 User Name
+        //   6–9 Cadre · Cadre Counsellor · House Group · House Group Faculty
+        //       (in this view's order — see GROUP_COLUMNS)
         const DEFAULT_HIDDEN_COLUMNS = [3, 4, 5, 6, 7, 8, 9];
+        // Cadre is always shown on the My Counsellees card view — it is what that
+        // list opens sorted by (index 6, the first group column; see GROUP_COLUMNS).
+        // Not saved, so the general preference is left alone. The House view forces
+        // nothing: House Group starts unticked like the other mapping columns.
+        const VIEW_FORCED_COLUMNS = IS_COUNSELLEE_VIEW ? [groupColumnIndex('cadre')] : [];
         function otGetHiddenCols() {
             try {
                 const raw = localStorage.getItem(otColStorageKey);
@@ -924,8 +1081,10 @@
         function setupOtColumns() {
             if (!dt) { return; }
             const singleDay = isSingleDayFilter();
-            const hidden = otGetHiddenCols().filter(idx => LOCKED_COLUMNS.indexOf(idx) === -1);
+            let hidden = otGetHiddenCols()
+                .filter(idx => LOCKED_COLUMNS.indexOf(idx) === -1);
             otPersistHiddenCols(hidden);
+            hidden = hidden.filter(idx => VIEW_FORCED_COLUMNS.indexOf(idx) === -1);
             dt.columns().every(function() {
                 const idx = this.index();
                 if (LOCKED_COLUMNS.indexOf(idx) !== -1) { this.visible(true, false); return; }
@@ -975,6 +1134,7 @@
         });
     });
 </script>
+@endif
 @endpush
 
 @endsection

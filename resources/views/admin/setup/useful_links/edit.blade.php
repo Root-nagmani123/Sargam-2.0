@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Edit Useful Link - Sargam | Lal Bahadur Shastri')
+@section('title', 'Edit Useful Link')
 
 @push('styles')
 <link rel="stylesheet"

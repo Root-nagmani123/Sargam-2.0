@@ -40,17 +40,39 @@ class FcRegistrationFlowService
         session([FcRegistrationIntentService::SESSION_FORM_ID => (int) $form->id]);
     }
 
+    /**
+     * The step whose completion unlocks the Travel Plan: Bank Details when the form
+     * has it active, otherwise Descriptive Roll 2 (tracker step3_done), otherwise the
+     * form's last active step. Steps after Descriptive Roll 2 (Special Assistance,
+     * Health, ...) must not hold Travel Plan back. Null only for a form with no
+     * active steps. Every Travel Plan gate — stepper, dashboard card, post-step
+     * redirect, travel page guard — must ask this, not look for bank_done itself.
+     *
+     * @param  Collection<int, FcFormStep>|null  $steps  active steps, in order
+     */
+    public function travelAnchorStep(FcForm $form, ?Collection $steps = null): ?FcFormStep
+    {
+        $steps = $steps ?? $form->activeSteps()->get();
+
+        return $steps->first(fn ($step) => ($step->tracker_column ?? '') === 'bank_done'
+                || str_contains(strtolower((string) ($step->step_slug ?? '')), 'bank'))
+            ?? $steps->first(fn ($step) => ($step->tracker_column ?? '') === 'step3_done')
+            ?? $steps->last();
+    }
+
     public function isBankCompleteForTravel(int $userId): bool
     {
         $form = $this->activeFormFromSession();
         if ($form) {
             $steps = $form->activeSteps()->get();
-            $status = $this->buildStepCompletionByStepId($form, $steps, $userId);
-            foreach ($steps as $step) {
-                if (($step->tracker_column ?? '') === 'bank_done'
-                    || str_contains(strtolower((string) ($step->step_slug ?? '')), 'bank')) {
-                    return $status[$step->id] ?? false;
+            $anchor = $this->travelAnchorStep($form, $steps);
+            if ($anchor) {
+                if ($this->stepNotApplicable($anchor, $userId)) {
+                    return true;
                 }
+                $status = $this->buildStepCompletionByStepId($form, $steps, $userId);
+
+                return $status[$anchor->id] ?? false;
             }
         }
 

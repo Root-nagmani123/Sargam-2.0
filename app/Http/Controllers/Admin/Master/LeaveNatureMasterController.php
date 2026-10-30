@@ -10,8 +10,34 @@ use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
+/**
+ * Nature Leave Master — the natures each leave form offers.
+ *
+ * Rows are bucketed by leave_type: what is filed under "Leave" is what the
+ * Training Section's Apply Leave on Behalf of OT page lists, and the other two
+ * buckets feed the officer trainee's own PT Exemption and Stationed Leave forms.
+ */
 class LeaveNatureMasterController extends Controller
 {
+    /** The permission of the "Nature Leave Master" menu (migration 2026_09_18_000001). */
+    public const MENU_PERMISSION = 'master_leave_nature_master';
+
+    public function __construct()
+    {
+        // The LEAVE bucket drives what the Training Section records on behalf of a
+        // trainee, so every action — the list, the forms, store / status / delete —
+        // takes the menu's own permission (Super Admin passes). Until PR #334 F-010
+        // these routes carried only `auth`, and any login could add, deactivate or
+        // delete a nature.
+        $this->middleware(function ($request, $next) {
+            if (! canUseStaffMenu(self::MENU_PERMISSION)) {
+                abort(403, 'You are not authorised to manage leave natures.');
+            }
+
+            return $next($request);
+        });
+    }
+
     public function index(LeaveNatureMasterDataTable $dataTable)
     {
         return $dataTable->render('admin.master.leave_nature.index');
@@ -19,14 +45,19 @@ class LeaveNatureMasterController extends Controller
 
     public function create()
     {
-        return view('admin.master.leave_nature.create_edit');
+        return view('admin.master.leave_nature.create_edit', [
+            'leaveTypes' => LeaveNatureMaster::TYPE_LABELS,
+        ]);
     }
 
     public function edit($id)
     {
         $leaveNature = LeaveNatureMaster::findOrFail($this->decryptId($id));
 
-        return view('admin.master.leave_nature.create_edit', compact('leaveNature'));
+        return view('admin.master.leave_nature.create_edit', [
+            'leaveNature' => $leaveNature,
+            'leaveTypes' => LeaveNatureMaster::TYPE_LABELS,
+        ]);
     }
 
     public function store(Request $request)
@@ -34,10 +65,9 @@ class LeaveNatureMasterController extends Controller
         $pk = $request->id ? $this->decryptId($request->id) : null;
 
         $request->validate([
-            'leave_type' => ['required', Rule::in([
-                LeaveApplication::TYPE_PT_EXEMPTION,
-                LeaveApplication::TYPE_STATIONED_LEAVE,
-            ])],
+            'leave_type' => ['required', Rule::in(array_keys(LeaveNatureMaster::TYPE_LABELS))],
+            // Unique per bucket, not globally: "Medical" legitimately exists
+            // under both PT Exemption and Stationed Leave today.
             'nature_name' => [
                 'required',
                 'string',
@@ -47,6 +77,8 @@ class LeaveNatureMasterController extends Controller
                     ->ignore($pk, 'pk'),
             ],
             'active_inactive' => 'required|in:1,2',
+        ], [
+            'nature_name.unique' => 'This nature already exists for the selected leave type.',
         ]);
 
         $displayOrder = $pk

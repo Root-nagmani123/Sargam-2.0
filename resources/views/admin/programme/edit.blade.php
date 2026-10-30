@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Edit Course - Programme - Sargam | Lal Bahadur')
+@section('title', 'Edit Course - Programme')
 
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />

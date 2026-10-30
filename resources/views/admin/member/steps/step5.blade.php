@@ -4,7 +4,7 @@
 <div class="row">
     <div class="col-md-6">
         <div class="mb-3">
-            <x-input name="residencenumber" formLabelClass="form-label" label="Residence Number" id="residencenumber" placeholder="eg. 123456" value="{{ old('residencenumber') }}" labelRequired="true" />
+            <x-input name="residencenumber" formLabelClass="form-label" label="Residence Number" id="residencenumber" placeholder="eg. 123456" value="{{ old('residencenumber') }}" />
         </div>
     </div>
     <div class="col-md-6">

@@ -403,6 +403,7 @@ class StationedLeaveMasterController extends Controller
         $filename = 'Stationed_Leave_Master_' . now()->format('Ymd_His');
         $rows = $this->baseListQuery($request)->get();
         $filterLine = $this->buildExportFilterLine($request);
+        $columns = $this->resolveExportColumns($request);
 
         if ($format === 'pdf') {
             @ini_set('memory_limit', '256M');
@@ -415,6 +416,7 @@ class StationedLeaveMasterController extends Controller
 
             $pdf = Pdf::loadView('admin.stationed_leave_master.export_pdf', [
                 'rows' => $rows,
+                'columns' => $columns,
                 'filterLine' => $filterLine,
                 'printedOn' => now()->format('d-m-Y H:i'),
                 'reportTitle' => 'Stationed Leave Master Report',
@@ -439,10 +441,26 @@ class StationedLeaveMasterController extends Controller
         }
 
         return Excel::download(
-            new StationedLeaveMasterExport($rows, $filterLine),
+            new StationedLeaveMasterExport($rows, $filterLine, $columns),
             $filename . '.xlsx',
             ExcelFormat::XLSX
         );
+    }
+
+    /**
+     * Columns the grid is showing (?cols=sno,course,…), intersected with the
+     * report's own list so a hand-edited value can't add or reorder columns.
+     * Absent, empty or nothing recognised => every column.
+     *
+     * @return list<string>
+     */
+    private function resolveExportColumns(Request $request): array
+    {
+        $raw = $request->query('cols', '');
+        $wanted = is_string($raw) ? array_filter(array_map('trim', explode(',', $raw))) : [];
+        $keys = array_values(array_intersect(array_keys(StationedLeaveMasterExport::COLUMNS), $wanted));
+
+        return $keys !== [] ? $keys : array_keys(StationedLeaveMasterExport::COLUMNS);
     }
 
     private function buildExportFilterLine(Request $request): string

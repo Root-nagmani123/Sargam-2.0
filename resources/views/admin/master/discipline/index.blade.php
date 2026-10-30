@@ -2,35 +2,83 @@
 
 @section('title', 'Discipline Master')
 
+@push('styles')
+@include('admin.layouts.partials.select2-assets')
+<link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
+@endpush
+
 @section('setup_content')
-<div class="container-fluid">
-<x-breadcrum title="Discipline Master"></x-breadcrum>
-    <div class="card" >
-        <div class="card-body">
-            <div class="row">
-                <div class="col-6">
-                    <h4>Discipline Master</h4>
-                </div>
-                <div class="col-6">
-                    <div class="d-flex justify-content-end align-items-center gap-2">
-                        <!-- Add Group Mapping -->
-                        <a href="{{ route('master.discipline.create') }}"
-                            class="btn btn-primary d-flex align-items-center">
-                            <i class="material-icons menu-icon material-symbols-rounded"
-                                style="font-size: 24px;">add</i>
-                            Add Discipline
-                        </a>
-                    </div>
+<div class="container-fluid mst-page">
+    <x-breadcrum title="Discipline Master" :showBack="false">
+        <a href="{{ route('master.discipline.create') }}" data-mst-modal-form
+           class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Add Discipline</span>
+        </a>
+    </x-breadcrum>
+
+    <x-session_message />
+
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
+
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns"
+                            data-bs-toggle="modal" data-bs-target="#discMstColumnVisibilityModal"
+                            title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div class="programme-dt-search" data-dt-search-for="discipline-table"></div>
                 </div>
             </div>
-            <hr>
 
-            {!! $dataTable->table(['class' => 'table']) !!}
+            {{-- Search, pager and "Showing N of M items" are relocated into the
+                 slots by public/js/datatable-global-ui.js. --}}
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
+                </div>
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                     data-dt-footer-for="discipline-table"></div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility -->
+<div class="modal fade" id="discMstColumnVisibilityModal" tabindex="-1"
+     aria-labelledby="discMstColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-3 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="discMstColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3 mst-colvis-grid" id="discMstColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
         </div>
     </div>
 </div>
 @endsection
 
 @push('scripts')
-    {!! $dataTable->scripts() !!}
+{!! $dataTable->scripts() !!}
+<script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
+<script>
+    $(function () {
+        MstAdmin.columnVisibility({
+            table: '#discipline-table',
+            grid: '#discMstColumnToggleGrid',
+            storageKey: 'sargam.disciplineMaster.hiddenCols.{{ auth()->id() ?? 'guest' }}'
+        });
+    });
+</script>
 @endpush

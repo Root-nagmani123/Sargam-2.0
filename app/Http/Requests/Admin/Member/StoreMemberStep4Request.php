@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin\Member;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreMemberStep4Request extends FormRequest
 {
@@ -26,15 +27,18 @@ class StoreMemberStep4Request extends FormRequest
         return [
             // Current Address
             'address'            => ['required', 'string', 'max:255'],
-            'country'            => ['required', 'string'],
-            'state'              => ['required', 'string'],
+            // country/state are plain dropdowns (no "other, please specify" escape
+            // valve like city has), so it's safe to require they resolve to a real
+            // row rather than any string (PR #319 review, F-027).
+            'country'            => ['required', 'integer', Rule::exists('country_master', 'pk')],
+            'state'              => ['required', 'integer', Rule::exists('state_master', 'pk')],
             'city'               => ['required', 'string'],
             'postal'             => ['required', 'string'],
 
             // Permanent Address
             'permanentaddress'   => ['required', 'string', 'max:255'],
-            'permanentcountry'   => ['required', 'string'],
-            'permanentstate'     => ['required', 'string'],
+            'permanentcountry'   => ['required', 'integer', Rule::exists('country_master', 'pk')],
+            'permanentstate'     => ['required', 'integer', Rule::exists('state_master', 'pk')],
             'permanentcity'      => ['required', 'string'],
             'permanentpostal'    => ['required', 'string'],
 
@@ -43,7 +47,13 @@ class StoreMemberStep4Request extends FormRequest
             'officialemail'      => ['required', 'email'],
             'mnumber'            => ['required', 'digits_between:10,15'],
             'emergencynumber'    => ['nullable', 'digits_between:10,15'],
-            'landlinenumber'     => ['nullable', 'digits_between:6,15'],
+            // PR #319 review round 2 (F-009). The requested change was to accept landline
+            // numbers shorter than 10 digits; the floor was moved all the way to 1, which
+            // accepts "7" as a landline number. The field is already nullable, so a floor
+            // of 1 does no work at all — anyone with nothing to enter leaves it blank.
+            // 5 is the shortest string that is plausibly a real number here (internal
+            // extensions) while still rejecting an obvious typo or a stray keypress.
+            'landlinenumber' => ['nullable', 'digits_between:5,15'],
         ];
     }
 
@@ -53,14 +63,18 @@ class StoreMemberStep4Request extends FormRequest
             // Current Address
             'address.required' => 'Current address is required.',
             'country.required' => 'Please select your country.',
+            'country.exists'   => 'Please select a valid country.',
             'state.required'   => 'Please select your state.',
+            'state.exists'     => 'Please select a valid state.',
             'city.required'    => 'City is required.',
             'postal.required'  => 'Postal code is required.',
 
             // Permanent Address
             'permanentaddress.required' => 'Permanent address is required.',
             'permanentcountry.required' => 'Please select your permanent country.',
+            'permanentcountry.exists'   => 'Please select a valid permanent country.',
             'permanentstate.required'   => 'Please select your permanent state.',
+            'permanentstate.exists'     => 'Please select a valid permanent state.',
             'permanentcity.required'    => 'Permanent city is required.',
             'permanentpostal.required'  => 'Permanent postal code is required.',
 
@@ -72,7 +86,7 @@ class StoreMemberStep4Request extends FormRequest
             'mnumber.required'         => 'Mobile number is required.',
             'mnumber.digits_between'   => 'Mobile number must be between 10 to 15 digits.',
             'emergencynumber.digits_between' => 'Emergency contact must be between 10 to 15 digits.',
-            'landlinenumber.digits_between'  => 'Landline number must be between 6 to 15 digits.',
+            'landlinenumber.digits_between' => 'Landline number must be between 5 to 15 digits.',
         ];
     }
 }

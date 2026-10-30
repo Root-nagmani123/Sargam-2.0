@@ -4,215 +4,104 @@
 @php
 $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
-<div class="container-fluid py-3 py-md-4 po-ux">
+<div class="container-fluid po-ux">
     <div class="no-print">
-        <x-breadcrum title="Purchase Orders"></x-breadcrum>
+        <x-breadcrum title="Purchase Orders">
+            <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-2"
+                id="poPrintListBtn" title="Print purchase order list">
+                <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">print</i>
+                <span class="d-none d-sm-inline">Print List</span>
+            </button>
+            <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2"
+                data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
+                <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+                <span>Create Purchase Order</span>
+            </button>
+        </x-breadcrum>
     </div>
-    <div class="datatables">
-        <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
-            <div class="card-header border-0 py-3 px-3 px-md-4 position-relative" style="background:#004a93;">
-                <div
-                    class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 no-print">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="rounded-3 bg-white bg-opacity-15 d-none d-sm-flex align-items-center justify-content-center flex-shrink-0"
-                            style="width: 2.75rem; height: 2.75rem;">
-                            <i class="material-icons material-symbol-rounded" style="font-size: 1.4rem;"
-                                aria-hidden="true">receipt_long</i>
-                        </div>
-                        <div>
-                            <h4 class="mb-0 fw-bold text-white">Purchase Orders</h4>
-                            <p class="mb-0 text-white-50 small">Filter, view, or create a new purchase order</p>
-                        </div>
-                    </div>
-                    <div class="d-flex flex-wrap align-items-center gap-2">
-                        <button type="button"
-                            class="btn btn-outline-light px-3 py-2 rounded-2 d-inline-flex align-items-center gap-2 fw-semibold"
-                            id="poPrintListBtn" title="Print purchase order list">
-                            <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;"
-                                aria-hidden="true">print</i>
-                            <span class="d-none d-sm-inline">Print List</span>
-                        </button>
-                        <button type="button"
-                            class="btn btn-light text-primary px-4 py-2 rounded-2 d-inline-flex align-items-center gap-2 shadow-sm fw-semibold po-btn-create"
-                            data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
-                            <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;"
-                                aria-hidden="true">add</i>
-                            <span class="d-none d-sm-inline">Create Purchase Order</span>
-                            <span class="d-inline d-sm-none">New</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="card-body p-3 p-md-4">
-                @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show shadow-lg border-0 rounded-4 d-flex align-items-start gap-3 bg-gradient"
-                    role="alert"
-                    style="background: linear-gradient(135deg, #d1f4e0 0%, #a8e6cf 100%); border-left: 4px solid #28a745 !important;">
-                    <i class="material-icons material-symbol-rounded flex-shrink-0 text-success"
-                        style="font-size: 1.5rem;" aria-hidden="true">check_circle</i>
-                    <div class="flex-grow-1 fw-medium">{{ session('success') }}</div>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-                @endif
-                @if(session('po_edit_error'))
-                <div class="alert alert-danger alert-dismissible fade show border-0 rounded-4" role="alert">
-                    {{ session('po_edit_error') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-                @endif
 
-                {{-- Filters --}}
+    @if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
+        <i class="material-icons material-symbols-rounded" style="font-size:20px;" aria-hidden="true">check_circle</i>
+        <div class="flex-grow-1">{{ session('success') }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
+    @if(session('po_edit_error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        {{ session('po_edit_error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
+    @if(($pendingApprovalCount ?? 0) > 0)
+    <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2 no-print" role="status">
+        <i class="material-icons material-symbols-rounded" style="font-size:20px;" aria-hidden="true">pending_actions</i>
+        <span class="flex-grow-1"><strong>{{ $pendingApprovalCount }}</strong>
+            purchase {{ $pendingApprovalCount === 1 ? 'order is' : 'orders are' }} waiting for your approval.
+            Their items cannot be sold until approved.</span>
+        <a href="{{ route('admin.mess.purchaseorders.index', ['status' => 'pending']) }}"
+            class="btn btn-sm btn-warning fw-semibold">Show pending</a>
+    </div>
+    @endif
+
+    <div class="datatables">
+        <div class="ds-card">
+            <div class="ds-card-body">
+                {{-- Filters: single inline toolbar --}}
                 <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}"
-                    class="card border-0 shadow-sm rounded-3 mb-4 no-print po-filter-card"
-                    aria-label="Purchase order list filters">
-                    <div class="card-header bg-white border-bottom border-light-subtle py-3 px-3 px-md-4 position-relative"
-                        style="border-top:3px solid #0b4a7e !important;">
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="material-symbols-rounded text-primary" style="font-size:1.5rem;"
-                                    aria-hidden="true">tune</span>
-                                <div>
-                                    <h6 class="mb-0 fw-semibold text-body">Refine Results</h6>
-                                    <p class="mb-0 small text-body-secondary">Filter by period, vendor & store</p>
-                                </div>
-                            </div>
-                        </div>
+                    class="po-filterbar mb-3 no-print" aria-label="Purchase order list filters">
+                    <span class="po-filters-label">Filters</span>
+
+                    <label class="po-filter-field" for="poFilterDateFrom">
+                        <span>From</span>
+                        <input type="date" name="date_from" id="poFilterDateFrom" class="form-control"
+                            value="{{ $filterDateFrom }}">
+                    </label>
+                    <label class="po-filter-field" for="poFilterDateTo">
+                        <span>To</span>
+                        <input type="date" name="date_to" id="poFilterDateTo" class="form-control"
+                            value="{{ $filterDateTo }}">
+                    </label>
+
+                    <div class="po-filter-ms">
+                        <select name="vendor_id[]" id="poFilterVendor" multiple class="form-select"
+                            data-placeholder="All vendors" aria-label="Filter by one or more vendors">
+                            @foreach($vendors as $v)
+                            <option value="{{ $v->id }}"
+                                {{ in_array((int) $v->id, $filterVendorIds ?? [], true) ? 'selected' : '' }}>
+                                {{ $v->name }}</option>
+                            @endforeach
+                        </select>
                     </div>
-                    <div class="card-body p-3 p-md-4 bg-body-tertiary">
-                        <div class="row g-4 align-items-stretch">
-                            <div class="col-12 col-lg-5 col-xl-4">
-                                <div class="h-100 rounded-3 border border-light-subtle bg-white p-3 p-md-4">
-                                    <div class="d-flex align-items-center gap-2 mb-3">
-                                        <span
-                                            class="badge rounded-1 bg-primary-subtle text-primary-emphasis fw-semibold px-3"
-                                            style="font-size: 0.7rem; letter-spacing: 0.06em;">Period</span>
-                                        <span class="small text-body-secondary">Order date range</span>
-                                    </div>
-                                    <div class="row g-3">
-                                        <div class="col-sm-6">
-                                            <label class="form-label fw-bold small mb-2 text-dark"
-                                                for="poFilterDateFrom">From</label>
-                                            <div class="rounded-3 overflow-hidden">
-                                                <div class="input-group input-group-sm shadow">
-                                                    <span class="input-group-text bg-light border-end-0 px-3"
-                                                        id="poFilterDateFrom-addon">
-                                                        <i class="material-icons material-symbol-rounded text-primary"
-                                                            style="font-size: 1.125rem;" aria-hidden="true">event</i>
-                                                    </span>
-                                                    <input type="date" name="date_from" id="poFilterDateFrom"
-                                                        class="form-control border-start-0 ps-0"
-                                                        value="{{ $filterDateFrom }}"
-                                                        aria-describedby="poFilterDateFrom-addon">
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-sm-6">
-                                            <label class="form-label fw-bold small mb-2 text-dark"
-                                                for="poFilterDateTo">To</label>
-                                            <div class="rounded-3 overflow-hidden">
-                                                <div class="input-group input-group-sm shadow">
-                                                    <span class="input-group-text bg-light border-end-0 px-3"
-                                                        id="poFilterDateTo-addon">
-                                                        <i class="material-icons material-symbol-rounded text-primary"
-                                                            style="font-size: 1.125rem;" aria-hidden="true">event</i>
-                                                    </span>
-                                                    <input type="date" name="date_to" id="poFilterDateTo"
-                                                        class="form-control border-start-0 ps-0"
-                                                        value="{{ $filterDateTo }}"
-                                                        aria-describedby="poFilterDateTo-addon">
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-12 col-lg-7 col-xl-8">
-                                <div class="h-100 rounded-3 border border-light-subtle bg-white p-3 p-md-4">
-                                    <div class="d-flex align-items-center gap-2 mb-3">
-                                        <span
-                                            class="badge rounded-1 bg-success-subtle text-success-emphasis fw-semibold px-3"
-                                            style="font-size: 0.7rem; letter-spacing: 0.06em;">Scope</span>
-                                        <span class="small text-body-secondary">Vendors & stores <span
-                                                class="d-none d-sm-inline">(leave blank for all)</span></span>
-                                    </div>
-                                    <div class="row g-3 align-items-start">
-                                        <div class="col-12 col-md-6">
-                                            <label class="form-label fw-bold small mb-2 text-dark"
-                                                for="poFilterVendor">Vendors</label>
-                                            <div
-                                                class="input-group input-group-sm shadow rounded-3 po-filter-multiselect-wrap">
-                                                <span class="input-group-text bg-light border-end-0"
-                                                    id="poFilterVendor-addon" aria-hidden="true">
-                                                    <i class="material-icons material-symbol-rounded text-primary"
-                                                        style="font-size: 1.125rem;">local_shipping</i>
-                                                </span>
-                                                <select name="vendor_id[]" id="poFilterVendor" multiple
-                                                    class="form-select form-select-sm rounded-0 border-start-0 po-filter-ts-vendor"
-                                                    data-placeholder="All vendors"
-                                                    aria-label="Filter by one or more vendors"
-                                                    aria-describedby="poFilterVendor-addon">
-                                                    @foreach($vendors as $v)
-                                                    <option value="{{ $v->id }}"
-                                                        {{ in_array((int) $v->id, $filterVendorIds ?? [], true) ? 'selected' : '' }}>
-                                                        {{ $v->name }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            <div class="form-text mt-1 mb-0 fst-italic">All vendors when none selected.
-                                                Type to search.</div>
-                                        </div>
-                                        <div class="col-12 col-md-6">
-                                            <label class="form-label fw-bold small mb-2 text-dark"
-                                                for="poFilterStore">Stores</label>
-                                            <div
-                                                class="input-group input-group-sm shadow rounded-3 po-filter-multiselect-wrap">
-                                                <span class="input-group-text bg-light border-end-0"
-                                                    id="poFilterStore-addon" aria-hidden="true">
-                                                    <i class="material-icons material-symbol-rounded text-primary"
-                                                        style="font-size: 1.125rem;">storefront</i>
-                                                </span>
-                                                <select name="store_id[]" id="poFilterStore" multiple
-                                                    class="form-select form-select-sm rounded-0 border-start-0"
-                                                    data-placeholder="All stores"
-                                                    aria-label="Filter by one or more stores"
-                                                    aria-describedby="poFilterStore-addon">
-                                                    @foreach($stores as $s)
-                                                    <option value="{{ $s->id }}"
-                                                        {{ in_array((int) $s->id, $filterStoreIds ?? [], true) ? 'selected' : '' }}>
-                                                        {{ $s->store_name }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            <div class="form-text mt-1 mb-0 fst-italic">All stores when none selected.
-                                                Type to search.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-12">
-                                <div
-                                    class="d-flex flex-column flex-md-row flex-wrap align-items-stretch align-items-md-center justify-content-between gap-3 pt-3 mt-2 border-top">
-                                    <div class="d-flex flex-wrap gap-2">
-                                        <button type="submit"
-                                            class="btn btn-primary rounded-2 d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 shadow-sm fw-semibold">
-                                            <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;"
-                                                aria-hidden="true">filter_alt</i>
-                                            <span>Apply filters</span>
-                                        </button>
-                                        <a href="{{ route('admin.mess.purchaseorders.index') }}"
-                                            class="btn btn-outline-secondary rounded-2 d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 fw-semibold">
-                                            <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;"
-                                                aria-hidden="true">restart_alt</i>
-                                            <span>Clear</span>
-                                        </a>
-                                    </div>
-                                    <p class="mb-0 small text-body-secondary text-center text-md-end ms-md-auto flex-shrink-0 fst-italic"
-                                        style="max-width: 28rem;">Tip: use the search field in each dropdown to find
-                                        vendors or stores. Remove chips to clear a selection; leave both empty for all.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="po-filter-ms">
+                        <select name="store_id[]" id="poFilterStore" multiple class="form-select"
+                            data-placeholder="All stores" aria-label="Filter by one or more stores">
+                            @foreach($stores as $s)
+                            <option value="{{ $s->id }}"
+                                {{ in_array((int) $s->id, $filterStoreIds ?? [], true) ? 'selected' : '' }}>
+                                {{ $s->store_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <select name="status" id="poFilterStatus" class="form-select po-filter-control"
+                        aria-label="Filter by status">
+                        <option value="">All statuses</option>
+                        @foreach(['pending' => 'Pending approval', 'approved' => 'Approved', 'rejected' => 'Rejected'] as $value => $label)
+                        <option value="{{ $value }}" {{ ($filterStatus ?? '') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                        @endforeach
+                    </select>
+
+                    <div class="ms-auto d-flex align-items-center gap-2">
+                        <button type="submit" class="btn btn-primary po-filter-btn d-inline-flex align-items-center gap-1">
+                            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">filter_alt</i>
+                            Apply
+                        </button>
+                        <a href="{{ route('admin.mess.purchaseorders.index') }}" id="poResetFilters"
+                            class="btn btn-outline-danger po-filter-btn d-inline-flex align-items-center gap-1">
+                            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">restart_alt</i>
+                            Reset Filters
+                        </a>
                     </div>
                 </form>
 
@@ -238,13 +127,13 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                     <div class="table-responsive">
                         <table id="purchaseOrdersTable" class="table align-middle mb-0 w-100 po-data-table">
                             <thead>
-                                <tr class="small">
-                                    <th scope="col" class="po-th border-0 py-3 ps-4">#</th>
-                                    <th scope="col" class="po-th border-0 py-3">Order No.</th>
-                                    <th scope="col" class="po-th border-0 py-3">Vendor</th>
-                                    <th scope="col" class="po-th border-0 py-3">Store</th>
-                                    <th scope="col" class="po-th border-0 py-3">Status</th>
-                                    <th scope="col" class="po-th border-0 py-3 pe-4 text-end d-print-none">Actions</th>
+                                <tr>
+                                    <th scope="col">#</th>
+                                    <th scope="col">Order No.</th>
+                                    <th scope="col">Vendor</th>
+                                    <th scope="col">Store</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col" class="text-end d-print-none">Actions</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -269,7 +158,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 }
 
 .po-row:hover {
-    background-color: rgba(11, 74, 126, .04) !important;
+    background-color: var(--ds-surface-2) !important;
 }
 
 /* ── Action buttons ── */
@@ -286,16 +175,6 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 .po-action-btn:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 6px rgba(0, 0, 0, .12);
-}
-
-/* ── Create button hover ── */
-.po-btn-create {
-    transition: all .25s ease;
-}
-
-.po-btn-create:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255, 255, 255, .25);
 }
 
 /* ── Fade-in animation ── */
@@ -315,10 +194,6 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
     animation: po-fade-in .4s ease-out;
 }
 
-.po-filter-card {
-    animation: po-fade-in .35s ease-out;
-}
-
 @media (max-width: 575.98px) {
     .po-ux .datatables .table thead th {
         font-size: 0.65rem;
@@ -328,8 +203,8 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 /* ── Modal form field focus — navy ring ── */
 #createPurchaseOrderModal .form-control:focus,
 #createPurchaseOrderModal .form-select:focus {
-    border-color: #0b4a7e !important;
-    box-shadow: 0 0 0 .2rem rgba(11, 74, 126, .15);
+    border-color: var(--ds-primary) !important;
+    box-shadow: var(--ds-focus-ring);
 }
 
 /* Print header – standard level (matches category-wise-print-slip) */
@@ -397,7 +272,6 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
     /* Hide chrome without visibility:hidden (that forced icon ligature text to print) */
     .po-ux>.no-print,
     .po-ux .card-header,
-    .po-ux .po-filter-card,
     .po-ux .alert,
     .po-ux .mess-col-manager-dropdown,
     .po-ux .dataTables_length,
@@ -837,7 +711,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 /* Control (Input Container) - Enhanced Bootstrap Style */
 .ts-wrapper .ts-control {
     background-color: #fff;
-    border: 2px solid #dee2e6;
+    border: 2px solid var(--ds-line);
     border-radius: 0.5rem;
     padding: 6px 12px;
     min-height: 42px;
@@ -855,14 +729,14 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 
 /* Focus state - Enhanced Bootstrap Style */
 .ts-wrapper.focus .ts-control {
-    border-color: #86b7fe;
+    border-color: var(--ds-primary);
     outline: 0;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+    box-shadow: var(--ds-focus-ring);
 }
 
 /* Dropdown container - Enhanced Bootstrap Style */
 .ts-dropdown {
-    border: 2px solid #dee2e6;
+    border: 2px solid var(--ds-line);
     border-radius: 0.5rem;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.175);
     background-color: #fff;
@@ -882,13 +756,13 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 
 /* Dropdown input (search field) - Enhanced Bootstrap Style */
 .ts-dropdown-content input {
-    border: 2px solid #dee2e6 !important;
+    border: 2px solid var(--ds-line) !important;
     border-radius: 0.375rem;
     padding: 0.5rem 0.75rem !important;
     margin: 0.5rem !important;
     width: calc(100% - 1rem) !important;
     font-size: 0.875rem;
-    background-color: #f8f9fa;
+    background-color: var(--ds-surface-2);
     box-sizing: border-box;
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
     transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
@@ -896,18 +770,18 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 
 .ts-dropdown-content input:focus {
     outline: none;
-    border-color: #86b7fe !important;
+    border-color: var(--ds-primary) !important;
     background-color: #fff;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+    box-shadow: var(--ds-focus-ring);
 }
 
 /* Options list - Enhanced Bootstrap Style */
 .ts-dropdown .option {
     padding: 0.625rem 0.75rem;
     font-size: 0.875rem;
-    color: #212529;
+    color: var(--ds-ink);
     cursor: pointer;
-    border-bottom: 1px solid #e9ecef;
+    border-bottom: 1px solid var(--ds-line);
     transition: background-color 0.15s ease;
     background-color: transparent;
 }
@@ -918,47 +792,48 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 
 /* Option hover state - Enhanced Bootstrap Style */
 .ts-dropdown .option:hover {
-    background-color: rgba(13, 110, 253, 0.08);
-    color: #0d6efd;
+    background-color: rgba(var(--bs-primary-rgb, 0 74 147), 0.08);
+    color: var(--ds-primary);
 }
 
 /* Prevent default active state highlighting */
 .ts-dropdown .option.active {
     background-color: transparent;
-    color: #212529;
+    color: var(--ds-ink);
 }
 
 /* Only show active state on hover */
 .ts-dropdown .option.active:hover {
-    background-color: rgba(13, 110, 253, 0.08);
-    color: #0d6efd;
+    background-color: rgba(var(--bs-primary-rgb, 0 74 147), 0.08);
+    color: var(--ds-primary);
 }
 
 /* Selected option highlight - Enhanced Bootstrap Style */
 .ts-dropdown .option.selected {
-    background-color: #0d6efd;
+    background-color: var(--ds-primary);
     color: #fff;
     font-weight: 600;
 }
 
 .ts-dropdown .option.selected:hover {
-    background-color: #0b5ed7;
+    background-color: var(--ds-primary);
+    filter: brightness(.9);
     color: #fff;
 }
 
 /* Aria-selected ko bhi visually normal rakho (auto selected highlight hide) */
 .ts-dropdown .option[aria-selected="true"]:not(.selected) {
     background-color: transparent;
-    color: #212529;
+    color: var(--ds-ink);
 }
 
 /* No results message - Enhanced Bootstrap Style */
 .ts-dropdown .no-results {
     padding: 1rem;
-    color: #6c757d;
+    color: var(--ds-ink-muted);
     font-size: 0.875rem;
     text-align: center;
-    background-color: #f8f9fa;
+    background-color: var(--ds-surface-2);
     font-style: italic;
 }
 
@@ -986,37 +861,60 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
     border-width: 2px;
 }
 
-.po-ux .po-filter-multiselect-wrap .input-group-text {
-    background-color: #f8f9fa;
-    border-color: #dee2e6;
-    border-width: 2px;
+/* ── Inline filter toolbar (design.md: --ds-* tokens, matches student_medical_exemption) ── */
+.po-filterbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ds-space-2);
 }
 
-.po-ux .po-filter-card {
-    overflow: visible;
+.po-filters-label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--ds-ink);
+    margin-right: var(--ds-space-1);
 }
 
-.po-ux .po-filter-card .card-body,
-.po-ux .po-filter-card .card-header {
-    overflow: visible;
+.po-filter-field {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-1);
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--ds-ink-muted);
 }
 
-.po-ux .po-filter-multiselect-wrap {
-    overflow: visible;
+.po-filterbar .form-control,
+.po-filterbar .po-filter-control,
+.po-filterbar .po-filter-btn {
+    min-height: 42px;
+    font-size: 0.875rem;
+    border-radius: var(--ds-radius-1);
 }
 
-.po-ux .po-filter-multiselect-wrap .ts-wrapper {
-    flex: 1 1 auto;
-    min-width: 0;
-    width: 1%;
+.po-filterbar .form-control,
+.po-filterbar .po-filter-control {
+    border-color: var(--ds-line);
+    color: var(--ds-ink);
 }
 
-.po-ux .po-filter-multiselect-wrap .ts-control {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-    min-height: calc(1.5em + .5rem + calc(var(--bs-border-width) * 2));
-    font-size: .875rem;
-    border-left-width: 0;
+.po-filterbar .po-filter-control {
+    width: auto;
+    min-width: 160px;
+}
+
+.po-filter-ms {
+    min-width: 200px;
+    max-width: 280px;
+    flex: 1 1 200px;
+}
+
+.po-filter-ms .ts-control {
+    min-height: 42px;
+    border-color: var(--ds-line);
+    border-radius: var(--ds-radius-1);
+    font-size: 0.875rem;
 }
 
 .choices__list--multiple .choices__item {
@@ -1060,7 +958,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                 enctype="multipart/form-data">
                 @csrf
                 <div class="modal-header bg-white border-bottom border-light-subtle py-3 px-4"
-                    style="border-top:4px solid #0b4a7e !important;">
+                    style="border-top:4px solid var(--ds-primary) !important;">
                     <div>
                         <h5 class="modal-title fw-semibold mb-0 text-body" id="createPurchaseOrderModalLabel">Create
                             Purchase Order</h5>
@@ -1096,8 +994,9 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                                                 value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label small mb-1">Store</label>
-                                            <select name="store_id" class="form-select form-select-sm">
+                                            <label class="form-label small mb-1">Store <span
+                                                    class="text-danger">*</span></label>
+                                            <select name="store_id" class="form-select form-select-sm" required>
                                                 <option value="">Select Store</option>
                                                 @foreach($stores as $store)
                                                 <option value="{{ $store->id }}">{{ $store->store_name }}</option>
@@ -1267,7 +1166,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 <div class="modal fade" id="editPurchaseOrderModal" tabindex="-1" aria-labelledby="editPurchaseOrderModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-content border-0 shadow rounded-3">
             <form method="POST" id="editPOForm" action="" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
@@ -1275,46 +1174,52 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                 <input type="hidden" name="all_lines_loaded" id="editAllLinesLoaded" value="0">
                 {{-- Number of lines in the form; kept above the line fields so it survives if the server cuts the request short. --}}
                 <input type="hidden" name="items_count" id="editItemsCount" value="">
-                <div class="modal-header border-0 border-bottom py-3 px-4 bg-gradient"
-                    style="background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);">
+                {{-- All lines as one JSON field, filled on submit; see the editPOForm submit handler. --}}
+                <input type="hidden" name="items_json" id="editItemsJson" value="">
+                <div class="modal-header bg-white border-bottom border-light-subtle py-3 px-4">
                     <div>
-                        <h5 class="modal-title fw-bold mb-1 text-dark" id="editPurchaseOrderModalLabel">Edit purchase
+                        <h5 class="modal-title fw-semibold mb-0 text-body" id="editPurchaseOrderModalLabel">Edit purchase
                             order</h5>
-                        <p class="mb-0 small text-body-secondary fw-medium">Update header, bill, and line items</p>
+                        <p class="mb-0 small text-body-secondary">Update header, bill, and line items</p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body px-3 px-md-4 py-4"
-                    style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
-                    <div class="card border-0 shadow-lg mb-4 rounded-4 overflow-hidden">
-                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex align-items-center gap-2"
-                            style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                            <div class="rounded-3 bg-warning bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
-                                style="width: 2.25rem; height: 2.25rem;">
+                <div class="modal-body px-3 px-md-4 py-3 py-md-4 bg-body-tertiary">
+                    <div id="editPoLockedNote" class="alert alert-info d-none d-flex align-items-start gap-2" role="status">
+                        <i class="material-icons material-symbol-rounded" aria-hidden="true">lock</i>
+                        <span>This purchase order is <strong>approved</strong> and its items are in stock, so vendor,
+                            store, order date and line items are locked. You can still update payment, bill, challan
+                            and attachment details.</span>
+                    </div>
+                    <div class="card border border-light-subtle mb-3 rounded-3">
+                        <div class="card-header bg-white py-2 px-3 d-flex align-items-center gap-2">
+                            <div class="rounded-2 bg-primary-subtle text-primary d-flex align-items-center justify-content-center flex-shrink-0"
+                                style="width: 2rem; height: 2rem;">
                                 <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;"
                                     aria-hidden="true">assignment</i>
                             </div>
-                            <h6 class="mb-0 fw-bold text-dark">Order details</h6>
+                            <h6 class="mb-0 fw-semibold small text-body">Order details</h6>
                         </div>
-                        <div class="card-body p-3 p-md-4 bg-white">
+                        <div class="card-body p-3 bg-white">
                             <div class="row g-3">
                                 <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Order number</label>
+                                    <label class="form-label small mb-1">Order number</label>
                                     <input type="text" id="editPoNumber"
-                                        class="form-control form-control-lg rounded-3 bg-light border-0 shadow"
+                                        class="form-control form-control-sm bg-body-secondary"
                                         readonly>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Order date <span
+                                    <label class="form-label small mb-1">Order date <span
                                             class="text-danger">*</span></label>
                                     <input type="date" name="po_date" id="editPoDate"
-                                        class="form-control form-control-lg rounded-3 shadow border-2"
+                                        class="form-control form-control-sm"
                                         max="{{ date('Y-m-d') }}" required>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Store</label>
+                                    <label class="form-label small mb-1">Store <span
+                                            class="text-danger">*</span></label>
                                     <select name="store_id" id="editStoreId"
-                                        class="form-select form-select-lg rounded-3 shadow border-2">
+                                        class="form-select form-select-sm" required>
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
                                         <option value="{{ $store->id }}">{{ $store->store_name }}</option>
@@ -1322,10 +1227,10 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Vendor <span
+                                    <label class="form-label small mb-1">Vendor <span
                                             class="text-danger">*</span></label>
                                     <select name="vendor_id" id="editVendorId"
-                                        class="form-select form-select-lg rounded-3 shadow border-2" required>
+                                        class="form-select form-select-sm" required>
                                         <option value="">Select Vendor</option>
                                         @foreach($vendors as $vendor)
                                         <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
@@ -1333,9 +1238,9 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Payment mode</label>
+                                    <label class="form-label small mb-1">Payment mode</label>
                                     <select name="payment_code" id="editPaymentCode"
-                                        class="form-select form-select-lg rounded-3 shadow border-2">
+                                        class="form-select form-select-sm">
                                         <option value="">Select Payment Mode</option>
                                         @foreach($paymentModes as $value => $label)
                                         <option value="{{ $value }}">{{ $label }}</option>
@@ -1343,66 +1248,65 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Bill / invoice no.</label>
+                                    <label class="form-label small mb-1">Bill / invoice no.</label>
                                     <input type="text" name="bill_no" id="editBillNo"
-                                        class="form-control form-control-lg rounded-3 shadow border-2" maxlength="100"
+                                        class="form-control form-control-sm" maxlength="100"
                                         placeholder="Optional">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Bill date</label>
+                                    <label class="form-label small mb-1">Bill date</label>
                                     <input type="date" name="bill_date" id="editBillDate"
-                                        class="form-control form-control-lg rounded-3 shadow border-2"
+                                        class="form-control form-control-sm"
                                         max="{{ date('Y-m-d') }}">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Challan / reference</label>
+                                    <label class="form-label small mb-1">Challan / reference</label>
                                     <input type="text" name="challan_no" id="editChallanNo"
-                                        class="form-control form-control-lg rounded-3 shadow border-2" maxlength="100"
+                                        class="form-control form-control-sm" maxlength="100"
                                         placeholder="Optional">
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Challan date</label>
+                                    <label class="form-label small mb-1">Challan date</label>
                                     <input type="date" name="challan_date" id="editChallanDate"
-                                        class="form-control form-control-lg rounded-3 shadow border-2"
+                                        class="form-control form-control-sm"
                                         max="{{ date('Y-m-d') }}">
                                 </div>
                             </div>
                         </div>
                     </div>
                     {{-- Bill / Attachment (Upload) --}}
-                    <div class="card border-0 shadow-lg mb-4 rounded-4 overflow-hidden"
-                        style="border-left: 4px solid var(--bs-warning) !important;">
-                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex align-items-center gap-2"
-                            style="background: linear-gradient(135deg, #ffffff 0%, #fff9e6 100%);">
-                            <div class="rounded-3 bg-warning bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
-                                style="width: 2.25rem; height: 2.25rem;">
+                    <div class="card border border-light-subtle mb-3 rounded-3"
+                       >
+                        <div class="card-header bg-white py-2 px-3 d-flex align-items-center gap-2">
+                            <div class="rounded-2 bg-primary-subtle text-primary d-flex align-items-center justify-content-center flex-shrink-0"
+                                style="width: 2rem; height: 2rem;">
                                 <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;"
                                     aria-hidden="true">attach_file</i>
                             </div>
-                            <h6 class="mb-0 fw-bold text-dark">Bill upload</h6>
+                            <h6 class="mb-0 fw-semibold small text-body">Bill upload</h6>
                             <span
                                 class="badge rounded-1 bg-secondary bg-opacity-25 text-secondary border-0 ms-auto fw-semibold px-3">Optional</span>
                         </div>
-                        <div class="card-body p-3 p-md-4 bg-white">
+                        <div class="card-body p-3 bg-white">
                             <div class="row">
                                 <div class="col-md-12">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Attachment <span
+                                    <label class="form-label small mb-1">Attachment <span
                                             class="text-body-secondary fw-normal fst-italic">· leave blank to keep
                                             current file</span></label>
-                                    <div class="d-flex align-items-center border rounded-3 px-3 py-2 bg-white gap-2 shadow"
+                                    <div class="d-flex align-items-center border rounded-2 px-3 py-2 bg-white gap-2"
                                         style="min-height: 42px;">
                                         <span id="editCurrentBillPath"
                                             class="flex-grow-1 text-muted small text-truncate me-2"
                                             style="min-width: 0;">No file chosen</span>
                                         <label class="mb-0 btn btn-outline-secondary py-1 px-3 rounded-1 fw-semibold"
-                                            style="cursor: pointer; transition: all 0.3s ease;">
+                                            style="cursor: pointer;">
                                             Choose file
                                             <input type="file" name="bill_file" class="d-none"
                                                 accept=".pdf,.jpg,.jpeg,.png,.webp" id="editBillFileInput">
                                         </label>
                                         <button type="button"
                                             class="btn btn-outline-danger py-1 px-3 rounded-1 fw-semibold"
-                                            id="editBillClearBtn" style="transition: all 0.3s ease;">
+                                            id="editBillClearBtn">
                                             Remove
                                         </button>
                                     </div>
@@ -1412,24 +1316,23 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                             </div>
                         </div>
                     </div>
-                    <div class="card border-0 shadow-lg mb-2 rounded-4 overflow-hidden">
-                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3"
-                            style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                    <div class="card border border-light-subtle mb-0 rounded-3" id="editPoLinesCard">
+                        <div class="card-header bg-white py-2 px-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
                             <div class="d-flex align-items-center gap-3">
-                                <div class="rounded-3 bg-warning bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
-                                    style="width: 2.5rem; height: 2.5rem;">
+                                <div class="rounded-2 bg-primary-subtle text-primary d-flex align-items-center justify-content-center flex-shrink-0"
+                                    style="width: 2rem; height: 2rem;">
                                     <i class="material-icons material-symbol-rounded" style="font-size: 1.25rem;"
                                         aria-hidden="true">inventory_2</i>
                                 </div>
                                 <div>
-                                    <h6 class="mb-0 fw-bold text-dark">Line items</h6>
-                                    <span class="small text-body-secondary d-block fw-medium">Add items to create
+                                    <h6 class="mb-0 fw-semibold small text-body">Line items</h6>
+                                    <span class="small text-body-secondary d-block">Add items to create
                                         purchase order lines.</span>
                                 </div>
                             </div>
                             <button type="button"
-                                class="btn btn-sm btn-warning rounded-1 d-inline-flex align-items-center gap-2 px-3 shadow-sm fw-semibold"
-                                id="addEditPoItemRow" style="transition: all 0.3s ease;"><i
+                                class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2 px-3 fw-semibold"
+                                id="addEditPoItemRow"><i
                                     class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">add</i>
                                 Add line</button>
                         </div>
@@ -1440,19 +1343,19 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                                         <thead class="table-light">
                                             <tr>
                                                 <th scope="col" style="width:180px;"
-                                                    class="fw-bold text-dark py-3 ps-3">Item <span
+                                                    class="ps-3">Item <span
                                                         class="text-danger">*</span></th>
-                                                <th scope="col" class="fw-bold text-dark py-3">Unit</th>
-                                                <th scope="col" class="fw-bold text-dark py-3">Code</th>
-                                                <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Qty
+                                                <th scope="col">Unit</th>
+                                                <th scope="col">Code</th>
+                                                <th scope="col" style="width:120px;">Qty
                                                     <span class="text-danger">*</span></th>
-                                                <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Rate
+                                                <th scope="col" style="width:120px;">Rate
                                                     <span class="text-danger">*</span></th>
-                                                <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Tax
+                                                <th scope="col" style="width:120px;">Tax
                                                     %</th>
-                                                <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Line
+                                                <th scope="col" style="width:120px;">Line
                                                     total</th>
-                                                <th scope="col" class="fw-bold text-dark py-3 pe-3 text-center"
+                                                <th scope="col" class="pe-3 text-center"
                                                     style="width:3rem;"> </th>
                                             </tr>
                                         </thead>
@@ -1461,23 +1364,19 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                                 </div>
                             </div>
                         </div>
-                        <div class="card-footer bg-gradient border-0 d-flex justify-content-end align-items-center py-3 px-4"
-                            style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                        <div class="card-footer bg-body-tertiary d-flex justify-content-end align-items-center py-3 px-4">
                             <div class="d-flex align-items-baseline gap-3 flex-wrap justify-content-end">
-                                <span class="fw-bold text-dark small text-uppercase"
-                                    style="letter-spacing: 0.05em;">Grand total</span>
-                                <span class="fs-4 text-warning fw-bold" id="editPoGrandTotal"
-                                    style="font-family: 'Segoe UI', system-ui, sans-serif;">₹0.00</span>
+                                <span class="fw-semibold text-body-secondary small">Grand total</span>
+                                <span class="fs-5 text-primary fw-semibold" id="editPoGrandTotal">₹0.00</span>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 border-top py-3 px-4 bg-gradient"
-                    style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                <div class="modal-footer bg-body-tertiary border-top border-light-subtle py-3 px-4">
                     <button type="button" class="btn btn-outline-secondary rounded-1 px-4 fw-semibold"
-                        data-bs-dismiss="modal" style="transition: all 0.3s ease;">Cancel</button>
-                    <button type="submit" class="btn btn-warning rounded-1 px-5 shadow-sm fw-semibold"
-                        style="transition: all 0.3s ease;">Update purchase order</button>
+                        data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold"
+                        id="editPoSubmitBtn">Update purchase order</button>
                 </div>
                 {{-- Must stay the LAST field of this form: PHP drops fields from the end when a request is
                      too large, so if this one is missing the server knows the request was cut short. --}}
@@ -1491,115 +1390,91 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 <div class="modal fade" id="viewPurchaseOrderModal" tabindex="-1" aria-labelledby="viewPurchaseOrderModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-fullscreen-lg-down modal-xl modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-header border-0 py-3 px-4 bg-gradient"
-                style="background: linear-gradient(135deg, #e7f3ff 0%, #cfe2ff 100%);">
-                <h5 class="modal-title fw-bold text-dark" id="viewPurchaseOrderModalLabel">Purchase Order Details</h5>
+        <div class="modal-content border-0 shadow rounded-3">
+            <div class="modal-header bg-white border-bottom border-light-subtle py-3 px-4">
+                <h5 class="modal-title fw-semibold mb-0 text-body" id="viewPurchaseOrderModalLabel">Purchase Order Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-3 p-lg-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
-                <div class="card border-0 shadow-lg mb-4 overflow-hidden rounded-4">
-                    <div class="card-header bg-gradient border-0 py-3 px-4 d-flex align-items-center gap-2"
-                        style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
-                        <div class="rounded-3 bg-info bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
-                            style="width: 2.5rem; height: 2.5rem;">
+            <div class="modal-body px-3 px-md-4 py-3 py-md-4 bg-body-tertiary">
+                <div class="card border border-light-subtle mb-3 rounded-3">
+                    <div class="card-header bg-white py-2 px-3 d-flex align-items-center gap-2">
+                        <div class="rounded-2 bg-primary-subtle text-primary d-flex align-items-center justify-content-center flex-shrink-0"
+                            style="width: 2rem; height: 2rem;">
                             <i class="material-icons material-symbol-rounded"
                                 style="font-size: 1.25rem;">receipt_long</i>
                         </div>
-                        <h6 class="mb-0 fw-bold text-dark">Order Details</h6>
+                        <h6 class="mb-0 fw-semibold small text-body">Order Details</h6>
                     </div>
-                    <div class="card-body p-3 p-lg-4">
+                    <div class="card-body p-3 bg-white">
                         <div class="row g-3">
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Order Number</label>
-                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewPoNumber">&mdash;</p>
+                                <div class="border border-light-subtle rounded-2 p-3 h-100 bg-white">
+                                    <label class="form-label text-body-secondary small mb-1 fw-semibold">Order Number</label>
+                                    <p class="mb-0 fw-semibold text-body" id="viewPoNumber">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Order Date</label>
-                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewPoDate">&mdash;</p>
+                                <div class="border border-light-subtle rounded-2 p-3 h-100 bg-white">
+                                    <label class="form-label text-body-secondary small mb-1 fw-semibold">Order Date</label>
+                                    <p class="mb-0 fw-semibold text-body" id="viewPoDate">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Store Name</label>
-                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewStoreName">&mdash;</p>
+                                <div class="border border-light-subtle rounded-2 p-3 h-100 bg-white">
+                                    <label class="form-label text-body-secondary small mb-1 fw-semibold">Store Name</label>
+                                    <p class="mb-0 fw-semibold text-body" id="viewStoreName">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Vendor Name</label>
-                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewVendorName">&mdash;</p>
+                                <div class="border border-light-subtle rounded-2 p-3 h-100 bg-white">
+                                    <label class="form-label text-body-secondary small mb-1 fw-semibold">Vendor Name</label>
+                                    <p class="mb-0 fw-semibold text-body" id="viewVendorName">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Payment Mode</label>
-                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewPaymentCode">&mdash;</p>
+                                <div class="border border-light-subtle rounded-2 p-3 h-100 bg-white">
+                                    <label class="form-label text-body-secondary small mb-1 fw-semibold">Payment Mode</label>
+                                    <p class="mb-0 fw-semibold text-body" id="viewPaymentCode">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Bill No./Invoice No</label>
-                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewBillNo">&mdash;</p>
+                                <div class="border border-light-subtle rounded-2 p-3 h-100 bg-white">
+                                    <label class="form-label text-body-secondary small mb-1 fw-semibold">Bill No./Invoice No</label>
+                                    <p class="mb-0 fw-semibold text-body" id="viewBillNo">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Bill Date</label>
-                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewBillDate">&mdash;</p>
+                                <div class="border border-light-subtle rounded-2 p-3 h-100 bg-white">
+                                    <label class="form-label text-body-secondary small mb-1 fw-semibold">Bill Date</label>
+                                    <p class="mb-0 fw-semibold text-body" id="viewBillDate">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Challan No./Reference</label>
-                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewChallanNo">&mdash;</p>
+                                <div class="border border-light-subtle rounded-2 p-3 h-100 bg-white">
+                                    <label class="form-label text-body-secondary small mb-1 fw-semibold">Challan No./Reference</label>
+                                    <p class="mb-0 fw-semibold text-body" id="viewChallanNo">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Challan Date</label>
-                                    <p class="mb-0 fw-bold text-dark fs-6" id="viewChallanDate">&mdash;</p>
+                                <div class="border border-light-subtle rounded-2 p-3 h-100 bg-white">
+                                    <label class="form-label text-body-secondary small mb-1 fw-semibold">Challan Date</label>
+                                    <p class="mb-0 fw-semibold text-body" id="viewChallanDate">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Status</label>
+                                <div class="border border-light-subtle rounded-2 p-3 h-100 bg-white">
+                                    <label class="form-label text-body-secondary small mb-1 fw-semibold">Status</label>
                                     <p class="mb-0"><span class="badge fs-6 px-3 py-2" id="viewStatus">&mdash;</span>
                                     </p>
                                 </div>
                             </div>
                             <div class="col-12">
-                                <div class="border-0 rounded-4 p-4 shadow-sm"
-                                    style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
-                                        style="letter-spacing: 0.05em;">Bill</label>
+                                <div class="border border-light-subtle rounded-2 p-3 bg-white">
+                                    <label class="form-label text-body-secondary small mb-1 fw-semibold">Bill</label>
                                     <p class="mb-0" id="viewBillWrap">
                                         <a href="#" id="viewBillLink" target="_blank" rel="noopener"
-                                            class="btn btn-info rounded-1 px-4 py-2 shadow-sm fw-semibold"
-                                            style="display: none; transition: all 0.3s ease;">View / Download Bill</a>
+                                            class="btn btn-outline-primary btn-sm px-3 fw-semibold"
+                                            style="display: none;">View / Download Bill</a>
                                         <span id="viewBillNone" class="text-muted fst-italic">No bill uploaded</span>
                                     </p>
                                 </div>
@@ -1608,51 +1483,46 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                     </div>
                 </div>
 
-                <div class="card border-0 shadow-lg mb-0 overflow-hidden rounded-4">
-                    <div class="card-header bg-gradient border-0 py-3 px-4 d-flex align-items-center gap-2"
-                        style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
-                        <div class="rounded-3 bg-info bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
-                            style="width: 2.5rem; height: 2.5rem;">
+                <div class="card border border-light-subtle mb-0 rounded-3">
+                    <div class="card-header bg-white py-2 px-3 d-flex align-items-center gap-2">
+                        <div class="rounded-2 bg-primary-subtle text-primary d-flex align-items-center justify-content-center flex-shrink-0"
+                            style="width: 2rem; height: 2rem;">
                             <i class="material-icons material-symbol-rounded"
                                 style="font-size: 1.25rem;">inventory_2</i>
                         </div>
-                        <h6 class="mb-0 fw-bold text-dark">Item Details</h6>
+                        <h6 class="mb-0 fw-semibold small text-body">Item Details</h6>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th class="text-nowrap fw-bold text-dark py-3 ps-4">Item Name</th>
-                                        <th class="text-nowrap fw-bold text-dark py-3">Unit</th>
-                                        <th class="text-nowrap fw-bold text-dark py-3">Item Code</th>
-                                        <th class="text-nowrap fw-bold text-dark py-3">Quantity</th>
-                                        <th class="text-nowrap fw-bold text-dark py-3">Unit Price</th>
-                                        <th class="text-nowrap fw-bold text-dark py-3">Tax (%)</th>
-                                        <th class="text-nowrap fw-bold text-dark py-3 pe-4">Total Amount</th>
+                                        <th class="text-nowrap ps-4">Item Name</th>
+                                        <th class="text-nowrap">Unit</th>
+                                        <th class="text-nowrap">Item Code</th>
+                                        <th class="text-nowrap">Quantity</th>
+                                        <th class="text-nowrap">Unit Price</th>
+                                        <th class="text-nowrap">Tax (%)</th>
+                                        <th class="text-nowrap pe-4">Total Amount</th>
                                     </tr>
                                 </thead>
                                 <tbody id="viewPoItemsBody"></tbody>
                             </table>
                         </div>
                     </div>
-                    <div class="card-footer bg-gradient d-flex justify-content-end align-items-center py-3 px-4"
-                        style="background: linear-gradient(135deg, #e7f3ff 0%, #cfe2ff 100%);">
-                        <span class="fw-bold text-dark" style="letter-spacing: 0.05em;">Grand Total:</span>
-                        <span class="fs-4 text-info fw-bold ms-3" id="viewPoGrandTotal"
-                            style="font-family: 'Segoe UI', system-ui, sans-serif;">&#8377;0.00</span>
+                    <div class="card-footer bg-body-tertiary d-flex justify-content-end align-items-center py-3 px-4">
+                        <span class="fw-semibold text-body-secondary">Grand Total:</span>
+                        <span class="fs-5 text-primary fw-semibold ms-3" id="viewPoGrandTotal">&#8377;0.00</span>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer border-0 border-top py-3 px-4 d-flex flex-wrap gap-2 justify-content-end bg-gradient"
-                style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+            <div class="modal-footer bg-body-tertiary border-top border-light-subtle py-3 px-4 d-flex flex-wrap gap-2 justify-content-end">
                 <button type="button"
-                    class="btn btn-info rounded-1 d-inline-flex align-items-center gap-2 px-4 shadow-sm fw-semibold btn-print-view-modal"
-                    data-print-target="#viewPurchaseOrderModal" title="Print" style="transition: all 0.3s ease;">
+                    class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-4 fw-semibold btn-print-view-modal"
+                    data-print-target="#viewPurchaseOrderModal" title="Print">
                     <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">print</i> Print
                 </button>
-                <button type="button" class="btn btn-secondary rounded-1 px-4 fw-semibold" data-bs-dismiss="modal"
-                    style="transition: all 0.3s ease;">Close</button>
+                <button type="button" class="btn btn-secondary rounded-1 px-4 fw-semibold" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -2666,6 +2536,32 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
         }
     });
 
+    // An approved PO is in stock, so its vendor, store, date and lines are locked; only payment,
+    // bill and challan details stay editable. The server ignores the locked fields as well.
+    // Mess Admin / Super Admin can still pick a store once on an old approved PO saved without one
+    // (it puts the PO's stock into that store); for everyone else the store stays locked.
+    const canAssignStoreOnApprovedPo = @json((bool) ($canApprovePurchaseOrders ?? false));
+    function applyEditPoLock(locked, hasStore) {
+        document.getElementById('editPoLockedNote').classList.toggle('d-none', !locked);
+        document.getElementById('editPoDate').readOnly = locked;
+        [
+            [choicesInstances.edit.vendor, document.getElementById('editVendorId'), locked],
+            [choicesInstances.edit.store, document.getElementById('editStoreId'), locked && (hasStore || !canAssignStoreOnApprovedPo)]
+        ].forEach(function(entry) {
+            var instance = entry[0], selectEl = entry[1], disable = entry[2];
+            if (instance && typeof instance.disable === 'function') {
+                disable ? instance.disable() : instance.enable();
+            } else if (selectEl) {
+                selectEl.disabled = disable;
+            }
+        });
+        var linesCard = document.getElementById('editPoLinesCard');
+        linesCard.inert = locked;
+        linesCard.style.opacity = locked ? '0.65' : '';
+        document.getElementById('addEditPoItemRow').classList.toggle('d-none', locked);
+        document.getElementById('editPoSubmitBtn').textContent = locked ? 'Save bill details' : 'Update purchase order';
+    }
+
     // Edit button: fetch PO and open modal (mousedown ensures single-tap works with DataTables)
     document.addEventListener('mousedown', function(e) {
         const btn = e.target.closest('.btn-edit-po');
@@ -2731,6 +2627,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                     }
                 }
                 editCurrentVendorId = po.vendor_id;
+                applyEditPoLock(po.status === 'approved', storeVal !== '');
 
                 function buildEditRows(vendorItemList) {
                     const merged = (vendorItemList || []).slice();
@@ -2750,6 +2647,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                     editPendingItems = [];
                     document.getElementById('editAllLinesLoaded').value = '0';
                     document.getElementById('editItemsCount').value = '';
+                    document.getElementById('editItemsJson').value = '';
                     if (items.length === 0) {
                         tbody.innerHTML = getItemRowHtml(0, null, true);
                         editItemRowIndex = 1;
@@ -3227,6 +3125,24 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
         renderPendingEditRows();
         document.getElementById('editAllLinesLoaded').value = editPendingItems.length ? '0' : '1';
         document.getElementById('editItemsCount').value = document.querySelectorAll('#editPoItemsBody .po-item-row').length;
+
+        // Post the lines as one JSON field instead of ~5 fields per line. PHP's max_input_vars
+        // (1000 by default) silently drops fields beyond the limit, which cut large POs short.
+        // The per-line inputs are disabled so they are not posted as well.
+        const lines = [];
+        document.querySelectorAll('#editPoItemsBody .po-item-row').forEach(function(row) {
+            const line = {};
+            row.querySelectorAll('[name^="items["]').forEach(function(el) {
+                const m = el.name.match(/^items\[\d+\]\[([^\]]+)\]/);
+                if (!m) return;
+                line[m[1]] = el.multiple
+                    ? Array.from(el.selectedOptions).map(function(o) { return o.value; })
+                    : el.value;
+                el.disabled = true;
+            });
+            lines.push(line);
+        });
+        document.getElementById('editItemsJson').value = JSON.stringify(lines);
     });
 
     // Large POs: append the next chunk of line items as the modal nears the bottom.

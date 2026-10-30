@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Master;
 
 use App\DataTables\Master\DesignationMasterDataTable;
+use App\DataTables\MemberDataTable;
 use App\Http\Controllers\Concerns\ExportsBrandedGrid;
 use App\Http\Controllers\Controller;
 use App\Models\DesignationMaster;
@@ -51,6 +52,16 @@ class DesignationMasterController extends Controller
 
         $designation->designation_name = $request->designation_name;
         $designation->save();
+
+        // PR #319 re-review F-059: MemberDataTable does NOT currently read or display
+        // designation_master in any form (verified: grep "designation" against
+        // app/DataTables/MemberDataTable.php returns zero matches) — the original
+        // comment here claiming otherwise (citing F-011/F-021) was false, unlike the
+        // analogous department comment in DepartmentMasterController, which IS
+        // accurate. This bump is therefore a harmless no-op today, kept rather than
+        // removed in case a future column add restores the dependency this comment
+        // once assumed.
+        MemberDataTable::bumpListingCacheEpoch();
 
         $message = $id ? 'Designation updated successfully.' : 'Designation created successfully.';
 

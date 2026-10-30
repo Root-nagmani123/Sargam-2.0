@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Edit Student Medical Exemption - Sargam | Lal Bahadur')
+@section('title', 'Edit Student Medical Exemption')
 
 @section('setup_content')
 <link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">

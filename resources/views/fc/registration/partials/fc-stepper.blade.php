@@ -4,12 +4,12 @@
      Travel Plan is appended as the LAST step. It is not an admin-configurable
      form step, but the flow reaches it after the final step, so the tracker must
      show it there — same rule the dashboard uses to render the Travel Plan card
-     (the form has a Bank Details step, tracker_column = bank_done). --}}
+     (FcRegistrationFlowService::travelAnchorStep). --}}
 @php
     $curIdx = $allSteps->search(fn ($s) => $s->id === $step->id);
     if ($curIdx === false) { $curIdx = 0; }
 
-    $showTravel = (bool) $allSteps->firstWhere('tracker_column', 'bank_done');
+    $showTravel = (bool) app(\App\Services\FC\FcRegistrationFlowService::class)->travelAnchorStep($form, $allSteps);
     $travelDone = false;
     if ($showTravel) {
         $travelDone = app(\App\Services\FC\FcRegistrationFlowService::class)

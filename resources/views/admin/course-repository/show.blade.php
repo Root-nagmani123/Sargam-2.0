@@ -831,6 +831,16 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <small class="text-muted d-block mt-1">
                                         <i class="bi bi-info-circle me-1"></i> Enter video URL (YouTube, Vimeo, etc.)
                                     </small>
+                                    <div class="form-check form-switch mt-2">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                            id="video_download_enabled_course" name="video_download_enabled_course" value="1" checked>
+                                        <label class="form-check-label small" for="video_download_enabled_course">
+                                            Allow users to download this video
+                                        </label>
+                                        <small class="text-muted d-block">
+                                            Off: only the "Download video" button is hidden. Users can still watch it, and the "Open video link" button still exposes the same URL, so this does not stop a determined download.
+                                        </small>
+                                    </div>
                                 </div>
 
                                 <!-- Document Upload -->
@@ -1020,6 +1030,16 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <label for="video_link_other" class="form-label">Video Link</label>
                                     <input type="url" class="form-control" id="video_link_other" name="video_link_other"
                                         placeholder="https://www.youtube.com/watch?v=...">
+                                    <div class="form-check form-switch mt-2">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                            id="video_download_enabled_other" name="video_download_enabled_other" value="1" checked>
+                                        <label class="form-check-label small" for="video_download_enabled_other">
+                                            Allow users to download this video
+                                        </label>
+                                        <small class="text-muted d-block">
+                                            Off: only the "Download video" button is hidden. Users can still watch it, and the "Open video link" button still exposes the same URL, so this does not stop a determined download.
+                                        </small>
+                                    </div>
                                 </div>
 
                                 <div class="mb-4">
@@ -1595,11 +1615,17 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             uploadData.append('keywords', kw ? kw.value : '');
             var vc = document.getElementById('video_link_course');
             uploadData.append('video_link', vc ? vc.value : '');
+            // Whether the user side may download that video: always 1 or 0, so
+            // the server can tell "off" from "this form has no switch".
+            var dc = document.getElementById('video_download_enabled_course');
+            if (dc) { uploadData.append('video_download_enabled', dc.checked ? '1' : '0'); }
         } else if (selectedCategory === 'Other') {
             var ko = document.getElementById('keywords_other');
             uploadData.append('keywords', ko ? ko.value : '');
             var vo = document.getElementById('video_link_other');
             uploadData.append('video_link', vo ? vo.value : '');
+            var doEl = document.getElementById('video_download_enabled_other');
+            if (doEl) { uploadData.append('video_download_enabled', doEl.checked ? '1' : '0'); }
         } else {
             var ki = document.getElementById('Key_words_institutional');
             uploadData.append('keywords', ki ? ki.value : '');
@@ -1906,8 +1932,15 @@ window.crDocEdit = (function() {
                 // keywords + video LAST — cascade change handlers overwrite keywords
                 setVal('keywords_course', d.keyword);
                 setVal('video_link_course', d.videolink);
+                setChecked('video_download_enabled_course', d.video_download_enabled);
                 setVal('session_date', d.session_date); // reaffirm in case a reset cleared it
             });
+    }
+
+    // Tick state for a checkbox, tolerant of the element being absent.
+    function setChecked(id, on) {
+        var el = document.getElementById(id);
+        if (el) { el.checked = !!on; }
     }
 
     // Pre-fill the Other-category section (mostly free-text inputs).
@@ -1923,6 +1956,7 @@ window.crDocEdit = (function() {
             .then(function() {
                 setVal('keywords_other', d.keyword);
                 setVal('video_link_other', d.videolink);
+                setChecked('video_download_enabled_other', d.video_download_enabled);
             });
     }
 
@@ -2038,8 +2072,21 @@ window.crDocEdit = (function() {
         );
     }
 
+    // 'pending' until the latest enter()'s prefill settles. submit() refuses anything but
+    // 'ready': the form still holds reset defaults (empty video link, download on) (F-066).
+    var prefillState = 'ready';
+    var prefillSeq = 0;
+
+    function setUpdateBtnDisabled(on) {
+        var btn = $id('uploadBtn');
+        if (btn) btn.disabled = on;
+    }
+
     // Reset the upload modal back to "create" mode.
     function reset() {
+        prefillSeq++; // a prefill still running for a previous Edit must not touch this state
+        prefillState = 'ready';
+        setUpdateBtnDisabled(false);
         var pkEl = $id('upload_edit_pk');
         if (pkEl) pkEl.value = '';
         setEditChrome(false, '');
@@ -2071,10 +2118,28 @@ window.crDocEdit = (function() {
         setTitleRow(category, data.file_title);
 
         var d = data.detail || {};
+        var seq = ++prefillSeq;
+        prefillState = 'pending';
+        setUpdateBtnDisabled(true);
         var done;
-        if (category === 'Other') done = prefillOther(d);
-        else if (category === 'Institutional') done = prefillInstitutional(d);
-        else done = prefillCourse(d);
+        try {
+            if (category === 'Other') done = prefillOther(d);
+            else if (category === 'Institutional') done = prefillInstitutional(d);
+            else done = prefillCourse(d);
+        } catch (e) {
+            done = Promise.reject(e);
+        }
+        done = Promise.resolve(done).then(function() {
+            if (seq !== prefillSeq) return;
+            prefillState = 'ready';
+            setUpdateBtnDisabled(false);
+        }, function(e) {
+            if (seq !== prefillSeq) return;
+            // Re-enabled so a click reaches submit(), which names the failure instead of saving.
+            prefillState = 'failed';
+            setUpdateBtnDisabled(false);
+            if (window.console) console.error('Course Repository edit prefill failed', e);
+        });
 
         var modalEl = $id('uploadModal');
         if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
@@ -2098,6 +2163,14 @@ window.crDocEdit = (function() {
         var showError = helpers.showError || function(m) {
             alert(Array.isArray(m) ? m.join('\n') : m);
         };
+        if (prefillState === 'pending') {
+            showError('The saved values are still loading. Please wait a moment and try again.');
+            return true;
+        }
+        if (prefillState === 'failed') {
+            showError('The saved values could not be loaded, so saving now could overwrite them. Close this form and open Edit again.');
+            return true;
+        }
         var category = (document.querySelector('input[name="category"]:checked') || {}).value || 'Course';
 
         var fd = new FormData();
@@ -2116,6 +2189,9 @@ window.crDocEdit = (function() {
             fd.append('ministry_master', (($id('ministry_master') || {}).value) || '');
             fd.append('keywords', (($id('keywords_course') || {}).value) || '');
             fd.append('video_link', (($id('video_link_course') || {}).value) || '');
+            // Always 1 or 0 — absent means "this form has no switch", and the
+            // server then keeps the stored choice.
+            if ($id('video_download_enabled_course')) { fd.append('video_download_enabled', $id('video_download_enabled_course').checked ? '1' : '0'); }
             var t1 = document.querySelector('#uploadForm input[name="attachment_titles[]"]');
             fileTitle = t1 ? t1.value : '';
             fileInput = findFileInput('attachments[]');
@@ -2128,6 +2204,7 @@ window.crDocEdit = (function() {
             fd.append('sector_master', (($id('sector_master_other') || {}).value) || '');
             fd.append('ministry_master', (($id('ministry_master_other') || {}).value) || '');
             fd.append('keywords', (($id('keywords_other') || {}).value) || '');
+            if ($id('video_download_enabled_other')) { fd.append('video_download_enabled', $id('video_download_enabled_other').checked ? '1' : '0'); }
             fd.append('video_link', (($id('video_link_other') || {}).value) || '');
             var t2 = document.querySelector('#uploadForm input[name="attachment_titles_other[]"]');
             fileTitle = t2 ? t2.value : '';

@@ -1218,7 +1218,7 @@ class ReportController extends Controller
      */
     public function stockSummaryPdf(Request $request)
     {
-        @ini_set('memory_limit', '512M');
+        @ini_set('memory_limit', '1024M');
         @set_time_limit(120);
 
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');

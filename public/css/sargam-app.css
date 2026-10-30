@@ -50,6 +50,9 @@
     --ds-warning: #b54708;      /* amber — tertiary/step-back actions */
     --ds-danger: #ef4444;       /* destructive control (remove a row) */
     --ds-accent: #2563eb;       /* additive control (add a row) */
+    /* Comma-separated channels, for rgba() tints of the brand red.
+       --bs-primary-rgb already ships the same thing for the blue. */
+    --ds-secondary-rgb: 177, 41, 35;
     --ds-ink: #1f2937;          /* primary text */
     --ds-ink-muted: #667085;    /* secondary text */
     --ds-line: #e5e7eb;         /* hairline borders */

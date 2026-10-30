@@ -3,114 +3,97 @@
 @section('title', 'Course Memo Decision Mapping')
 
 @push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+@include('admin.layouts.partials.select2-assets')
+<link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
 @endpush
 
 @section('setup_content')
-<div class="container-fluid">
-    <x-breadcrum title="Course Memo Decision Mapping" />
-    <div class="datatables">
-        <div class="card" >
-            <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
-                            <h4>Course Memo Decision Mapping</h4>
-                        </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <!-- <a href="{{ route('course.memo.decision.create') }}" class="btn btn-primary">+Add New
-                                    Mapping</a> -->
-                                <button type="button" id="showConclusionAlert" class="btn btn-primary">
-                                    +Add New Mapping
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <hr>
-                    <div class="row g-3 align-items-end mb-3">
-                       
-                        <div class="col-md-4">
-                            <label class="form-label">Course</label>
-                            <select id="courseFilter" class="form-select">
-                                <option value="">-- All Courses --</option>
-                                @foreach($CourseMaster as $course)
-                                <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Memo Conclusion</label>
-                            <select id="memoConclusionFilter" class="form-select">
-                                <option value="">-- All Memo Conclusions --</option>
-                                @foreach($MemoConclusionMaster as $memo)
-                                <option value="{{ $memo->pk }}">{{ $memo->discussion_name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <button type="button" id="resetMemoFilters" class="btn btn-outline-secondary">
-                                Reset Filters
-                            </button>
-                        </div>
-                    </div>
-                    <div>
-                        <table class="table w-100" id="memoDecisionTable">
-                            <thead style="background-color: #af2910;">
-                                <tr>
-                                    <th>S.No.</th>
-                                    <th>Course Name</th>
-                                    <th>Memo Decision</th>
-                                    <th>Memo Conclusion</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                        </table>
+{{-- Root is `mst-page cmdm-page`, deliberately NOT `cmdm-master-page`: the
+     `.cmdm-master-page #memoDecisionTable …` block in public/css/custom.css
+     styles the retired icon-only action row and its ID-level rules would
+     out-rank the shared .mst-act stack (min-width, padding, colours). --}}
+<div class="container-fluid mst-page cmdm-page">
+    <x-breadcrum title="Course Memo Decision Mapping" :showBack="false">
+        {{-- #showConclusionAlert opens the Add modal (#conclusionModal). --}}
+        <button type="button" id="showConclusionAlert"
+                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Add Mapping</span>
+        </button>
+    </x-breadcrum>
 
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white" role="group" aria-label="Filter mappings by status">
+    <x-session_message />
+
+    {{-- Scope tabs above the card (§1). They split the mappings by the COURSE's
+         lifecycle (status_filter=active|archive), not by the mapping's own
+         Active/Inactive status — the hint says so, because the Status column
+         below means something else. --}}
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0"
+            role="group" aria-label="Show mappings by course status" aria-describedby="cmdmScopeHint">
             <li class="nav-item" role="presentation">
                 <button type="button"
-                    class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill active"
-                    id="cmdmFilterActive"
-                    aria-pressed="true"
-                    aria-current="true">
+                        class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill active"
+                        id="cmdmFilterActive" aria-pressed="true" aria-current="true">
                     Active
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button type="button"
-                    class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill"
-                    id="cmdmFilterArchive"
-                    aria-pressed="false">
+                        class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill"
+                        id="cmdmFilterArchive" aria-pressed="false">
                     Archived
                 </button>
             </li>
         </ul>
+        <p class="text-muted small mb-0" id="cmdmScopeHint">
+            <span class="fw-semibold">Active</span> lists mappings of running or upcoming courses;
+            <span class="fw-semibold">Archived</span> lists mappings of courses that have ended.
+        </p>
     </div>
 
-    <div class="card cmdm-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
+    <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
-            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar programme-choices-bootstrap">
+
+            {{-- Two filters + Reset and Columns + search do not fit one row
+                 beside the sidebar, so the toolbar WRAPS as two whole groups
+                 (filters left, Columns + search right-aligned below) instead
+                 of squeezing each group into a ragged second line. --}}
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
                 <div class="d-flex flex-wrap align-items-center gap-3">
                     <span class="programme-dt-filters-label">Filters</span>
+
+                    {{-- Course options follow the selected tab: they are rebuilt from
+                         get-courses-by-status whenever Active / Archived changes. --}}
                     <div class="programme-dt-filter-select">
-                        <select id="cmdmCourseFilter" class="form-select js-programme-choice">
-                            <option value="">Course Name</option>
+                        <select id="cmdmCourseFilter" class="form-select mst-control mst-searchable"
+                                data-placeholder="All courses" aria-label="Filter by course">
+                            <option value="">All courses</option>
                             @foreach($filterCourses ?? [] as $pk => $name)
-                            <option value="{{ $pk }}">{{ $name }}</option>
+                                <option value="{{ $pk }}">{{ $name }}</option>
                             @endforeach
                         </select>
                     </div>
+
+                    <div class="programme-dt-filter-select">
+                        <select id="memoConclusionFilter" class="form-select mst-control mst-searchable"
+                                data-placeholder="All memo conclusions" aria-label="Filter by memo conclusion">
+                            <option value="">All memo conclusions</option>
+                            @foreach($MemoConclusionMaster as $memo)
+                                <option value="{{ $memo->pk }}">{{ $memo->discussion_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
                     <button type="button" class="btn programme-dt-btn-reset" id="cmdmResetFilters">
                         Reset Filters
                     </button>
                 </div>
-                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
                     <button type="button" class="btn programme-dt-btn-columns" id="btnCmdmColumns"
-                        data-bs-toggle="modal" data-bs-target="#cmdmColumnVisibilityModal"
-                        title="Show / hide columns">
+                            data-bs-toggle="modal" data-bs-target="#cmdmColumnVisibilityModal"
+                            title="Show / hide columns">
                         <span>Columns</span>
                         <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
@@ -118,156 +101,225 @@
                 </div>
             </div>
 
-            <div class="programme-dt-panel cmdm-dt-scroll">
-                <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" id="memoDecisionTable">
-                    <thead class="table-light">
-                        <tr>
-                            <th scope="col">S. No.</th>
-                            <th scope="col">Course Name</th>
-                            <th scope="col">Memo Decision</th>
-                            <th scope="col">Memo Conclusion</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Action</th>
-                        </tr>
-                    </thead>
-                </table>
-                <div id="cmdmDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="memoDecisionTable"></div>
+            {{-- Search, pager and "Showing N of M items" are relocated into the
+                 slots by public/js/datatable-global-ui.js. --}}
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" id="memoDecisionTable">
+                        <caption class="visually-hidden">Course memo decision mappings: each course with the memo decision and conclusion mapped to it</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">S. No.</th>
+                                <th scope="col">Course</th>
+                                <th scope="col">Memo Decision</th>
+                                <th scope="col">Memo Conclusion</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Action</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+                <div id="cmdmDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                     data-dt-footer-for="memoDecisionTable"></div>
             </div>
+
         </div>
     </div>
+
+    {{-- Row markup. The feed (CourseMemoDecisionMappController@index) still
+         returns its legacy switch / Edit / Delete HTML; the grid renders these
+         shared partials instead and fills the __CMDM_*__ slots from each row
+         (see cmdmRenderActions). Active rows keep a disabled Delete, exactly as
+         the feed did. --}}
+    <template id="cmdmTplStatusOn">@include('admin.master.partials.grid-status', ['active' => true])</template>
+    <template id="cmdmTplStatusOff">@include('admin.master.partials.grid-status', ['active' => false])</template>
+    @php
+        $cmdmEditTpl = [
+            'class' => 'editConclusion',
+            'attrs' => [
+                'data-id'              => '__CMDM_ID__',
+                'data-course'          => '__CMDM_COURSE__',
+                'data-course-name'     => '__CMDM_COURSE_NAME__',
+                'data-memo'            => '__CMDM_MEMO__',
+                'data-memo-name'       => '__CMDM_MEMO_NAME__',
+                'data-conclusion'      => '__CMDM_CONCLUSION__',
+                'data-conclusion-name' => '__CMDM_CONCLUSION_NAME__',
+                'data-status'          => '__CMDM_STATUS__',
+            ],
+        ];
+        $cmdmToggleTpl = [
+            'table'  => 'course_memo_decision_mapp',
+            'column' => 'active_inactive',
+            'id'     => '__CMDM_ID__',
+        ];
+    @endphp
+    <template id="cmdmTplActionsOn">@include('admin.master.partials.grid-actions', [
+        'name'   => '__CMDM_NAME__',
+        'edit'   => $cmdmEditTpl,
+        'toggle' => $cmdmToggleTpl + ['active' => true],
+        'delete' => ['disabled' => true, 'reason' => 'Active mappings cannot be deleted. Deactivate it first.'],
+    ])</template>
+    <template id="cmdmTplActionsOff">@include('admin.master.partials.grid-actions', [
+        'name'   => '__CMDM_NAME__',
+        'edit'   => $cmdmEditTpl,
+        'toggle' => $cmdmToggleTpl + ['active' => false],
+        'delete' => ['action' => '__CMDM_DEL__'],
+    ])</template>
 </div>
 
 <!-- Add mapping modal -->
-<div class="modal fade cmdm-form-modal" id="conclusionModal" tabindex="-1" aria-labelledby="conclusionModalLabel" aria-hidden="true"
-    data-bs-backdrop="static" data-bs-keyboard="true">
-    <div class="modal-dialog modal-dialog-centered cmdm-modal-dialog">
-        <div class="modal-content cgt-form-modal border-0 shadow-lg rounded-4">
+<div class="modal fade mst-modal" id="conclusionModal" tabindex="-1" aria-labelledby="conclusionModalLabel" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
             <div class="modal-header border-bottom">
-                <h5 class="modal-title mb-0 fw-bold" id="conclusionModalLabel">Add Memo Conclusion</h5>
+                <div>
+                    <h5 class="modal-title fw-bold mb-0" id="conclusionModalLabel">Add Memo Decision Mapping</h5>
+                    <p class="text-muted small mb-0 mt-1" id="conclusionModalHint">Pick the course, then the memo decision and the conclusion it maps to.</p>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body pt-4 pb-2">
-                <form id="conclusionForm" novalidate>
-                    <div class="mb-4">
-                        <label for="course_master_pk" class="form-label cgt-field-label mb-2">
-                            Select Course <span class="text-danger">*</span>
+            <div class="modal-body">
+                <form id="conclusionForm" novalidate aria-describedby="conclusionModalHint">
+                    <div class="mst-field-card">
+                        <label for="course_master_pk" class="mst-form-label d-block">
+                            Course <span class="mst-req" aria-hidden="true">*</span>
                         </label>
-                        <select name="course_master_pk" id="course_master_pk" class="form-select rounded-3" required>
+                        <select name="course_master_pk" id="course_master_pk"
+                                class="form-select mst-control mst-searchable"
+                                data-placeholder="Select Course" required aria-required="true">
                             <option value="">Select Course</option>
                             @foreach($CourseMaster as $course)
-                            <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                                <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
                             @endforeach
                         </select>
                     </div>
 
-                    <div class="mb-4">
-                        <label for="memo_type_master_pk" class="form-label cgt-field-label mb-2">
-                            Select Memo <span class="text-danger">*</span>
-                        </label>
-                        <select name="memo_type_master_pk" id="memo_type_master_pk" class="form-select rounded-3" required>
-                            <option value="">Select Memo</option>
-                            @foreach($MemoTypeMaster as $memo)
-                            <option value="{{ $memo->pk }}">{{ $memo->memo_type_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                    <div class="mst-field-card">
+                        <div class="mb-3">
+                            <label for="memo_type_master_pk" class="mst-form-label d-block">
+                                Memo Decision <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <select name="memo_type_master_pk" id="memo_type_master_pk"
+                                    class="form-select mst-control mst-searchable"
+                                    data-placeholder="Select Memo Decision" required aria-required="true">
+                                <option value="">Select Memo Decision</option>
+                                @foreach($MemoTypeMaster as $memo)
+                                    <option value="{{ $memo->pk }}">{{ $memo->memo_type_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
 
-                    <div class="mb-4">
-                        <label for="memo_conclusion_master_pk" class="form-label cgt-field-label mb-2">
-                            Select Memo Conclusion <span class="text-danger">*</span>
-                        </label>
-                        <select name="memo_conclusion_master_pk" id="memo_conclusion_master_pk" class="form-select rounded-3" required>
-                            <option value="">Select Memo Conclusion</option>
-                            @foreach($MemoConclusionMaster as $memo)
-                            <option value="{{ $memo->pk }}">{{ $memo->discussion_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                        <div class="mb-3">
+                            <label for="memo_conclusion_master_pk" class="mst-form-label d-block">
+                                Memo Conclusion <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <select name="memo_conclusion_master_pk" id="memo_conclusion_master_pk"
+                                    class="form-select mst-control mst-searchable"
+                                    data-placeholder="Select Memo Conclusion" required aria-required="true">
+                                <option value="">Select Memo Conclusion</option>
+                                @foreach($MemoConclusionMaster as $memo)
+                                    <option value="{{ $memo->pk }}">{{ $memo->discussion_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
 
-                    <div class="mb-0">
-                        <label for="active_inactive" class="form-label cgt-field-label mb-2">
-                            Status <span class="text-danger">*</span>
-                        </label>
-                        <select name="active_inactive" id="active_inactive" class="form-select rounded-3" required>
-                            <option value="">Select Status</option>
-                            <option value="1">Active</option>
-                            <option value="2">Inactive</option>
-                        </select>
+                        <div class="mb-0">
+                            <label for="active_inactive" class="mst-form-label d-block">
+                                Status <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <select name="active_inactive" id="active_inactive"
+                                    class="form-select mst-control mst-searchable"
+                                    data-placeholder="Select Status" required aria-required="true">
+                                <option value="">Select Status</option>
+                                <option value="1">Active</option>
+                                <option value="2">Inactive</option>
+                            </select>
+                        </div>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer border-top border-0 gap-2 justify-content-end pt-3 pb-4 px-4">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4 py-2" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" id="submitConclusionForm" class="btn btn-primary rounded-3 px-4 py-2">Create Memo Mapping</button>
+            <div class="modal-footer border-0 gap-2 justify-content-end">
+                <button type="button" class="btn mst-btn-cancel px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="submitConclusionForm" class="btn mst-btn-submit px-4">Save</button>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Edit mapping modal -->
-<div class="modal fade cmdm-form-modal" id="editconclusionModal" tabindex="-1" aria-labelledby="editConclusionLabel" aria-hidden="true"
-    data-bs-backdrop="static" data-bs-keyboard="true">
-    <div class="modal-dialog modal-dialog-centered cmdm-modal-dialog">
-        <div class="modal-content cgt-form-modal border-0 shadow-lg rounded-4">
+<div class="modal fade mst-modal" id="editconclusionModal" tabindex="-1" aria-labelledby="editConclusionLabel" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
             <div class="modal-header border-bottom">
-                <h5 class="modal-title mb-0 fw-bold" id="editConclusionLabel">Edit Memo Conclusion</h5>
+                <div>
+                    <h5 class="modal-title fw-bold mb-0" id="editConclusionLabel">Edit Memo Decision Mapping</h5>
+                    <p class="text-muted small mb-0 mt-1" id="editConclusionHint">Change the course, the memo decision or the conclusion it maps to.</p>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body pt-4 pb-2">
-                <form id="edit_conclusionForm" novalidate>
+            <div class="modal-body">
+                <form id="edit_conclusionForm" novalidate aria-describedby="editConclusionHint">
                     <input type="hidden" id="edit_id" name="edit_id">
 
-                    <div class="mb-4">
-                        <label for="edit_course_master_pk" class="form-label cgt-field-label mb-2">
-                            Select Course <span class="text-danger">*</span>
+                    <div class="mst-field-card">
+                        <label for="edit_course_master_pk" class="mst-form-label d-block">
+                            Course <span class="mst-req" aria-hidden="true">*</span>
                         </label>
-                        <select id="edit_course_master_pk" class="form-select rounded-3">
+                        <select id="edit_course_master_pk" class="form-select mst-control mst-searchable"
+                                data-placeholder="Select Course" aria-required="true">
                             <option value="">Select Course</option>
                             @foreach($CourseMaster as $course)
-                            <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                                <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
                             @endforeach
                         </select>
                     </div>
 
-                    <div class="mb-4">
-                        <label for="edit_memo_type_master_pk" class="form-label cgt-field-label mb-2">
-                            Select Memo <span class="text-danger">*</span>
-                        </label>
-                        <select id="edit_memo_type_master_pk" class="form-select rounded-3">
-                            <option value="">Select Memo</option>
-                            @foreach($MemoTypeMaster as $memo)
-                            <option value="{{ $memo->pk }}">{{ $memo->memo_type_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                    <div class="mst-field-card">
+                        <div class="mb-3">
+                            <label for="edit_memo_type_master_pk" class="mst-form-label d-block">
+                                Memo Decision <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <select id="edit_memo_type_master_pk" class="form-select mst-control mst-searchable"
+                                    data-placeholder="Select Memo Decision" aria-required="true">
+                                <option value="">Select Memo Decision</option>
+                                @foreach($MemoTypeMaster as $memo)
+                                    <option value="{{ $memo->pk }}">{{ $memo->memo_type_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
 
-                    <div class="mb-4">
-                        <label for="edit_memo_conclusion_master_pk" class="form-label cgt-field-label mb-2">
-                            Select Memo Conclusion <span class="text-danger">*</span>
-                        </label>
-                        <select id="edit_memo_conclusion_master_pk" class="form-select rounded-3">
-                            <option value="">Select Memo Conclusion</option>
-                            @foreach($MemoConclusionMaster as $memo)
-                            <option value="{{ $memo->pk }}">{{ $memo->discussion_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                        <div class="mb-3">
+                            <label for="edit_memo_conclusion_master_pk" class="mst-form-label d-block">
+                                Memo Conclusion <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <select id="edit_memo_conclusion_master_pk" class="form-select mst-control mst-searchable"
+                                    data-placeholder="Select Memo Conclusion" aria-required="true">
+                                <option value="">Select Memo Conclusion</option>
+                                @foreach($MemoConclusionMaster as $memo)
+                                    <option value="{{ $memo->pk }}">{{ $memo->discussion_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
 
-                    <div class="mb-0">
-                        <label for="edit_active_inactive" class="form-label cgt-field-label mb-2">
-                            Status <span class="text-danger">*</span>
-                        </label>
-                        <select id="edit_active_inactive" class="form-select rounded-3">
-                            <option value="">Select Status</option>
-                            <option value="1">Active</option>
-                            <option value="2">Inactive</option>
-                        </select>
+                        <div class="mb-0">
+                            <label for="edit_active_inactive" class="mst-form-label d-block">
+                                Status <span class="mst-req" aria-hidden="true">*</span>
+                            </label>
+                            <select id="edit_active_inactive" class="form-select mst-control mst-searchable"
+                                    data-placeholder="Select Status" aria-required="true">
+                                <option value="">Select Status</option>
+                                <option value="1">Active</option>
+                                <option value="2">Inactive</option>
+                            </select>
+                        </div>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer border-top border-0 gap-2 justify-content-end pt-3 pb-4 px-4">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4 py-2" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary rounded-3 px-4 py-2" id="edit_submitConclusionForm">Update</button>
+            <div class="modal-footer border-0 gap-2 justify-content-end">
+                <button type="button" class="btn mst-btn-cancel px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn mst-btn-submit px-4" id="edit_submitConclusionForm">Update</button>
             </div>
         </div>
     </div>
@@ -276,17 +328,17 @@
 <!-- Column Visibility Modal -->
 <div class="modal fade" id="cmdmColumnVisibilityModal" tabindex="-1" aria-labelledby="cmdmColumnVisibilityLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
+        <div class="modal-content rounded-3 border-0 shadow">
             <div class="modal-header border-0 pb-2">
                 <h5 class="modal-title fw-bold" id="cmdmColumnVisibilityLabel">Column Visibility</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body pt-0">
                 <hr class="mt-0">
-                <div class="row g-3" id="cmdmColumnToggleGrid"></div>
+                <div class="row g-3 mst-colvis-grid" id="cmdmColumnToggleGrid"></div>
             </div>
             <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -294,7 +346,7 @@
 @endsection
 
 @section('scripts')
-<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
 <script>
     $(function() {
         const tableSelector = '#memoDecisionTable';
@@ -308,7 +360,89 @@
             }
         });
 
-        // ── Active / Archived tab + course filter state ──
+        /* ---------------- Row markup from the shared partials ---------------- */
+        const cmdmTpl = {
+            statusOn: $('#cmdmTplStatusOn').html(),
+            statusOff: $('#cmdmTplStatusOff').html(),
+            actionsOn: $('#cmdmTplActionsOn').html(),
+            actionsOff: $('#cmdmTplActionsOff').html()
+        };
+
+        function cmdmEsc(value) {
+            return String(value === undefined || value === null ? '' : value).replace(/[&<>"']/g, function(ch) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+            });
+        }
+
+        function cmdmFill(tpl, values) {
+            return tpl.replace(/__CMDM_([A-Z]+(?:_[A-Z]+)*)__/g, function(match, key) {
+                return Object.prototype.hasOwnProperty.call(values, key) ? cmdmEsc(values[key]) : '';
+            });
+        }
+
+        function cmdmIsActive(row) {
+            return String(row.active_inactive) === '1';
+        }
+
+        function cmdmRenderStatus(data, type, row) {
+            if (type !== 'display') {
+                return data;
+            }
+            return cmdmIsActive(row) ? cmdmTpl.statusOn : cmdmTpl.statusOff;
+        }
+
+        // The feed's legacy action HTML still carries the edit hooks (with the
+        // saved names for archived / disabled values) and the encrypted delete
+        // URL; read them from it inertly (DOMParser runs no handlers).
+        function cmdmRenderActions(data, type, row) {
+            if (type !== 'display') {
+                return data;
+            }
+            const doc = new DOMParser().parseFromString('<div>' + (data || '') + '</div>', 'text/html');
+            const edit = doc.querySelector('.editConclusion');
+            const form = doc.querySelector('form[action]');
+            const attr = function(name, fallback) {
+                return edit && edit.hasAttribute(name) ? edit.getAttribute(name) : (fallback === undefined ? '' : fallback);
+            };
+            const active = cmdmIsActive(row);
+            const courseName = attr('data-course-name');
+            const memoName = attr('data-memo-name');
+            const values = {
+                ID: attr('data-id', row.pk),
+                COURSE: attr('data-course', row.course_master_pk),
+                COURSE_NAME: courseName,
+                MEMO: attr('data-memo', row.memo_type_master_pk),
+                MEMO_NAME: memoName,
+                CONCLUSION: attr('data-conclusion', row.memo_conclusion_master_pk),
+                CONCLUSION_NAME: attr('data-conclusion-name'),
+                STATUS: attr('data-status', row.active_inactive),
+                NAME: [courseName, memoName].filter(Boolean).join(' – '),
+                DEL: form ? form.getAttribute('action') : ''
+            };
+            if (!active && !values.DEL) {
+                return data; // unexpected feed shape: keep the server markup
+            }
+            return cmdmFill(active ? cmdmTpl.actionsOn : cmdmTpl.actionsOff, values);
+        }
+
+        // Course is the record's anchor (bold); the memo decision reads as a
+        // neutral category tag (not a status colour); the conclusion is plain
+        // text that may wrap.
+        function cmdmRenderCourse(data, type) {
+            if (type !== 'display' || !data || data === '-') {
+                return data;
+            }
+            return '<span class="fw-semibold">' + data + '</span>';
+        }
+
+        function cmdmRenderDecision(data, type) {
+            if (type !== 'display' || !data || data === '-') {
+                return data;
+            }
+            return '<span class="badge rounded-1 bg-light text-dark border fw-semibold text-wrap text-start lh-sm">' + data + '</span>';
+        }
+
+        // ── Active / Archived tab + filter state ──
         // Bound before init so the first ajax request carries the filters too.
         let cmdmCurrentFilter = 'active';
 
@@ -321,63 +455,62 @@
         });
 
         if (!$.fn.DataTable.isDataTable(tableSelector)) {
-            const memoDecisionTable = $(tableSelector).DataTable({
+            $(tableSelector).DataTable({
                 processing: true,
                 serverSide: true,
                 ajax: {
                     url: "{{ route('course.memo.decision.index') }}",
                     data: function(d) {
-                        d.course_filter = $('#courseFilter').val();
+                        d.course_filter = $('#cmdmCourseFilter').val();
                         d.memo_conclusion_filter = $('#memoConclusionFilter').val();
                     }
                 },
-                order: [[0, 'desc']],
                 columns: [{
                         data: 'DT_RowIndex',
                         name: 'DT_RowIndex',
                         orderable: false,
-                        searchable: false
+                        searchable: false,
+                        className: 'text-nowrap'
                     },
                     {
                         data: 'course_name',
-                        name: 'course.course_name'
+                        name: 'course.course_name',
+                        render: cmdmRenderCourse
                     },
                     {
                         data: 'memo_decision',
-                        name: 'memo.memo_type_name'
+                        name: 'memo.memo_type_name',
+                        render: cmdmRenderDecision
                     },
                     {
                         data: 'memo_conclusion',
-                        name: 'memoConclusion.discussion_name'
+                        name: 'memoConclusion.discussion_name',
+                        // Wrap the cell only — on the <th> it split "CONCLUSION".
+                        createdCell: function(td) {
+                            td.classList.add('mst-col-wrap');
+                        }
                     },
                     {
                         data: 'status',
                         name: 'status',
                         orderable: false,
-                        searchable: false
+                        searchable: false,
+                        className: 'text-nowrap',
+                        render: cmdmRenderStatus
                     },
                     {
                         data: 'action',
                         name: 'action',
                         orderable: false,
-                        searchable: false
+                        searchable: false,
+                        className: 'text-nowrap',
+                        width: '13rem',
+                        render: cmdmRenderActions
                     }
                 ],
                 order: [
                     [1, 'asc']
                 ]
-            });
-
-            // Reload table when filters change
-            $('#courseFilter, #memoConclusionFilter').on('change', function() {
-                memoDecisionTable.ajax.reload();
-            });
-
-            // Reset filters
-            $('#resetMemoFilters').on('click', function() {
-                $('#courseFilter').val('');
-                $('#memoConclusionFilter').val('');
-                memoDecisionTable.ajax.reload();
             });
         }
 
@@ -427,7 +560,7 @@
 
                 var inputId = 'cmdmcolvis_' + idx;
                 var $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
-                var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-1 px-3 py-2 mb-0 w-100"></label>')
                     .attr('for', inputId);
                 var $cb = $('<input type="checkbox" class="form-check-input m-0">')
                     .attr('id', inputId)
@@ -456,78 +589,11 @@
             setupCmdmColumns($(tableSelector).DataTable());
         }
 
-        /* ---------------- Active / Archived tabs + course filter ---------------- */
-        var cmdmChoiceOpts = {
-            searchEnabled: true,
-            shouldSort: false,
-            itemSelectText: '',
-            allowHTML: false,
-            classNames: {
-                containerOuter: ['choices', 'w-100', 'programme-dt-filter-select'],
-                containerInner: ['choices__inner'],
-                input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
-                inputCloned: ['choices__input--cloned'],
-                list: ['choices__list'],
-                listItems: ['choices__list--multiple'],
-                listSingle: ['choices__list--single'],
-                listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
-                item: ['choices__item', 'dropdown-item', 'rounded-0'],
-                itemSelectable: ['choices__item--selectable'],
-                itemDisabled: ['choices__item--disabled', 'disabled'],
-                itemChoice: ['choices__item--choice'],
-                description: ['choices__description', 'small', 'text-muted'],
-                placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
-                group: ['choices__group'],
-                groupHeading: ['choices__heading', 'dropdown-header', 'text-uppercase', 'small'],
-                button: ['choices__button'],
-                activeState: ['is-active'],
-                focusState: ['is-focused'],
-                openState: ['is-open'],
-                disabledState: ['is-disabled'],
-                highlightedState: ['is-highlighted', 'active'],
-                flippedState: ['is-flipped'],
-                loadingState: ['is-loading'],
-                invalidState: ['is-invalid'],
-                notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2'],
-                addChoice: ['choices__item--selectable', 'add-choice'],
-                noResults: ['has-no-results'],
-                noChoices: ['has-no-choices'],
-            }
-        };
-        var cmdmCourseChoices = null;
-
-        function cmdmInitCourseChoices() {
-            if (typeof Choices === 'undefined') {
-                return;
-            }
-            var el = document.getElementById('cmdmCourseFilter');
-            if (!el || el.dataset.choicesInitialized === 'true') {
-                return;
-            }
-            cmdmCourseChoices = new Choices(el, cmdmChoiceOpts);
-            el._choicesInstance = cmdmCourseChoices;
-            el.dataset.choicesInitialized = 'true';
-        }
-
-        function cmdmRebuildCourseChoices() {
-            var el = document.getElementById('cmdmCourseFilter');
-            if (!el) {
-                return;
-            }
-            if (el._choicesInstance) {
-                el._choicesInstance.destroy();
-                el.dataset.choicesInitialized = 'false';
-                el._choicesInstance = null;
-                cmdmCourseChoices = null;
-            }
-            cmdmInitCourseChoices();
-        }
-
-        cmdmInitCourseChoices();
-
+        /* ---------------- Active / Archived tabs + filters ---------------- */
+        // A filter or tab change starts again from page 1.
         function cmdmReloadTable() {
             if ($.fn.DataTable.isDataTable(tableSelector)) {
-                $(tableSelector).DataTable().ajax.reload(null, false);
+                $(tableSelector).DataTable().ajax.reload();
             }
         }
 
@@ -541,6 +607,9 @@
                 .attr('aria-current', 'true');
         }
 
+        // Rebuild the Course filter for the selected tab. Select2 re-reads the
+        // <option>s live; change.select2 repaints the cleared selection without
+        // firing the jQuery change handler below.
         function cmdmLoadCoursesByStatus(status) {
             $.ajax({
                 url: "{{ route('course.memo.decision.get.courses.by.status') }}",
@@ -558,8 +627,7 @@
                                 text: name
                             }));
                         });
-                        $sel.val('');
-                        cmdmRebuildCourseChoices();
+                        $sel.val('').trigger('change.select2');
                     }
                     cmdmReloadTable();
                 },
@@ -581,142 +649,26 @@
             cmdmLoadCoursesByStatus('archive');
         });
 
-        $('#cmdmCourseFilter').on('change', function() {
+        // jQuery handlers: Select2 signals a pick with a jQuery `change`.
+        $('#cmdmCourseFilter, #memoConclusionFilter').on('change', function() {
             cmdmReloadTable();
         });
 
         $('#cmdmResetFilters').on('click', function() {
+            $('#memoConclusionFilter').val('').trigger('change.select2');
             cmdmCurrentFilter = 'active';
             cmdmSetActiveTab($('#cmdmFilterActive'));
             cmdmLoadCoursesByStatus('active');
         });
 
-        function iconOnlyBtn($btn, iconClass, extraClass) {
-            $btn.removeClass('btn btn-sm btn-outline-warning btn-outline-danger btn-outline-secondary d-flex align-items-center gap-1');
-            $btn.addClass('programme-action-btn ' + (extraClass || ''));
-            $btn.find('.material-icons').remove();
-            $btn.find('span').remove();
-            if (!$btn.find('.bi').length) {
-                $btn.append('<i class="bi ' + iconClass + '" aria-hidden="true"></i>');
-            }
+        /* ---------------- Add ---------------- */
+        function cmdmResetAddForm() {
+            document.getElementById('conclusionForm').reset();
+            $('#conclusionForm select').trigger('change.select2');
         }
-
-        function buildToggleControl($toggle) {
-            const $label = $('<label>', {
-                class: 'programme-action-toggle-icon cmdm-action-toggle mb-0',
-                'aria-label': 'Toggle mapping status'
-            });
-
-            $toggle.detach().addClass('cmdm-status-toggle-input').appendTo($label);
-            $label.append('<i class="bi bi-toggle-off cmdm-toggle-icon cmdm-toggle-icon--off" aria-hidden="true"></i>');
-            $label.append('<i class="bi bi-toggle-on cmdm-toggle-icon cmdm-toggle-icon--on" aria-hidden="true"></i>');
-
-            return $label;
-        }
-
-        function decorateCmdmRows() {
-            $(tableSelector + ' tbody tr').each(function() {
-                const $row = $(this);
-                if ($row.hasClass('cmdm-row-decorated')) {
-                    return;
-                }
-
-                const $cells = $row.find('td');
-                if ($cells.length < 6) {
-                    return;
-                }
-
-                const $courseCell = $cells.eq(1);
-                const $memoCell = $cells.eq(2);
-                const $conclusionCell = $cells.eq(3);
-                const $statusCell = $cells.eq(4);
-                const $actionCell = $cells.eq(5);
-
-                $courseCell.addClass('cmdm-col-course');
-                $memoCell.addClass('cmdm-col-memo-decision');
-                $conclusionCell.addClass('cmdm-col-memo-conclusion');
-
-                const $toggle = $statusCell.find('.status-toggle').first();
-                const isActive = $toggle.length ? $toggle.is(':checked') : false;
-
-                $statusCell.empty().append(
-                    $('<span>', {
-                        class: 'badge rounded-1 programme-status-badge cmdm-status-badge ' +
-                            (isActive ? 'programme-status-badge--active' : 'programme-status-badge--inactive'),
-                        text: isActive ? 'Active' : 'Inactive'
-                    })
-                );
-
-                const $editBtn = $actionCell.find('.editConclusion').first().detach();
-                const $deleteForm = $actionCell.find('form').first().detach();
-                const $disabledDelete = $actionCell.find('button[disabled]').not('.editConclusion').first().detach();
-
-                const $group = $('<div>', {
-                    class: 'd-inline-flex align-items-center programme-action-group',
-                    role: 'group',
-                    'aria-label': 'Course memo mapping actions'
-                });
-
-                if ($editBtn.length) {
-                    iconOnlyBtn($editBtn, 'bi-pencil');
-                    $group.append($editBtn);
-                }
-
-                if ($toggle.length) {
-                    $group.append(buildToggleControl($toggle));
-                }
-
-                if ($deleteForm.length) {
-                    const $deleteBtn = $deleteForm.find('button[type="submit"]').first();
-                    if ($deleteBtn.length) {
-                        iconOnlyBtn($deleteBtn, 'bi-trash3', 'programme-action-btn--danger');
-                        $deleteForm.addClass('d-inline m-0');
-                        $group.append($deleteForm);
-                    }
-                } else if ($disabledDelete.length) {
-                    iconOnlyBtn($disabledDelete, 'bi-trash3', 'programme-action-btn--danger is-disabled');
-                    $disabledDelete.prop('disabled', true).attr('aria-disabled', 'true');
-                    $group.append($disabledDelete);
-                }
-
-                $actionCell.empty().append($group);
-                $row.addClass('cmdm-row-decorated');
-            });
-        }
-
-        function updateCmdmRowBadge($checkbox, isActive) {
-            const $badge = $checkbox.closest('tr').find('.cmdm-status-badge');
-            if ($badge.length) {
-                $badge
-                    .removeClass('programme-status-badge--active programme-status-badge--inactive')
-                    .addClass(isActive ? 'programme-status-badge--active' : 'programme-status-badge--inactive')
-                    .text(isActive ? 'Active' : 'Inactive');
-            }
-        }
-
-        $(tableSelector).on('draw.dt', function() {
-            $(tableSelector + ' tbody tr').removeClass('cmdm-row-decorated');
-            decorateCmdmRows();
-        });
-
-        $(tableSelector).on('init.dt', function() {
-            decorateCmdmRows();
-        });
-
-        if ($.fn.DataTable.isDataTable(tableSelector)) {
-            decorateCmdmRows();
-        }
-
-        $(document).on('click', '.swal2-cancel, .swal2-deny', function() {
-            setTimeout(function() {
-                $(tableSelector + ' tbody .status-toggle').each(function() {
-                    updateCmdmRowBadge($(this), $(this).is(':checked'));
-                });
-            }, 0);
-        });
 
         document.getElementById('showConclusionAlert').addEventListener('click', function() {
-            document.getElementById('conclusionForm').reset();
+            cmdmResetAddForm();
             if (window.bootstrap && bootstrap.Modal) {
                 bootstrap.Modal.getOrCreateInstance(addModalEl).show();
             } else if (window.jQuery) {
@@ -768,7 +720,7 @@
                             showConfirmButton: false
                         }).then(() => {
                             $('#memoDecisionTable').DataTable().ajax.reload(null, false);
-                            document.getElementById('conclusionForm').reset();
+                            cmdmResetAddForm();
                             if (window.bootstrap && bootstrap.Modal) {
                                 bootstrap.Modal.getOrCreateInstance(addModalEl).hide();
                             } else {
@@ -792,6 +744,7 @@
                 });
         });
 
+        /* ---------------- Edit ---------------- */
         // These dropdowns are rendered with running courses / active memo types only.
         // A row from the Archived tab (or one whose memo type was later disabled) has
         // no matching <option>, so .val() silently left the field blank — the course
@@ -832,7 +785,10 @@
             $('#edit_course_master_pk').val(course).trigger('change');
             $('#edit_memo_type_master_pk').val(memo).trigger('change');
             $('#edit_memo_conclusion_master_pk').val(conclusion).trigger('change');
-            $('#edit_active_inactive').val(status).trigger('change');
+            // A row switched off from the grid is stored as 0 — it is Inactive (2) here.
+            $('#edit_active_inactive').val(
+                String(status) === '1' ? '1' : (status === undefined || status === '' ? '' : '2')
+            ).trigger('change');
 
             if (window.bootstrap && bootstrap.Modal) {
                 bootstrap.Modal.getOrCreateInstance(editModalEl).show();
@@ -878,7 +834,21 @@
                                 $('#editconclusionModal').modal('hide');
                             }
                         });
+                    } else {
+                        // A 422 (empty field) or "Record not found" used to fail silently.
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: res.message || 'Please fill all required fields!'
+                        });
                     }
+                })
+                .catch(function() {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Server Error',
+                        text: 'Please try again later.'
+                    });
                 });
         });
     });

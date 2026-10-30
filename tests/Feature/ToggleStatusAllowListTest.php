@@ -58,7 +58,12 @@ class ToggleStatusAllowListTest extends TestCase
         [$table, $column, $pk, $was] = $this->toggleableRow();
         $flipped = $was === 1 ? 0 : 1;
 
-        $this->actingAs($this->actor())
+        // Country and State toggles need their screen's menu permission (PR #335
+        // review F-002); Super Admin is the account those screens admit here.
+        $admin = User::query()->whereHas('roles', fn ($q) => $q->where('name', 'Super Admin'))->first()
+            ?? $this->markTestSkipped('no Super Admin in this database');
+
+        $this->actingAs($admin)
             ->post(route('admin.toggleStatus'), [
                 'table' => $table,
                 'column' => $column,

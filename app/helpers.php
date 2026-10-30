@@ -871,6 +871,21 @@ function isOfficerTraineeUser(): bool
 }
 
 /**
+ * Training Section operator. Narrower than isTrainingOrEstateAuthority(): the estate
+ * roles are deliberately excluded, because the screens gated on this (applying leave
+ * on behalf of an officer trainee) belong to the training section only. Super Admin
+ * is included so the module stays reachable for support.
+ */
+function isTrainingSectionUser(): bool
+{
+    return hasRole('Super Admin')
+        || hasRole('Training Induction Admin') || hasRole('Training-Induction')
+        || hasRole('Training MCTP Admin') || hasRole('Training-MCTP')
+        || hasRole('Training IST') || hasRole('IST')
+        || hasRole('Training');
+}
+
+/**
  * Whether the user has at least one Spatie role (user management → assign role).
  */
 function userHasAssignedRoles(): bool
@@ -894,6 +909,79 @@ function userHasAssignedRoles(): bool
 function isSidebarPrivilegedUser(): bool
 {
     return hasRole('Super Admin');
+}
+
+/**
+ * A trainee login: user_category 'S' (whose user_id is a student_master pk), or a
+ * session carrying the Student-OT / Officer Trainee role.
+ */
+function isTraineeLogin(): bool
+{
+    $user = Auth::user();
+
+    return $user !== null
+        && ((($user->user_category ?? null) === 'S') || isOfficerTraineeUser());
+}
+
+/**
+ * The student_master pk the signed-in login is provably the trainee of, or null.
+ * The one identity rule for every "a trainee sees only their own" gate and the
+ * notice feed (PR #334 F-069, F-074):
+ * - category S: its user_id is a student pk;
+ * - no category, holding an Officer Trainee role (the Moodle token sets it): only
+ *   when user_id is a student whose email matches the login's and that student has
+ *   no category-S login. Some trainees' only login looks like that. Any other
+ *   category's user_id is an employee / faculty pk that can equal some student's
+ *   pk, so it is never read as one (F-047, F-067).
+ */
+function auth_student_master_pk(): ?string
+{
+    $user = Auth::user();
+    if (! $user || empty($user->user_id)) {
+        return null;
+    }
+
+    $category = (string) ($user->user_category ?? '');
+    if ($category === 'S') {
+        return (string) $user->user_id;
+    }
+
+    $email = strtolower(trim((string) ($user->email_id ?? '')));
+    if ($category !== '' || $email === '' || ! isOfficerTraineeUser()) {
+        return null;
+    }
+
+    $own = DB::table('student_master')->where('pk', $user->user_id)
+        ->whereRaw('LOWER(TRIM(email)) = ?', [$email])->exists()
+        && ! DB::table('user_credentials')->where('user_category', 'S')
+            ->where('user_id', $user->user_id)->exists();
+
+    return $own ? (string) $user->user_id : null;
+}
+
+/**
+ * A staff screen gated on the sidebar's own rule (hasMenuPermission(): Super Admin,
+ * or holding one of the menu permissions that link to it), with trainee logins
+ * refused first, whatever they hold. The route then agrees with the menu by
+ * construction, and granting the menu on the roles screen widens access with no
+ * deploy (PR #334 F-009).
+ */
+function canUseStaffMenu(string ...$permissions): bool
+{
+    // Super Admin first: a Super Admin whose login is category S is still an
+    // administrator (PR #334 F-059). hasRole() reads the database role here.
+    return Auth::check()
+        && (isSidebarPrivilegedUser() || (! isTraineeLogin() && hasMenuPermission(...$permissions)));
+}
+
+/**
+ * Who may author notices — the list, create/edit/delete, and the audience lookups
+ * behind the form (PR #334 F-003, F-013). The Add Notice buttons ask the same
+ * question, so the screen never offers what the route refuses.
+ */
+function canAuthorNotices(): bool
+{
+    return canUseStaffMenu(...\App\Http\Controllers\Admin\NoticeNotificationController::AUTHOR_PERMISSIONS);
 }
 
 /**
@@ -1081,6 +1169,103 @@ function is_faculty_portal_user(): bool
 }
 
 /**
+ * Lower-case name words of 3+ letters, without honorifics, for comparing a
+ * person's name with a faculty_master.full_name.
+ *
+ * @return string[]
+ */
+function faculty_name_tokens(string $name): array
+{
+    $stop = ['shri', 'smt', 'sri', 'mrs', 'miss', 'prof', 'kumari'];
+    $words = preg_split('/[^a-z]+/', strtolower($name), -1, PREG_SPLIT_NO_EMPTY);
+
+    return array_values(array_diff(array_filter($words, fn ($w) => strlen($w) >= 3), $stop));
+}
+
+/**
+ * The faculty_master row a person's mobile or email identifies, or null.
+ *
+ * Contact data holds placeholders ("0", "2303", "1234512345", "LBSNAA@nic.in")
+ * shared by unrelated rows, so a contact only identifies a faculty when all
+ * three hold: it is a real value (10+ digits, not one repeated digit / a valid
+ * email address), exactly one faculty_master row carries it, and that row's
+ * full_name shares a name with $names. Otherwise null, never a guess.
+ *
+ * @param  string[]  $names  the person's first / last name
+ */
+function faculty_pk_by_contact(?string $mobile, ?string $email, array $names): ?int
+{
+    $wanted = faculty_name_tokens(implode(' ', $names));
+    if ($wanted === []) {
+        return null;
+    }
+
+    foreach (faculty_rows_by_contact($mobile, $email) as $row) {
+        if (array_intersect(faculty_name_tokens((string) $row->full_name), $wanted) !== []) {
+            return (int) $row->pk;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * The faculty_master rows a real contact identifies on its own (no name check):
+ * for the mobile, then the email, the one row carrying it when exactly one does.
+ * Real means 10+ digits and not one repeated digit, or a valid email address.
+ *
+ * @return \App\Models\FacultyMaster[]
+ */
+function faculty_rows_by_contact(?string $mobile, ?string $email): array
+{
+    $candidates = [];
+
+    $mobile = trim((string) $mobile);
+    $digits = preg_replace('/\D+/', '', $mobile);
+    if (strlen($digits) >= 10 && ! preg_match('/^(\d)\1+$/', $digits)) {
+        $candidates[] = \App\Models\FacultyMaster::where('mobile_no', $mobile)->limit(2)->get(['pk', 'full_name', 'employee_master_pk']);
+    }
+
+    $email = trim((string) $email);
+    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $candidates[] = \App\Models\FacultyMaster::where(function ($q) use ($email) {
+            $q->where('email_id', $email)->orWhere('alternate_email_id', $email);
+        })->limit(2)->get(['pk', 'full_name', 'employee_master_pk']);
+    }
+
+    $rows = [];
+    foreach ($candidates as $found) {
+        if ($found->count() === 1) {
+            $rows[] = $found[0];
+        }
+    }
+
+    return $rows;
+}
+
+/**
+ * The faculty_master column that holds the logged-in user's user_id. A faculty
+ * login (user_category F) stores faculty_master.pk itself; every other login
+ * stores an employee pk, linked through faculty_master.employee_master_pk.
+ * Neither falls back to the other.
+ */
+function login_faculty_key_column(): string
+{
+    return (Auth::user()->user_category ?? null) === 'F' ? 'pk' : 'employee_master_pk';
+}
+
+/**
+ * old($key, $default) as a string for a form to re-select. A field posted as
+ * name[]=x comes back as an array, and (string) on it is a 500: use the default.
+ */
+function old_string(string $key, $default = ''): string
+{
+    $value = old($key, $default);
+
+    return is_scalar($value) ? (string) $value : (string) $default;
+}
+
+/**
  * Resolve faculty_master.pk for the authenticated user.
  *
  * Mapping used across the app:
@@ -1128,21 +1313,16 @@ function get_auth_faculty_master_pk(): ?int
         }
     }
 
-    // 4) Match faculty by login mobile / email (guest faculty without employee link)
-    if (! empty($user->mobile_no)) {
-        $pk = \App\Models\FacultyMaster::where('mobile_no', $user->mobile_no)->value('pk');
-        if ($pk) {
-            return (int) $pk;
-        }
+    // 4) Match faculty by login mobile / email (guest faculty without employee link),
+    //    only when the contact is real, unique and the names agree (faculty_pk_by_contact).
+    $names = [(string) ($user->first_name ?? ''), (string) ($user->last_name ?? '')];
+    if (trim(implode('', $names)) === '') {
+        $employee = \Illuminate\Support\Facades\DB::table('employee_master')->where('pk', $userId)->first(['first_name', 'last_name']);
+        $names = [(string) ($employee->first_name ?? ''), (string) ($employee->last_name ?? '')];
     }
-
-    if (! empty($user->user_name)) {
-        $pk = \App\Models\FacultyMaster::where('email_id', $user->user_name)
-            ->orWhere('alternate_email_id', $user->user_name)
-            ->value('pk');
-        if ($pk) {
-            return (int) $pk;
-        }
+    $pk = faculty_pk_by_contact($user->mobile_no, $user->user_name, $names);
+    if ($pk) {
+        return $pk;
     }
 
     // 5) Legacy alignment with CalendarController::feedbackList & coordinator rows using user_id as faculty pk
@@ -1406,32 +1586,28 @@ function provision_faculty_profile_from_employee_user(): ?int
     $mobile = trim((string) ($user->mobile_no ?: $employee->mobile ?? ''));
     $email = trim((string) ($employee->email ?? ''));
 
-    // Link existing faculty that was never tied to this employee
-    $existingQuery = \App\Models\FacultyMaster::query()->whereNull('employee_master_pk');
-
-    if ($mobile !== '') {
-        $linked = (clone $existingQuery)->where('mobile_no', $mobile)->first();
-        if ($linked) {
-            $linked->update(['employee_master_pk' => $employeePk]);
-
-            return (int) $linked->pk;
-        }
-    }
-
-    if ($email !== '') {
-        $linked = (clone $existingQuery)->where('email_id', $email)
-            ->orWhere('alternate_email_id', $email)
-            ->first();
-        if ($linked && empty($linked->employee_master_pk)) {
-            $linked->update(['employee_master_pk' => $employeePk]);
-
-            return (int) $linked->pk;
-        }
+    // Link an existing faculty that was never tied to an employee — only one the
+    // contact identifies beyond doubt (faculty_pk_by_contact). Placeholder
+    // contacts ("0", "2303") used to tie this employee to an unrelated faculty.
+    $contactPk = faculty_pk_by_contact($mobile, $email, [(string) ($employee->first_name ?? ''), (string) ($employee->last_name ?? '')]);
+    if ($contactPk
+        && \App\Models\FacultyMaster::where('pk', $contactPk)->whereNull('employee_master_pk')
+            ->update(['employee_master_pk' => $employeePk]) === 1) {
+        return $contactPk;
     }
 
     // Already linked elsewhere
     if (\App\Models\FacultyMaster::where('employee_master_pk', $employeePk)->exists()) {
         return (int) \App\Models\FacultyMaster::where('employee_master_pk', $employeePk)->value('pk');
+    }
+
+    // The contact names an unlinked faculty whose name did not match (e.g. "Prem V R"
+    // / "Premkumar VR"): likely the same person, so creating a row would duplicate
+    // them. Leave the link to an administrator (PR #335 review F-013).
+    foreach (faculty_rows_by_contact($mobile, $email) as $row) {
+        if (empty($row->employee_master_pk)) {
+            return null;
+        }
     }
 
     $facultyType = hasRole('Guest Faculty') ? 2 : 1;
@@ -1652,14 +1828,84 @@ function get_profile_pic()
         return $profile_pic;
     }
 }
+if (!function_exists('notice_safe_html')) {
+    /**
+     * A notice description reduced to formatting HTML (PR #334 F-003).
+     *
+     * The description is rich text from the Summernote editor and is rendered as
+     * HTML in every reader's feed and dashboard, so it goes through HTMLPurifier
+     * with an allow-list: the formatting the editor produces stays, while script,
+     * event handlers, javascript: URLs, iframes, forms and style blocks are removed.
+     * Applied on save AND at every render, because rows saved before this existed
+     * were stored verbatim.
+     */
+    function notice_safe_html($html): string
+    {
+        if (! is_string($html) || trim($html) === '') {
+            return '';
+        }
+
+        static $purifier = null;
+
+        if ($purifier === null) {
+            $config = \HTMLPurifier_Config::createDefault();
+
+            $cacheDir = storage_path('framework/cache/htmlpurifier');
+            if (! is_dir($cacheDir)) {
+                @mkdir($cacheDir, 0755, true);
+            }
+            if (is_dir($cacheDir) && is_writable($cacheDir)) {
+                $config->set('Cache.SerializerPath', $cacheDir);
+            } else {
+                $config->set('Cache.DefinitionImpl', null);
+            }
+
+            $config->set('HTML.Allowed', implode(',', [
+                'p[style]', 'div[style]', 'span[style]', 'br', 'hr',
+                'b', 'strong', 'i', 'em', 'u', 's', 'strike', 'sub[style]', 'sup[style]',
+                'font[color|face|size]',
+                'h1[style]', 'h2[style]', 'h3[style]', 'h4[style]', 'h5[style]', 'h6[style]',
+                'ul[style]', 'ol[style]', 'li[style]', 'blockquote[style]', 'pre', 'code',
+                'a[href|title|target]', 'img[src|alt|title|width|height|style]',
+                'table[style|border]', 'thead', 'tbody', 'tfoot', 'tr[style]',
+                'th[colspan|rowspan|style]', 'td[colspan|rowspan|style]',
+            ]));
+            $config->set('CSS.AllowedProperties', implode(',', [
+                'color', 'background-color', 'font-size', 'font-family', 'font-weight',
+                'font-style', 'text-decoration', 'text-align', 'line-height',
+                'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
+                'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+                'border', 'width', 'height',
+            ]));
+            $config->set('Attr.AllowedFrameTargets', ['_blank']);
+            $config->set('HTML.TargetNoopener', true);
+            $config->set('URI.AllowedSchemes', ['http' => true, 'https' => true, 'mailto' => true, 'data' => true]);
+
+            $purifier = new \HTMLPurifier($config);
+        }
+
+        return $purifier->purify($html);
+    }
+}
 if (!function_exists('notice_feed_base_query')) {
     /**
      * Base notice query with the author name and department resolved.
      * Columns are table-qualified because user_credentials / department_master
      * carry their own active_inactive + pk columns.
+     *
+     * $scope selects which side of expiry_date to read:
+     *   live    — still current (the default; what the dashboard widget shows)
+     *   archive — already expired, newest first
+     *   all     — both
+     *
+     * Archive reverses the sort: a live feed reads forward from today, an
+     * archive reads backward from it, so the most recently expired notice is
+     * the one a user is looking for first.
      */
-    function notice_feed_base_query()
+    function notice_feed_base_query(string $scope = 'live')
     {
+        $today = date('Y-m-d');
+
         return DB::table('notices_notification')
             ->leftJoin('user_credentials as notice_author', 'notice_author.pk', '=', 'notices_notification.created_by')
             ->leftJoin('employee_master as notice_author_emp', 'notice_author_emp.pk', '=', 'notice_author.user_id')
@@ -1680,8 +1926,63 @@ if (!function_exists('notice_feed_base_query')) {
                 'notice_author_dept.department_name as author_department'
             )
             ->where('notices_notification.active_inactive', 1)
-            ->where('notices_notification.expiry_date', '>=', date('Y-m-d'))
+            ->when($scope === 'live', function ($q) use ($today) {
+                $q->where('notices_notification.expiry_date', '>=', $today);
+            })
+            ->when($scope === 'archive', function ($q) use ($today) {
+                $q->where('notices_notification.expiry_date', '<', $today);
+            })
             ->orderBy('notices_notification.display_date', 'desc');
+    }
+}
+if (!function_exists('notice_audience_has_any')) {
+    /**
+     * "This notice has an audience row of $type pointing at one of $ids."
+     *
+     * EXISTS rather than a join: a notice can carry several rows of the same
+     * type (that is the point of multi-select), and a join would emit the notice
+     * once per matching row — duplicate cards, and a count() that cannot drive
+     * pagination without a distinct().
+     */
+    function notice_audience_has_any($query, string $type, array $ids): void
+    {
+        if (empty($ids)) {
+            $query->whereRaw('1 = 0');
+            return;
+        }
+
+        $query->whereExists(function ($sub) use ($type, $ids) {
+            $sub->select(DB::raw(1))
+                ->from('notice_audience_map')
+                ->whereColumn('notice_audience_map.notices_notification_pk', 'notices_notification.pk')
+                ->where('notice_audience_map.audience_type', $type)
+                ->whereIn('notice_audience_map.reference_pk', $ids);
+        });
+    }
+}
+if (!function_exists('notice_audience_unpinned_or_any')) {
+    /**
+     * "This notice is not pinned to any $type, or it is pinned to one of mine."
+     *
+     * No rows of a type is how "Select All" is stored: the author narrowed
+     * nothing, so the notice reaches every course / department.
+     */
+    function notice_audience_unpinned_or_any($query, string $type, array $ids): void
+    {
+        $query->where(function ($w) use ($type, $ids) {
+            $w->whereNotExists(function ($sub) use ($type) {
+                $sub->select(DB::raw(1))
+                    ->from('notice_audience_map')
+                    ->whereColumn('notice_audience_map.notices_notification_pk', 'notices_notification.pk')
+                    ->where('notice_audience_map.audience_type', $type);
+            });
+
+            if (!empty($ids)) {
+                $w->orWhere(function ($m) use ($type, $ids) {
+                    notice_audience_has_any($m, $type, $ids);
+                });
+            }
+        });
     }
 }
 if (!function_exists('notice_feed_query_by_role')) {
@@ -1695,9 +1996,13 @@ if (!function_exists('notice_feed_query_by_role')) {
      * Each role resolves to ONE statement — the previous version ran a second
      * query per role and merged the two collections, which cannot be paginated.
      *
+     * $scope is passed straight to notice_feed_base_query() — 'live' (default),
+     * 'archive' or 'all'. Who may see a notice never depends on whether it has
+     * expired, so the role predicates below are identical for every scope.
+     *
      * @return \Illuminate\Database\Query\Builder|null  null when unauthenticated
      */
-    function notice_feed_query_by_role()
+    function notice_feed_query_by_role(string $scope = 'live')
     {
         $user = Auth::user();
         if (!$user) {
@@ -1706,19 +2011,84 @@ if (!function_exists('notice_feed_query_by_role')) {
 
         $sessionRoles = Session::get('user_roles', []);
 
-        $roleStaffFaculty = ['Internal Faculty', 'Guest Faculty', 'Training', 'Staff'];
-        $roleStudent      = ['Student-OT'];
+        // user_category is the authoritative split: E = employee, S = student.
+        // The role-name list below is only a fallback for credentials that have
+        // no category set.
+        //
+        // It cannot be the primary test. user_role_master holds 30+ roles and an
+        // employee is far more likely to hold 'Admin', 'Faculty', 'Employee',
+        // 'Doctor', 'Estate' or 'Training-MCTP' than the four names this list
+        // used to check — 'Training' matches no role at all. Every one of those
+        // employees fell through to the final "only 'All' notices" branch, which
+        // is why Staff/Faculty notices reached nobody.
+        $category = (string) ($user->user_category ?? '');
 
-        $isStaffFaculty = !empty(array_intersect($roleStaffFaculty, $sessionRoles));
-        $isStudent      = !empty(array_intersect($roleStudent, $sessionRoles));
+        $roleStaffFaculty = [
+            'Internal Faculty', 'Guest Faculty', 'Staff', 'Faculty', 'Employee',
+            'Doctor', 'Admin', 'Super Admin', 'Personal Assistant', 'Estate',
+            'Estate Admin', 'Estate HAC', 'Mess-Staff', 'Mess-Admin',
+            'Training-Induction', 'Training-MCTP', 'Training MCTP Admin',
+            'Training IST', 'IST', 'Discipline Admin', 'Admin Security',
+            'Security Card', 'Centcom Admin', 'CR-Admin', 'TA and RF',
+        ];
+        $roleStudent = ['Student-OT', 'Officer Trainee'];
 
-        $query = notice_feed_base_query();
+        // 'F' is a faculty login (is_faculty_portal_user()), so it gets the
+        // Staff/Faculty notices. Any category other than E / F / S keeps the
+        // role-based test the feed used before categories were read (PR #334 F-021).
+        $knownCategory = in_array($category, ['E', 'F', 'S'], true);
+        $isStaffFaculty = in_array($category, ['E', 'F'], true)
+            || (! $knownCategory && !empty(array_intersect($roleStaffFaculty, $sessionRoles)));
+        $isStudent = $category === 'S'
+            || (! $knownCategory && !empty(array_intersect($roleStudent, $sessionRoles)));
 
-        // Staff/Faculty: everyone's "All" notices plus their own audience.
+        $query = notice_feed_base_query($scope);
+
+        // Staff/Faculty: everyone's "All" notices plus their own audience,
+        // narrowed by the notice's departments and individual-recipient list.
+        // No department rows means "all departments", and a NULL audience_mode is
+        // every notice written before this targeting existed — both reach everyone.
         if ($isStaffFaculty) {
-            return $query->where(function ($w) {
+            // A category-F login's user_id is a faculty_master.pk, not an employee
+            // pk (see get_auth_faculty_master_pk()); its employee is the faculty
+            // row's employee_master_pk, and a guest faculty has none.
+            // Only a category-E login's user_id is an employee pk; any other category
+            // is matched by role alone, never as an employee (PR #334 F-058).
+            $employeePk = match ($category) {
+                'F' => DB::table('faculty_master')->where('pk', $user->user_id)->value('employee_master_pk'),
+                'E' => $user->user_id,
+                default => null,
+            };
+
+            $departmentIds = $employeePk === null ? [] : DB::table('employee_master')
+                ->where('pk', $employeePk)
+                ->pluck('department_master_pk')
+                // Not ->filter(): department pk 0 (NIAR) is real, and dropping it
+                // would hide NIAR-pinned notices from NIAR's own staff.
+                ->reject(fn ($pk) => $pk === null || $pk === '')
+                ->values()
+                ->all();
+
+            $employeeIds = $employeePk === null ? [] : [$employeePk];
+
+            return $query->where(function ($w) use ($employeeIds, $departmentIds) {
                 $w->where('notices_notification.target_audience', 'All')
-                    ->orWhere('notices_notification.target_audience', 'like', '%Staff/Faculty%');
+                    ->orWhere(function ($o) use ($employeeIds, $departmentIds) {
+                        $o->where('notices_notification.target_audience', 'like', '%Staff/Faculty%');
+
+                        // An individual notice reaches its named employees wherever they
+                        // now work (PR #334 F-044); any other notice by department.
+                        $o->where(function ($m) use ($employeeIds, $departmentIds) {
+                            $m->where(function ($i) use ($employeeIds) {
+                                $i->where('notices_notification.audience_mode', 'individual');
+                                notice_audience_has_any($i, 'E', $employeeIds);
+                            })->orWhere(function ($d) use ($departmentIds) {
+                                $d->where(fn ($mode) => $mode->where('notices_notification.audience_mode', '!=', 'individual')
+                                    ->orWhereNull('notices_notification.audience_mode'));
+                                notice_audience_unpinned_or_any($d, 'D', $departmentIds);
+                            });
+                        });
+                    });
             });
         }
 
@@ -1729,20 +2099,67 @@ if (!function_exists('notice_feed_query_by_role')) {
         // row (duplicate cards), and a joined query cannot be counted for
         // pagination without a distinct().
         if ($isStudent) {
+            $studentPk = auth_student_master_pk();
+
+            // A no-category trainee without a verified student identity gets only
+            // notices explicitly addressed to everyone (PR #334 F-069).
+            if ($category === '' && $studentPk === null) {
+                return $query->where('notices_notification.target_audience', 'All');
+            }
+
+            $studentIds = $studentPk === null ? [] : [$studentPk];
+
             $courseIds = DB::table('student_master_course__map')
-                ->where('student_master_pk', $user->user_id)
+                ->whereIn('student_master_pk', $studentIds)
                 ->distinct()
                 ->pluck('course_master_pk');
 
-            return $query->where(function ($w) use ($courseIds) {
-                $w->where('notices_notification.target_audience', 'All');
+            // Groups the OT belongs to, for notices aimed at one group type.
+            $groupIds = DB::table('student_course_group_map')
+                ->whereIn('student_master_pk', $studentIds)
+                ->where('active_inactive', 1)
+                ->distinct()
+                ->pluck('group_type_master_course_master_map_pk');
 
-                if ($courseIds->isNotEmpty()) {
-                    $w->orWhere(function ($o) use ($courseIds) {
-                        $o->where('notices_notification.target_audience', 'like', '%Office trainee%')
-                            ->whereIn('notices_notification.course_master_pk', $courseIds);
+            return $query->where(function ($w) use ($studentIds, $courseIds, $groupIds) {
+                $w->where('notices_notification.target_audience', 'All')
+                    ->orWhere(function ($o) use ($studentIds, $courseIds, $groupIds) {
+                        $o->where('notices_notification.target_audience', 'like', '%Office trainee%');
+
+                        // No course rows = the author picked "Select All" courses —
+                        // but only on a notice saved through the targeting form,
+                        // which always sets audience_mode. A notice from before it
+                        // (NULL mode) reached only the OTs of its course_master_pk,
+                        // and the backfill wrote a C row only where that was > 0;
+                        // with no C row it reached nobody, and still does, rather
+                        // than every OT after deploy (PR #334 F-046).
+                        $o->where(function ($c) use ($courseIds) {
+                            $c->where(function ($legacy) use ($courseIds) {
+                                $legacy->whereNull('notices_notification.audience_mode');
+                                notice_audience_has_any($legacy, 'C', $courseIds->all());
+                            })->orWhere(function ($targeted) use ($courseIds) {
+                                $targeted->whereNotNull('notices_notification.audience_mode');
+                                notice_audience_unpinned_or_any($targeted, 'C', $courseIds->all());
+                            });
+                        });
+
+                        $o->where(function ($m) use ($studentIds, $groupIds) {
+                            // NULL mode = a notice written before this targeting
+                            // existed; it reaches the whole course.
+                            $m->whereNull('notices_notification.audience_mode')
+                                ->orWhere('notices_notification.audience_mode', 'all')
+                                ->orWhere(function ($g) use ($groupIds) {
+                                    $g->where('notices_notification.audience_mode', 'group');
+
+                                    notice_audience_has_any($g, 'G', $groupIds->all());
+                                })
+                                ->orWhere(function ($i) use ($studentIds) {
+                                    $i->where('notices_notification.audience_mode', 'individual');
+
+                                    notice_audience_has_any($i, 'S', $studentIds);
+                                });
+                        });
                     });
-                }
             });
         }
 
