@@ -350,14 +350,20 @@ class UserController extends Controller
 
         // Protocol Staff counts, same scope as the cards on the /protocol dashboard
         $isProtocolStaff = Auth::user()->can('protocol.protocol_requests');
-        $protocolCounts = ['guesthouse' => 0, 'vehicle' => 0, 'ticket' => 0, 'pending' => 0];
+        $protocolCounts = ['guesthouse' => 0, 'vehicle' => 0, 'ticket' => 0, 'pending' => 0, 'recommended' => 0];
         if ($isProtocolStaff) {
             $protocolApproval = app(\Modules\Protocol\Services\ApprovalService::class);
             foreach ($protocolApproval->allowedRequestTypes() as $type) {
                 $protocolCounts[$type] = $protocolApproval->scopedQuery()->where('request_type', $type)->count();
             }
             $protocolCounts['pending'] = \Modules\Protocol\Entities\ProtocolRequest::awaitingProtocolStaff(Auth::id())->count();
+            // Recommended requests in the All Requests scope that still await a decision
+            $protocolCounts['recommended'] = $protocolApproval->scopedQuery()->where('status', \Modules\Protocol\Entities\ProtocolRequest::STATUS_RECOMMENDED)->count();
         }
+
+        // Employee's own protocol requests, same count as the "All" tab on My Requests
+        $canRaiseProtocol = Auth::user()->can('protocol.my_requests');
+        $myProtocolCount = $canRaiseProtocol ? \Modules\Protocol\Entities\ProtocolRequest::forUser(Auth::id())->count() : 0;
 
         // Hardcoded card definitions: count, link, visibility
         $cardDefinitions = [
@@ -384,6 +390,8 @@ class UserController extends Controller
             'protocol_vehicle_pass_requests'=> ['count' => $protocolCounts['vehicle'],          'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'vehicle']) : null,    'visible' => $isProtocolStaff],
             'protocol_ticket_requests'      => ['count' => $protocolCounts['ticket'],           'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'ticket']) : null,     'visible' => $isProtocolStaff],
             'protocol_pending_my_action'    => ['count' => $protocolCounts['pending'],          'link' => $isProtocolStaff ? route('protocol.approval.queue') : null,                        'visible' => $isProtocolStaff],
+            'protocol_recommend_action'     => ['count' => $protocolCounts['recommended'],      'link' => $isProtocolStaff ? route('protocol.requests.all') : null,                          'visible' => $isProtocolStaff],
+            'my_protocol_request'         => ['count' => $myProtocolCount,                    'link' => $canRaiseProtocol ? route('protocol.requests.my') : null,                          'visible' => $canRaiseProtocol],
         ];
 
         // Count map for custom cards added via UI.
