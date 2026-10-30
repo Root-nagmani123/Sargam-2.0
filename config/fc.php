@@ -286,9 +286,12 @@ return [
     | FcRosterApplicationGuardService::exemptionRestrictedServiceIds().
     |
     */
-    'exemption_restricted_services' => array_values(array_filter(array_map(
-        'trim',
-        explode(',', (string) env('FC_EXEMPTION_RESTRICTED_SERVICES', 'IAS'))
-    ))),
+    // Disabled for now: no service is barred from applying for an exemption. With the key
+    // absent, config() returns the [] default and hasExemptionRestrictedService() is false.
+    // Uncomment to restore the IAS restriction.
+    // 'exemption_restricted_services' => array_values(array_filter(array_map(
+    //     'trim',
+    //     explode(',', (string) env('FC_EXEMPTION_RESTRICTED_SERVICES', 'IAS'))
+    // ))),
 
 ];

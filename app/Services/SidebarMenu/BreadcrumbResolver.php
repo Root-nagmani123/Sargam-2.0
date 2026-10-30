@@ -27,8 +27,8 @@ class BreadcrumbResolver
 
         $memoKey = ($pageTitle ?? '')."\0".($path ?? '')."\0".($routeName ?? '')
             ."\0".request()->path()
-            ."\0".(string) request()->get('menu')
-            ."\0".(string) request()->get('category');
+            ."\0".SidebarNavResolver::scalarQuery('menu')
+            ."\0".SidebarNavResolver::scalarQuery('category');
 
         if (array_key_exists($memoKey, $memo)) {
             return $memo[$memoKey];

@@ -24,7 +24,7 @@ class MDOEscrotExemptionDataTable extends DataTable
             ->editColumn('mdo_name', function ($row) {
                 $name = optional($row->mdoDutyTypeMaster)->mdo_duty_type_name ?? 'N/A';
                 if (!empty($row->duty_other)) {
-                    $name .= ' (' . e($row->duty_other) . ')';
+                    $name .= ' (' . $row->duty_other . ')';
                 }
                 return $name;
             })
@@ -94,46 +94,29 @@ class MDOEscrotExemptionDataTable extends DataTable
                     });
                 }
             }, true)
+            // Action: Edit · Delete as icon-over-label stacks — the shared
+            // admin.master.partials.grid-actions markup (docs/new-design-index-page.md §3b).
+            // Edit keeps its .mee-edit-btn / data-edit-id hook (the page opens
+            // #meeEditModal from edit-data/{id}); Delete stays a plain DELETE form,
+            // which the page's own #meeDeleteConfirmModal intercepts via
+            // form.mee-delete-form. destroy() refuses nothing, so Delete is never disabled.
             ->addColumn('actions', function ($row) {
-                $deleteUrl = route('mdo-escrot-exemption.destroy', $row->pk);
-                $csrf = csrf_token();
-                $formId = 'delete-form-' . $row->pk;
+                $label = optional($row->studentMaster)->display_name;
 
-                return <<<HTML
-<div class="d-flex justify-content-center align-items-center gap-2"
-     role="group"
-     aria-label="Row actions">
-
-    <!-- Edit -->
-    <a href="javascript:void(0)"
-       class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2 mee-edit-btn border-0 bg-transparent p-0"
-       data-edit-id="{$row->pk}"
-       aria-label="Edit record">
-        <span class="material-icons material-symbols-rounded"
-              style="font-size:20px;"
-              aria-hidden="true">edit</span>
-    </a>
-
-    <!-- Delete -->
-    <form id="{$formId}" action="{$deleteUrl}" method="POST" class="d-inline">
-        <input type="hidden" name="_token" value="{$csrf}">
-        <input type="hidden" name="_method" value="DELETE">
-
-        <button type="submit"
-                class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 px-2 border-0 bg-transparent p-0"
-                aria-label="Delete record"
-                onclick="return confirm('Are you sure you want to delete this record?');">
-            <span class="material-icons material-symbols-rounded"
-                  style="font-size:20px;"
-                  aria-hidden="true">delete</span>
-        </button>
-    </form>
-
-</div>
-
-HTML;
+                return view('admin.master.partials.grid-actions', [
+                    'name'   => $label ? trim($label) : 'this record',
+                    'edit'   => [
+                        'class' => 'mee-edit-btn',
+                        'attrs' => ['data-edit-id' => $row->pk],
+                    ],
+                    'delete' => [
+                        'action'     => route('mdo-escrot-exemption.destroy', $row->pk),
+                        'form_class' => 'mee-delete-form',
+                    ],
+                ])->render();
             })
-            ->rawColumns(['student_name', 'ot_code', 'course_name', 'mdo_name', 'faculty_name', 'actions']);
+            // Name columns are plain text — Yajra escapes them; only the action stack is HTML.
+            ->rawColumns(['actions']);
     }
 
     public function query(): QueryBuilder
@@ -258,17 +241,17 @@ public function html(): HtmlBuilder
     {
         // Column order mirrors the reference mockup exactly.
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('mdo_date')->title('Date')->orderable(true)->searchable(false),
-            Column::make('ot_code')->title('OT Code')->addClass('text-center')->orderable(true)->searchable(true),
-            Column::make('student_name')->title('Student Name')->addClass('text-center')->orderable(true)->searchable(true),
-            Column::make('Time_from')->title('Time From')->orderable(true)->searchable(false)->addClass('text-center'),
-            Column::make('Time_to')->title('Time To')->orderable(true)->searchable(false)->addClass('text-center'),
-            Column::make('course_name')->title('Programme Name')->addClass('text-center')->searchable(true)->orderable(true),
-            Column::make('mdo_name')->title('Duty Type')->addClass('text-center')->searchable(true)->orderable(true),
-            Column::make('faculty_name')->title('Faculty Name')->addClass('text-center')->searchable(true)->orderable(true),
-            Column::make('Remark')->title('Remarks')->addClass('text-center')->searchable(true)->orderable(true),
-            Column::computed('actions')->title('Action')->addClass('text-center')->orderable(false),
+            Column::computed('DT_RowIndex')->title('S. No.')->addClass('text-nowrap')->width('5.5rem')->orderable(false)->searchable(false),
+            Column::make('mdo_date')->title('Date')->addClass('text-nowrap')->orderable(true)->searchable(false),
+            Column::make('ot_code')->title('OT Code')->addClass('text-nowrap')->orderable(true)->searchable(true),
+            Column::make('student_name')->title('Student Name')->addClass('mst-col-wrap')->orderable(true)->searchable(true),
+            Column::make('Time_from')->title('Time From')->orderable(true)->searchable(false)->addClass('text-nowrap'),
+            Column::make('Time_to')->title('Time To')->orderable(true)->searchable(false)->addClass('text-nowrap'),
+            Column::make('course_name')->title('Programme Name')->addClass('mst-col-wrap')->searchable(true)->orderable(true),
+            Column::make('mdo_name')->title('Duty Type')->addClass('text-nowrap')->searchable(true)->orderable(true),
+            Column::make('faculty_name')->title('Faculty Name')->addClass('mst-col-wrap')->searchable(true)->orderable(true),
+            Column::make('Remark')->title('Remarks')->addClass('mst-col-wrap')->searchable(true)->orderable(true),
+            Column::computed('actions')->title('Action')->addClass('text-nowrap')->width('8rem')->orderable(false),
         ];
 
     }

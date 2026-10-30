@@ -28,51 +28,46 @@ class BuildingMasterDataTable extends DataTable
             ->addColumn('no_of_floors', fn($row) => $row->no_of_floors ?? '-')
             ->addColumn('no_of_rooms', fn($row) => $row->no_of_rooms ?? '-')
             ->addColumn('building_type', fn($row) => $row->building_type ?? '-')
-            ->addColumn('status', function ($row) {
-                return (int) $row->active_inactive === 1
-                    ? '<span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>'
-                    : '<span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>';
-            })
+            // Status: display-only soft badge. The switch lives in the Action stack.
+            ->addColumn('status', fn ($row) => view('admin.master.partials.grid-status', [
+                'active' => (int) $row->active_inactive === 1,
+            ])->render())
+            // Action: Edit · status switch · Delete (docs/new-design-index-page.md §3b).
+            // Edit stays a .hb-edit-btn button carrying the row's data-* so the
+            // page's Add/Edit modal keeps prefilling from it.
             ->addColumn('action', function ($row) {
-                $deleteUrl = route('master.hostel.building.destroy', ['id' => encrypt($row->pk)]);
-                $isActive  = (int) $row->active_inactive === 1;
-                $checked   = $isActive ? 'checked' : '';
-                $deleteDisabled = $isActive ? 'disabled' : '';
-                $csrf = csrf_token();
+                $isActive = (int) $row->active_inactive === 1;
 
-                $editBtn = '<button type="button" class="programme-action-btn hb-edit-btn" aria-label="Edit building"'
-                        . ' data-id="' . encrypt($row->pk) . '"'
-                        . ' data-name="' . e($row->building_name) . '"'
-                        . ' data-floors="' . e($row->no_of_floors) . '"'
-                        . ' data-rooms="' . e($row->no_of_rooms) . '"'
-                        . ' data-type="' . e($row->building_type) . '"'
-                        . ' data-status="' . (int) $row->active_inactive . '">'
-                        . '<i class="bi bi-pencil" aria-hidden="true"></i>'
-                        . '</button>';
-
-                $deleteHtml = '<form action="' . $deleteUrl . '" method="POST" class="d-inline-flex m-0" onsubmit="return confirm(\'Are you sure you want to delete this building?\')">'
-                        . '<input type="hidden" name="_token" value="' . $csrf . '">'
-                        . '<input type="hidden" name="_method" value="DELETE">'
-                        . '<button type="submit" class="programme-action-btn programme-action-btn--danger" aria-label="Delete building" ' . $deleteDisabled . '>'
-                        . '<i class="bi bi-trash3" aria-hidden="true"></i>'
-                        . '</button>'
-                        . '</form>';
-
-                return '
-                <div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Row actions">
-                    ' . $editBtn . '
-                    <div class="form-check form-switch programme-action-switch mb-0">
-                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                            data-table="building_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
-                    </div>
-                    ' . $deleteHtml . '
-                </div>';
+                return view('admin.master.partials.grid-actions', [
+                    'name'   => $row->building_name ?? '',
+                    'edit'   => [
+                        'class' => 'hb-edit-btn',
+                        'attrs' => [
+                            'data-id'     => encrypt($row->pk),
+                            'data-name'   => $row->building_name,
+                            'data-floors' => $row->no_of_floors,
+                            'data-rooms'  => $row->no_of_rooms,
+                            'data-type'   => $row->building_type,
+                            'data-status' => (int) $row->active_inactive,
+                        ],
+                    ],
+                    'toggle' => [
+                        'active' => $isActive,
+                        'table'  => 'building_master',
+                        'column' => 'active_inactive',
+                        'id'     => $row->pk,
+                    ],
+                    // Active buildings were never deletable from this grid — keep that rule.
+                    'delete' => $isActive
+                        ? ['disabled' => true, 'reason' => 'Active buildings cannot be deleted. Deactivate it first.']
+                        : ['action' => route('master.hostel.building.destroy', ['id' => encrypt($row->pk)])],
+                ])->render();
             })
             ->setRowId('pk')
             ->filterColumn('building_name', function ($query, $keyword) {
                 $query->where('building_name', 'like', "%{$keyword}%");
             })
-            ->rawColumns(['building_name', 'action', 'status']);
+            ->rawColumns(['action', 'status']); // building_name is plain text — escaped
     }
 
     /**
@@ -140,13 +135,13 @@ class BuildingMasterDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S. No.')->searchable(false)->orderable(false)->addClass('text-center'),
+            Column::computed('DT_RowIndex')->title('S. No.')->searchable(false)->orderable(false)->addClass('text-nowrap')->width('5.5rem'),
             Column::make('building_name')->title('Building Name')->orderable(false),
             Column::make('no_of_floors')->title('No. of Floors')->orderable(false)->addClass('text-center'),
             Column::make('no_of_rooms')->title('No. of Rooms')->orderable(false)->addClass('text-center'),
             Column::make('building_type')->title('Building Type')->orderable(false),
-            Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center'),
+            Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-nowrap')->width('8rem'),
+            Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-nowrap')->width('13rem'),
         ];
     }
 

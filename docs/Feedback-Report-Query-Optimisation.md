@@ -1,5 +1,116 @@
 # Session-feedback query optimisation
 
+## OT dashboard pending count (F-075, 2026-10-13)
+
+`UserController::getOtPendingFeedbackCount()` now returns
+`COUNT(DISTINCT t.pk, f.pk)` from MySQL instead of sorting, fetching all pending
+pairs and deduplicating/counting them in PHP. `JSON_TABLE` proposes faculty IDs
+from each eligible timetable row, then joins `faculty_master` through its primary
+key rather than scanning every faculty for every session.
+
+The original membership and Teaching predicates remain as guarded residual
+checks on those candidates. This preserves string-vs-number JSON matching,
+duplicates, nested arrays and invalid JSON behavior; it does not claim that all
+JSON operations disappeared. Attendance, active enrolment, completed-session,
+venue/course, submitted-feedback and OT group eligibility are unchanged.
+
+### Required index migration
+
+Run `2026_10_13_130000_add_ot_pending_feedback_lookup_indexes` before performance
+sign-off. It adds two non-unique, name-guarded lookup indexes without rewriting
+application data:
+
+| Table | Index | Columns in order |
+| --- | --- | --- |
+| `course_group_timetable_mapping` | `idx_cgtm_timetable_group` | `timetable_pk`, `group_pk` |
+| `student_course_group_map` | `idx_scgm_student_group` | `student_master_pk`, `group_type_master_course_master_map_pk` |
+
+Use the approved release migration process; review DDL locking/storage impact on
+the target database with the DBA. On Windows the scoped command is:
+
+```powershell
+php artisan migrate --force --path=database\migrations\2026_10_13_130000_add_ot_pending_feedback_lookup_indexes.php
+if ($LASTEXITCODE -ne 0) { throw 'STOP: feedback lookup index migration failed' }
+```
+
+Do not use a broad migration rollback for this index change: other migrations
+in the same batch may carry the notice forward-fix-only dependency. Confirm
+actual index definitions, not just migration history. `JSON_TABLE` requires a
+compatible MySQL 8 runtime; do not infer compatibility with another database
+engine/version from this local result.
+
+### Local timing and plans (not production-size evidence)
+
+The operator authorized measurements and the scoped index migration on
+`testsargam6`, MySQL `8.0.46`. The migration completed there; no production
+migration/deployment was performed.
+
+Measured development cardinalities:
+
+| Table | Rows |
+| --- | ---: |
+| `timetable` | 1,007 |
+| `faculty_master` | 668 |
+| `course_student_attendance` | 69,559 |
+| `topic_feedback` | 52,519 |
+| `student_master_course__map` | 3,796 |
+| `course_group_timetable_mapping` | 1,205 |
+| `student_course_group_map` | 6,595 |
+
+Read-only, interleaved original/optimized comparisons on the 30 most-attended
+trainees matched **60/60 counts** (30 with OT group scoping, 30 without it).
+Both queries used the same database and installed indexes. The original
+reference still fetched pairs and counted them in PHP.
+
+| Mode | Original median | Optimized median | Original max | Optimized max |
+| --- | ---: | ---: | ---: | ---: |
+| Without Student-OT group restriction | 297.60 ms | 10.58 ms | 363.05 ms | 17.09 ms |
+| With authenticated Student-OT group restriction | 265.37 ms | 13.13 ms | 301.85 ms | 16.59 ms |
+
+A separate 15-call repetition on each of the three most-attended trainees
+(authenticated Student-OT mode) returned stable counts of 0, 164 and 87.
+Median times were 12.20, 13.00 and 12.76 ms; all measured calls ranged from
+9.22 to 17.63 ms. These are local warmed count-call timings, not whole-dashboard
+latency, cold-cache results, concurrency measurements, or production guarantees.
+
+`EXPLAIN` and `EXPLAIN ANALYZE` were executed. The optimized plan drives from
+the trainee's attendance index, joins timetable and faculty by primary key,
+and probes submitted feedback through existing indexes. The two new group
+indexes replace the mapping-table scan/hash join with indexed lookups:
+
+| Plan node | Access / key |
+| --- | --- |
+| `csa` | `ref`, `idx_attendance_student` |
+| `t` | `eq_ref`, `PRIMARY` |
+| `listed_faculty` | Per-row `json_table` table function |
+| `f` | `eq_ref`, `PRIMARY` |
+| `cgtm` | `ref`, `idx_cgtm_timetable_group` |
+| `scgm` | `ref`, `idx_scgm_student_group` |
+
+There is no result sort or faculty-table scan in that plan. Some per-session
+JSON processing and distinct aggregation remain. Work still grows with each
+trainee's eligible attended sessions and listed faculty, not a claimed constant
+time. No caching was added: the measured local query was sufficiently cheaper,
+and avoiding cache staleness means a submitted feedback is reflected immediately.
+
+Regression coverage: `tests/Feature/OtPendingFeedbackCountTest.php` (rolled-back
+fixtures) and the existing OT dashboard-category tests. The checks cover JSON
+shapes, duplicate attendance/enrolment/faculty/group rows, separate faculty
+submissions, freshness, filters, trainee group scope and actual index order.
+
+### Remaining release gate
+
+**Production-size sign-off remains pending.** DBA / Performance owner must run
+the exact candidate on a designated production-like copy with representative
+course, timetable, faculty, attendance and feedback volumes. Record those
+cardinalities and concurrency, cold/warm p50/p95 timings, count parity and both
+execution plans. Increase timetable/faculty volumes and check that the plan
+continues to use indexed attendance/group lookups and faculty primary-key
+probes rather than scanning the faculty table. Agree dashboard latency targets
+with the Product/release owner before declaring stable growth or closing F-075.
+
+---
+
 Measured on the development database (`topic_feedback` 30,785 rows, `course_student_attendance`
 39,794, `timetable` 653, `faculty_master` 538, MySQL 8.0.39, `ONLY_FULL_GROUP_BY` on).
 
