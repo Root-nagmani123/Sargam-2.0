@@ -84,6 +84,7 @@
                             <option value="">Select Category first</option>
                         </select>
                         <div class="form-text text-muted">Auto-selected from the escalation matrix.</div>
+                        <div id="nodal_employee_hint" class="form-text text-warning d-none" role="status"></div>
                         @error('nodal_employee_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
@@ -290,6 +291,64 @@ $(document).ready(function() {
     $('#description').on('input keyup', updateCharCount);
     updateCharCount();
 
+    // Nodal officers the server would accept for this category and complainant
+    // (the endpoint excludes the complainant and the signed-in logger, and
+    // anyone who cannot sign in). keepPk re-selects an earlier choice if it is
+    // still on offer; otherwise the server's own choice is preselected.
+    // Level 2 & 3 are for display only.
+    function loadNodalEmployees(categoryId, keepPk) {
+        $('#nodal_employee_hint').addClass('d-none').text('');
+        $.ajax({
+            url: '/admin/issue-management/nodal-employees/' + categoryId,
+            type: 'GET',
+            data: { complainant: $('#complainant').val() || '' },
+            success: function(response) {
+                if(response.success && response.level1 && response.level1.length > 0) {
+                    destroyIssueChoices($('#nodal_employee'));
+                    $('#nodal_employee').html('<option value="">- Select -</option>');
+                    var autoSelect = response.level1_auto_select;
+                    var keepOffered = keepPk && response.level1.some(function(e) { return e.employee_pk == keepPk; });
+                    $.each(response.level1, function(key, employee) {
+                        var fullName = employee.employee_name || (employee.first_name + ' ' + (employee.middle_name ? employee.middle_name + ' ' : '') + employee.last_name);
+                        var selected = keepOffered ? employee.employee_pk == keepPk : (autoSelect && employee.employee_pk == autoSelect);
+                        $('#nodal_employee').append(new Option(fullName, employee.employee_pk, !!selected, !!selected));
+                    });
+                    initIssueChoices($('#nodal_employee'), '— Select —');
+                    if (response.assigned_level && response.assigned_level !== 1) {
+                        $('#nodal_employee_hint').text(response.message).removeClass('d-none');
+                    }
+                    // Level 2 & 3 - display only
+                    if(response.level2) {
+                        $('#level2_display').text(response.level2.employee_name + ' (' + response.level2.days_notify + ' days)');
+                    } else {
+                        $('#level2_display').text('—');
+                    }
+                    if(response.level3) {
+                        $('#level3_display').text(response.level3.employee_name + ' (' + response.level3.days_notify + ' days)');
+                    } else {
+                        $('#level3_display').text('—');
+                    }
+                    $('#escalation_levels_display').removeClass('d-none');
+                } else {
+                    destroyIssueChoices($('#nodal_employee'));
+                    $('#nodal_employee').html('<option value="">No eligible nodal officer - configure Escalation Matrix</option>');
+                    initIssueChoices($('#nodal_employee'), '— Select —');
+                    if (response.message) {
+                        $('#nodal_employee_hint').text(response.message).removeClass('d-none');
+                    }
+                    $('#escalation_levels_display').addClass('d-none');
+                }
+            },
+            error: function() {
+                console.log('Error loading nodal employees');
+                destroyIssueChoices($('#nodal_employee'));
+                $('#nodal_employee').html('<option value="">Error loading employees</option>');
+                initIssueChoices($('#nodal_employee'), '— Select —');
+                $('#escalation_levels_display').addClass('d-none');
+            }
+        });
+    }
+
     // Load sub-categories when category changes
     $('#issue_category').change(function() {
         var categoryId = $(this).val();
@@ -314,48 +373,7 @@ $(document).ready(function() {
                 }
             });
             
-            // Load nodal employees (Level 1 only) - auto-select first; Level 2 & 3 for display only
-            $.ajax({
-                url: '/admin/issue-management/nodal-employees/' + categoryId,
-                type: 'GET',
-                success: function(response) {
-                    if(response.success && response.level1 && response.level1.length > 0) {
-                        destroyIssueChoices($('#nodal_employee'));
-                        $('#nodal_employee').html('<option value="">- Select -</option>');
-                        var autoSelect = response.level1_auto_select;
-                        $.each(response.level1, function(key, employee) {
-                            var fullName = employee.employee_name || (employee.first_name + ' ' + (employee.middle_name ? employee.middle_name + ' ' : '') + employee.last_name);
-                            var selected = (autoSelect && employee.employee_pk == autoSelect) ? 'selected' : '';
-                            $('#nodal_employee').append(new Option(fullName, employee.employee_pk, !!selected, !!selected));
-                        });
-                        initIssueChoices($('#nodal_employee'), '— Select —');
-                        // Level 2 & 3 - display only
-                        if(response.level2) {
-                            $('#level2_display').text(response.level2.employee_name + ' (' + response.level2.days_notify + ' days)');
-                        } else {
-                            $('#level2_display').text('—');
-                        }
-                        if(response.level3) {
-                            $('#level3_display').text(response.level3.employee_name + ' (' + response.level3.days_notify + ' days)');
-                        } else {
-                            $('#level3_display').text('—');
-                        }
-                        $('#escalation_levels_display').removeClass('d-none');
-                    } else {
-                        destroyIssueChoices($('#nodal_employee'));
-                        $('#nodal_employee').html('<option value="">No Level 1 employees - configure Escalation Matrix</option>');
-                        initIssueChoices($('#nodal_employee'), '— Select —');
-                        $('#escalation_levels_display').addClass('d-none');
-                    }
-                },
-                error: function() {
-                    console.log('Error loading nodal employees');
-                    destroyIssueChoices($('#nodal_employee'));
-                    $('#nodal_employee').html('<option value="">Error loading employees</option>');
-                    initIssueChoices($('#nodal_employee'), '— Select —');
-                    $('#escalation_levels_display').addClass('d-none');
-                }
-            });
+            loadNodalEmployees(categoryId, null);
         } else {
             destroyIssueChoices($('#sub_categories'));
             destroyIssueChoices($('#nodal_employee'));
@@ -386,6 +404,11 @@ $(document).ready(function() {
         var mobile = complainantMobileMap[selected];
         var normalized = getNormalizedMobile(mobile);
         $('#mobile_number').val(!selected ? '' : (normalized ? normalized : 'Mobile number is not available'));
+        // The complainant cannot be the nodal officer: refresh who is on offer.
+        var categoryId = $('#issue_category').val();
+        if (categoryId) {
+            loadNodalEmployees(categoryId, $('#nodal_employee').val());
+        }
     });
 
     // Auto-fill mobile on page load if complainant is pre-selected (logged-in user)
@@ -574,22 +597,7 @@ $(document).ready(function() {
         }
         if (oldNodal) {
             setTimeout(function() {
-                $.ajax({
-                    url: '/admin/issue-management/nodal-employees/' + oldCategory,
-                    type: 'GET',
-                    success: function(res) {
-                        if (res.success && res.level1) {
-                            destroyIssueChoices($('#nodal_employee'));
-                            $('#nodal_employee').html('<option value="">- Select -</option>');
-                            $.each(res.level1, function(k, emp) {
-                                var pk = emp.employee_pk;
-                                var name = emp.employee_name || ((emp.first_name || '') + ' ' + (emp.middle_name ? emp.middle_name + ' ' : '') + (emp.last_name || ''));
-                                $('#nodal_employee').append(new Option(name, pk, pk == oldNodal, pk == oldNodal));
-                            });
-                            initIssueChoices($('#nodal_employee'), '— Select —');
-                        }
-                    }
-                });
+                loadNodalEmployees(oldCategory, oldNodal);
             }, 400);
         }
     }

@@ -105,16 +105,17 @@
 
                     <div>
                         <label for="complainant" class="ic-field-label">Complainant<span class="ic-req">*</span></label>
-                        <select name="created_by" id="complainant" class="form-select ic-input choices-select" required>
+                        {{-- Fixed once raised: update() ignores created_by, so the field is display-only. --}}
+                        <select id="complainant" class="form-select ic-input choices-select" disabled aria-readonly="true">
                             <option value="">Select Complainant</option>
                             @foreach($employees as $employee)
                                 <option value="{{ $employee->employee_pk }}" data-mobile="{{ $employee->mobile }}"
-                                    {{ old('created_by', $issue->created_by) == $employee->employee_pk ? 'selected' : '' }}>
+                                    {{ $issue->created_by == $employee->employee_pk ? 'selected' : '' }}>
                                     {{ $employee->employee_name }}
                                 </option>
                             @endforeach
                         </select>
-                        <div class="form-text text-muted">Type to search when editing on behalf of others.</div>
+                        <div class="form-text text-muted">The complainant cannot be changed after the complaint is raised.</div>
                         @error('created_by')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                     </div>
 
@@ -297,7 +298,11 @@ jQuery(function ($) {
     // user touches a control, their choice wins over the stored value.
     var CURRENT = {
         subCategory: @json((string) $currentSubCategory),
-        nodal: @json((string) ($issue->employee_master_pk ?? '')),
+        // The officer's employee_master.pk, which is what the nodal-employees
+        // endpoint offers, even when the ticket stores their pk_old (edit()).
+        nodal: @json((string) ($currentNodalPk ?? $issue->employee_master_pk ?? '')),
+        complainant: @json((string) ($issue->created_by ?? '')),
+        logger: @json((string) ($issue->issue_logger ?? '')),
         building: @json((string) ($currentBuilding ?? '')),
         floor: @json((string) ($currentFloor ?? '')),
         room: @json((string) ($currentRoom ?? ''))
@@ -424,6 +429,9 @@ jQuery(function ($) {
         $.ajax({
             url: '/admin/issue-management/nodal-employees/' + categoryId,
             type: 'GET',
+            // update() excludes the complainant and logger too, so the list
+            // offers only officers it would accept.
+            data: { complainant: CURRENT.complainant, logger: CURRENT.logger },
             success: function(response) {
                 var level1 = response.level1 || response.data || [];
                 var autoSelect = response.level1_auto_select;
@@ -436,6 +444,11 @@ jQuery(function ($) {
                     var keep = (prefill && CURRENT.nodal) ? pk == CURRENT.nodal : (autoSelect && pk == autoSelect);
                     return new Option(name, pk, keep, keep);
                 });
+                // update() keeps the current officer on a same-category edit
+                // even when they are no longer on offer; keep them selectable.
+                if (prefill && CURRENT.nodal) {
+                    keepUnmatched($('#nodal_employee'), CURRENT.nodal, 'Current nodal officer (not on offer)');
+                }
 
                 if (level1.length) {
                     $('#level2_display').text(response.level2
