@@ -9,6 +9,23 @@
 {{-- COE module layer (coe-*), shared with the question-paper screens. --}}
 <link rel="stylesheet"
       href="{{ asset('css/coe-admin.css') }}?v={{ @filemtime(public_path('css/coe-admin.css')) ?: time() }}">
+<style>
+    /* Scribers Details — the dialog's OT → scriber rows. */
+    .coe-modal .ols-scribers { border: 1px solid var(--coe-control-line); border-radius: .5rem; }
+    .coe-modal .ols-scribers th { background: #f2f4f7; font-weight: 500; font-size: .875rem; white-space: nowrap; }
+    .coe-modal .ols-scribers th,
+    .coe-modal .ols-scribers td { padding: .625rem .75rem; }
+    .coe-modal .ols-scribers td { min-width: 150px; }
+    .coe-modal .ols-scribers td.ols-scr-type { min-width: 140px; }
+    .coe-modal .ols-scribers td.ols-scr-act { min-width: 96px; white-space: nowrap; text-align: center; }
+    .coe-modal .ols-scr-btn {
+        width: 36px; height: 36px; border: 0; border-radius: .5rem; color: #fff;
+        display: inline-flex; align-items: center; justify-content: center;
+    }
+    .coe-modal .ols-scr-btn--remove { background: var(--coe-danger); }
+    .coe-modal .ols-scr-btn--add { background: var(--coe-brand); }
+    .coe-modal .ols-scr-btn + .ols-scr-btn { margin-left: .5rem; }
+</style>
 @endpush
 
 @section('setup_content')
@@ -126,8 +143,12 @@
                                 <th scope="col">Laptop Required</th>
                                 <th scope="col">Reason</th>
                                 <th scope="col">OT with Disability</th>
+                                <th scope="col">Disability Type</th>
                                 <th scope="col">Need for Scriber</th>
                                 <th scope="col">Remarks for Scriber</th>
+                                <th scope="col">Primary Scriber</th>
+                                <th scope="col">Secondary Scriber</th>
+                                <th scope="col">Additional Remarks</th>
                                 <th scope="col">Updated By</th>
                                 <th scope="col">Action</th>
                             </tr>
@@ -152,8 +173,15 @@
                                         {!! $row['reason'] ? e($row['reason']) : $dash !!}
                                     </td>
                                     <td>{{ $row['disability'] ? 'Yes' : 'No' }}</td>
-                                    <td>{{ $row['scriber'] ? 'Yes' : 'No' }}</td>
+                                    <td>{!! $row['disability_type'] ? e($row['disability_type']) : $dash !!}</td>
+                                    {{-- NULL = never asked (no disability), not "No". --}}
+                                    <td>{!! $row['scriber'] === null ? $dash : ($row['scriber'] ? 'Yes' : 'No') !!}</td>
                                     <td class="coe-strong coe-col-wrap">{!! $row['scriber_remarks'] ? e($row['scriber_remarks']) : $dash !!}</td>
+                                    <td class="coe-col-wrap">{!! $row['primary_scriber'] ? e($row['primary_scriber']) : $dash !!}</td>
+                                    <td class="coe-col-wrap">{!! $row['secondary_scriber'] ? e($row['secondary_scriber']) : $dash !!}</td>
+                                    <td class="coe-col-truncate" @if ($row['additional_remarks']) title="{{ $row['additional_remarks'] }}" @endif>
+                                        {!! $row['additional_remarks'] ? e($row['additional_remarks']) : $dash !!}
+                                    </td>
                                     <td>{{ $row['updated_by'] }}</td>
                                     <td>
                                         <div class="coe-act-group" role="group" aria-label="Row actions">
@@ -180,7 +208,7 @@
 
 {{-- ── Import Laptop Status: Bulk (file) · Single Record (form) ─────────── --}}
 <div class="modal fade" id="olsImportModal" tabindex="-1" aria-labelledby="olsImportModalLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content coe-modal border-0 shadow">
             <div class="modal-header coe-modal-header">
                 <h5 class="modal-title" id="olsImportModalLabel">Import Laptop Status</h5>
@@ -211,8 +239,8 @@
                         <div class="coe-instructions">
                             <h6 class="coe-instructions__title">Instructions &amp; Excel Template</h6>
                             <ul class="coe-instructions__list">
-                                <li><a href="#" id="olsTemplateLink">Download the template file</a> to ensure your Excel file has the correct format for importing members.</li>
-                                <li><span class="coe-tip">Tip:</span> Make sure your Excel file matches the template format exactly to avoid import errors.</li>
+                                <li><a href="{{ route('admin.coe.ot-laptop-status.template', ['scope' => $scope]) }}" id="olsTemplateLink">Download the template file</a>, pre-filled with the OTs of {{ $isArchived ? 'archived' : 'running' }} courses. Fill in <strong>Laptop Required</strong> (Yes/No) and <strong>Reason</strong>; rows left blank are skipped.</li>
+                                <li><span class="coe-tip">Tip:</span> Keep the Participant ID column as downloaded — the import matches OTs on it. Disability and scriber answers are recorded through Add Single Record.</li>
                             </ul>
                         </div>
                     </div>
@@ -221,36 +249,27 @@
                     <div class="tab-pane fade" id="olsModeSingle" role="tabpanel" aria-labelledby="olsModeSingleTab">
                         <form id="olsSingleForm" class="coe-form" novalidate>
                             <div class="row g-3">
-                                <div class="col-sm-6">
+                                <div class="col-12">
                                     <label class="coe-form-label" for="olsCourse">Course Name<span class="coe-req">*</span></label>
-                                    <select id="olsCourse" class="form-select coe-control" required>
+                                    <select id="olsCourse" name="course" class="form-select coe-control" required>
                                         <option value="">Select Course</option>
-                                        @foreach ($courses as $course)
-                                            <option value="{{ $course }}">{{ $course }}</option>
+                                        @foreach ($singleCourses as $course)
+                                            <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
                                 <div class="col-sm-6">
-                                    <label class="coe-form-label" for="olsBatch">Batch<span class="coe-req">*</span></label>
-                                    <select id="olsBatch" class="form-select coe-control" required>
-                                        <option value="">Select Batch</option>
-                                        @foreach ($batches as $batch)
-                                            <option value="{{ $batch }}">{{ $batch }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-12">
                                     <label class="coe-form-label" for="olsOt">OT<span class="coe-req">*</span></label>
-                                    {{-- Filled from the JSON list for the chosen Course + Batch. --}}
-                                    <select id="olsOt" class="form-select coe-control" required>
-                                        <option value="">Select OT</option>
-                                    </select>
+                                    {{-- Filled from the participants endpoint for the chosen Course.
+                                         Several OTs can be picked; each gets the same answers. --}}
+                                    <select id="olsOt" name="student_master_pks[]" class="form-select coe-control" multiple required></select>
                                 </div>
-                                <div class="col-12">
+                                <div class="col-sm-6">
                                     <label class="coe-form-label" for="olsDisability">OT with Disabilities<span class="coe-req">*</span></label>
-                                    <select id="olsDisability" class="form-select coe-control" required>
-                                        <option value="no" selected>No</option>
+                                    <select id="olsDisability" name="has_disability" class="form-select coe-control" required>
+                                        <option value="">Select</option>
                                         <option value="yes">Yes</option>
+                                        <option value="no">No</option>
                                     </select>
                                 </div>
 
@@ -261,6 +280,14 @@
                                         <label class="coe-radio"><input type="radio" name="ols_laptop" value="no" checked> No</label>
                                     </div>
                                 </div>
+                                <div class="col-sm-6">
+                                    <label class="coe-form-label" for="olsReasonLaptop">
+                                        Reason for Laptop<span class="coe-req ols-req-laptop d-none">*</span>
+                                    </label>
+                                    <textarea id="olsReasonLaptop" name="reason" class="form-control coe-control" rows="3" maxlength="500"
+                                              placeholder="eg. Don't have PC" disabled></textarea>
+                                </div>
+
                                 <div class="col-sm-6 ols-if-disability d-none">
                                     <span class="coe-form-label" id="olsScriberLabel">Scriber Required<span class="coe-req">*</span></span>
                                     <div class="coe-radio-row" role="radiogroup" aria-labelledby="olsScriberLabel">
@@ -268,20 +295,44 @@
                                         <label class="coe-radio"><input type="radio" name="ols_scriber" value="no" checked> No</label>
                                     </div>
                                 </div>
-
-                                <div class="col-12 ols-reason-laptop-col">
-                                    <label class="coe-form-label" for="olsReasonLaptop">
-                                        Reason for Laptop<span class="coe-req ols-req-laptop d-none">*</span>
-                                    </label>
-                                    <textarea id="olsReasonLaptop" class="form-control coe-control" rows="2" maxlength="255"
-                                              placeholder="eg. Don't have PC" disabled></textarea>
-                                </div>
                                 <div class="col-sm-6 ols-if-disability d-none">
                                     <label class="coe-form-label" for="olsReasonScriber">
                                         Reason for Scriber<span class="coe-req ols-req-scriber d-none">*</span>
                                     </label>
-                                    <textarea id="olsReasonScriber" class="form-control coe-control" rows="2" maxlength="255"
+                                    <textarea id="olsReasonScriber" name="scriber_remarks" class="form-control coe-control" rows="3" maxlength="500"
                                               placeholder="eg. Need a fast writer" disabled></textarea>
+                                </div>
+
+                                {{-- Scribers Details — the course's OTs with disabilities, one row
+                                     each. Disability Type is chosen here, per OT; Primary / Secondary
+                                     Scriber come from Scriber's Master and are open only for an OT
+                                     who needs a scriber. Shown whenever "OT with Disabilities" is Yes,
+                                     since every OT with a disability needs a type. --}}
+                                <div class="col-12 ols-if-disability d-none">
+                                    <span class="coe-form-label">Scribers Details</span>
+                                    <div class="ols-scribers table-responsive">
+                                        <table class="table align-middle mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col">OT</th>
+                                                    <th scope="col">Primary Scriber</th>
+                                                    <th scope="col">Secondary Scriber</th>
+                                                    <th scope="col">Disability Type<span class="coe-req">*</span></th>
+                                                    <th scope="col" class="text-center">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="olsScriberRows"></tbody>
+                                        </table>
+                                    </div>
+                                    <div class="form-text">
+                                        Scribers are managed in <a href="{{ route('admin.coe.scriber-master.index') }}" target="_blank" rel="noopener">Scriber's Master</a>.
+                                    </div>
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="coe-form-label" for="olsAdditionalRemarks">Additional Remarks</label>
+                                    <textarea id="olsAdditionalRemarks" name="additional_remarks" class="form-control coe-control" rows="3" maxlength="500"
+                                              placeholder="eg. Need a fast writer"></textarea>
                                 </div>
                             </div>
                         </form>
@@ -326,15 +377,34 @@ $(function () {
     'use strict';
 
     /* Column indexes — keep in step with the <thead>. */
-    var COL = { check: 0, sno: 1, roll: 2, course: 5, batch: 6, action: 13 };
-    var OTS = @json($ots);
+    var COL = { check: 0, sno: 1, roll: 2, course: 5, batch: 6, action: 17 };
+    var DISABILITY_TYPES = @json($disabilityTypes);
+    var SCRIBERS = @json($scribers);
+    var SCRIBER_ROLE = { primary: 1, secondary: 2 };
     var IMPORT_EXT = @json($importExtensions);
     var IMPORT_MAX_MB = @json($importMaxMb);
+    var URLS = {
+        participants: @json(route('admin.coe.ot-laptop-status.participants')),
+        store: @json(route('admin.coe.ot-laptop-status.store')),
+        import: @json(route('admin.coe.ot-laptop-status.import')),
+        bulkDestroy: @json(route('admin.coe.ot-laptop-status.bulk-destroy')),
+        destroy: @json(route('admin.coe.ot-laptop-status.destroy', ['response' => '__ID__']))
+    };
+    var CSRF = $('meta[name="csrf-token"]').attr('content') || '';
     var $table = $('#olsTable');
-    var DELETE_ACTION = '<div class="coe-act-group" role="group" aria-label="Row actions">' +
-        '<button type="button" class="coe-act coe-act--del">' +
-        '<span class="coe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>' +
-        '<span class="coe-act__label">Delete</span></button></div>';
+
+    function ajax(opts) {
+        return $.ajax($.extend({ headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' } }, opts));
+    }
+
+    // The server's own words on a failure; a generic line only when it sent none.
+    function failText(xhr) {
+        var res = xhr && xhr.responseJSON;
+        if (res && res.message) { return res.message; }
+        if (xhr && xhr.status === 419) { return 'Your session has expired. Reload the page and try again.'; }
+        return 'Something went wrong. Please try again.';
+    }
+    function showError(xhr) { Swal.fire({ icon: 'error', title: 'Error', text: failText(xhr) }); }
 
     var dt = CoeGrid.init({
         table: '#olsTable',
@@ -351,7 +421,8 @@ $(function () {
         searchToggle: '#olsSearchToggle',
         searchSlot: '#olsDtSearch',
         colvisGrid: '#olsColumnToggleGrid',
-        colvisKey: 'coeOtLaptopStatus:hiddenColumns:v1',
+        // v2: Disability Type and Additional Remarks shifted the column indexes.
+        colvisKey: 'coeOtLaptopStatus:hiddenColumns:v2',
         empty: { title: 'No Laptop Status Records', zeroTitle: 'No Laptop Status Records Found', text: 'Import laptop status to get started.' }
     });
 
@@ -384,19 +455,38 @@ $(function () {
     dt.on('search.dt', function () { setTimeout(syncSelection, 0); });
 
     /* ── Delete (row) · Delete Selected (bulk) ───────────────────────────────
-       DESIGN PREVIEW: no backend yet, so rows are removed in the browser only.
-       When the endpoint exists, DELETE first and redraw from the response. */
+       Rows leave the grid only after the server confirms the delete — and for
+       a bulk delete, only the ids it says it actually deleted. */
     CoeGrid.confirmDelete({
         table: '#olsTable',
         modal: '#olsDeleteModal',
         confirm: '#olsDeleteConfirm',
         bulkTrigger: '#olsBulkDelete',
         onConfirm: function ($row) {
-            var $targets = $row ? $row : selectedRows();
-            var n = $targets.length;
-            dt.rows($targets).remove().draw(false);
-            syncSelection();
-            Swal.fire({ icon: 'success', title: 'Success', text: n === 1 ? 'Record deleted.' : n + ' records deleted.' });
+            if ($row) {
+                ajax({ url: URLS.destroy.replace('__ID__', encodeURIComponent($row.attr('data-coe-id'))), method: 'DELETE' })
+                    .done(function (res) {
+                        dt.row($row).remove().draw(false);
+                        syncSelection();
+                        Swal.fire({ icon: 'success', title: 'Success', text: res.message });
+                    })
+                    .fail(showError);
+                return;
+            }
+
+            var ids = selectedRows().map(function () { return $(this).attr('data-coe-id'); }).get();
+            if (!ids.length) { return; }
+            ajax({ url: URLS.bulkDestroy, method: 'POST', data: { ids: ids } })
+                .done(function (res) {
+                    var gone = (res.deleted || []).map(String);
+                    var $gone = dt.rows().nodes().to$().filter(function () {
+                        return gone.indexOf($(this).attr('data-coe-id')) !== -1;
+                    });
+                    dt.rows($gone).remove().draw(false);
+                    syncSelection();
+                    Swal.fire({ icon: 'success', title: 'Success', text: res.message });
+                })
+                .fail(showError);
         }
     });
 
@@ -404,9 +494,11 @@ $(function () {
     var importModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('olsImportModal'));
     var $submit = $('#olsImportSubmit');
     var bulkFile = null;
+    var busy = false;
 
     function mode() { return $('#olsModeSingleTab').hasClass('active') ? 'single' : 'bulk'; }
-    function syncSubmit() { $submit.prop('disabled', mode() === 'bulk' ? !bulkFile : false); }
+    function syncSubmit() { $submit.prop('disabled', busy || (mode() === 'bulk' ? !bulkFile : false)); }
+    function setBusy(on) { busy = on; syncSubmit(); }
 
     var dz = CoeGrid.dropzone({
         root: '#olsImportFile',
@@ -418,48 +510,75 @@ $(function () {
 
     $('#olsModeBulkTab, #olsModeSingleTab').on('shown.bs.tab', syncSubmit);
 
-    // The template the import expects — generated here so it can't go stale
-    // against a file on disk. Same header order as the grid.
-    $('#olsTemplateLink').on('click', function (e) {
-        e.preventDefault();
-        var header = ['Roll Number', 'Course', 'Batch', 'Laptop Required (Yes/No)', 'Reason for Laptop',
-            'OT with Disability (Yes/No)', 'Scriber Required (Yes/No)', 'Reason for Scriber'];
-        var blob = new Blob([header.join(',') + '\r\n'], { type: 'text/csv;charset=utf-8' });
-        var a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'laptop-status-template.csv';
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
-    });
-
-    /* Single record — dependent OT list, conditional scriber fields. */
-    var $course = $('#olsCourse'), $batch = $('#olsBatch'), $ot = $('#olsOt'), $dis = $('#olsDisability');
+    /* Single record — dependent OT list, conditional disability / scriber fields. */
+    var $course = $('#olsCourse'), $ot = $('#olsOt'), $dis = $('#olsDisability');
+    var $scrRows = $('#olsScriberRows');
     var $modalBody = $('#olsImportModal .modal-body');
+    var otsByPk = {};
+    var otList = [];   // server order (roll number), for the Scribers Details OT lists
+    var otRequest = 0;
 
-    [$course, $batch, $dis].forEach(function ($s) {
-        $s.select2({ width: '100%', dropdownParent: $modalBody });
+    [$course, $dis].forEach(function ($s) {
+        $s.select2({ width: '100%', dropdownParent: $modalBody, minimumResultsForSearch: $s.is($course) ? 0 : Infinity });
     });
-    $ot.select2({ width: '100%', dropdownParent: $modalBody, placeholder: 'Select OT' });
-    // The searchbox reads "Search OT", as designed.
-    $ot.on('select2:open', function () {
-        $('.select2-container--open .select2-search__field').attr('placeholder', 'Search OT');
-    });
+    // Multiple: the list stays open while picking, so several OTs go in one pass.
+    $ot.select2({ width: '100%', dropdownParent: $modalBody, placeholder: 'Select OT', closeOnSelect: false });
 
+    function otLabel(o) { return o.name + (o.code ? ' - ' + o.code : ''); }
+    function selectedOts() { return $ot.val() || []; }
+
+    // The OT list comes from the server per Course. A response that arrives
+    // after the selection moved on is dropped, not shown.
     function fillOts() {
-        var course = $course.val(), batch = $batch.val();
-        $ot.empty().append(new Option('', '', true, true));
-        OTS.filter(function (o) { return (!course || o.course === course) && (!batch || o.batch === batch); })
-            .forEach(function (o) {
-                var opt = new Option(o.name + ' -' + o.code, String(o.id));
-                $ot.append(opt);
-            });
-        $ot.trigger('change.select2');
+        var course = $course.val();
+        var ticket = ++otRequest;
+        otsByPk = {};
+        otList = [];
+        $ot.empty().trigger('change.select2');
+        $scrRows.empty();
+        syncScriberRows();
+        if (!course) { return; }
+
+        ajax({ url: URLS.participants, method: 'GET', data: { course: course } })
+            .done(function (res) {
+                if (ticket !== otRequest) { return; }
+                otList = res.data || [];
+                otList.forEach(function (o) {
+                    otsByPk[o.pk] = o;
+                    $ot.append(new Option(otLabel(o) + (o.answered ? ' (recorded)' : ''), String(o.pk)));
+                });
+                $ot.trigger('change.select2');
+                // Rebuilt from scratch now the course's assignments are known.
+                $scrRows.empty();
+                syncScriberRows();
+                if (!otList.length) {
+                    fieldError($ot, 'No OTs on this course.');
+                }
+            })
+            .fail(function (xhr) { if (ticket === otRequest) { showError(xhr); } });
     }
     $course.on('change', fillOts);
-    $batch.on('change', fillOts);
 
     function radio(name) { return $('input[name="' + name + '"]:checked').val(); }
+    function setRadio(name, yes) { $('input[name="' + name + '"][value="' + (yes ? 'yes' : 'no') + '"]').prop('checked', true); }
+
+    // With exactly one OT picked, the form opens with that OT's status, so a
+    // correction starts from what is on record instead of silently
+    // overwriting it; one with no status opens blank. Once a second OT is
+    // added the form is left as it is — the answers on screen go to all of them.
+    $ot.on('change', function () {
+        var picked = selectedOts();
+        if (picked.length !== 1) { syncScriberRows(true); return; }
+        var o = otsByPk[picked[0]];
+        var answered = !!(o && o.answered);
+        $dis.val(answered ? (o.has_disability ? 'yes' : 'no') : '').trigger('change.select2');
+        setRadio('ols_laptop', answered && o.laptop_required === 1);
+        setRadio('ols_scriber', answered && o.scriber_required === 1);
+        syncConditional();
+        $('#olsReasonLaptop').val(answered ? o.reason : '');
+        $('#olsReasonScriber').val(answered ? o.scriber_remarks : '');
+        $('#olsAdditionalRemarks').val(answered ? o.additional_remarks : '');
+    });
 
     function syncConditional() {
         var disability = $dis.val() === 'yes';
@@ -467,8 +586,6 @@ $(function () {
         var scriber = disability && radio('ols_scriber') === 'yes';
 
         $('.ols-if-disability').toggleClass('d-none', !disability);
-        // Two reasons side by side when both can apply, otherwise one full width.
-        $('.ols-reason-laptop-col').toggleClass('col-12', !disability).toggleClass('col-sm-6', disability);
 
         // A reason is only asked for when the answer is Yes.
         $('#olsReasonLaptop').prop('disabled', !laptop).prop('required', laptop);
@@ -477,9 +594,187 @@ $(function () {
         $('.ols-req-scriber').toggleClass('d-none', !scriber);
         if (!laptop) { $('#olsReasonLaptop').val(''); }
         if (!scriber) { $('#olsReasonScriber').val(''); }
+
+        syncScriberRows(true);
     }
     $dis.on('change', syncConditional);
     $('#olsSingleForm').on('change', 'input[type=radio]', syncConditional);
+
+    /* ── Scribers Details ────────────────────────────────────────────────────
+       Each row's OT list holds only the course's OTs with disabilities: the
+       ones on record, plus the OTs being edited when this form says Yes. An
+       OT already picked in one row is not offered in another.
+       Disability Type is chosen in the row. Primary / Secondary Scriber list
+       Scriber's Master by role, and are open only for an OT who needs a
+       scriber — by this form's answer for the OTs being edited, by their
+       record for the rest. */
+    function isEdited(o) { return selectedOts().indexOf(String(o.pk)) !== -1; }
+
+    function needsScriber(o) {
+        return isEdited(o)
+            ? $dis.val() === 'yes' && radio('ols_scriber') === 'yes'
+            : o.scriber_required === 1;
+    }
+
+    function scriberEligibleOts() {
+        return otList.filter(function (o) { return isEdited(o) ? $dis.val() === 'yes' : o.has_disability === 1; });
+    }
+
+    function scriberRowHtml() {
+        var types = '<option value="">Select Type</option>';
+        Object.keys(DISABILITY_TYPES).forEach(function (k) {
+            types += '<option value="' + k + '">' + $('<span>').text(DISABILITY_TYPES[k]).html() + '</option>';
+        });
+        return '<tr>' +
+            '<td><select class="form-select coe-control ols-scr-ot" aria-label="OT"></select></td>' +
+            '<td><select class="form-select coe-control ols-scr-primary" aria-label="Primary Scriber"></select></td>' +
+            '<td><select class="form-select coe-control ols-scr-secondary" aria-label="Secondary Scriber"></select></td>' +
+            '<td class="ols-scr-type"><select class="form-select coe-control ols-scr-dtype" aria-label="Disability Type">' + types + '</select></td>' +
+            '<td class="ols-scr-act">' +
+                '<button type="button" class="ols-scr-btn ols-scr-btn--remove" title="Remove row" aria-label="Remove row">' +
+                    '<i class="bi bi-dash-lg" aria-hidden="true"></i></button>' +
+                '<button type="button" class="ols-scr-btn ols-scr-btn--add" title="Add row" aria-label="Add row">' +
+                    '<i class="bi bi-plus-lg" aria-hidden="true"></i></button>' +
+            '</td>' +
+        '</tr>';
+    }
+
+    // A scriber select of one role. Inactive scribers are offered only to the
+    // row that already holds one, so an old assignment still reads correctly.
+    function fillScriberSelect($s, role, value) {
+        var placeholder = role === SCRIBER_ROLE.primary ? 'Select Primary Scribers' : 'Select Secondary Scribers';
+        value = value ? String(value) : '';
+        $s.empty().append(new Option(placeholder, ''));
+        SCRIBERS.forEach(function (sc) {
+            if (sc.role !== role || (!sc.active && String(sc.pk) !== value)) { return; }
+            $s.append(new Option(sc.name + (sc.active ? '' : ' (Inactive)'), String(sc.pk)));
+        });
+        $s.val(value);
+    }
+
+    // A row's scribers and type, from what is on record for its OT.
+    function fillRowFromRecord($row, o) {
+        fillScriberSelect($row.find('.ols-scr-primary'), SCRIBER_ROLE.primary, o && o.primary_scriber_pk);
+        fillScriberSelect($row.find('.ols-scr-secondary'), SCRIBER_ROLE.secondary, o && o.secondary_scriber_pk);
+        $row.find('.ols-scr-dtype').val(o && o.disability_type ? String(o.disability_type) : '');
+    }
+
+    function addScriberRow(otPk) {
+        var $row = $(scriberRowHtml()).appendTo($scrRows);
+        var o = otPk ? otsByPk[otPk] : null;
+        if (o) { $row.find('.ols-scr-ot').data('pick', String(otPk)); }
+        fillRowFromRecord($row, o);
+        return $row;
+    }
+
+    // Rebuilds every row's OT options from the current state, keeping each
+    // row's pick while it is still eligible. The table opens with every OT
+    // already assigned a scriber — it is the course's whole assignment list,
+    // and the server clears whoever is left out.
+    //
+    // autoPick (on an OT, disability or scriber answer change): each OT being
+    // edited that qualifies gets a row, taking the place of an empty one. Not
+    // on the table's own +/− clicks, so removing such a row sticks.
+    function syncScriberRows(autoPick) {
+        var eligible = scriberEligibleOts();
+        if (!$scrRows.children().length) {
+            eligible.forEach(function (o) {
+                if (o.primary_scriber_pk || o.secondary_scriber_pk) { addScriberRow(o.pk); }
+            });
+            if (!$scrRows.children().length) { addScriberRow(null); }
+        }
+
+        // A seeded row's OT is still a pending data('pick'), not yet its value.
+        function rowPick(el) { var p = $(el).data('pick'); return p !== undefined ? String(p) : ($(el).val() || ''); }
+
+        if (autoPick) {
+            var picked = $scrRows.find('.ols-scr-ot').map(function () { return rowPick(this); }).get();
+            selectedOts().forEach(function (pk) {
+                if (picked.indexOf(pk) !== -1 || !eligible.some(function (o) { return String(o.pk) === pk; })) { return; }
+                $scrRows.find('.ols-scr-ot').filter(function () { return !rowPick(this); }).first().closest('tr').remove();
+                addScriberRow(pk);
+                picked.push(pk);
+            });
+        }
+
+        var $selects = $scrRows.find('.ols-scr-ot');
+        $selects.each(function () {
+            var $s = $(this);
+            var pick = rowPick(this);
+            $s.removeData('pick');
+            var takenElsewhere = $selects.not($s).map(function () { return rowPick(this); }).get();
+
+            $s.empty().append(new Option('Select OT', ''));
+            eligible.forEach(function (o) {
+                var opt = new Option(otLabel(o), String(o.pk));
+                opt.disabled = takenElsewhere.indexOf(String(o.pk)) !== -1;
+                $s.append(opt);
+            });
+            $s.val(eligible.some(function (o) { return String(o.pk) === pick; }) ? pick : '');
+
+            // No OT, no type; no scriber needed, no scribers.
+            var o = otsByPk[$s.val()];
+            var $row = $s.closest('tr');
+            var scribe = !!o && needsScriber(o);
+            $row.find('.ols-scr-dtype').prop('disabled', !o);
+            $row.find('.ols-scr-primary, .ols-scr-secondary').prop('disabled', !scribe);
+            if (!scribe) { $row.find('.ols-scr-primary, .ols-scr-secondary').val(''); }
+        });
+
+        // "+" only on the last row, and only while there is an OT left to add.
+        var $rows = $scrRows.children();
+        $rows.find('.ols-scr-btn--add').addClass('d-none');
+        $rows.last().find('.ols-scr-btn--add').toggleClass('d-none', $rows.length >= eligible.length);
+    }
+
+    // Picking an OT brings in the scribers and type already on record for them.
+    $scrRows.on('change', '.ols-scr-ot', function () {
+        fillRowFromRecord($(this).closest('tr'), otsByPk[this.value]);
+        syncScriberRows();
+    });
+    $scrRows.on('change', '.ols-scr-dtype', function () { if (this.value) { fieldError($scrRows, ''); } });
+    $scrRows.on('click', '.ols-scr-btn--add', function () {
+        addScriberRow(null);
+        syncScriberRows();
+    });
+    // The last row is cleared rather than removed, so the table never empties.
+    $scrRows.on('click', '.ols-scr-btn--remove', function () {
+        var $row = $(this).closest('tr');
+        if ($scrRows.children().length > 1) {
+            $row.remove();
+        } else {
+            $row.find('.ols-scr-ot, .ols-scr-primary, .ols-scr-secondary, .ols-scr-dtype').val('');
+        }
+        syncScriberRows();
+    });
+
+    // Only rows with an OT are sent; the scriber selects may be left blank.
+    function scriberPayload() {
+        return $scrRows.children().map(function () {
+            var $r = $(this);
+            var ot = $r.find('.ols-scr-ot').val();
+            if (!ot) { return null; }
+            return {
+                student_master_pk: ot,
+                primary_scriber_pk: $r.find('.ols-scr-primary').val() || '',
+                secondary_scriber_pk: $r.find('.ols-scr-secondary').val() || '',
+                disability_type: $r.find('.ols-scr-dtype').val() || ''
+            };
+        }).get();
+    }
+
+    // Every OT being edited must be in the table, and every row needs a type.
+    function scriberTableError() {
+        var rows = scriberPayload();
+        var listed = rows.map(function (r) { return String(r.student_master_pk); });
+        if (selectedOts().some(function (pk) { return listed.indexOf(pk) === -1; })) {
+            return 'Add every selected OT to Scribers Details.';
+        }
+        if (rows.some(function (r) { return !r.disability_type; })) {
+            return 'Select the disability type for every OT in Scribers Details.';
+        }
+        return '';
+    }
 
     function fieldError($el, msg) {
         var $wrap = $el.closest('[class*="col-"]');
@@ -491,87 +786,131 @@ $(function () {
     }
 
     // An error clears as soon as its field is answered.
-    $course.add($batch).add($ot).on('change', function () { if (this.value) { fieldError($(this), ''); } });
+    $course.add($ot).add($dis).on('change', function () { if (this.value) { fieldError($(this), ''); } });
     $('#olsReasonLaptop, #olsReasonScriber').on('input', function () { if ($.trim(this.value)) { fieldError($(this), ''); } });
 
     function validateSingle() {
         var ok = true;
         ok = fieldError($course, $course.val() ? '' : 'Select a course.') && ok;
-        ok = fieldError($batch, $batch.val() ? '' : 'Select a batch.') && ok;
-        ok = fieldError($ot, $ot.val() ? '' : 'Select an OT.') && ok;
+        ok = fieldError($ot, selectedOts().length ? '' : 'Select at least one OT.') && ok;
+        ok = fieldError($dis, $dis.val() ? '' : 'Select whether the OT has a disability.') && ok;
+        ok = fieldError($scrRows, $dis.val() === 'yes' ? scriberTableError() : '') && ok;
         var $rl = $('#olsReasonLaptop'), $rs = $('#olsReasonScriber');
         ok = fieldError($rl, $rl.prop('required') && !$.trim($rl.val()) ? 'Enter the reason for the laptop.' : '') && ok;
         ok = fieldError($rs, $rs.prop('required') && !$.trim($rs.val()) ? 'Enter the reason for the scriber.' : '') && ok;
         return ok;
     }
 
+    // Server field name => the control its 422 message belongs under.
+    var FIELD_FOR = {
+        course: '#olsCourse', student_master_pks: '#olsOt',
+        has_disability: '#olsDisability', scribers: '#olsScriberRows',
+        reason: '#olsReasonLaptop', scriber_remarks: '#olsReasonScriber',
+        additional_remarks: '#olsAdditionalRemarks',
+        laptop_required: 'input[name="ols_laptop"]', scriber_required: 'input[name="ols_scriber"]'
+    };
+
+    function showServerErrors(xhr) {
+        var errors = (xhr.responseJSON && xhr.responseJSON.errors) || {};
+        var unplaced = [];
+        Object.keys(errors).forEach(function (field) {
+            var $el = $(FIELD_FOR[field] || '').first();
+            if ($el.length) { fieldError($el, errors[field][0]); } else { unplaced.push(errors[field][0]); }
+        });
+        if (unplaced.length || !Object.keys(errors).length) {
+            Swal.fire({ icon: 'error', title: 'Error', text: unplaced.length ? unplaced.join(' ') : failText(xhr) });
+        }
+    }
+
+    function singlePayload() {
+        var disability = $dis.val() === 'yes';
+        var laptop = radio('ols_laptop') === 'yes';
+        var data = {
+            course: $course.val(),
+            student_master_pks: selectedOts(),
+            laptop_required: laptop ? '1' : '0',
+            reason: laptop ? $.trim($('#olsReasonLaptop').val()) : '',
+            has_disability: disability ? '1' : '0',
+            additional_remarks: $.trim($('#olsAdditionalRemarks').val())
+        };
+        // The scriber pair and Scribers Details (with each OT's Disability Type)
+        // are only posted when "OT with Disabilities" is Yes. scribers_present
+        // tells the server the table was sent even when every row was removed.
+        if (disability) {
+            var scriber = radio('ols_scriber') === 'yes';
+            data.scriber_required = scriber ? '1' : '0';
+            data.scriber_remarks = scriber ? $.trim($('#olsReasonScriber').val()) : '';
+            data.scribers_present = '1';
+            data.scribers = scriberPayload();
+        }
+        return data;
+    }
+
     function resetSingle() {
         $course.val('').trigger('change.select2');
-        $batch.val('').trigger('change.select2');
-        $dis.val('no').trigger('change.select2');
+        $dis.val('').trigger('change.select2');
+        $scrRows.empty();
         fillOts();
         $('input[name="ols_laptop"][value="no"], input[name="ols_scriber"][value="no"]').prop('checked', true);
-        $('#olsReasonLaptop, #olsReasonScriber').val('');
+        $('#olsReasonLaptop, #olsReasonScriber, #olsAdditionalRemarks').val('');
         $('#olsSingleForm .coe-field-error').remove();
         $('#olsSingleForm .is-invalid').removeClass('is-invalid');
         syncConditional();
     }
 
-    function addRow() {
-        var ot = OTS.find(function (o) { return String(o.id) === $ot.val(); });
-        var laptop = radio('ols_laptop') === 'yes';
-        var disability = $dis.val() === 'yes';
-        var scriber = disability && radio('ols_scriber') === 'yes';
-        var dash = '<span class="coe-muted">&mdash;</span>';
-        var esc = function (t) { return $('<div>').text(t).html(); };
-        var reason = $.trim($('#olsReasonLaptop').val());
-        var remarks = $.trim($('#olsReasonScriber').val());
+    // Saved rows come back from the server on a reload rather than being drawn
+    // here, so the grid can never show a row the database does not hold.
+    function reloadAfter(swalPromise) {
+        swalPromise.then(function () { window.location.reload(); });
+    }
 
-        var node = dt.row.add([
-            '<input type="checkbox" class="form-check-input m-0 ols-row-check" aria-label="Select ' + esc(ot.name) + '">',
-            '',
-            esc(ot.roll),
-            esc(ot.name),
-            esc(ot.code),
-            esc(ot.course),
-            esc(ot.batch),
-            laptop ? 'Yes' : 'No',
-            reason ? esc(reason) : dash,
-            disability ? 'Yes' : 'No',
-            scriber ? 'Yes' : 'No',
-            remarks ? esc(remarks) : dash,
-            'Admin',
-            DELETE_ACTION
-        ]).draw(false).node();
+    function submitBulk() {
+        var form = new FormData();
+        form.append('file', bulkFile);
+        setBusy(true);
+        ajax({ url: URLS.import, method: 'POST', data: form, processData: false, contentType: false })
+            .done(function (res) {
+                var saved = (res.added || 0) + (res.updated || 0);
+                var failures = res.failures || [];
+                importModal.hide();
 
-        // Same cell classes as the server-rendered rows.
-        var $cells = $(node).attr('data-service', ot.service).children('td');
-        $cells.eq(COL.check).addClass('coe-col-check');
-        $cells.eq(2).addClass('coe-nowrap');
-        $cells.eq(3).addClass('coe-col-wrap');
-        $cells.eq(5).addClass('coe-strong');
-        $cells.eq(7).addClass('coe-yesno');
-        $cells.eq(8).addClass('coe-col-truncate').attr('title', reason || null);
-        $cells.eq(11).addClass('coe-strong coe-col-wrap');
+                var $html = $('<div class="text-start"></div>').append($('<p class="mb-2"></p>').text(res.message));
+                if (failures.length) {
+                    var $list = $('<ul class="small mb-0 ps-3" style="max-height:220px;overflow:auto"></ul>');
+                    failures.forEach(function (f) { $list.append($('<li></li>').text(f)); });
+                    $html.append($('<p class="fw-semibold mb-1"></p>').text('Rejected rows:')).append($list);
+                }
+
+                var shown = Swal.fire({
+                    icon: failures.length ? (saved ? 'warning' : 'error') : 'success',
+                    title: failures.length ? (saved ? 'Imported with errors' : 'Nothing imported') : 'Success',
+                    html: $html[0]
+                });
+                if (saved) { reloadAfter(shown); }
+            })
+            .fail(showError)
+            .always(function () { setBusy(false); });
+    }
+
+    function submitSingle() {
+        if (!validateSingle()) { return; }
+        setBusy(true);
+        ajax({ url: URLS.store, method: 'POST', data: singlePayload() })
+            .done(function (res) {
+                importModal.hide();
+                reloadAfter(Swal.fire({ icon: 'success', title: 'Success', text: res.message }));
+            })
+            .fail(function (xhr) { if (xhr.status === 422) { showServerErrors(xhr); } else { showError(xhr); } })
+            .always(function () { setBusy(false); });
     }
 
     $submit.on('click', function () {
+        if (busy) { return; }
         if (mode() === 'bulk') {
-            if (!bulkFile) { return; }
-            // DESIGN PREVIEW: no import endpoint yet — say so rather than fake a result.
-            Swal.fire({
-                icon: 'info',
-                title: 'Import not connected yet',
-                text: '"' + bulkFile.name + '" passed the file checks. The import runs once the backend is wired up.',
-                confirmButtonColor: '#004384'
-            });
+            if (bulkFile) { submitBulk(); }
             return;
         }
-
-        if (!validateSingle()) { return; }
-        addRow();
-        importModal.hide();
-        Swal.fire({ icon: 'success', title: 'Success', text: 'Laptop status added.' });
+        submitSingle();
     });
 
     $('#olsImportModal').on('hidden.bs.modal', function () {

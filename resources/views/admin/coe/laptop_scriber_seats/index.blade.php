@@ -27,6 +27,8 @@
 .lss-seat:hover      { background: #a9cbee; }
 .lss-seat.is-selected{ background: #f5a623; border-color: #c8841a; color: #5a3800; }
 .lss-seat.is-disabled{ background: #e9ecef; border-color: #ced4da; color: #adb5bd; cursor: default; pointer-events: none; }
+.lss-seat--void      { visibility: hidden; pointer-events: none; }
+.lss-map-empty       { font-size: 12px; color: var(--ds-ink-muted); padding: 1rem 0; }
 .lss-podium          { text-align: center; font-size: 10px; color: var(--ds-ink-muted);
                         margin-top: 4px; border-top: 1px solid #d0d9e8; padding-top: 3px; }
 .lss-sep             { width: 6px; }
@@ -111,7 +113,6 @@
                                 <th scope="col">Room Name</th>
                                 <th scope="col">Building</th>
                                 <th scope="col">Floor</th>
-                                <th scope="col">Room Type</th>
                                 <th scope="col" class="coe-col-center">Total Capacity</th>
                                 <th scope="col" class="coe-col-center">Laptop Seats</th>
                                 <th scope="col" class="coe-col-center">Scriber Seats</th>
@@ -120,18 +121,13 @@
                         </thead>
                         <tbody>
                             @foreach ($rows as $row)
-                                <tr data-coe-id="{{ $row['id'] }}"
-                                    data-lss-building="{{ $row['building'] }}"
-                                    data-lss-floor="{{ $row['floor'] }}"
-                                    data-lss-room="{{ $row['room'] }}"
-                                    data-lss-type="{{ $row['type'] }}"
+                                <tr data-coe-id="{{ $row['venue_id'] }}"
                                     data-lss-capacity="{{ $row['capacity'] }}"
-                                    data-lss-laptop="{{ $row['laptop_seats'] }}"
-                                    data-lss-scriber="{{ $row['scriber_seats'] }}">
+                                    data-lss-laptop-seats="{{ json_encode($row['laptop']) }}"
+                                    data-lss-scriber-seats="{{ json_encode($row['scriber']) }}">
                                     <td class="lss-cell-room coe-strong">{{ $row['room'] }}</td>
-                                    <td class="lss-cell-building">{{ $row['building'] }}</td>
-                                    <td class="lss-cell-floor">{{ $row['floor'] }}</td>
-                                    <td class="lss-cell-type">{{ $row['type'] }}</td>
+                                    <td class="lss-cell-building">{{ $row['building'] !== '' ? $row['building'] : '—' }}</td>
+                                    <td class="lss-cell-floor">{{ $row['floor'] !== '' ? $row['floor'] : '—' }}</td>
                                     <td class="coe-col-center lss-cell-capacity" data-order="{{ $row['capacity'] }}">{{ $row['capacity'] }}</td>
                                     <td class="coe-col-center lss-cell-laptop" data-order="{{ $row['laptop_seats'] }}">
                                         @if ($row['laptop_seats'] > 0)
@@ -182,20 +178,32 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body coe-modal-body">
+                    @if ($rooms->isEmpty())
+                        {{-- No examination rooms yet: rooms come from Venue Master (building, floor, capacity). --}}
+                        <div id="lssNoRooms" class="alert alert-warning d-flex align-items-start gap-2 mb-0" role="alert">
+                            <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                            <div>
+                                <strong>No examination rooms found.</strong>
+                                Laptop and scriber seats are marked on an examination room. Add rooms in
+                                <a href="{{ route('Venue-Master.index') }}">Venue Master</a>
+                                with a building, a floor and a capacity first, then come back here.
+                            </div>
+                        </div>
+                    @else
                     {{-- Row 1: Building + Floor --}}
                     <div class="row g-3 mb-3">
                         <div class="col-sm-6">
                             <label class="coe-form-label" for="lssBuilding">Building Name<span class="coe-req">*</span></label>
-                            <select id="lssBuilding" name="building_name" class="form-select coe-control" required>
+                            <select id="lssBuilding" name="building" class="form-select coe-control" required>
                                 <option value="">Select Building Name</option>
-                                @foreach ($buildings as $b)
-                                    <option value="{{ $b }}">{{ $b }}</option>
+                                @foreach ($rooms->unique('building_pk') as $r)
+                                    <option value="{{ $r['building_pk'] }}">{{ $r['building'] }}</option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="col-sm-6">
                             <label class="coe-form-label" for="lssFloor">Floor Name<span class="coe-req">*</span></label>
-                            <select id="lssFloor" name="floor_name" class="form-select coe-control" required>
+                            <select id="lssFloor" name="floor" class="form-select coe-control" required>
                                 <option value="">Select Floor</option>
                             </select>
                         </div>
@@ -205,7 +213,7 @@
                     <div class="row g-3 mb-4">
                         <div class="col-12">
                             <label class="coe-form-label" for="lssRoom">Room Name<span class="coe-req">*</span></label>
-                            <select id="lssRoom" name="room_name" class="form-select coe-control" required>
+                            <select id="lssRoom" name="venue_id" class="form-select coe-control" required>
                                 <option value="">Select Room</option>
                             </select>
                         </div>
@@ -221,7 +229,7 @@
                             </div>
                         </div>
                         <div class="col-lg-6">
-                            <label class="coe-form-label mb-2">Scriber Seats<span class="coe-req">*</span></label>
+                            <label class="coe-form-label mb-2">Scriber Seats</label>
                             <div id="lssScriberMap" class="lss-map-wrap"></div>
                             <div class="lss-count-badge mt-2">
                                 Selected: <b id="lssScriberCount">0</b> scriber seat(s)
@@ -229,10 +237,13 @@
                         </div>
                     </div>
                     <div id="lssSeatsError" class="coe-field-error d-none mt-2">Select at least one laptop seat.</div>
+                    @endif
                 </div>
                 <div class="modal-footer coe-modal-footer">
                     <button type="button" class="btn coe-btn coe-btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn coe-btn coe-btn-primary" id="lssSubmit">Add Laptop &amp; Scriber Seats</button>
+                    @if ($rooms->isNotEmpty())
+                        <button type="submit" class="btn coe-btn coe-btn-primary" id="lssSubmit">Add Laptop &amp; Scriber Seats</button>
+                    @endif
                 </div>
             </form>
         </div>
@@ -263,16 +274,39 @@
 
 @push('scripts')
 <script src="{{ asset('js/coe-grid.js') }}?v={{ @filemtime(public_path('js/coe-grid.js')) ?: time() }}"></script>
+<script src="{{ asset('js/coe-seat-map.js') }}?v={{ @filemtime(public_path('js/coe-seat-map.js')) ?: time() }}"></script>
 <script>
 $(function () {
     'use strict';
 
     /* ── Data from server ─────────────────────────────────────────────── */
-    var FLOORS_BY_BUILDING = @json($floorsByBuilding);
-    var ROOMS_BY_BUILDING_FLOOR = @json($roomsByBuildingFloor);
+    /* Examination rooms: [{id, name, building_pk, building, floor_pk, floor, floor_order, capacity}] */
+    var ROOMS = @json($rooms);
+    var ENDPOINTS = {
+        store:   @json(route('admin.coe.laptop-scriber-seats.store')),
+        destroy: @json(route('admin.coe.laptop-scriber-seats.destroy', ['venue' => '__ID__']))
+    };
+    var CSRF = $('meta[name="csrf-token"]').attr('content') || '';
+
+    function roomById(id) {
+        id = parseInt(id, 10);
+        for (var i = 0; i < ROOMS.length; i++) { if (ROOMS[i].id === id) { return ROOMS[i]; } }
+        return null;
+    }
+
+    function ajax(opts) {
+        return $.ajax($.extend({ headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' } }, opts));
+    }
+
+    function seatList(attr) {
+        try {
+            var v = JSON.parse(attr || '[]');
+            return Array.isArray(v) ? v.map(function (n) { return parseInt(n, 10); }).filter(function (n) { return n > 0; }) : [];
+        } catch (e) { return []; }
+    }
 
     /* ── Column map ───────────────────────────────────────────────────── */
-    var COL = { room: 0, building: 1, floor: 2, type: 3, capacity: 4, laptop: 5, scriber: 6, action: 7 };
+    var COL = { room: 0, building: 1, floor: 2, capacity: 3, laptop: 4, scriber: 5, action: 6 };
 
     var $table = $('#lssTable');
 
@@ -291,7 +325,8 @@ $(function () {
         searchToggle: '#lssSearchToggle',
         searchSlot: '#lssDtSearch',
         colvisGrid: '#lssColumnToggleGrid',
-        colvisKey: 'coeLaptopScriberSeats:hiddenColumns:v1',
+        // v2: the Room Type column was removed, so v1's hidden indexes no longer line up.
+        colvisKey: 'coeLaptopScriberSeats:hiddenColumns:v2',
         empty: { title: 'No Seat Allocations', zeroTitle: 'No Records Found',
                  text: 'Add laptop and scriber seats to get started.' }
     });
@@ -302,127 +337,167 @@ $(function () {
         modal: '#lssDeleteModal',
         confirm: '#lssDeleteConfirm',
         onConfirm: function ($row) {
-            dt.row($row).remove().draw(false);
-            Swal.fire({ icon: 'success', title: 'Deleted', text: 'Record deleted.' });
+            ajax({
+                url: ENDPOINTS.destroy.replace('__ID__', encodeURIComponent($row.attr('data-coe-id'))),
+                method: 'DELETE'
+            }).done(function (res) {
+                dt.row($row).remove().draw(false);
+                Swal.fire({ icon: 'success', title: 'Deleted', text: (res && res.message) || 'Record deleted.' });
+            }).fail(function (xhr) {
+                Swal.fire({ icon: 'error', title: 'Error',
+                    text: (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong.' });
+            });
         }
     });
 
     /* ── Seat map ─────────────────────────────────────────────────────── */
     /*
-     * Seat layout matches the screenshot:
-     *   Block A  (cols 1-4, rows A-F)
-     *   Block B CENTRE  (cols 1-13, rows A-F)  — widest block
-     *   Block C  (cols 1-6, rows A-F)
-     * Seats are numbered within each block, prefixed by block letter.
-     * The row label (A-F) goes front-to-back (A = front row near entrance).
+     * Drawn from CoeSeatMap.layout(capacity) (public/js/coe-seat-map.js) — the
+     * numbering the seat allocator and Venue Allocation use, so data-seat is the
+     * real seat number. Row A is the front row by the podium, so rows are drawn
+     * back-to-front (podium at the bottom).
      */
-    var ROWS = ['F', 'E', 'D', 'C', 'B', 'A'];  // top to bottom in visual
-    var BLOCKS = [
-        { label: 'BLOCK A',          cols: 4  },
-        { label: 'BLOCK B (CENTRE)', cols: 13 },
-        { label: 'BLOCK C',          cols: 6  }
-    ];
-
-    function buildSeatId(blockIdx, row, col) {
-        return 'B' + blockIdx + '_' + row + col;
-    }
-
-    /**
-     * Render a seat map into `container`.
-     * Returns { getSelected, setSelected, reset, setCapacity }
-     */
-    function buildSeatMap(container, onCountChange) {
+    function buildSeatMap(container, onChange) {
         var $wrap = $(container);
         var selected = {};
+        var blocked = {};
+        var $map = null;
 
-        var $map = $('<div class="lss-map"></div>');
+        function count() { return Object.keys(selected).length; }
 
-        // Entrance arrow header
-        $map.append(
-            '<div class="lss-map-header">' +
-            '<i class="bi bi-arrow-down-short" aria-hidden="true"></i> ENTRANCE ' +
-            '<i class="bi bi-arrow-down-short" aria-hidden="true"></i></div>'
-        );
-
-        var $blocks = $('<div class="lss-blocks"></div>').appendTo($map);
-
-        BLOCKS.forEach(function (block, bi) {
-            var $block = $('<div class="lss-block"></div>').appendTo($blocks);
-            $('<div class="lss-block-label"></div>').text(block.label).appendTo($block);
-
-            // Separator between blocks
-            if (bi < BLOCKS.length - 1) {
-                $blocks.append('<div class="lss-sep"></div>');
+        function render(capacity) {
+            selected = {};
+            blocked = {};
+            $wrap.empty();
+            capacity = parseInt(capacity, 10) || 0;
+            if (capacity < 1) {
+                $map = null;
+                $wrap.append('<div class="lss-map-empty">Select a room to see its seats.</div>');
+                onChange();
+                return;
             }
 
-            ROWS.forEach(function (rowLetter) {
-                var $row = $('<div class="lss-row"></div>');
-                $('<div class="lss-row-label"></div>').text(rowLetter).appendTo($row);
+            var layout = CoeSeatMap.layout(capacity);
+            var rows = layout.rows.slice().reverse();
 
-                for (var c = block.cols; c >= 1; c--) {
-                    var seatNum = String(c).padStart(2, '0');
-                    // Build label: block-letter + rowLetter + col e.g. "A G21"
-                    var id = buildSeatId(bi, rowLetter, seatNum);
-                    var $seat = $('<button type="button" class="lss-seat"></button>')
-                        .attr({ 'data-sid': id, 'title': rowLetter + seatNum })
-                        .text(rowLetter + seatNum);
-                    $row.append($seat);
+            $map = $('<div class="lss-map"></div>');
+            $map.append(
+                '<div class="lss-map-header">' +
+                '<i class="bi bi-arrow-down-short" aria-hidden="true"></i> ENTRANCE ' +
+                '<i class="bi bi-arrow-down-short" aria-hidden="true"></i></div>'
+            );
+
+            var $blocks = $('<div class="lss-blocks"></div>').appendTo($map);
+
+            layout.blocks.forEach(function (block, bi) {
+                var $block = $('<div class="lss-block"></div>').appendTo($blocks);
+                $('<div class="lss-block-label"></div>').text(block.label).appendTo($block);
+
+                if (bi < layout.blocks.length - 1) {
+                    $blocks.append('<div class="lss-sep"></div>');
                 }
-                $block.append($row);
+
+                rows.forEach(function (rowLetter) {
+                    var $row = $('<div class="lss-row"></div>');
+                    $('<div class="lss-row-label"></div>').text(rowLetter).appendTo($row);
+
+                    block.seats[rowLetter].forEach(function (seat) {
+                        if (!seat) {
+                            // Past capacity: keep the grid aligned, no desk.
+                            $row.append('<span class="lss-seat lss-seat--void" aria-hidden="true"></span>');
+                            return;
+                        }
+                        var text = seat.row + String(seat.col).padStart(2, '0');
+                        $('<button type="button" class="lss-seat"></button>')
+                            .attr({ 'data-seat': seat.number, 'title': seat.label + ' (seat ' + seat.number + ')' })
+                            .text(text)
+                            .appendTo($row);
+                    });
+                    $block.append($row);
+                });
             });
-        });
 
-        $map.append('<div class="lss-podium"><i class="bi bi-speaker" aria-hidden="true"></i> SPEAKER / PODIUM</div>');
-        $wrap.append($map);
+            $map.append('<div class="lss-podium"><i class="bi bi-speaker" aria-hidden="true"></i> SPEAKER / PODIUM</div>');
+            $wrap.append($map);
+            onChange();
+        }
 
-        // Toggle on click
-        $map.on('click', '.lss-seat:not(.is-disabled)', function () {
-            var id = $(this).attr('data-sid');
-            if (selected[id]) {
-                delete selected[id];
+        $wrap.on('click', '.lss-seat[data-seat]:not(.is-disabled)', function () {
+            var n = parseInt($(this).attr('data-seat'), 10);
+            if (selected[n]) {
+                delete selected[n];
                 $(this).removeClass('is-selected');
             } else {
-                selected[id] = true;
+                selected[n] = true;
                 $(this).addClass('is-selected');
             }
-            onCountChange(Object.keys(selected).length);
+            onChange();
         });
 
+        render(0);
+
         return {
-            getCount: function () { return Object.keys(selected).length; },
-            reset: function () {
-                selected = {};
-                $map.find('.lss-seat').removeClass('is-selected is-disabled');
-                onCountChange(0);
+            render: render,
+            getCount: count,
+            /** Sorted seat numbers. */
+            getSelected: function () {
+                return Object.keys(selected).map(Number).sort(function (a, b) { return a - b; });
             },
-            /** Disable seats beyond `n` total capacity — those that don't exist. */
-            setCapacity: function (n) {
-                // Count all seats and disable those above capacity
-                var count = 0;
-                $map.find('.lss-seat').each(function () {
-                    count++;
-                    $(this).toggleClass('is-disabled', count > n);
-                });
-            },
-            /** Pre-select the first `n` seats (for edit pre-fill). */
-            selectFirst: function (n) {
+            /** Select exactly these seat numbers (seats not on the map are ignored). */
+            setSelected: function (numbers) {
                 selected = {};
-                var done = 0;
-                $map.find('.lss-seat:not(.is-disabled)').each(function () {
-                    if (done < n) {
-                        selected[$(this).attr('data-sid')] = true;
-                        $(this).addClass('is-selected');
-                        done++;
-                    }
-                });
-                onCountChange(done);
+                if ($map) {
+                    $map.find('.lss-seat[data-seat]').removeClass('is-selected');
+                    (numbers || []).forEach(function (n) {
+                        var $s = $map.find('.lss-seat[data-seat="' + parseInt(n, 10) + '"]');
+                        if ($s.length && !blocked[n]) {
+                            selected[n] = true;
+                            $s.addClass('is-selected');
+                        }
+                    });
+                }
+                onChange();
+            },
+            /** Seats taken by the other map: shown disabled, not selectable. */
+            setBlocked: function (numbers) {
+                blocked = {};
+                (numbers || []).forEach(function (n) { blocked[n] = true; });
+                if ($map) {
+                    $map.find('.lss-seat[data-seat]').each(function () {
+                        $(this).toggleClass('is-disabled', !!blocked[$(this).attr('data-seat')]);
+                    });
+                }
             }
         };
     }
 
-    /* Build both maps once */
-    var laptopMap  = buildSeatMap('#lssLaptopMap',  function (n) { $('#lssLaptopCount').text(n); });
-    var scriberMap = buildSeatMap('#lssScriberMap', function (n) { $('#lssScriberCount').text(n); });
+    if (!ROOMS.length) {
+        /* Empty state is rendered server-side in the modal; only the open button is wired. */
+        $('#lssAddBtn').on('click', function () {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('lssFormModal')).show();
+        });
+        return;
+    }
+
+    /* A seat chosen on one map is disabled on the other. */
+    var laptopMap, scriberMap;
+    laptopMap = buildSeatMap('#lssLaptopMap', function () {
+        $('#lssLaptopCount').text(laptopMap ? laptopMap.getCount() : 0);
+        if (scriberMap && laptopMap) { scriberMap.setBlocked(laptopMap.getSelected()); }
+    });
+    scriberMap = buildSeatMap('#lssScriberMap', function () {
+        $('#lssScriberCount').text(scriberMap ? scriberMap.getCount() : 0);
+        if (laptopMap && scriberMap) { laptopMap.setBlocked(scriberMap.getSelected()); }
+    });
+
+    /* Saved layouts by venue id, so picking a room that already has seats shows them. */
+    var SAVED = {};
+    $table.find('tbody tr[data-coe-id]').each(function () {
+        SAVED[$(this).attr('data-coe-id')] = {
+            laptop: seatList($(this).attr('data-lss-laptop-seats')),
+            scriber: seatList($(this).attr('data-lss-scriber-seats'))
+        };
+    });
 
     /* ── Dependent selects: Building → Floor → Room ───────────────────── */
     var $building = $('#lssBuilding');
@@ -434,39 +509,53 @@ $(function () {
         $s.select2({ width: '100%', dropdownParent: $modal });
     });
 
+    /* Floors are not tied to buildings in the schema: a building's floors are the floors that have an exam room in it. */
     function fillFloors() {
-        var b = $building.val();
-        var floors = b ? (FLOORS_BY_BUILDING[b] || []) : [];
+        var b = parseInt($building.val(), 10);
+        var seen = {};
+        var floors = [];
+        ROOMS.forEach(function (r) {
+            if (r.building_pk === b && !seen[r.floor_pk]) {
+                seen[r.floor_pk] = true;
+                floors.push(r);
+            }
+        });
+        floors.sort(function (x, y) { return (x.floor_order - y.floor_order) || x.floor.localeCompare(y.floor); });
         $floor.empty().append(new Option('Select Floor', '', true, true));
-        floors.forEach(function (f) { $floor.append(new Option(f, f)); });
+        floors.forEach(function (r) { $floor.append(new Option(r.floor, r.floor_pk)); });
         $floor.trigger('change.select2');
         fillRooms();
     }
 
     function fillRooms() {
-        var b = $building.val(), f = $floor.val();
-        var rooms = (b && f) ? ((ROOMS_BY_BUILDING_FLOOR[b] || {})[f] || []) : [];
+        var b = parseInt($building.val(), 10), f = parseInt($floor.val(), 10);
         $room.empty().append(new Option('Select Room', '', true, true));
-        rooms.forEach(function (r) { $room.append(new Option(r[0], r[0])); });
+        ROOMS.forEach(function (r) {
+            if (r.building_pk === b && r.floor_pk === f) {
+                var text = r.name + ' (capacity ' + r.capacity + ')' + (SAVED[r.id] ? ' — seats already set' : '');
+                $room.append(new Option(text, r.id));
+            }
+        });
         $room.trigger('change.select2');
-        resetMaps();
+        showRoom();
     }
 
-    function resetMaps() {
-        laptopMap.reset();
-        scriberMap.reset();
-        // Apply capacity from selected room
-        var b = $building.val(), f = $floor.val(), rm = $room.val();
-        var rooms = (b && f) ? ((ROOMS_BY_BUILDING_FLOOR[b] || {})[f] || []) : [];
-        var found = rooms.find(function (r) { return r[0] === rm; });
-        var capacity = found ? found[2] : 999;
-        laptopMap.setCapacity(capacity);
-        scriberMap.setCapacity(capacity);
+    /* Draw both maps for the chosen room and select its saved seats, if any. */
+    function showRoom() {
+        var room = roomById($room.val());
+        laptopMap.render(room ? room.capacity : 0);
+        scriberMap.render(room ? room.capacity : 0);
+        var saved = room ? SAVED[room.id] : null;
+        if (saved) {
+            laptopMap.setSelected(saved.laptop);
+            scriberMap.setSelected(saved.scriber);
+        }
+        $('#lssSeatsError').addClass('d-none');
     }
 
     $building.on('change', function () { fieldError($building, ''); fillFloors(); });
     $floor.on('change', function () { fieldError($floor, ''); fillRooms(); });
-    $room.on('change', function () { fieldError($room, ''); resetMaps(); });
+    $room.on('change', function () { fieldError($room, ''); showRoom(); });
 
     /* ── Form validation helpers ─────────────────────────────────────── */
     function fieldError($el, msg) {
@@ -479,36 +568,36 @@ $(function () {
     }
 
     /* ── Form open (add / edit) ──────────────────────────────────────── */
-    var $editingRow = null;
+    var isEdit = false;
 
     function openForm($row) {
-        $editingRow = $row || null;
-        var isEdit = !!$row;
+        isEdit = !!$row;
         $('#lssFormModalLabel').text(isEdit ? 'Edit Laptop & Scriber Seats' : 'Add Laptop & Scriber Seats');
         $('#lssSubmit').text(isEdit ? 'Update' : 'Add Laptop & Scriber Seats');
 
-        if (isEdit) {
-            var b  = $row.attr('data-lss-building');
-            var fl = $row.attr('data-lss-floor');
-            var rm = $row.attr('data-lss-room');
-            var laptop  = parseInt($row.attr('data-lss-laptop'), 10)  || 0;
-            var scriber = parseInt($row.attr('data-lss-scriber'), 10) || 0;
-            var capacity = parseInt($row.attr('data-lss-capacity'), 10) || 999;
+        var room = isEdit ? roomById($row.attr('data-coe-id')) : null;
+        if (isEdit && !room) {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'This room is no longer an examination room in Venue Master.' });
+            return;
+        }
 
-            $building.val(b).trigger('change.select2');
+        if (room) {
+            $building.val(String(room.building_pk)).trigger('change.select2');
             fillFloors();
-            $floor.val(fl).trigger('change.select2');
+            $floor.val(String(room.floor_pk)).trigger('change.select2');
             fillRooms();
-            $room.val(rm).trigger('change.select2');
-            laptopMap.setCapacity(capacity);
-            scriberMap.setCapacity(capacity);
-            laptopMap.selectFirst(laptop);
-            scriberMap.selectFirst(scriber);
+            $room.val(String(room.id)).trigger('change.select2');
+            showRoom();
+            // Use the row's own seat lists — they are what is saved for this room.
+            laptopMap.setSelected(seatList($row.attr('data-lss-laptop-seats')));
+            scriberMap.setSelected(seatList($row.attr('data-lss-scriber-seats')));
         } else {
             document.getElementById('lssForm').reset();
             $building.val('').trigger('change.select2');
             fillFloors();
         }
+        // Editing is for one room; pick a different room with Add.
+        [$building, $floor, $room].forEach(function ($s) { $s.prop('disabled', isEdit); });
         $('#lssSeatsError').addClass('d-none');
         bootstrap.Modal.getOrCreateInstance($modal[0]).show();
     }
@@ -517,10 +606,11 @@ $(function () {
     $table.on('click', '.coe-act--edit', function () { openForm($(this).closest('tr')); });
 
     $modal.on('hidden.bs.modal', function () {
-        $editingRow = null;
-        laptopMap.reset();
-        scriberMap.reset();
-        $modal.find('.coe-field-error').remove();
+        isEdit = false;
+        [$building, $floor, $room].forEach(function ($s) { $s.prop('disabled', false); });
+        laptopMap.render(0);
+        scriberMap.render(0);
+        $modal.find('.coe-field-error').not('#lssSeatsError').remove();
         $modal.find('.is-invalid').removeClass('is-invalid');
         $('#lssSeatsError').addClass('d-none');
     });
@@ -533,9 +623,9 @@ $(function () {
         ok = fieldError($floor, $floor.val() ? '' : 'Select a floor.') && ok;
         ok = fieldError($room, $room.val() ? '' : 'Select a room.') && ok;
 
-        var laptopCount  = laptopMap.getCount();
-        var scriberCount = scriberMap.getCount();
-        if (laptopCount === 0) {
+        var laptop  = laptopMap.getSelected();
+        var scriber = scriberMap.getSelected();
+        if (laptop.length === 0) {
             $('#lssSeatsError').text('Select at least one laptop seat.').removeClass('d-none');
             ok = false;
         } else {
@@ -543,76 +633,37 @@ $(function () {
         }
         if (!ok) { return; }
 
-        var b  = $building.val();
-        var fl = $floor.val();
-        var rm = $room.val();
-        var rooms = ((ROOMS_BY_BUILDING_FLOOR[b] || {})[fl] || []);
-        var found = rooms.find(function (r) { return r[0] === rm; });
-        var type     = found ? found[1] : '';
-        var capacity = found ? found[2] : '';
-        var esc = function (t) { return $('<div>').text(t).html(); };
-
-        if ($editingRow) {
-            /* Update existing row in-place. */
-            $editingRow.attr({
-                'data-lss-building': b, 'data-lss-floor': fl,
-                'data-lss-room': rm,    'data-lss-type': type,
-                'data-lss-capacity': capacity,
-                'data-lss-laptop': laptopCount, 'data-lss-scriber': scriberCount
-            });
-            $editingRow.find('.lss-cell-room').text(rm);
-            $editingRow.find('.lss-cell-building').text(b);
-            $editingRow.find('.lss-cell-floor').text(fl);
-            $editingRow.find('.lss-cell-type').text(type);
-            $editingRow.find('.lss-cell-capacity').text(capacity).attr('data-order', capacity);
-            $editingRow.find('.lss-cell-laptop').html(laptopCount > 0 ? laptopCount : '<span class="lss-dash">&mdash;</span>').attr('data-order', laptopCount);
-            $editingRow.find('.lss-cell-scriber').html(scriberCount > 0 ? scriberCount : '<span class="lss-dash">&mdash;</span>').attr('data-order', scriberCount);
-            dt.row($editingRow).invalidate('dom').draw(false);
+        var $submit = $('#lssSubmit').prop('disabled', true);
+        ajax({
+            url: ENDPOINTS.store,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ venue_id: parseInt($room.val(), 10), laptop_seats: laptop, scriber_seats: scriber })
+        }).done(function (res) {
             bootstrap.Modal.getOrCreateInstance($modal[0]).hide();
-            Swal.fire({ icon: 'success', title: 'Updated', text: 'Seat allocation updated.' });
-        } else {
-            /* Add new row. */
-            var newId = 1 + Math.max(0, Math.max.apply(null,
-                dt.rows().nodes().to$().map(function () {
-                    return parseInt(this.getAttribute('data-coe-id'), 10) || 0;
-                }).get()
-            ));
-            var $newRow = $(dt.row.add([
-                esc(rm),
-                esc(b),
-                esc(fl),
-                esc(type),
-                capacity,
-                laptopCount > 0 ? laptopCount : '<span class="lss-dash">&mdash;</span>',
-                scriberCount > 0 ? scriberCount : '<span class="lss-dash">&mdash;</span>',
-                '<div class="coe-act-group" role="group" aria-label="Row actions">' +
-                '<button type="button" class="coe-act coe-act--edit">' +
-                '<span class="coe-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>' +
-                '<span class="coe-act__label">Edit</span></button>' +
-                '<button type="button" class="coe-act coe-act--del">' +
-                '<span class="coe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>' +
-                '<span class="coe-act__label">Delete</span></button></div>'
-            ]).draw(false).node());
-
-            $newRow.attr({
-                'data-coe-id': newId,
-                'data-lss-building': b, 'data-lss-floor': fl,
-                'data-lss-room': rm,    'data-lss-type': type,
-                'data-lss-capacity': capacity,
-                'data-lss-laptop': laptopCount, 'data-lss-scriber': scriberCount
-            });
-            var $cells = $newRow.children('td');
-            $cells.eq(COL.room).addClass('lss-cell-room coe-strong');
-            $cells.eq(COL.building).addClass('lss-cell-building');
-            $cells.eq(COL.floor).addClass('lss-cell-floor');
-            $cells.eq(COL.type).addClass('lss-cell-type');
-            $cells.eq(COL.capacity).addClass('coe-col-center lss-cell-capacity').attr('data-order', capacity);
-            $cells.eq(COL.laptop).addClass('coe-col-center lss-cell-laptop').attr('data-order', laptopCount);
-            $cells.eq(COL.scriber).addClass('coe-col-center lss-cell-scriber').attr('data-order', scriberCount);
-
-            bootstrap.Modal.getOrCreateInstance($modal[0]).hide();
-            Swal.fire({ icon: 'success', title: 'Added', text: 'Laptop & scriber seats added.' });
-        }
+            Swal.fire({ icon: 'success', title: isEdit ? 'Updated' : 'Saved',
+                        text: (res && res.message) || 'Laptop & scriber seats saved.' })
+                .then(function () { window.location.reload(); });
+        }).fail(function (xhr) {
+            if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                var errors = xhr.responseJSON.errors;
+                var seatMsgs = [];
+                Object.keys(errors).forEach(function (name) {
+                    if (name === 'venue_id') {
+                        fieldError($room, errors[name][0]);
+                    } else if (name.indexOf('laptop_seats') === 0 || name.indexOf('scriber_seats') === 0) {
+                        seatMsgs.push(errors[name][0]);
+                    }
+                });
+                if (seatMsgs.length) { $('#lssSeatsError').text(seatMsgs.join(' ')).removeClass('d-none'); }
+                if (!errors.venue_id && !seatMsgs.length) {
+                    Swal.fire({ icon: 'error', title: 'Error', text: xhr.responseJSON.message || 'Please check the form.' });
+                }
+                return;
+            }
+            Swal.fire({ icon: 'error', title: 'Error',
+                text: (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong.' });
+        }).always(function () { $submit.prop('disabled', false); });
     });
 });
 </script>

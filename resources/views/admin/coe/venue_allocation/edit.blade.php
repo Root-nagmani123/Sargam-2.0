@@ -6,205 +6,172 @@
 <link rel="stylesheet"
       href="{{ asset('css/coe-admin.css') }}?v={{ @filemtime(public_path('css/coe-admin.css')) ?: time() }}">
 <style>
-/* ── Page layout ─────────────────────────────────────────────────────── */
-.esp-wrap        { display:flex;gap:20px;align-items:flex-start; }
+/* Edit Seating Plan (design node 1514-58696). The large hall (.vsp-*) and seat map
+   (.esp-*) are in coe-admin.css, shared with View Seating Plan. */
+.esp-head        { display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px; }
+.esp-tools       { display:flex;flex-wrap:wrap;align-items:center;gap:12px; }
+.esp-legend      { display:flex;flex-wrap:wrap;align-items:center;gap:14px;font-size:12px;color:#667085; }
+.esp-swap-toggle { display:inline-flex;align-items:center;gap:6px;border:none;border-radius:6px;padding:7px 14px;
+                   font-size:13px;font-weight:600;cursor:pointer;background:#fef3c7;color:#b54708; }
+.esp-swap-toggle.is-off { background:#f2f4f7;color:#475467; }
+.esp-verify-btn  { display:inline-flex;align-items:center;gap:6px;background:#004384;color:#fff;border:none;border-radius:6px;
+                   padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer; }
+.esp-verify-btn:hover { background:#00356a; }
+.esp-wrap        { display:flex;gap:24px;align-items:flex-start; }
 .esp-map-side    { flex:1;min-width:0; }
-.esp-panel-side  { width:340px;flex-shrink:0; }
-@media(max-width:992px){
-    .esp-wrap    { flex-direction:column; }
-    .esp-panel-side{ width:100%; }
-}
-/* ── Legend / toolbar ─────────────────────────────────────────────────── */
-.esp-legend      { display:flex;flex-wrap:wrap;align-items:center;gap:14px;font-size:12px;margin-bottom:10px; }
-.esp-legend-dot  { width:14px;height:14px;border-radius:3px;display:inline-block;vertical-align:middle;margin-right:4px; }
-.esp-leg-avail   { background:#c5dcf5; }
-.esp-leg-sel     { background:#004384;color:#fff; }
-.esp-leg-swap    { background:#f5a623; }
-.esp-leg-empty   { background:#e2e8f0;border:1px solid #cbd5e1; }
-.esp-swap-toggle { background:#f5a623;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer; }
-.esp-swap-toggle.is-off{ background:#e2e8f0;color:#475569; }
-.esp-verify-btn  { background:#004384;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:13px;font-weight:600;cursor:pointer; }
-.esp-verify-btn:hover{ background:#003070; }
-/* ── Seating map ──────────────────────────────────────────────────────── */
-.esp-hall-label  { font-size:13px;font-weight:700;color:var(--ds-ink);margin-bottom:2px; }
-.esp-hall-sub    { font-size:11px;color:var(--ds-ink-muted);margin-bottom:12px; }
-.esp-entrance    { text-align:center;font-size:11px;font-weight:600;color:var(--ds-ink-muted);letter-spacing:.5px;margin-bottom:6px; }
-.esp-entrance i  { display:block;font-size:18px; }
-.esp-podium      { text-align:center;font-size:11px;font-weight:600;color:var(--ds-ink-muted);letter-spacing:.5px;margin-top:6px;padding:6px;border:1px dashed var(--ds-line);border-radius:6px; }
-.esp-blocks-row  { display:flex;gap:6px;align-items:flex-start; }
-.esp-block       { display:flex;flex-direction:column;gap:3px; }
-.esp-row         { display:flex;gap:3px; }
-.esp-row-label   { width:14px;font-size:10px;font-weight:700;color:var(--ds-ink-muted);line-height:24px;flex-shrink:0;text-align:center; }
-.esp-block-label { font-size:10px;font-weight:700;color:var(--ds-ink-muted);text-align:center;margin-bottom:2px;letter-spacing:.5px; }
-.esp-sep         { width:8px;flex-shrink:0; }
-/* Seats */
-.esp-seat        { width:24px;height:24px;border-radius:4px;background:#c5dcf5;border:none;
-                   font-size:9px;font-weight:600;color:#1e3a5f;cursor:pointer;display:flex;
-                   align-items:center;justify-content:center;line-height:1;padding:0; }
-.esp-seat.is-assigned{ background:#004384;color:#fff; }
-.esp-seat.is-swap-target{ background:#f5a623;color:#fff; }
-.esp-seat.is-empty   { background:#e2e8f0;color:#94a3b8;cursor:default;pointer-events:none; }
-.esp-seat:hover:not(.is-empty){ opacity:.8; }
-/* ── Swap Operation card ─────────────────────────────────────────────── */
-.esp-swap-card   { border:1px solid var(--ds-line);border-radius:10px;padding:12px;margin-bottom:14px;background:var(--ds-surface-2); }
-.esp-swap-card-title{ font-size:12px;font-weight:700;color:var(--ds-ink-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px; }
-.esp-swap-slots  { display:flex;align-items:center;gap:8px; }
-.esp-swap-slot   { flex:1;border:2px solid var(--ds-brand);border-radius:8px;padding:8px 10px;text-align:center; }
-.esp-swap-slot .seat-id  { font-size:16px;font-weight:700;color:var(--ds-brand); }
-.esp-swap-slot .seat-roll{ font-size:10px;color:var(--ds-ink-muted); }
-.esp-swap-slot-lbl{ font-size:10px;font-weight:600;color:var(--ds-ink-muted);margin-bottom:4px; }
-.esp-swap-arrow  { font-size:20px;color:var(--ds-ink-muted); }
-.esp-swap-actions{ display:flex;gap:8px;margin-top:10px; }
-.esp-confirm-btn { background:#198754;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;flex:1; }
-.esp-cancel-btn  { background:#e2e8f0;color:#475569;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;flex:1; }
-/* ── Assignment table ─────────────────────────────────────────────────── */
-.esp-assign-table{ width:100%;border-collapse:collapse;font-size:12px; }
-.esp-assign-table th{ padding:6px 8px;background:var(--ds-surface-2);font-weight:700;color:var(--ds-ink-muted);border-bottom:1px solid var(--ds-line); }
-.esp-assign-table td{ padding:6px 8px;border-bottom:1px solid var(--ds-line);vertical-align:middle; }
+.esp-panel-side  { width:580px;flex-shrink:0; }
+@media (max-width:1400px) { .esp-wrap { flex-direction:column; } .esp-panel-side { width:100%; } }
+.esp-under-legend{ display:flex;flex-wrap:wrap;gap:14px;justify-content:center;font-size:11px;color:#667085;margin-top:12px; }
+/* Swap Operation */
+.esp-swap-card   { border:1.5px solid #f5c26b;border-radius:10px;padding:12px 14px;margin-bottom:14px;background:#fffaeb; }
+.esp-swap-title  { font-size:14px;font-weight:700;color:#dc6803;margin-bottom:10px; }
+.esp-swap-row    { display:flex;flex-wrap:wrap;align-items:center;gap:10px; }
+.esp-swap-slot   { width:136px;border-radius:6px;padding:8px 10px;text-align:center; }
+.esp-swap-slot.is-from { background:#004384;color:#fff; }
+.esp-swap-slot.is-to   { border:1.5px solid #f5c26b;color:#dc6803;background:#fff; }
+.esp-swap-slot .seat-id   { font-size:13px;font-weight:500; }
+.esp-swap-slot .seat-roll { font-size:11px;opacity:.75; }
+.esp-swap-arrow  { display:flex;flex-direction:column;align-items:center;color:#dc6803;font-size:11px; }
+.esp-swap-arrow i{ font-size:20px;line-height:1; }
+.esp-confirm-btn { background:#f5a623;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer; }
+.esp-confirm-btn:disabled { opacity:.5;cursor:not-allowed; }
+.esp-cancel-btn  { background:#f2f4f7;color:#475467;border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer; }
+/* Assignment table */
+.esp-assign-wrap { border:1px solid var(--ds-line);border-radius:8px;max-height:420px;overflow-y:auto; }
+.esp-assign-table{ width:100%;border-collapse:collapse;font-size:13px; }
+.esp-assign-table th{ position:sticky;top:0;padding:10px 12px;background:#f9fafb;font-weight:600;color:#101828;border-bottom:1px solid var(--ds-line);text-align:left; }
+.esp-assign-table td{ padding:10px 12px;border-bottom:1px solid var(--ds-line);vertical-align:middle;color:#344054; }
 .esp-assign-table tr:last-child td{ border-bottom:none; }
-.esp-assign-sel  { background:#eff6ff; }
-.esp-assign-swap { background:#fff7ed; }
-.esp-status-sel  { background:#dbeafe;color:#1e40af;border-radius:12px;padding:1px 8px;font-size:11px;font-weight:600; }
-.esp-status-swap { background:#fef3c7;color:#92400e;border-radius:12px;padding:1px 8px;font-size:11px;font-weight:600; }
-/* ── Footer stats ─────────────────────────────────────────────────────── */
-.esp-stats       { display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--ds-ink-muted);margin-top:10px; }
-.esp-stat-dot    { width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:4px;vertical-align:middle; }
+.esp-assign-table tr.is-sel  td{ background:#eef4ff;color:#004384;font-weight:500; }
+.esp-assign-table tr.is-swap td{ background:#fffaeb;color:#dc6803;font-weight:500; }
+.esp-badge       { display:inline-block;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:500; }
+.esp-badge--sel  { background:#004384;color:#fff; }
+.esp-badge--swap { background:#f5a623;color:#fff; }
+.esp-stats       { display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:#667085;margin-top:10px; }
+@media print { .esp-tools, .esp-swap-card, .vsp-actions, .modern-breadcrumb-back { display:none !important; } }
 </style>
 @endpush
 
 @section('setup_content')
+@php
+    $assigned = $allocation['seats']->count();
+    $blockNames = ['A' => 'Block A', 'B' => 'Centre', 'C' => 'Block C'];
+@endphp
 <div class="container-fluid coe-page">
+    <x-breadcrum title="Edit Seating Plan" :showBack="true"
+                 :items="['Setup', 'COE', 'Examination Management', 'Edit Seating Plan']" />
 
-    {{-- Breadcrumb --}}
-    <div class="d-flex align-items-center gap-3 mb-1" style="font-size:12px;color:var(--ds-ink-muted)">
-        <a href="{{ route('admin.coe.venue-allocation.index') }}"
-           class="d-inline-flex align-items-center gap-1 text-decoration-none" style="color:inherit">
-            <i class="bi bi-arrow-left" style="font-size:18px;color:var(--ds-ink)"></i>
-        </a>
-        <span>Setup &rsaquo; COE &rsaquo; Examination Management &rsaquo; Edit Seating Plan</span>
-    </div>
-    <h4 class="fw-bold mb-3" style="font-size:22px">Edit Seating Plan</h4>
-
-    {{-- Scope tabs + Download/Print --}}
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-        <nav class="coe-tabs" aria-label="Scope">
-            <div class="coe-tab is-active">Active</div>
-            <div class="coe-tab">Archived</div>
-        </nav>
-        <div class="d-flex gap-2 coe-secondary-actions">
-            <button type="button" class="btn programme-dt-btn-columns" id="espDownloadBtn">
-                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-            </button>
-            <button type="button" class="btn programme-dt-btn-columns" id="espPrintBtn">
-                <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
-            </button>
-        </div>
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 coe-secondary-actions vsp-actions">
+        <button type="button" class="btn programme-dt-btn-columns" id="espDownloadBtn" title="Download as CSV">
+            <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+        </button>
+        <button type="button" class="btn programme-dt-btn-columns" id="espPrintBtn" title="Print">
+            <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
+        </button>
     </div>
 
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
 
-            {{-- Hall title --}}
-            <div class="esp-hall-label">Tagore Hall — Seating Plan Editor</div>
-            <div class="esp-hall-sub">{{ $allocation['course'] }} – {{ $allocation['component'] }} (Special/Re-Exam) · System Generated</div>
-
-            {{-- Legend + Swap Mode toggle + Verify --}}
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-                <div class="esp-legend">
-                    <span><span class="esp-legend-dot esp-leg-avail"></span>Available</span>
-                    <span><span class="esp-legend-dot esp-leg-sel"></span>Selected</span>
-                    <span><span class="esp-legend-dot esp-leg-swap"></span>Swap Target</span>
-                    <span><span class="esp-legend-dot esp-leg-empty"></span>Empty</span>
+            {{-- Title · legend · Swap Mode · Verify & Save --}}
+            <div class="esp-head">
+                <div>
+                    <div class="esp-hall-label" style="font-size:16px">
+                        {{ $allocation['room'] }} — Seating Plan {{ $allocation['frozen'] ? '(Frozen)' : 'Editor' }}
+                    </div>
+                    <div class="esp-hall-sub" style="font-size:13px">
+                        {{ $allocation['course'] }} ({{ $allocation['batch'] }}) ·
+                        {{ $allocation['subject'] }} / {{ $allocation['component'] }} ·
+                        {{ $allocation['category'] }}@if ($allocation['exam_date']) · {{ $allocation['exam_date'] }}@endif ·
+                        {{ $allocation['source'] }}
+                    </div>
                 </div>
-                <div class="d-flex align-items-center gap-2">
-                    <button type="button" id="espSwapToggle" class="esp-swap-toggle" aria-pressed="true">
-                        <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i>Swap Mode: On
-                    </button>
-                    <button type="button" id="espVerifyBtn" class="esp-verify-btn">
-                        <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Verify &amp; Save
-                    </button>
+                <div class="esp-tools">
+                    <div class="esp-legend">
+                        <span><span class="vsp-dot" style="background:#dce8fb"></span>Available</span>
+                        <span><span class="vsp-dot" style="background:#004384"></span>Selected</span>
+                        <span><span class="vsp-dot" style="background:#fef3c7"></span>Swap Target</span>
+                        <span><span class="vsp-dot" style="background:#eaecf0"></span>Empty</span>
+                    </div>
+                    @unless ($allocation['frozen'])
+                        <button type="button" id="espSwapToggle" class="esp-swap-toggle is-off" aria-pressed="false">
+                            <i class="bi bi-arrow-left-right" aria-hidden="true"></i><span>Swap Mode: OFF</span>
+                        </button>
+                        <button type="button" id="espVerifyBtn" class="esp-verify-btn">
+                            <i class="bi bi-check2-circle" aria-hidden="true"></i>Verify &amp; Save
+                        </button>
+                    @endunless
                 </div>
             </div>
 
             <div class="esp-wrap">
-                {{-- Left: seat map --}}
+                {{-- Left: the hall --}}
                 <div class="esp-map-side">
-                    <div class="esp-entrance">
-                        <i class="bi bi-arrow-down-circle" aria-hidden="true"></i>ENTRANCE
+                    <div class="vsp-hall">
+                        <div class="vsp-hall-inner">
+                            <div class="vsp-entrance">
+                                <i class="bi bi-arrow-down" aria-hidden="true"></i>ENTRANCE<i class="bi bi-arrow-down" aria-hidden="true"></i>
+                            </div>
+                            <div class="esp-blocks-row vsp-map" id="espSeatMap"></div>
+                            <div class="vsp-podium"><i class="bi bi-volume-up-fill" aria-hidden="true"></i>SPEAKER / PODIUM</div>
+                        </div>
                     </div>
-
-                    <div class="esp-blocks-row" id="espSeatMap"></div>
-
-                    <div class="esp-podium">🎤 SPEAKER / PODIUM</div>
-
-                    {{-- Stats footer --}}
-                    <div class="esp-stats mt-3">
-                        <span><span class="esp-stat-dot" style="background:#004384"></span>Total Seats: <strong id="espStatTotal">{{ $allocation['total_seats'] }}</strong></span>
-                        <span><span class="esp-stat-dot" style="background:#c5dcf5"></span>Assigned: <strong id="espStatAssigned">{{ $allocation['assigned_seats'] }}</strong></span>
-                        <span><span class="esp-stat-dot" style="background:#e2e8f0;border:1px solid #cbd5e1"></span>Empty: <strong id="espStatEmpty">{{ $allocation['empty_seats'] }}</strong></span>
-                        <span><span class="esp-stat-dot" style="background:#f5a623"></span>Pending Swaps: <strong id="espStatSwaps">{{ $allocation['pending_swaps'] }}</strong></span>
+                    <div class="esp-under-legend">
+                        <span><span class="vsp-dot" style="background:#eaecf0;box-shadow:inset 0 -3px 0 #17a2b8"></span>Laptop desk</span>
+                        <span><span class="vsp-dot" style="background:#eaecf0;box-shadow:inset 0 -3px 0 #8e44ad"></span>Scriber desk</span>
                     </div>
                 </div>
 
-                {{-- Right: swap panel + assignment table --}}
+                {{-- Right: swap operation · assignments · totals --}}
                 <div class="esp-panel-side">
-                    {{-- Swap Operation card --}}
-                    <div class="esp-swap-card" id="espSwapCard">
-                        <div class="esp-swap-card-title">Swap Operation</div>
-                        <div class="esp-swap-slots">
-                            <div>
-                                <div class="esp-swap-slot-lbl">Seat A08</div>
-                                <div class="esp-swap-slot" id="espSlotFrom">
-                                    <div class="seat-id" id="espSlotFromId">Seat A08</div>
-                                    <div class="seat-roll" id="espSlotFromRoll">FC101-047</div>
-                                </div>
-                                <div class="mt-1 text-center" style="font-size:10px;color:#17a2b8;font-weight:600;">Swap</div>
+                    <div class="esp-swap-card" id="espSwapCard" style="display:none">
+                        <div class="esp-swap-title">Swap Operation</div>
+                        <div class="esp-swap-row">
+                            <div class="esp-swap-slot is-from">
+                                <div class="seat-id" id="espSlotFromId">Select a seat</div>
+                                <div class="seat-roll" id="espSlotFromRoll">Click an assigned seat</div>
                             </div>
-                            <div class="esp-swap-arrow">⇄</div>
-                            <div>
-                                <div class="esp-swap-slot-lbl">Seat A06</div>
-                                <div class="esp-swap-slot" id="espSlotTo" style="border-color:#f5a623">
-                                    <div class="seat-id" id="espSlotToId" style="color:#f5a623">Seat A06</div>
-                                    <div class="seat-roll" id="espSlotToRoll">FC101-052</div>
-                                </div>
+                            <div class="esp-swap-arrow"><i class="bi bi-arrow-left-right" aria-hidden="true"></i>Swap</div>
+                            <div class="esp-swap-slot is-to">
+                                <div class="seat-id" id="espSlotToId">Swap with</div>
+                                <div class="seat-roll" id="espSlotToRoll">Then the seat to swap with</div>
                             </div>
-                        </div>
-                        <div class="esp-swap-actions">
-                            <button type="button" class="esp-confirm-btn" id="espConfirmSwap">Confirm Swap</button>
+                            <button type="button" class="esp-confirm-btn" id="espConfirmSwap" disabled>Confirm Swap</button>
                             <button type="button" class="esp-cancel-btn" id="espCancelSwap">Cancel</button>
                         </div>
                     </div>
 
-                    {{-- Assignment table --}}
-                    <table class="esp-assign-table">
-                        <thead>
-                            <tr>
-                                <th>Roll No.</th>
-                                <th>Name</th>
-                                <th>Seat</th>
-                                <th>Block</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="espAssignBody">
-                            @foreach ($allocation['seat_assignments'] as $a)
-                            @php
-                                $isSwap = $a['status'] === 'Swap Target';
-                            @endphp
-                            <tr class="{{ $isSwap ? 'esp-assign-swap' : 'esp-assign-sel' }}">
-                                <td>{{ $a['roll'] }}</td>
-                                <td>{{ $a['name'] }}</td>
-                                <td>{{ $a['seat'] }}</td>
-                                <td>{{ $a['block'] }}</td>
-                                <td>
-                                    <span class="{{ $isSwap ? 'esp-status-swap' : 'esp-status-sel' }}">
-                                        {{ $a['status'] }}
-                                    </span>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                    <div class="esp-assign-wrap">
+                        <table class="esp-assign-table">
+                            <thead>
+                                <tr><th>Roll No.</th><th>Name</th><th>Seat</th><th>Block</th><th>Status</th></tr>
+                            </thead>
+                            <tbody id="espAssignBody">
+                                @forelse ($allocation['seats'] as $a)
+                                    @php $parts = explode('-', $a['label'], 2); @endphp
+                                    <tr data-seat="{{ $a['seat'] }}">
+                                        <td>{{ $a['roll'] }}</td>
+                                        <td>{{ $a['name'] }}</td>
+                                        <td>{{ $parts[1] ?? $a['label'] }}</td>
+                                        <td>{{ $blockNames[$parts[0]] ?? $parts[0] }}</td>
+                                        <td class="esp-assign-status"
+                                            data-status="{{ collect([$a['laptop'] ? 'Laptop' : null, $a['scriber'] ? 'Scriber' : null, $a['manual'] ? 'Moved' : null])->filter()->implode(' · ') ?: 'Seated' }}">
+                                            {{ collect([$a['laptop'] ? 'Laptop' : null, $a['scriber'] ? 'Scriber' : null, $a['manual'] ? 'Moved' : null])->filter()->implode(' · ') ?: 'Seated' }}
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="5" class="text-center text-muted">Nobody is seated in this room.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="esp-stats">
+                        <span><span class="vsp-dot" style="background:#004384"></span>Total Seats: <strong>{{ $allocation['capacity'] }}</strong></span>
+                        <span><span class="vsp-dot" style="background:#dce8fb"></span>Assigned: <strong>{{ $assigned }}</strong></span>
+                        <span><span class="vsp-dot" style="background:#eaecf0"></span>Empty: <strong>{{ max(0, $allocation['capacity'] - $assigned) }}</strong></span>
+                        <span><span class="vsp-dot" style="background:#fff;box-shadow:inset 0 0 0 1.5px #f5a623"></span>Pending Swaps: <strong id="espStatSwaps">0</strong></span>
+                    </div>
                 </div>
             </div>
 
@@ -214,114 +181,134 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('js/coe-seat-map.js') }}?v={{ @filemtime(public_path('js/coe-seat-map.js')) ?: time() }}"></script>
 <script>
 $(function () {
     'use strict';
 
-    /* ── Seat map layout ──────────────────────────────────────────────── *
-     * Block A: 6 rows (F-A top-to-bottom) × 4 cols
-     * Block B (CENTRE): 6 rows × 13 cols
-     * Block C: 6 rows × 6 cols
-     * Assigned seats hard-coded from sample data; swap seats pre-marked.
-     */
-    var ROWS   = ['F','E','D','C','B','A'];
-    var BLOCKS = [
-        { label:'BLOCK A',   cols: 4  },
-        { label:'BLOCK B (CENTRE)', cols: 13 },
-        { label:'BLOCK C',   cols: 6  },
-    ];
+    var ROOM = @json($allocation);
+    var SWAP_URL = @json(route('admin.coe.venue-allocation.swap', $allocation['id']));
+    var CSRF = $('meta[name="csrf-token"]').attr('content');
 
-    /* Seats that are "assigned" (selected = navy) */
-    var assignedSeats = new Set();
-    for (var i = 1; i <= 98; i++) { assignedSeats.add(i); } // first 98 seats assigned
+    var laptop = {};
+    ROOM.laptop_seats.forEach(function (n) { laptop[n] = true; });
 
-    /* Swap pair */
-    var swapFrom = 'A08';
-    var swapTo   = 'A06';
-    var swapMode = true;
-
+    /* ── Seat map: same numbering as the allocator (public/js/coe-seat-map.js) ── */
     var $map = $('#espSeatMap');
-    var seatIndex = 0;
+    var bySeat = CoeSeatMap.render($map, ROOM);
 
-    BLOCKS.forEach(function (blk, bi) {
-        var $block = $('<div class="esp-block"></div>');
-        $('<div class="esp-block-label"></div>').text(blk.label).appendTo($block);
+    // "B-A08" → "Seat A08" — the block is its own column.
+    function seatName(n) { var l = CoeSeatMap.label(n); return 'Seat ' + (l.split('-')[1] || l); }
 
-        ROWS.forEach(function (rowLetter) {
-            var $row = $('<div class="esp-row"></div>');
-            $('<span class="esp-row-label"></span>').text(rowLetter).appendTo($row);
-            for (var c = 1; c <= blk.cols; c++) {
-                seatIndex++;
-                var seatId = rowLetter + String(c).padStart(2, '0');
-                var $seat  = $('<button type="button" class="esp-seat"></button>').text(seatId).attr('data-sid', seatId);
+    if (ROOM.frozen) { return; }
 
-                if (seatId === swapFrom) {
-                    $seat.addClass('is-assigned').attr('title', 'FC101-047 – Rajesh Kumar Sharma');
-                } else if (seatId === swapTo) {
-                    $seat.addClass('is-swap-target').attr('title', 'FC101-052 – Priya Rani Menon');
-                } else if (seatIndex <= 98) {
-                    $seat.addClass('is-assigned');
-                } else if (seatIndex > 105) {
-                    $seat.addClass('is-empty');
-                }
+    /* ── Swap: click an assigned seat, then any other seat (empty = move) ── */
+    var swapMode = false, from = null, to = null;
 
-                $seat.appendTo($row);
-            }
-            $row.appendTo($block);
+    function paintSwap() {
+        $map.find('.esp-seat').removeClass('is-picked is-swap-target');
+        $('#espAssignBody tr').removeClass('is-sel is-swap').find('.esp-assign-status').each(function () {
+            $(this).text($(this).attr('data-status'));
         });
-
-        $block.appendTo($map);
-        if (bi < BLOCKS.length - 1) {
-            $('<div class="esp-sep"></div>').appendTo($map);
+        if (from) {
+            $map.find('[data-seat="' + from + '"]').addClass('is-picked');
+            $('#espAssignBody tr[data-seat="' + from + '"]').addClass('is-sel')
+                .find('.esp-assign-status').html('<span class="esp-badge esp-badge--sel">Selected</span>');
         }
-    });
+        if (to) {
+            $map.find('[data-seat="' + to + '"]').addClass('is-swap-target');
+            $('#espAssignBody tr[data-seat="' + to + '"]').addClass('is-swap')
+                .find('.esp-assign-status').html('<span class="esp-badge esp-badge--swap">Swap Target</span>');
+        }
+        var $sel = $('#espAssignBody tr.is-sel');
+        if ($sel.length) { $sel[0].scrollIntoView({ block: 'nearest' }); }
 
-    /* ── Swap Mode toggle ─────────────────────────────────────────────── */
+        $('#espSlotFromId').text(from ? seatName(from) : 'Select a seat');
+        $('#espSlotFromRoll').text(from ? bySeat[from].roll : 'Click an assigned seat');
+        $('#espSlotToId').text(to ? seatName(to) : 'Swap with');
+        $('#espSlotToRoll').text(to ? (bySeat[to] ? bySeat[to].roll : 'Empty — OT moves here') : 'Then the seat to swap with');
+        $('#espConfirmSwap').prop('disabled', !(from && to));
+        $('#espStatSwaps').text(from && to ? 1 : 0);
+    }
+
     $('#espSwapToggle').on('click', function () {
         swapMode = !swapMode;
-        $(this).text(swapMode ? '⇄ Swap Mode: On' : '⇄ Swap Mode: Off')
-               .toggleClass('is-off', !swapMode);
+        $(this).toggleClass('is-off', !swapMode).attr('aria-pressed', swapMode)
+            .find('span').text('Swap Mode: ' + (swapMode ? 'ON' : 'OFF'));
         $('#espSwapCard').toggle(swapMode);
+        $map.find('.esp-seat[data-seat]').css('cursor', swapMode ? 'pointer' : '');
+        from = to = null;
+        paintSwap();
     });
 
-    /* ── Seat click (in swap mode) ────────────────────────────────────── */
-    $map.on('click', '.esp-seat:not(.is-empty)', function () {
+    $map.on('click', '.esp-seat[data-seat]', function () {
         if (!swapMode) { return; }
-        var sid = $(this).attr('data-sid');
-        Swal.fire({ icon: 'info', title: 'Seat ' + sid, text: 'Click Confirm Swap to swap with the current target.', timer: 1500, showConfirmButton: false });
+        var n = parseInt($(this).attr('data-seat'), 10);
+        if (!from) {
+            if (!bySeat[n]) { return; }
+            from = n;
+        } else if (n === from) {
+            from = to = null;
+        } else {
+            to = n;
+        }
+        paintSwap();
     });
 
-    /* ── Confirm Swap ─────────────────────────────────────────────────── */
+    // A row in the table picks its seat too, as on the map.
+    $('#espAssignBody').on('click', 'tr[data-seat]', function () {
+        if (!swapMode) { return; }
+        $map.find('[data-seat="' + $(this).attr('data-seat') + '"]').trigger('click');
+    });
+
+    $('#espCancelSwap').on('click', function () { from = to = null; paintSwap(); });
+
     $('#espConfirmSwap').on('click', function () {
-        // Swap visual classes
-        var $from = $map.find('.esp-seat.is-assigned[data-sid="' + swapFrom + '"]');
-        var $to   = $map.find('.esp-seat.is-swap-target[data-sid="' + swapTo + '"]');
-        $from.removeClass('is-assigned').addClass('is-swap-target');
-        $to.removeClass('is-swap-target').addClass('is-assigned');
-
-        // Swap in panel
-        var tmp = swapFrom; swapFrom = swapTo; swapTo = tmp;
-        $('#espSlotFromId').text('Seat ' + swapFrom);
-        $('#espSlotToId').text('Seat ' + swapTo);
-
-        $('#espStatSwaps').text(0);
-        Swal.fire({ icon: 'success', title: 'Swapped', text: 'Seat swap confirmed.', timer: 1500, showConfirmButton: false });
+        var $btn = $(this).prop('disabled', true);
+        $.ajax({ url: SWAP_URL, method: 'POST', headers: { 'X-CSRF-TOKEN': CSRF }, data: { from_seat: from, to_seat: to } })
+            .done(function (r) {
+                Swal.fire({ icon: 'success', title: 'Swapped', text: r.message, timer: 1500, showConfirmButton: false })
+                    .then(function () { location.reload(); });
+            })
+            .fail(function (xhr) {
+                var res = xhr.responseJSON || {};
+                var msg = res.errors ? Object.keys(res.errors).map(function (k) { return res.errors[k][0]; }).join('\n') : (res.message || 'The swap could not be saved.');
+                Swal.fire({ icon: 'error', title: 'Not swapped', text: msg });
+                $btn.prop('disabled', false);
+            });
     });
 
-    $('#espCancelSwap').on('click', function () {
-        $('#espSwapCard').hide();
-        swapMode = false;
-        $('#espSwapToggle').text('⇄ Swap Mode: Off').addClass('is-off');
-    });
-
-    /* ── Verify & Save ────────────────────────────────────────────────── */
+    /* ── Verify: every swap is saved as it is confirmed; this checks the room as saved ── */
     $('#espVerifyBtn').on('click', function () {
-        Swal.fire({ icon: 'success', title: 'Saved', text: 'Seating plan verified and saved.' });
+        var problems = [];
+        if (ROOM.laptop_seats.length) {
+            ROOM.seats.forEach(function (s) {
+                if (s.laptop && !laptop[s.seat]) { problems.push(s.roll + ' needs a laptop but sits at ' + s.label); }
+            });
+        }
+        if (from && to) { problems.push('A swap is selected but not confirmed.'); }
+        Swal.fire(problems.length
+            ? { icon: 'warning', title: 'Check the seating', text: problems.join('\n') }
+            : { icon: 'success', title: 'Verified', text: ROOM.seats.length + ' OT(s) seated. All swaps are saved.' });
     });
-
-    /* ── Download/Print shortcuts ─────────────────────────────────────── */
+});
+</script>
+<script>
+$(function () {
+    /* Download: the assignment list as CSV. */
     $('#espDownloadBtn').on('click', function () {
-        Swal.fire({ icon: 'info', title: 'Download', text: 'Downloading seating plan…', timer: 1200, showConfirmButton: false });
+        var rows = [['Roll No.', 'Name', 'Seat', 'Block', 'Status']];
+        $('#espAssignBody tr[data-seat]').each(function () {
+            var cells = $(this).children('td').map(function () { return $(this).text().trim(); }).get();
+            cells[4] = $(this).find('.esp-assign-status').attr('data-status');
+            rows.push(cells);
+        });
+        var csv = rows.map(function (r) { return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(','); }).join('\r\n');
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        a.download = 'seating-plan.csv';
+        document.body.appendChild(a); a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
     });
     $('#espPrintBtn').on('click', function () { window.print(); });
 });

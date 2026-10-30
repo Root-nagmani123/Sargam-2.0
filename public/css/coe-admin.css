@@ -1350,3 +1350,54 @@
     .coe-viewer__badge { display: none; }
     .coe-viewer__sheet.coe-paper-view { padding: 1.25rem 1rem; }
 }
+/* ── Seat map (public/js/coe-seat-map.js render) ──────────────────────────
+   Edit Seating Plan and the Venue Allocation "View Seating Plan" preview. */
+:is(.coe-page, .coe-modal) .esp-legend      { display:flex;flex-wrap:wrap;align-items:center;gap:14px;font-size:12px;margin-bottom:10px; }
+:is(.coe-page, .coe-modal) .esp-legend-dot  { width:14px;height:14px;border-radius:3px;display:inline-block;vertical-align:middle;margin-right:4px; }
+:is(.coe-page, .coe-modal) .esp-leg-avail   { background:#c5dcf5; }
+:is(.coe-page, .coe-modal) .esp-leg-sel     { background:#004384;color:#fff; }
+:is(.coe-page, .coe-modal) .esp-leg-swap    { background:#f5a623; }
+:is(.coe-page, .coe-modal) .esp-leg-empty   { background:#e2e8f0;border:1px solid #cbd5e1; }
+:is(.coe-page, .coe-modal) .esp-hall-label  { font-size:13px;font-weight:700;color:var(--ds-ink);margin-bottom:2px; }
+:is(.coe-page, .coe-modal) .esp-hall-sub    { font-size:11px;color:var(--ds-ink-muted);margin-bottom:12px; }
+:is(.coe-page, .coe-modal) .esp-entrance    { text-align:center;font-size:11px;font-weight:600;color:var(--ds-ink-muted);letter-spacing:.5px;margin-bottom:6px; }
+:is(.coe-page, .coe-modal) .esp-entrance i  { display:block;font-size:18px; }
+:is(.coe-page, .coe-modal) .esp-podium      { text-align:center;font-size:11px;font-weight:600;color:var(--ds-ink-muted);letter-spacing:.5px;margin-top:6px;padding:6px;border:1px dashed var(--ds-line);border-radius:6px; }
+:is(.coe-page, .coe-modal) .esp-blocks-row  { display:flex;gap:6px;align-items:flex-start; }
+:is(.coe-page, .coe-modal) .esp-block       { display:flex;flex-direction:column;gap:3px; }
+:is(.coe-page, .coe-modal) .esp-row         { display:flex;gap:3px; }
+:is(.coe-page, .coe-modal) .esp-row-label   { width:14px;font-size:10px;font-weight:700;color:var(--ds-ink-muted);line-height:24px;flex-shrink:0;text-align:center; }
+:is(.coe-page, .coe-modal) .esp-block-label { font-size:10px;font-weight:700;color:var(--ds-ink-muted);text-align:center;margin-bottom:2px;letter-spacing:.5px; }
+:is(.coe-page, .coe-modal) .esp-sep         { width:8px;flex-shrink:0; }
+:is(.coe-page, .coe-modal) .esp-seat        { width:24px;height:24px;border-radius:4px;background:#c5dcf5;border:none;
+                                              font-size:9px;font-weight:600;color:#1e3a5f;cursor:pointer;display:flex;
+                                              align-items:center;justify-content:center;line-height:1;padding:0; }
+:is(.coe-page, .coe-modal) .esp-seat.is-assigned    { background:#004384;color:#fff; }
+:is(.coe-page, .coe-modal) .esp-seat.is-swap-target { background:#f5a623;color:#fff; }
+:is(.coe-page, .coe-modal) .esp-seat.is-empty       { background:#e2e8f0;color:#94a3b8; }
+:is(.coe-page, .coe-modal) .esp-seat.is-laptop      { box-shadow:inset 0 -3px 0 #17a2b8; }
+:is(.coe-page, .coe-modal) .esp-seat.is-scriber     { box-shadow:inset 0 -3px 0 #8e44ad; }
+:is(.coe-page, .coe-modal) .esp-seat.is-spacer      { visibility:hidden; }
+:is(.coe-page, .coe-modal) .esp-seat:hover:not(.is-empty) { opacity:.8; }
+
+/* ── Large hall — View Seating Plan and Edit Seating Plan (design 2166-58975 / 1514-58696) ──
+   Seats are drawn by CoeSeatMap.render into .esp-blocks-row.vsp-map. */
+.coe-page .vsp-hall        { overflow-x:auto;padding:24px 8px 8px; }
+.coe-page .vsp-hall-inner  { width:max-content;margin:0 auto; }
+.coe-page .vsp-entrance    { display:flex;align-items:center;justify-content:center;gap:10px;font-size:15px;font-weight:600;
+                             color:#475467;letter-spacing:.5px;margin-bottom:6px; }
+.coe-page .vsp-entrance i  { font-size:18px; }
+.coe-page .vsp-map.esp-blocks-row { gap:10px; }
+.coe-page .vsp-map .esp-block     { gap:7px; }
+.coe-page .vsp-map .esp-row       { gap:7px; }
+.coe-page .vsp-map .esp-block-label { font-size:13px;color:#475467;margin-bottom:4px; }
+.coe-page .vsp-map .esp-row-label   { width:18px;font-size:12px;font-weight:500;line-height:26px;color:#667085; }
+.coe-page .vsp-map .esp-sep         { width:6px; }
+.coe-page .vsp-map .esp-seat        { width:33px;height:26px;border-radius:4px;font-size:11px;font-weight:500;cursor:default; }
+.coe-page .vsp-map .esp-seat.is-assigned     { background:#dce8fb;color:#1a4fa0;cursor:pointer; }
+.coe-page .vsp-map .esp-seat.is-empty        { background:#eaecf0;color:#98a2b3; }
+.coe-page .vsp-map .esp-seat.is-picked       { background:#004384;color:#fff; }
+.coe-page .vsp-map .esp-seat.is-swap-target  { background:#fef3c7;color:#b54708;box-shadow:inset 0 0 0 1.5px #f5a623; }
+.coe-page .vsp-podium      { display:flex;align-items:center;justify-content:center;gap:8px;width:262px;margin:10px auto 0;
+                             padding:6px 10px;border-radius:4px;background:#eaecf0;color:#667085;font-size:13px;font-weight:600;letter-spacing:.3px; }
+.coe-page .vsp-dot         { width:14px;height:14px;border-radius:3px;display:inline-block;vertical-align:middle;margin-right:4px; }

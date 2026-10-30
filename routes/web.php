@@ -38,6 +38,8 @@ use App\Http\Controllers\Admin\IssueReportController;
 use App\Http\Controllers\Admin\LeaveApplicationController;
 use App\Http\Controllers\Admin\Master\AppellationMasterController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
+use App\Http\Controllers\Admin\Master\ExamBuildingMasterController;
+use App\Http\Controllers\Admin\Master\ExamFloorMasterController;
 use App\Http\Controllers\Admin\MDOEscrotExemptionController;
 use App\Http\Controllers\Admin\MedicalExceptionFacultyViewController;
 use App\Http\Controllers\Admin\MedicalExceptionOTViewController;
@@ -1153,6 +1155,22 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('delete/{id}', [AppellationMasterController::class, 'destroy'])->name('delete');
     });
 
+    Route::prefix('admin/exam-building')->name('master.exam_building.')->group(function () {
+        Route::get('/', [ExamBuildingMasterController::class, 'index'])->name('index');
+        Route::get('create', [ExamBuildingMasterController::class, 'create'])->name('create');
+        Route::get('edit/{id}', [ExamBuildingMasterController::class, 'edit'])->name('edit');
+        Route::post('store', [ExamBuildingMasterController::class, 'store'])->name('store');
+        Route::delete('delete/{id}', [ExamBuildingMasterController::class, 'destroy'])->name('delete');
+    });
+
+    Route::prefix('admin/exam-floor')->name('master.exam_floor.')->group(function () {
+        Route::get('/', [ExamFloorMasterController::class, 'index'])->name('index');
+        Route::get('create', [ExamFloorMasterController::class, 'create'])->name('create');
+        Route::get('edit/{id}', [ExamFloorMasterController::class, 'edit'])->name('edit');
+        Route::post('store', [ExamFloorMasterController::class, 'store'])->name('store');
+        Route::delete('delete/{id}', [ExamFloorMasterController::class, 'destroy'])->name('delete');
+    });
+
     Route::prefix('admin/discipline')->name('master.discipline.')->group(function () {
         Route::get('/', [DisciplineMasterController::class, 'index'])->name('index');
         Route::get('create', [DisciplineMasterController::class, 'create'])->name('create');
@@ -2088,6 +2106,12 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('service-passing-marks.destroy');
     Route::patch('service-passing-marks/{id}/toggle-status', [\App\Http\Controllers\Admin\COE\ServicePassingMarksController::class, 'toggleStatus'])
         ->name('service-passing-marks.toggle-status');
+    Route::get('scriber-master', [\App\Http\Controllers\Admin\COE\ScriberMasterController::class, 'index'])
+        ->name('scriber-master.index');
+    Route::post('scriber-master', [\App\Http\Controllers\Admin\COE\ScriberMasterController::class, 'store'])
+        ->name('scriber-master.store');
+    Route::delete('scriber-master/{scriber}', [\App\Http\Controllers\Admin\COE\ScriberMasterController::class, 'destroy'])
+        ->whereNumber('scriber')->name('scriber-master.destroy');
     Route::get('building', [\App\Http\Controllers\Admin\COE\BuildingController::class, 'index'])
         ->name('building.index');
     Route::get('floor', [\App\Http\Controllers\Admin\COE\FloorController::class, 'index'])
@@ -2100,11 +2124,45 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('unique-participant-code.index');
     Route::get('laptop-scriber-seats', [\App\Http\Controllers\Admin\COE\LaptopScriberSeatsController::class, 'index'])
         ->name('laptop-scriber-seats.index');
+    Route::post('laptop-scriber-seats', [\App\Http\Controllers\Admin\COE\LaptopScriberSeatsController::class, 'store'])
+        ->name('laptop-scriber-seats.store');
+    Route::delete('laptop-scriber-seats/{venue}', [\App\Http\Controllers\Admin\COE\LaptopScriberSeatsController::class, 'destroy'])
+        ->whereNumber('venue')->name('laptop-scriber-seats.destroy');
     // COE -> Examination Management
     Route::get('roll-number', [\App\Http\Controllers\Admin\COE\RollNumberController::class, 'index'])
         ->name('roll-number.index');
+    Route::get('roll-number/participants', [\App\Http\Controllers\Admin\COE\RollNumberController::class, 'participants'])
+        ->name('roll-number.participants');
+    Route::get('roll-number/template', [\App\Http\Controllers\Admin\COE\RollNumberController::class, 'importTemplate'])
+        ->name('roll-number.template');
+    Route::post('roll-number/generate', [\App\Http\Controllers\Admin\COE\RollNumberController::class, 'generate'])
+        ->name('roll-number.generate');
+    Route::post('roll-number/single', [\App\Http\Controllers\Admin\COE\RollNumberController::class, 'storeSingle'])
+        ->name('roll-number.single');
+    Route::post('roll-number/import', [\App\Http\Controllers\Admin\COE\RollNumberController::class, 'import'])
+        ->name('roll-number.import');
+    Route::post('roll-number/freeze', [\App\Http\Controllers\Admin\COE\RollNumberController::class, 'freeze'])
+        ->name('roll-number.freeze');
+    Route::post('roll-number/notify', [\App\Http\Controllers\Admin\COE\RollNumberController::class, 'notify'])
+        ->name('roll-number.notify');
+    Route::post('roll-number/bulk-delete', [\App\Http\Controllers\Admin\COE\RollNumberController::class, 'bulkDestroy'])
+        ->name('roll-number.bulk-destroy');
+    Route::put('roll-number/{rollNumber}', [\App\Http\Controllers\Admin\COE\RollNumberController::class, 'update'])
+        ->whereNumber('rollNumber')->name('roll-number.update');
+    Route::delete('roll-number/{rollNumber}', [\App\Http\Controllers\Admin\COE\RollNumberController::class, 'destroy'])
+        ->whereNumber('rollNumber')->name('roll-number.destroy');
     Route::get('venue-allocation', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'index'])
         ->name('venue-allocation.index');
+    Route::get('venue-allocation/components', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'components'])
+        ->name('venue-allocation.components');
+    Route::post('venue-allocation', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'store'])
+        ->name('venue-allocation.store');
+    Route::post('venue-allocation/{id}/freeze', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'freeze'])
+        ->whereNumber('id')->name('venue-allocation.freeze');
+    Route::delete('venue-allocation/{id}', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'destroy'])
+        ->whereNumber('id')->name('venue-allocation.destroy');
+    Route::post('venue-allocation/{id}/swap', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'swap'])
+        ->whereNumber('id')->name('venue-allocation.swap');
     Route::get('evaluation-marks', [\App\Http\Controllers\Admin\COE\EvaluationMarksController::class, 'index'])
         ->name('evaluation-marks.index');
     Route::get('faculty-evaluation-marks', [\App\Http\Controllers\Admin\COE\EvaluationMarksController::class, 'facultyIndex'])
@@ -2113,6 +2171,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('result-calculation.index');
     Route::get('venue-allocation/{id}/edit', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'edit'])
         ->whereNumber('id')->name('venue-allocation.edit');
+    Route::get('venue-allocation/{id}', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'show'])
+        ->whereNumber('id')->name('venue-allocation.show');
     Route::get('examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'index'])
         ->name('examination-drive.index');
     Route::post('examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'store'])
@@ -2146,4 +2206,16 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
     // COE -> Laptop Management
     Route::get('ot-laptop-status', [\App\Http\Controllers\Admin\COE\OtLaptopStatusController::class, 'index'])
         ->name('ot-laptop-status.index');
+    Route::get('ot-laptop-status/participants', [\App\Http\Controllers\Admin\COE\OtLaptopStatusController::class, 'participants'])
+        ->name('ot-laptop-status.participants');
+    Route::get('ot-laptop-status/template', [\App\Http\Controllers\Admin\COE\OtLaptopStatusController::class, 'importTemplate'])
+        ->name('ot-laptop-status.template');
+    Route::post('ot-laptop-status', [\App\Http\Controllers\Admin\COE\OtLaptopStatusController::class, 'store'])
+        ->name('ot-laptop-status.store');
+    Route::post('ot-laptop-status/import', [\App\Http\Controllers\Admin\COE\OtLaptopStatusController::class, 'import'])
+        ->name('ot-laptop-status.import');
+    Route::post('ot-laptop-status/bulk-delete', [\App\Http\Controllers\Admin\COE\OtLaptopStatusController::class, 'bulkDestroy'])
+        ->name('ot-laptop-status.bulk-destroy');
+    Route::delete('ot-laptop-status/{response}', [\App\Http\Controllers\Admin\COE\OtLaptopStatusController::class, 'destroy'])
+        ->whereNumber('response')->name('ot-laptop-status.destroy');
 });

@@ -11,20 +11,25 @@
 /* Status badges */
 .rn-status-frozen  { background:#d1f0e0;color:#0d6832; }
 .rn-status-pending { background:#fff3cd;color:#856404; }
+.rn-status-none    { background:#eef0f3;color:#5c6670; }
 /* Row-level action icons */
 .rn-act            { display:inline-flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;padding:0 5px;cursor:pointer;font-size:11px;line-height:1.2; }
 .rn-act i          { font-size:16px; }
-.rn-act--edit i    { color:#004384; }
+.rn-act--edit i,
+.rn-act--assign i  { color:#004384; }
 .rn-act--del i     { color:#dc3545; }
 .rn-act--notify i  { color:#6c757d; }
 .rn-act--freeze i  { color:#17a2b8; }
 .rn-act:hover i    { opacity:.75; }
+.rn-act:disabled   { opacity:.5;cursor:wait; }
 .rn-act-group      { display:flex;align-items:center;gap:2px; }
 /* Bulk header buttons */
 .rn-bulk-btn-del   { background:#dc3545;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:13px;font-weight:600; }
 .rn-bulk-btn-del:hover{ background:#b02a37; }
 .rn-bulk-btn-freeze{ background:#198754;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:13px;font-weight:600; }
 .rn-bulk-btn-freeze:hover{ background:#146c43; }
+.rn-bulk-btn-notify{ background:#6c757d;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:13px;font-weight:600; }
+.rn-bulk-btn-notify:hover{ background:#565e64; }
 /* Generate modal allocation-rules checkbox area */
 .rn-alloc-rules    { border:1px solid var(--ds-line);border-radius:8px;padding:12px 14px;margin-top:8px; }
 /* Import modal tabs */
@@ -42,8 +47,9 @@
     <x-breadcrum title="Roll Numbers" :showBack="false"
                  :items="['Setup', 'COE', 'Examination Management', 'Roll Numbers']">
         <div id="rnBulkActions" class="d-none d-flex gap-2">
-            <button type="button" class="rn-bulk-btn-del" id="rnDeleteAll">Delete All</button>
-            <button type="button" class="rn-bulk-btn-freeze" id="rnFreezeAll">Freeze All</button>
+            <button type="button" class="rn-bulk-btn-del" id="rnDeleteAll">Delete Selected</button>
+            <button type="button" class="rn-bulk-btn-freeze" id="rnFreezeAll">Freeze Selected</button>
+            <button type="button" class="rn-bulk-btn-notify" id="rnNotifyAll">Notify Selected</button>
         </div>
         <button type="button" class="btn btn-outline-primary rounded-3 px-3 py-2" id="rnImportBtn"
                 style="font-size:13px;font-weight:600;border-width:1.5px">
@@ -82,38 +88,33 @@
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
 
-            {{-- Toolbar --}}
+            {{-- Toolbar. Every filter matches a <tr data-rn-*> key, so it filters on the
+                 record's id rather than on display text that may repeat. --}}
             <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar coe-toolbar">
                 <div class="d-flex flex-wrap align-items-center gap-3">
                     <span class="programme-dt-filters-label">Filter</span>
                     <div class="programme-dt-filter-select">
                         <select id="rnFilterCourse" class="form-select" aria-label="Course Name">
                             <option value="">Course Name</option>
-                            @foreach ($courses as $c)<option value="{{ $c }}">{{ $c }}</option>@endforeach
+                            @foreach ($filterCourses as $pk => $name)<option value="{{ $pk }}">{{ $name }}</option>@endforeach
                         </select>
                     </div>
                     <div class="programme-dt-filter-select">
                         <select id="rnFilterService" class="form-select" aria-label="Service Name">
                             <option value="">Service Name</option>
-                            @foreach ($services as $s)<option value="{{ $s }}">{{ $s }}</option>@endforeach
-                        </select>
-                    </div>
-                    <div class="programme-dt-filter-select">
-                        <select id="rnFilterExam" class="form-select" aria-label="Examination">
-                            <option value="">Examination</option>
-                            @foreach ($examinations as $e)<option value="{{ $e }}">{{ $e }}</option>@endforeach
+                            @foreach ($filterServices as $pk => $name)<option value="{{ $pk }}">{{ $name }}</option>@endforeach
                         </select>
                     </div>
                     <div class="programme-dt-filter-select">
                         <select id="rnFilterCadre" class="form-select" aria-label="Cadre">
                             <option value="">Cadre</option>
-                            @foreach ($cadres as $c)<option value="{{ $c }}">{{ $c }}</option>@endforeach
+                            @foreach ($filterCadres as $pk => $name)<option value="{{ $pk }}">{{ $name }}</option>@endforeach
                         </select>
                     </div>
                     <div class="programme-dt-filter-select">
                         <select id="rnFilterBatch" class="form-select" aria-label="Batch">
                             <option value="">Batch</option>
-                            @foreach ($batches as $b)<option value="{{ $b }}">{{ $b }}</option>@endforeach
+                            @foreach ($filterBatches as $b)<option value="{{ $b }}">{{ $b }}</option>@endforeach
                         </select>
                     </div>
                     <button type="button" id="rnResetFilters" class="btn programme-dt-btn-reset">Remove Filter</button>
@@ -137,7 +138,7 @@
                     <table id="rnTable" class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                         <thead>
                             <tr>
-                                <th><input type="checkbox" id="rnCheckAll" class="form-check-input" style="width:16px;height:16px;accent-color:#004384"></th>
+                                <th><input type="checkbox" id="rnCheckAll" class="form-check-input" style="width:16px;height:16px;accent-color:#004384" aria-label="Select all"></th>
                                 <th>S.No</th>
                                 <th>Name</th>
                                 <th>Service</th>
@@ -151,29 +152,27 @@
                         </thead>
                         <tbody>
                             @foreach ($rows as $row)
-                            @php $isFrozen = $row['status'] === 'Frozen'; @endphp
-                            <tr data-coe-id="{{ $row['id'] }}"
+                            <tr data-coe-id="{{ $row['student_pk'] }}"
+                                data-rn-id="{{ $row['roll_pk'] }}"
+                                data-rn-state="{{ $row['state'] }}"
                                 data-rn-name="{{ $row['name'] }}"
-                                data-rn-service="{{ $row['service'] }}"
-                                data-rn-cadre="{{ $row['cadre'] }}"
-                                data-rn-gender="{{ $row['gender'] }}"
                                 data-rn-ot="{{ $row['ot_code'] }}"
                                 data-rn-roll="{{ $row['roll_number'] }}"
-                                data-rn-status="{{ $row['status'] }}"
-                                data-rn-course="{{ $row['course'] }}">
-                                <td><input type="checkbox" class="rn-row-check form-check-input" style="width:16px;height:16px;accent-color:#004384"></td>
+                                data-rn-prefix="{{ $row['prefix'] }}"
+                                data-rn-number="{{ $row['number'] }}"
+                                data-rn-course="{{ $row['course_pk'] }}"
+                                data-rn-batch="{{ $row['batch'] }}"
+                                data-rn-service="{{ $row['service_pk'] }}"
+                                data-rn-cadre="{{ $row['cadre_pk'] }}">
+                                <td><input type="checkbox" class="rn-row-check form-check-input" style="width:16px;height:16px;accent-color:#004384" aria-label="Select row"></td>
                                 <td></td>
                                 <td>{{ $row['name'] }}</td>
                                 <td>{{ $row['service'] }}</td>
                                 <td>{{ $row['cadre'] }}</td>
                                 <td>{{ $row['gender'] }}</td>
                                 <td>{{ $row['ot_code'] }}</td>
-                                <td>{{ $row['roll_number'] }}</td>
-                                <td class="coe-col-center">
-                                    <span class="coe-state {{ $isFrozen ? 'rn-status-frozen' : 'rn-status-pending' }}">
-                                        {{ $row['status'] }}
-                                    </span>
-                                </td>
+                                <td class="rn-cell-roll">{{ $row['roll_number'] ?? '—' }}</td>
+                                <td class="coe-col-center"><span class="coe-state"></span></td>
                                 <td class="rn-cell-actions"></td>
                             </tr>
                             @endforeach
@@ -197,45 +196,50 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body coe-modal-body">
-                    <div class="mb-3">
-                        <label class="coe-form-label" for="rnGenCourse">Course Name<span class="coe-req">*</span></label>
-                        <select id="rnGenCourse" class="form-select coe-control">
-                            <option value="">Select Course</option>
-                            @foreach ($courses as $c)<option value="{{ $c }}">{{ $c }}</option>@endforeach
-                        </select>
+                    <div class="row g-3 mb-3">
+                        <div class="col-8">
+                            <label class="coe-form-label" for="rnGenCourse">Course Name<span class="coe-req">*</span></label>
+                            <select id="rnGenCourse" class="form-select coe-control rn-course-select" data-batch-target="#rnGenBatch">
+                                <option value="">Select Course</option>
+                                @foreach ($courses as $c)<option value="{{ $c->pk }}">{{ $c->course_name }}</option>@endforeach
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <label class="coe-form-label" for="rnGenBatch">Batch<span class="coe-req">*</span></label>
+                            <select id="rnGenBatch" class="form-select coe-control">
+                                <option value="">Select Batch</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-6">
                             <label class="coe-form-label" for="rnGenPrefix">Prefix<span class="coe-req">*</span></label>
                             <input type="text" id="rnGenPrefix" class="form-control coe-control" placeholder="eg. FC101" maxlength="20" autocomplete="off">
                         </div>
-                        <div class="col-6">
+                        <div class="col-6" id="rnGenStartWrap">
                             <label class="coe-form-label" for="rnGenStart">Starting Number<span class="coe-req">*</span></label>
-                            <input type="text" id="rnGenStart" class="form-control coe-control" placeholder="eg. 0001" maxlength="10" autocomplete="off">
+                            <input type="text" id="rnGenStart" class="form-control coe-control" placeholder="eg. 0001" maxlength="9" autocomplete="off" inputmode="numeric">
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="coe-form-label" for="rnGenStrategy">Allocation Strategy<span class="coe-req">*</span></label>
                         <select id="rnGenStrategy" class="form-select coe-control">
-                            @foreach ($strategies as $s)<option value="{{ $s }}">{{ $s }}</option>@endforeach
+                            @foreach ($strategies as $key => $label)<option value="{{ $key }}">{{ $label }}</option>@endforeach
                         </select>
                     </div>
-                    {{-- Allocation Rules checkboxes — visible only when strategy = Allocation Rules --}}
+                    {{-- Allocation Rules checkboxes — visible only for strategies that honour them --}}
                     <div id="rnAllocRulesBox" class="rn-alloc-rules">
                         <div class="fw-semibold mb-2" style="font-size:13px">Allocation Rules</div>
                         <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" id="rnRuleService" checked>
+                            <input class="form-check-input" type="checkbox" id="rnRuleService" value="avoid_same_service" checked>
                             <label class="form-check-label" for="rnRuleService">Avoid same-service sitting together</label>
                         </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" id="rnRuleCadre" checked>
-                            <label class="form-check-label" for="rnRuleCadre">Avoid consecutive rolls for same Cadre</label>
-                        </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="rnRuleGender">
+                            <input class="form-check-input" type="checkbox" id="rnRuleGender" value="alternate_gender">
                             <label class="form-check-label" for="rnRuleGender">Alternate female/male where possible</label>
                         </div>
                     </div>
+                    <p class="text-muted small mt-3 mb-0">Generating again for a course and batch replaces its existing roll numbers, unless any of them is frozen.</p>
                 </div>
                 <div class="modal-footer coe-modal-footer">
                     <button type="button" class="btn coe-btn coe-btn-cancel" data-bs-dismiss="modal">Cancel</button>
@@ -258,15 +262,15 @@
                 <div class="modal-body coe-modal-body">
                     <div class="mb-3">
                         <label class="coe-form-label" for="rnEditOt">OT Name<span class="coe-req">*</span></label>
-                        <select id="rnEditOt" class="form-select coe-control">
+                        <select id="rnEditOt" class="form-select coe-control" disabled>
                             <option value="">Select OT</option>
                         </select>
                     </div>
                     <div class="mb-3">
                         <label class="coe-form-label" for="rnEditCourse">Course Name<span class="coe-req">*</span></label>
-                        <select id="rnEditCourse" class="form-select coe-control">
+                        <select id="rnEditCourse" class="form-select coe-control" disabled>
                             <option value="">Select Course</option>
-                            @foreach ($courses as $c)<option value="{{ $c }}">{{ $c }}</option>@endforeach
+                            @foreach ($courses as $c)<option value="{{ $c->pk }}">{{ $c->course_name }}</option>@endforeach
                         </select>
                     </div>
                     <div class="row g-3">
@@ -275,14 +279,14 @@
                             <input type="text" id="rnEditPrefix" class="form-control coe-control" maxlength="20" autocomplete="off">
                         </div>
                         <div class="col-6">
-                            <label class="coe-form-label" for="rnEditStartNum">Starting Number<span class="coe-req">*</span></label>
-                            <input type="text" id="rnEditStartNum" class="form-control coe-control" maxlength="10" autocomplete="off">
+                            <label class="coe-form-label" for="rnEditStartNum">Number<span class="coe-req">*</span></label>
+                            <input type="text" id="rnEditStartNum" class="form-control coe-control" maxlength="9" autocomplete="off" inputmode="numeric">
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer coe-modal-footer">
                     <button type="button" class="btn coe-btn coe-btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn coe-btn coe-btn-primary coe-btn--narrow">Generate Roll Number</button>
+                    <button type="submit" class="btn coe-btn coe-btn-primary coe-btn--narrow">Update Roll Number</button>
                 </div>
             </form>
         </div>
@@ -317,12 +321,13 @@
                             </label>
                             <input type="file" id="rnFileInput" class="d-none" accept=".xlsx,.xls,.csv">
                         </div>
+                        <div id="rnFileName" class="mt-2 fw-semibold text-body" style="font-size:12px"></div>
                     </div>
                     <div>
                         <strong style="font-size:13px">Instructions &amp; Excel Template</strong>
                         <ul class="mt-2 ps-3" style="font-size:13px">
-                            <li><a href="#" class="text-primary">Download the template file</a> to ensure your Excel file has the correct format for importing members.</li>
-                            <li class="text-muted">Tip: Make sure your Excel file matches the template format exactly to avoid import errors.</li>
+                            <li><a href="{{ route('admin.coe.roll-number.template') }}" id="rnTemplateLink" class="text-primary">Download the template file</a> — it lists the participants (of the Course and Batch picked in the filters, when set); fill in the Roll Number column only and keep the Participant ID column unchanged.</li>
+                            <li class="text-muted">Tip: Make sure your Excel file matches the template format exactly to avoid import errors. Frozen roll numbers are not changed by an import.</li>
                         </ul>
                     </div>
                 </div>
@@ -330,20 +335,25 @@
                 {{-- Single Record pane --}}
                 <div id="rnImpSingle" class="d-none">
                     <form id="rnSingleForm" novalidate>
-                        <div class="mb-3">
-                            <label class="coe-form-label" for="rnSingleCourse">Course Name<span class="coe-req">*</span></label>
-                            <select id="rnSingleCourse" class="form-select coe-control">
-                                <option value="">Select Course</option>
-                                @foreach ($courses as $c)<option value="{{ $c }}">{{ $c }}</option>@endforeach
-                            </select>
+                        <div class="row g-3 mb-3">
+                            <div class="col-8">
+                                <label class="coe-form-label" for="rnSingleCourse">Course Name<span class="coe-req">*</span></label>
+                                <select id="rnSingleCourse" class="form-select coe-control rn-course-select" data-batch-target="#rnSingleBatch">
+                                    <option value="">Select Course</option>
+                                    @foreach ($courses as $c)<option value="{{ $c->pk }}">{{ $c->course_name }}</option>@endforeach
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <label class="coe-form-label" for="rnSingleBatch">Batch<span class="coe-req">*</span></label>
+                                <select id="rnSingleBatch" class="form-select coe-control">
+                                    <option value="">Select Batch</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label class="coe-form-label" for="rnSingleOt">OT Name<span class="coe-req">*</span></label>
                             <select id="rnSingleOt" class="form-select coe-control">
                                 <option value="">Select OT</option>
-                                <option>A77 – Priya Nair</option>
-                                <option>A78 – Anjali Gupta</option>
-                                <option>A79 – Vikram Patel</option>
                             </select>
                         </div>
                         <div class="row g-3">
@@ -352,8 +362,8 @@
                                 <input type="text" id="rnSinglePrefix" class="form-control coe-control" placeholder="FC101" maxlength="20" autocomplete="off">
                             </div>
                             <div class="col-6">
-                                <label class="coe-form-label" for="rnSingleStart">Starting Number<span class="coe-req">*</span></label>
-                                <input type="text" id="rnSingleStart" class="form-control coe-control" placeholder="0001" maxlength="10" autocomplete="off">
+                                <label class="coe-form-label" for="rnSingleStart">Number<span class="coe-req">*</span></label>
+                                <input type="text" id="rnSingleStart" class="form-control coe-control" placeholder="0001" maxlength="9" autocomplete="off" inputmode="numeric">
                             </div>
                         </div>
                     </form>
@@ -361,14 +371,13 @@
             </div>
             <div class="modal-footer coe-modal-footer">
                 <button type="button" class="btn coe-btn coe-btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn coe-btn coe-btn-primary coe-btn--narrow" id="rnImportSave">Add Roll Number</button>
+                <button type="button" class="btn coe-btn coe-btn-primary coe-btn--narrow" id="rnImportSave">Import Roll Numbers</button>
             </div>
         </div>
     </div>
 </div>
 
 @include('admin.coe.partials.confirm_delete_modal', ['id' => 'rnDeleteModal', 'confirmId' => 'rnDeleteConfirm'])
-@include('admin.coe.partials.freeze_modal', ['phoneMasked' => '+91 ******3274'])
 
 {{-- Column Visibility --}}
 <div class="modal fade" id="rnColumnVisibilityModal" tabindex="-1" aria-hidden="true">
@@ -395,41 +404,102 @@
 $(function () {
     'use strict';
 
+    var SCOPE = @json($scope);
+    var COURSE_BATCHES = @json((object) $courseBatches);
+    var RULE_STRATEGIES = @json($ruleStrategies);
+    var OT_CODE_STRATEGY = @json($otCodeStrategy);
+    var ROUTES = {
+        generate: @json(route('admin.coe.roll-number.generate')),
+        single: @json(route('admin.coe.roll-number.single')),
+        import: @json(route('admin.coe.roll-number.import')),
+        template: @json(route('admin.coe.roll-number.template')),
+        participants: @json(route('admin.coe.roll-number.participants')),
+        freeze: @json(route('admin.coe.roll-number.freeze')),
+        notify: @json(route('admin.coe.roll-number.notify')),
+        bulkDestroy: @json(route('admin.coe.roll-number.bulk-destroy')),
+        // __ID__ is swapped for coe_roll_numbers.pk.
+        row: @json(route('admin.coe.roll-number.update', ['rollNumber' => 0])).replace(/\/0$/, '/__ID__')
+    };
+    var STATE = {
+        not_generated: { label: 'Not Generated', cls: 'rn-status-none' },
+        generated: { label: 'Pending', cls: 'rn-status-pending' },
+        frozen: { label: 'Frozen', cls: 'rn-status-frozen' }
+    };
+
     /* col indexes */
     var COL = { chk:0, sno:1, name:2, service:3, cadre:4, gender:5, ot:6, roll:7, status:8, action:9 };
 
     var $table  = $('#rnTable');
     var $checkAll = $('#rnCheckAll');
 
-    /* ── Paint state-dependent action buttons ─────────────────────────── */
-    function paintActions($row) {
-        var status   = $row.attr('data-rn-status');
-        var isFrozen = status === 'Frozen';
-        var html = '<div class="rn-act-group">' +
-            '<button type="button" class="rn-act rn-act--edit" title="Edit"><i class="bi bi-pencil-square"></i><span>Edit</span></button>' +
-            '<button type="button" class="rn-act rn-act--del"  title="Delete"><i class="bi bi-trash3"></i><span>Delete</span></button>';
-        if (isFrozen) {
+    /* ── AJAX helpers ─────────────────────────────────────────────────── */
+    function csrf() { return $('meta[name="csrf-token"]').attr('content') || ''; }
+
+    function send(url, data, opts) {
+        return $.ajax($.extend({
+            url: url,
+            type: 'POST',
+            data: data,
+            dataType: 'json',
+            headers: { 'X-CSRF-TOKEN': csrf(), 'Accept': 'application/json' }
+        }, opts || {}));
+    }
+
+    function errorText(xhr) {
+        if (xhr.status === 419) { return 'Your session has expired. Reload the page and try again.'; }
+        var j = xhr.responseJSON || {};
+        if (j.errors) {
+            var first = Object.keys(j.errors)[0];
+            if (first && j.errors[first][0]) { return j.errors[first][0]; }
+        }
+        return j.message || 'The request failed. Please try again.';
+    }
+
+    function showError(xhr) {
+        Swal.fire({ icon: 'error', title: 'Could not complete', text: errorText(xhr) });
+    }
+
+    function busy($btn, on) { $btn.prop('disabled', !!on); }
+
+    /* ── Paint state-dependent cells ─────────────────────────────────── */
+    function paintRow($row) {
+        var state = $row.attr('data-rn-state');
+        var s = STATE[state] || STATE.not_generated;
+        $row.find('.coe-state').attr('class', 'coe-state ' + s.cls).text(s.label);
+        $row.find('.rn-cell-roll').text($row.attr('data-rn-roll') || '—');
+        // Nothing to freeze, notify or delete on a participant without a number.
+        $row.find('.rn-row-check').prop('disabled', state === 'not_generated')
+            .prop('checked', false);
+
+        var html = '<div class="rn-act-group">';
+        if (state === 'generated') {
+            html += '<button type="button" class="rn-act rn-act--edit" title="Edit"><i class="bi bi-pencil-square"></i><span>Edit</span></button>' +
+                '<button type="button" class="rn-act rn-act--del"  title="Delete"><i class="bi bi-trash3"></i><span>Delete</span></button>' +
+                '<button type="button" class="rn-act rn-act--freeze" title="Freeze"><i class="bi bi-snow2"></i><span>Freeze</span></button>';
+        } else if (state === 'frozen') {
+            // Frozen numbers can no longer be edited or deleted — the server refuses both.
             html += '<button type="button" class="rn-act rn-act--notify" title="Notify"><i class="bi bi-bell"></i><span>Notify</span></button>';
         } else {
-            html += '<button type="button" class="rn-act rn-act--freeze" title="Freeze"><i class="bi bi-snow2"></i><span>Freeze</span></button>';
+            html += '<button type="button" class="rn-act rn-act--assign" title="Assign a roll number"><i class="bi bi-plus-square"></i><span>Assign</span></button>';
         }
         html += '</div>';
         $row.find('.rn-cell-actions').html(html);
     }
-    $table.find('tbody tr').each(function () { paintActions($(this)); });
+    $table.find('tbody tr').each(function () { paintRow($(this)); });
 
     /* ── DataTable ────────────────────────────────────────────────────── */
     var dt = CoeGrid.init({
         table: '#rnTable',
         title: 'Roll Numbers',
         snoCol: COL.sno,
-        order: [[COL.name, 'asc']],
+        order: [],
         noSort: [COL.chk, COL.sno, COL.action],
         exclude: [COL.chk, COL.action],
-        filters: {
-            '#rnFilterCourse':  COL.roll,    // course filter targets roll prefix column
-            '#rnFilterService': COL.service,
-            '#rnFilterCadre':   COL.cadre
+        rowFilters: {
+            '#rnFilterCourse':  'rn-course',
+            '#rnFilterService': 'rn-service',
+            '#rnFilterCadre':   'rn-cadre',
+            '#rnFilterBatch':   'rn-batch'
         },
         reset: '#rnResetFilters',
         download: '#rnDownloadBtn',
@@ -441,88 +511,150 @@ $(function () {
         empty: { title: 'No Roll Numbers', text: 'Generate or import roll numbers to get started.' }
     });
 
+    function allRows() { return $(dt.rows().nodes()); }
+
+    /* Apply a server-confirmed change to one row. */
+    function setState($row, state, roll) {
+        if (state === 'not_generated') {
+            $row.attr({ 'data-rn-id': '', 'data-rn-roll': '', 'data-rn-prefix': '', 'data-rn-number': '' });
+        }
+        if (roll !== undefined) { $row.attr('data-rn-roll', roll); }
+        $row.attr('data-rn-state', state);
+        paintRow($row);
+        dt.row($row).invalidate('dom');
+    }
+
+    function rowsById(ids) {
+        var want = (ids || []).map(String);
+        return allRows().filter(function () { return want.indexOf(this.getAttribute('data-rn-id')) !== -1; });
+    }
+
+    function afterDelete(ids) {
+        rowsById(ids).each(function () {
+            var $row = $(this);
+            // On "All" the participant is still on the course, now without a number.
+            if (SCOPE === 'all') { setState($row, 'not_generated'); }
+            else { dt.row($row).remove(); }
+        });
+        dt.draw(false);
+        syncBulk();
+    }
+
+    function afterFreeze(ids) {
+        rowsById(ids).each(function () {
+            var $row = $(this);
+            if (SCOPE === 'generated') { dt.row($row).remove(); }
+            else { setState($row, 'frozen'); }
+        });
+        dt.draw(false);
+        syncBulk();
+    }
+
     /* ── Checkbox logic & bulk actions ───────────────────────────────── */
+    function selectedIds() {
+        return allRows().filter(function () { return $(this).find('.rn-row-check').is(':checked'); })
+            .map(function () { return this.getAttribute('data-rn-id'); }).get()
+            .filter(function (id) { return id; });
+    }
+
     function syncBulk() {
-        var checked = $table.find('.rn-row-check:checked').length;
+        var $boxes = allRows().find('.rn-row-check:enabled');
+        var checked = $boxes.filter(':checked').length;
         $('#rnBulkActions').toggleClass('d-none', checked === 0).toggleClass('d-flex', checked > 0);
-        $checkAll.prop('indeterminate', checked > 0 && checked < $table.find('.rn-row-check').length);
-        $checkAll.prop('checked', checked > 0 && checked === $table.find('.rn-row-check').length);
+        $checkAll.prop('indeterminate', checked > 0 && checked < $boxes.length);
+        $checkAll.prop('checked', checked > 0 && checked === $boxes.length);
     }
 
     $checkAll.on('change', function () {
-        $table.find('.rn-row-check').prop('checked', this.checked);
+        $(dt.rows({ search: 'applied' }).nodes()).find('.rn-row-check:enabled').prop('checked', this.checked);
         syncBulk();
     });
     $table.on('change', '.rn-row-check', syncBulk);
 
+    function confirmThen(opts, fn) {
+        Swal.fire($.extend({
+            showCancelButton: true, cancelButtonText: 'Cancel'
+        }, opts)).then(function (r) { if (r.isConfirmed) { fn(); } });
+    }
+
     $('#rnDeleteAll').on('click', function () {
-        Swal.fire({
+        var ids = selectedIds();
+        if (!ids.length) { return; }
+        confirmThen({
             icon: 'warning', title: 'Confirm Delete?',
-            text: "Are you sure you want to delete Roll Number? This action can't be undone.",
-            iconColor: '#dc3545',
-            showCancelButton: true, cancelButtonText: 'Cancel',
-            confirmButtonText: 'Yes, Delete', confirmButtonColor: '#dc3545'
-        }).then(function (r) {
-            if (!r.isConfirmed) { return; }
-            $table.find('.rn-row-check:checked').each(function () {
-                dt.row($(this).closest('tr')).remove();
-            });
-            dt.draw(false);
-            syncBulk();
-            Swal.fire({ icon: 'success', title: 'Deleted', text: 'Selected roll numbers deleted.' });
+            text: 'Delete ' + ids.length + " selected roll number(s)? Frozen ones are kept. This action can't be undone.",
+            iconColor: '#dc3545', confirmButtonText: 'Yes, Delete', confirmButtonColor: '#dc3545'
+        }, function () {
+            send(ROUTES.bulkDestroy, { ids: ids }).done(function (res) {
+                afterDelete(res.deleted_ids);
+                Swal.fire({ icon: 'success', title: 'Deleted', text: res.message });
+            }).fail(showError);
         });
     });
 
-    $('#rnFreezeAll').on('click', function () {
-        Swal.fire({
+    function freezeIds(ids) {
+        confirmThen({
             icon: 'info', title: 'Confirm Freeze?',
-            text: "Are you sure you want to freeze Roll Number? This action can't be undone. Once you freeze this a notification send to the respective OT's.",
-            iconColor: '#17a2b8',
-            showCancelButton: true, cancelButtonText: 'Cancel',
-            confirmButtonText: 'Yes, Freeze', confirmButtonColor: '#198754'
-        }).then(function (r) {
-            if (!r.isConfirmed) { return; }
-            $table.find('.rn-row-check:checked').each(function () {
-                var $row = $(this).closest('tr');
-                $row.attr('data-rn-status', 'Frozen');
-                $row.find('.coe-state').attr('class', 'coe-state rn-status-frozen').text('Frozen');
-                paintActions($row);
-                dt.row($row).invalidate('dom');
-            });
-            dt.draw(false);
-            syncBulk();
-            Swal.fire({ icon: 'success', title: 'Frozen', text: 'Selected roll numbers frozen.' });
+            text: 'Freeze ' + ids.length + " roll number(s)? Frozen roll numbers can no longer be edited, deleted or regenerated. This action can't be undone.",
+            iconColor: '#17a2b8', confirmButtonText: 'Yes, Freeze', confirmButtonColor: '#198754'
+        }, function () {
+            send(ROUTES.freeze, { ids: ids }).done(function (res) {
+                afterFreeze(res.frozen_ids);
+                Swal.fire({ icon: 'success', title: 'Frozen', text: res.message });
+            }).fail(showError);
         });
-    });
+    }
+
+    function notifyIds(ids) {
+        confirmThen({
+            icon: 'question', title: 'Send Notification?',
+            text: 'Notify the OT(s) of their frozen roll number? Roll numbers that are not frozen are skipped.',
+            confirmButtonText: 'Yes, Notify', confirmButtonColor: '#004384'
+        }, function () {
+            send(ROUTES.notify, { ids: ids }).done(function (res) {
+                Swal.fire({ icon: res.no_account || res.skipped_not_frozen || res.failed ? 'info' : 'success',
+                    title: 'Notification Sent', text: res.message });
+            }).fail(showError);
+        });
+    }
+
+    $('#rnFreezeAll').on('click', function () { var ids = selectedIds(); if (ids.length) { freezeIds(ids); } });
+    $('#rnNotifyAll').on('click', function () { var ids = selectedIds(); if (ids.length) { notifyIds(ids); } });
 
     /* ── Row-level delete ─────────────────────────────────────────────── */
     CoeGrid.confirmDelete({
         table: '#rnTable',
+        trigger: '.rn-act--del',
         modal: '#rnDeleteModal',
         confirm: '#rnDeleteConfirm',
         onConfirm: function ($row) {
-            dt.row($row).remove().draw(false);
-            Swal.fire({ icon: 'success', title: 'Deleted', text: 'Roll number deleted.' });
+            var id = $row.attr('data-rn-id');
+            send(ROUTES.row.replace('__ID__', id), { _method: 'DELETE' }).done(function (res) {
+                afterDelete(res.deleted_ids);
+                Swal.fire({ icon: 'success', title: 'Deleted', text: res.message });
+            }).fail(showError);
         }
     });
 
-    /* ── Row-level freeze ─────────────────────────────────────────────── */
-    CoeGrid.freeze({
-        table: '#rnTable',
-        trigger: '.rn-act--freeze',
-        onConfirm: function ($row) {
-            $row.attr('data-rn-status', 'Frozen');
-            $row.find('.coe-state').attr('class', 'coe-state rn-status-frozen').text('Frozen');
-            paintActions($row);
-            dt.row($row).invalidate('dom').draw(false);
-            // Show "Notification Sent" toast
-            Swal.fire({ icon: 'success', title: 'Notification Sent', text: 'Notification has sent to the respective OT.', timer: 2500, showConfirmButton: false });
-        }
+    /* ── Row-level freeze / notify — a plain confirm, then the server ─── */
+    $table.on('click', '.rn-act--freeze', function () {
+        freezeIds([$(this).closest('tr').attr('data-rn-id')]);
     });
-
-    /* ── Row-level notify ─────────────────────────────────────────────── */
     $table.on('click', '.rn-act--notify', function () {
-        Swal.fire({ icon: 'success', title: 'Notification Sent', text: 'Notification has sent to the respective OT.', timer: 2500, showConfirmButton: false });
+        notifyIds([$(this).closest('tr').attr('data-rn-id')]);
+    });
+
+    /* ── Course → Batch pickers ───────────────────────────────────────── */
+    function fillBatches($batch, courseId, selected) {
+        var list = COURSE_BATCHES[courseId] || [];
+        $batch.empty().append('<option value="">Select Batch</option>');
+        list.forEach(function (b) { $batch.append($('<option>').val(b).text(b)); });
+        if (selected) { $batch.val(String(selected)); }
+        else if (list.length === 1) { $batch.val(String(list[0])); }
+        $batch.trigger('change');
+    }
+    $('.rn-course-select').on('change', function () {
+        fillBatches($($(this).data('batch-target')), this.value);
     });
 
     /* ── Generate modal ───────────────────────────────────────────────── */
@@ -530,9 +662,14 @@ $(function () {
     var $genStrategy = $('#rnGenStrategy');
     var $allocBox    = $('#rnAllocRulesBox');
 
-    $genStrategy.on('change', function () {
-        $allocBox.toggleClass('d-none', $(this).val() !== 'Allocation Rules');
-    });
+    function syncStrategy() {
+        var key = $genStrategy.val();
+        $allocBox.toggleClass('d-none', RULE_STRATEGIES.indexOf(key) === -1);
+        // Sequential by OT Code takes each serial from the OT code — no start to ask for.
+        $('#rnGenStartWrap').toggleClass('d-none', key === OT_CODE_STRATEGY);
+    }
+    $genStrategy.on('change', syncStrategy);
+    syncStrategy();
 
     $genModal.find('.coe-control').each(function () {
         if (this.tagName === 'SELECT') { $(this).select2({ width: '100%', dropdownParent: $genModal.find('.modal-body') }); }
@@ -544,65 +681,178 @@ $(function () {
 
     $('#rnGenerateForm').on('submit', function (e) {
         e.preventDefault();
-        bootstrap.Modal.getOrCreateInstance($genModal[0]).hide();
-        Swal.fire({ icon: 'success', title: 'Generated', text: 'Roll numbers generated successfully.' });
+        var $btn = $(this).find('[type=submit]');
+        var data = {
+            course: $('#rnGenCourse').val(),
+            batch: $('#rnGenBatch').val(),
+            prefix: $.trim($('#rnGenPrefix').val()),
+            start_number: $genStrategy.val() === OT_CODE_STRATEGY ? '' : $.trim($('#rnGenStart').val()),
+            strategy: $genStrategy.val(),
+            rules: $allocBox.hasClass('d-none') ? [] : $allocBox.find('input:checked').map(function () { return this.value; }).get()
+        };
+        if (!data.course || !data.batch) {
+            Swal.fire({ icon: 'warning', title: 'Missing details', text: 'Select a course and a batch.' });
+            return;
+        }
+        busy($btn, true);
+        send(ROUTES.generate, data).done(function (res) {
+            bootstrap.Modal.getOrCreateInstance($genModal[0]).hide();
+            Swal.fire({ icon: 'success', title: 'Generated', text: res.message })
+                .then(function () { window.location.reload(); });
+        }).fail(showError).always(function () { busy($btn, false); });
     });
 
     /* ── Edit modal ───────────────────────────────────────────────────── */
     var $editModal = $('#rnEditModal');
+    var $editing = null;
     $editModal.find('select').each(function () {
         $(this).select2({ width: '100%', dropdownParent: $editModal.find('.modal-body') });
     });
 
     $table.on('click', '.rn-act--edit', function () {
-        var $row = $(this).closest('tr');
-        var ot   = $row.attr('data-rn-ot') + ' – ' + $row.attr('data-rn-name');
-        var course = $row.attr('data-rn-course');
-        var roll   = $row.attr('data-rn-roll');
-        var parts  = roll.split('-');
-        // Populate OT select with a dynamic option
-        var $otSel = $('#rnEditOt');
-        $otSel.empty().append('<option value="">Select OT</option>').append('<option value="' + ot + '" selected>' + ot + '</option>');
-        $otSel.trigger('change.select2');
-        $('#rnEditCourse').val(course).trigger('change.select2');
-        $('#rnEditPrefix').val(parts[0] || '');
-        $('#rnEditStartNum').val(parts[1] || '');
+        $editing = $(this).closest('tr');
+        var ot = $editing.attr('data-rn-ot') + ' – ' + $editing.attr('data-rn-name');
+        $('#rnEditOt').empty().append($('<option selected>').val($editing.attr('data-coe-id')).text(ot))
+            .trigger('change.select2');
+        $('#rnEditCourse').val($editing.attr('data-rn-course')).trigger('change.select2');
+        $('#rnEditPrefix').val($editing.attr('data-rn-prefix') || '');
+        $('#rnEditStartNum').val($editing.attr('data-rn-number') || '');
         bootstrap.Modal.getOrCreateInstance($editModal[0]).show();
     });
+    $editModal.on('hidden.bs.modal', function () { $editing = null; });
 
     $('#rnEditForm').on('submit', function (e) {
         e.preventDefault();
-        bootstrap.Modal.getOrCreateInstance($editModal[0]).hide();
-        Swal.fire({ icon: 'success', title: 'Updated', text: 'Roll number updated.' });
+        if (!$editing) { return; }
+        var $row = $editing;
+        var $btn = $(this).find('[type=submit]');
+        var prefix = $.trim($('#rnEditPrefix').val());
+        var number = $.trim($('#rnEditStartNum').val());
+        busy($btn, true);
+        send(ROUTES.row.replace('__ID__', $row.attr('data-rn-id')), { _method: 'PUT', prefix: prefix, number: number })
+            .done(function (res) {
+                $row.attr({ 'data-rn-prefix': prefix, 'data-rn-number': number });
+                setState($row, 'generated', res.roll_number);
+                dt.draw(false);
+                bootstrap.Modal.getOrCreateInstance($editModal[0]).hide();
+                Swal.fire({ icon: 'success', title: 'Updated', text: res.message });
+            }).fail(showError).always(function () { busy($btn, false); });
     });
 
     /* ── Import/Add modal ─────────────────────────────────────────────── */
     var $impModal = $('#rnImportModal');
+    var $saveBtn = $('#rnImportSave');
+    var $file = $('#rnFileInput');
+    var chosenFile = null;
+    var activeTab = 'bulk';
+
     $impModal.find('select').each(function () {
         $(this).select2({ width: '100%', dropdownParent: $impModal.find('.modal-body') });
     });
 
+    function templateHref() {
+        var q = {};
+        if ($('#rnFilterCourse').val()) { q.course = $('#rnFilterCourse').val(); }
+        if ($('#rnFilterBatch').val()) { q.batch = $('#rnFilterBatch').val(); }
+        var qs = $.param(q);
+        return ROUTES.template + (qs ? '?' + qs : '');
+    }
+
+    function showTab(tab) {
+        activeTab = tab;
+        $('.rn-imp-tab').removeClass('is-active').filter('[data-tab="' + tab + '"]').addClass('is-active');
+        $('#rnImpBulk').toggleClass('d-none', tab !== 'bulk');
+        $('#rnImpSingle').toggleClass('d-none', tab !== 'single');
+        $saveBtn.text(tab === 'bulk' ? 'Import Roll Numbers' : 'Add Roll Number');
+    }
+
     $('#rnImportBtn').on('click', function () {
+        $('#rnTemplateLink').attr('href', templateHref());
         bootstrap.Modal.getOrCreateInstance($impModal[0]).show();
     });
 
-    $('.rn-imp-tab').on('click', function () {
-        $('.rn-imp-tab').removeClass('is-active');
-        $(this).addClass('is-active');
-        var tab = $(this).data('tab');
-        $('#rnImpBulk, #rnImpSingle').addClass('d-none');
-        $('#rnImp' + tab.charAt(0).toUpperCase() + tab.slice(1)).removeClass('d-none');
-    });
+    $('.rn-imp-tab').on('click', function () { showTab($(this).data('tab')); });
 
-    $('#rnImportSave').on('click', function () {
-        bootstrap.Modal.getOrCreateInstance($impModal[0]).hide();
-        Swal.fire({ icon: 'success', title: 'Added', text: 'Roll number added.' });
-    });
+    function chooseFile(f) {
+        chosenFile = f || null;
+        $('#rnFileName').text(chosenFile ? chosenFile.name : '');
+    }
+    $file.on('change', function () { chooseFile(this.files[0]); });
 
-    /* Drag-and-drop highlight */
+    /* Drag-and-drop */
     var $drop = $impModal.find('.rn-drop');
     $drop.on('dragover', function (e) { e.preventDefault(); $(this).css('border-color', '#004384'); });
-    $drop.on('dragleave drop', function () { $(this).css('border-color', ''); });
+    $drop.on('dragleave', function () { $(this).css('border-color', ''); });
+    $drop.on('drop', function (e) {
+        e.preventDefault();
+        $(this).css('border-color', '');
+        var dtf = e.originalEvent.dataTransfer;
+        if (dtf && dtf.files && dtf.files[0]) { chooseFile(dtf.files[0]); }
+    });
+
+    /* Single record: OTs of the chosen course + batch, numbered ones shown with their number. */
+    var pendingOt = null;
+    $('#rnSingleBatch').on('change', function () {
+        var $ot = $('#rnSingleOt');
+        var course = $('#rnSingleCourse').val();
+        var batch = this.value;
+        $ot.empty().append('<option value="">Select OT</option>').trigger('change.select2');
+        if (!course || !batch) { return; }
+        $.getJSON(ROUTES.participants, { course: course, batch: batch }).done(function (res) {
+            (res.data || []).forEach(function (p) {
+                var text = p.label + (p.roll_number ? ' (' + p.roll_number + (p.frozen ? ', frozen' : '') + ')' : '');
+                $ot.append($('<option>').val(p.pk).text(text).prop('disabled', !!p.frozen));
+            });
+            if (pendingOt) { $ot.val(String(pendingOt)); pendingOt = null; }
+            $ot.trigger('change.select2');
+        }).fail(showError);
+    });
+
+    /* "Assign" on a participant without a number opens Add Single Record on them. */
+    $table.on('click', '.rn-act--assign', function () {
+        var $row = $(this).closest('tr');
+        showTab('single');
+        pendingOt = $row.attr('data-coe-id');
+        $('#rnSingleCourse').val($row.attr('data-rn-course')).trigger('change.select2');
+        fillBatches($('#rnSingleBatch'), $row.attr('data-rn-course'), $row.attr('data-rn-batch'));
+        $('#rnTemplateLink').attr('href', templateHref());
+        bootstrap.Modal.getOrCreateInstance($impModal[0]).show();
+    });
+
+    $saveBtn.on('click', function () {
+        var req;
+        if (activeTab === 'bulk') {
+            if (!chosenFile) {
+                Swal.fire({ icon: 'warning', title: 'No file', text: 'Choose a file to import.' });
+                return;
+            }
+            var fd = new FormData();
+            fd.append('file', chosenFile);
+            req = send(ROUTES.import, fd, { processData: false, contentType: false });
+        } else {
+            req = send(ROUTES.single, {
+                course: $('#rnSingleCourse').val(),
+                batch: $('#rnSingleBatch').val(),
+                student_master_pk: $('#rnSingleOt').val(),
+                prefix: $.trim($('#rnSinglePrefix').val()),
+                number: $.trim($('#rnSingleStart').val())
+            });
+        }
+        busy($saveBtn, true);
+        req.done(function (res) {
+            bootstrap.Modal.getOrCreateInstance($impModal[0]).hide();
+            // An import that also had failing rows still reports them in the message.
+            Swal.fire({ icon: res.failed ? 'warning' : 'success', title: activeTab === 'bulk' ? 'Import finished' : 'Added', text: res.message })
+                .then(function () { window.location.reload(); });
+        }).fail(showError).always(function () { busy($saveBtn, false); });
+    });
+
+    $impModal.on('hidden.bs.modal', function () {
+        chooseFile(null);
+        $file.val('');
+        pendingOt = null;
+        showTab('bulk');
+    });
 });
 </script>
 @endpush
