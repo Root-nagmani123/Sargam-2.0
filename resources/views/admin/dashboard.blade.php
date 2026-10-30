@@ -308,7 +308,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                     data-notice-desc='@json(notice_safe_html($notice->description ?? ""))'
                                     data-notice-badge="{{ $noticeCategory }}"
                                     data-notice-meta="{{ $noticeMeta }}"
-                                    data-notice-doc="{{ $notice->document ? asset('storage/' . $notice->document) : '' }}"
+                                    data-notice-doc="{{ $notice->document ? route('admin.notice.attachment', $notice->pk) : '' }}"
                                     role="button" tabindex="0"
                                     aria-label="View notice: {{ $notice->notice_title ?? 'Notice' }}">
                                     <span class="dashboard-notice-title">{{ $notice->notice_title }}</span>
@@ -326,7 +326,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                         <span class="dashboard-notice-type-pill">{{ $noticeCategory }}</span>
                                     </div>
                                     @if($notice->document)
-                                    <a href="{{ asset('storage/' . $notice->document) }}" target="_blank"
+                                    <a href="{{ route('admin.notice.attachment', $notice->pk) }}" target="_blank"
                                         class="dashboard-notice-attachment text-danger text-decoration-none">
                                         <i class="bi bi-paperclip" aria-hidden="true"></i>View attachment
                                     </a>

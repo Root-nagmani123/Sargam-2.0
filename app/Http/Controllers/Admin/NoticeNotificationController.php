@@ -187,11 +187,18 @@ class NoticeNotificationController extends Controller
             abort(404);
         }
 
-        if (! $notice->document || ! Storage::disk('private')->exists($notice->document)) {
+        // New uploads go to the public disk; files uploaded while notices were kept
+        // on the private disk are still served from there. This route is the only
+        // supported way in: the web server must deny direct /storage/notice_docs/
+        // requests (see deploy notes), or the audience check above is bypassed.
+        $disk = collect(['public', 'private'])
+            ->first(fn ($name) => $notice->document && Storage::disk($name)->exists($notice->document));
+
+        if (! $disk) {
             abort(404);
         }
 
-        return Storage::disk('private')->response($notice->document);
+        return Storage::disk($disk)->response($notice->document);
     }
 
     /**
@@ -269,7 +276,7 @@ class NoticeNotificationController extends Controller
 
         if ($request->hasFile('document')) {
             $data['document'] = $request->file('document')
-                ->store('notice_docs', 'private');
+                ->store('notice_docs', 'public');
         }
 
         // One transaction: a notice committed without its audience rows reads as
@@ -410,13 +417,16 @@ class NoticeNotificationController extends Controller
         ]);
         $data['description'] = notice_safe_html($data['description'] ?? '');
 
+        $previousDocument = $notice->document;
+
         if ($request->hasFile('document')) {
-            $data['document'] = $request->file('document')->store('notice_docs', 'private');
+            $data['document'] = $request->file('document')->store('notice_docs', 'public');
         }
 
         if ($this->keepsLegacyCourselessAudience($notice, $request)) {
             // Audience untouched: no audience columns written, no rows re-synced.
             $notice->update($data);
+            $this->deleteReplacedAttachment($notice, $previousDocument);
 
             return redirect()->route('admin.notice.index')->with('success', 'Notice updated!');
         }
@@ -429,8 +439,32 @@ class NoticeNotificationController extends Controller
             $notice->update($data);
             $this->syncAudience($notice, $request);
         });
+        $this->deleteReplacedAttachment($notice, $previousDocument);
 
         return redirect()->route('admin.notice.index')->with('success', 'Notice updated!');
+    }
+
+    private function deleteReplacedAttachment(Notice $notice, ?string $previousDocument): void
+    {
+        if ($previousDocument && $previousDocument !== $notice->document) {
+            $this->deleteAttachmentFile($previousDocument);
+        }
+    }
+
+    /**
+     * Remove a notice attachment from whichever disk holds it, once no notice row
+     * still points at it. Runs after the row change has committed, so a failed
+     * update never leaves a notice pointing at a deleted file.
+     */
+    private function deleteAttachmentFile(?string $path): void
+    {
+        if (! $path || Notice::where('document', $path)->exists()) {
+            return;
+        }
+
+        foreach (['public', 'private'] as $disk) {
+            Storage::disk($disk)->delete($path);
+        }
     }
 
 
@@ -446,6 +480,9 @@ class NoticeNotificationController extends Controller
                 $data->audienceMaps()->delete();
                 $data->delete();
             });
+            // Public-disk files stay on disk until removed; don't leave a deleted
+            // notice's attachment behind.
+            $this->deleteAttachmentFile($data->document);
             return back()->with('success', 'Notice deleted!');
         } else {
             return back()->with('error', 'Active Notice cannot be deleted!');
