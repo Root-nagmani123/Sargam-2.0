@@ -45,12 +45,21 @@ class ApprovalService
         return Auth::user()->getAllPermissions()->pluck('name')->toArray();
     }
 
+    # @ Full access, recommended bookings and Protocol Approvers (requests of any type
+    # @ can be recommended to them) see every request type
+    private function seesAllRequestTypes(array $userPermissions): bool
+    {
+        return in_array('protocol.all_booking', $userPermissions)
+            || in_array('protocol.recommended_booking', $userPermissions)
+            || Auth::user()->hasRole('Protocol Approver');
+    }
+
     # @ Request types this user can see in All Requests
     public function allowedRequestTypes(): array
     {
         $userPermissions = $this->userPermissions();
 
-        if (in_array('protocol.all_booking', $userPermissions) || in_array('protocol.recommended_booking', $userPermissions)) {
+        if ($this->seesAllRequestTypes($userPermissions)) {
             return array_keys(config('protocol.request_types'));
         }
 
@@ -76,8 +85,8 @@ class ApprovalService
 
         $tabs = [];
 
-        // Full access and recommended bookings cover every type, so they get an "All" tab
-        if (in_array('protocol.all_booking', $userPermissions) || in_array('protocol.recommended_booking', $userPermissions)) {
+        // Users who see every type get an "All" tab
+        if ($this->seesAllRequestTypes($userPermissions)) {
             $tabs[] = [
                 'type' => 'all',
                 'label' => 'All',

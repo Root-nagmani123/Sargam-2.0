@@ -1,10 +1,20 @@
-@extends('protocol::layouts.app')
+@extends('admin.layouts.master')
 
 @section('title', 'Recommended to Me')
 @section('page_title', 'Recommended to Me')
 @section('page_subtitle', 'Requests that Protocol Staff has recommended to you for final approval')
 
 @section('content')
+@include('protocol::partials.style')
+  <div class="container-fluid profile-page">
+    <x-breadcrum
+        title="Recommended to Me"
+        :items="[
+            'Home',
+            ['label' => 'Protocol', 'url' => route('protocol.dashboard')],
+            'Recommended to Me',
+        ]"
+    />
 
   <div class="card-clean p-3">
     <div class="section-title">Recommended to Me</div>
@@ -36,6 +46,7 @@
     </div>
 
     <div class="mt-3">{{ $requests->links() }}</div>
+  </div>
   </div>
 
 @endsection
