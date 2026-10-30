@@ -431,9 +431,10 @@ class IssueManagementController extends Controller
      * The two grids differ only in the action column — All Requests offers
      * View + Edit (to the raiser/logger), Centcom offers Update Status + View.
      *
+     * @param  array<int, string>  $ids  signedInEmployeeIds(), the set edit() checks
      * @return array<string, string>
      */
-    private function issueGridRow(IssueLogManagement $issue, $userId, string $variant = 'index'): array
+    private function issueGridRow(IssueLogManagement $issue, array $ids, string $variant = 'index'): array
     {
         $status = (int) $issue->issue_status;
 
@@ -457,7 +458,7 @@ class IssueManagementController extends Controller
             $actions = $view;
             // Edit stays available to the raiser/logger while the issue is open —
             // the old grid offered it and dropping it would lose the feature.
-            if (($issue->issue_logger == $userId || $issue->created_by == $userId) && $status !== 2) {
+            if ((in_array((string) $issue->issue_logger, $ids) || in_array((string) $issue->created_by, $ids)) && $status !== 2) {
                 $actions .= $link(route('admin.issue-management.edit', $issue->pk), 'edit', 'bi-pencil', 'Edit');
             }
             $group = 'ic-act-group';
@@ -509,9 +510,9 @@ class IssueManagementController extends Controller
      */
     private function dataTablesResponse(Request $request, array $snapshot, string $variant = 'index')
     {
-        $userId = Auth::user()->user_id;
+        $ids = $this->signedInEmployeeIds();
         $data = $this->issueManagementHydrateCentcomRows($snapshot['ids'])
-            ->map(fn (IssueLogManagement $issue) => $this->issueGridRow($issue, $userId, $variant))
+            ->map(fn (IssueLogManagement $issue) => $this->issueGridRow($issue, $ids, $variant))
             ->values();
 
         return response()->json([
@@ -1485,14 +1486,15 @@ class IssueManagementController extends Controller
             ]);
 
             // created_by may name someone else (logging on their behalf);
-            // issue_logger is always the signed-in user. Neither may be the
-            // nodal officer by their own choice — see resolveNodalOfficer().
-            // Nor may anyone who cannot sign in.
+            // issue_logger is the signed-in user as signedInEmployeeIds() names
+            // them. Neither may be the nodal officer by their own choice — see
+            // resolveNodalOfficer(). Nor may anyone who cannot sign in.
             // With no eligible officer at any level the complaint is refused:
             // stored without one, nobody could ever change its status.
-            // The logger is who the login is by signedInEmployeeIds(), not its
-            // raw user_id: a student or NULL-category login sharing an employee's
-            // pk would otherwise hand that employee the logger's rights (L-69).
+            // Not the raw user_id: a student or NULL-category login sharing an
+            // employee's pk would hand that employee the logger's rights (L-69).
+            // A login that is nobody is logged as NULL ("NA" on the detail page),
+            // never as the complainant (F-010).
             $loggerIds = $this->signedInEmployeeIds();
             $nodalEmployeePk = $this->resolveNodalOfficer(
                 $request->issue_category_id,
@@ -1515,7 +1517,7 @@ class IssueManagementController extends Controller
                 'description' => $request->description,
                 'created_by' => $request->created_by,
                 'employee_master_pk' => $nodalEmployeePk,
-                'issue_logger' => $loggerIds[0] ?? $request->created_by,
+                'issue_logger' => $loggerIds[0] ?? null,
                 'issue_status' => 0,
                 'created_date' => now()->setTimezone('Asia/Kolkata')->format('Y-m-d H:i:s'),
             );

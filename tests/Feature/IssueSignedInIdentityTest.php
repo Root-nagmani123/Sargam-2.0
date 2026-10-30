@@ -274,6 +274,91 @@ class IssueSignedInIdentityTest extends TestCase
             ->assertSessionHas('error');
     }
 
+    // ── F-010: a login that is no employee is not recorded as the complainant ──
+
+    /** Files a complaint for $complainant as $login and returns it. */
+    private function fileAs(User $login, int $complainant): IssueLogManagement
+    {
+        $officer = $this->employee();
+        $this->login($officer, 'E');
+        [$category, $subCategory] = $this->categoryWithOfficer($officer);
+        $building = DB::table('building_master')->value('pk');
+        if (! $building) {
+            $this->markTestSkipped('Needs a building_master row.');
+        }
+        $description = 'F-010 logger probe '.uniqid();
+
+        $this->actingAs($login)
+            ->post(route('admin.issue-management.store'), [
+                'description' => $description,
+                'issue_category_id' => $category,
+                'issue_sub_category_id' => $subCategory,
+                'issue_priority_id' => (int) DB::table('issue_priority_master')->value('pk'),
+                'sub_category_name' => 'probe',
+                'created_by' => $complainant,
+                'nodal_employee_id' => $officer,
+                'location' => 'O',
+                'building_master_pk' => $building,
+            ])
+            ->assertSessionHasNoErrors();
+
+        return IssueLogManagement::where('description', $description)->firstOrFail();
+    }
+
+    public function test_a_student_filing_for_an_employee_is_not_recorded_as_that_employee_logging_it(): void
+    {
+        $complainant = $this->employee();
+        $issue = $this->fileAs($this->login($this->unusedKey(), 'S'), $complainant);
+
+        $this->assertSame((string) $complainant, (string) $issue->created_by);
+        $this->assertNull($issue->issue_logger, 'the complainant was recorded as the issue logger');
+
+        // The complainant's detail page does not name them as the logger.
+        $html = $this->actingAs($this->login($complainant, 'E'))
+            ->get(route('admin.issue-management.show', $issue->pk))
+            ->assertOk()
+            ->getContent();
+        $this->assertMatchesRegularExpression('#Issue Logger</span>\s*<span class="ic-fact__value">NA</span>#', $html);
+    }
+
+    public function test_a_null_category_login_sharing_an_employees_pk_records_no_employee_as_the_logger(): void
+    {
+        $victim = $this->employee();
+        $complainant = $this->employee();
+        $issue = $this->fileAs($this->login($victim, null), $complainant);
+
+        $this->assertNull($issue->issue_logger, 'the colliding employee or the complainant was recorded as the logger');
+    }
+
+    public function test_control_an_employee_filing_for_someone_else_is_recorded_as_the_logger(): void
+    {
+        $logger = $this->employee();
+        $issue = $this->fileAs($this->login($logger, 'E'), $this->employee());
+
+        $this->assertSame((string) $logger, (string) $issue->issue_logger);
+    }
+
+    // ── The grid's Edit link follows the same identity as edit() ─────────────
+
+    public function test_the_grid_offers_edit_to_an_employee_whose_login_is_their_pk_old(): void
+    {
+        $pkOld = $this->unusedKey();
+        $employee = $this->employee($pkOld);
+        // Stored under pk, as store() now records the logger and complainant.
+        $issue = $this->issueOf($employee);
+        $login = $this->login($pkOld, 'E');
+
+        $this->actingAs($login)->get(route('admin.issue-management.edit', $issue->pk))->assertOk();
+        $row = collect($this->actingAs($login)
+            ->getJson(route('admin.issue-management.data', ['search' => ['value' => (string) $issue->pk], 'length' => 10]))
+            ->assertOk()
+            ->json('data'))
+            ->firstWhere('id', (string) $issue->pk);
+
+        $this->assertNotNull($row, 'index grid did not list it');
+        $this->assertStringContainsString(route('admin.issue-management.edit', $issue->pk), $row['action'], 'the grid hid Edit from a login edit() accepts');
+    }
+
     public function test_a_student_sharing_an_employees_pk_does_not_drop_that_employee_from_the_nodal_officers(): void
     {
         $officer = $this->employee();
