@@ -270,8 +270,8 @@
             var params = new URLSearchParams(currentFilters());
             params.set('search', dt ? (dt.search() || '') : '');
             var cols = [];
-            $('#listMeterReadingTable thead th').each(function (i) {
-                var key = LMR_EXPORT_KEYS[i];
+            // Walk the key list, not the DOM: DataTables removes a hidden column's <th>.
+            LMR_EXPORT_KEYS.forEach(function (key, i) {
                 if (!key) return;
                 if (!dt || dt.column(i).visible()) cols.push(key);
             });

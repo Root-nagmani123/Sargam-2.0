@@ -820,6 +820,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             /* ---------- Download / Print: the filtered list ---------- */
+            // Grid column index -> export column key (EstateChangeRequestHouseExport). '' = Action.
+            var RFH_EXPORT_KEYS = ['sno', 'request_id', 'request_date', 'name', 'doj_academy', 'status',
+                'alloted_house', 'eligibility_type', 'possession_from', 'possession_to', ''];
             function rfhExportParams() {
                 var params = {};
                 var st = jQuery('#rfhStatusFilter').val();
@@ -827,6 +830,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (st) params.status_filter = st;
                 if (el) params.eligibility_filter = el;
                 if (dt.search()) params.search = dt.search();
+                var cols = RFH_EXPORT_KEYS.filter(function (key, i) {
+                    return key && dt.column(i).visible();
+                });
+                if (cols.length) params.cols = cols.join(',');
                 return params;
             }
             jQuery(document).on('click', '[data-export-for="rfh"]', function () {

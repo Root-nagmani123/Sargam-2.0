@@ -143,8 +143,8 @@ class EstatePossessionOtherDataTable extends DataTable
             'q' => trim((string) data_get($r->all(), 'search.value', '')),
             'order' => $r->input('order', []),
             'cols' => $colSearch,
-            'estate_filter' => trim((string) $r->input('estate_filter', '')),
-            'allotment_date_filter' => trim((string) $r->input('allotment_date_filter', '')),
+            'bill_year_filter' => trim((string) $r->input('bill_year_filter', '')),
+            'bill_date_filter' => trim((string) $r->input('bill_date_filter', '')),
             'can_del' => $canDelete ? 1 : 0,
             'uid' => Auth::id(),
         ];
@@ -182,8 +182,8 @@ class EstatePossessionOtherDataTable extends DataTable
                 static::applyFilters(
                     $query,
                     (string) request()->input('search.value', ''),
-                    (string) request()->input('estate_filter', ''),
-                    (string) request()->input('allotment_date_filter', '')
+                    (string) request()->input('bill_year_filter', ''),
+                    (string) request()->input('bill_date_filter', '')
                 );
             })
             ->orderColumn('DT_RowIndex', fn ($query, $order) => $query->orderBy('estate_possession_other.pk', $order))
@@ -336,21 +336,28 @@ class EstatePossessionOtherDataTable extends DataTable
     }
 
     /**
-     * The listing's search + Estate Name / Allotment date filters, shared by the
+     * The listing's search + Bill Year / Bill Date filters, shared by the
      * DataTable and the exports so a download matches what the table showed.
      *
      * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $query
      */
-    public static function applyFilters($query, string $searchValue, string $estateFilter = '', string $allotmentDate = ''): void
+    public static function applyFilters($query, string $searchValue, string $billYear = '', string $billDate = ''): void
     {
-        $estateFilter = trim($estateFilter);
-        if ($estateFilter !== '') {
-            $query->where('estate_possession_other.estate_campus_master_pk', (int) $estateFilter);
-        }
-
-        $allotmentDate = trim($allotmentDate);
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $allotmentDate) === 1) {
-            $query->whereDate('estate_possession_other.allotment_date', $allotmentDate);
+        // Keep a possession when it has a bill matching: Bill Year = bill_year,
+        // Bill Date = a bill period from_date..to_date covering that day.
+        $billYear = trim($billYear);
+        $billDate = trim($billDate);
+        $hasYear = preg_match('/^\d{4}$/', $billYear) === 1;
+        $hasDate = preg_match('/^\d{4}-\d{2}-\d{2}$/', $billDate) === 1;
+        if ($hasYear || $hasDate) {
+            $query->whereExists(function ($q) use ($hasYear, $billYear, $hasDate, $billDate) {
+                $q->selectRaw('1')
+                    ->from('estate_month_reading_details_other as emr')
+                    ->whereColumn('emr.estate_possession_other_pk', 'estate_possession_other.pk')
+                    ->when($hasYear, fn ($q) => $q->where('emr.bill_year', $billYear))
+                    ->when($hasDate, fn ($q) => $q->whereDate('emr.from_date', '<=', $billDate)
+                        ->whereDate('emr.to_date', '>=', $billDate));
+            });
         }
 
         $searchValue = trim($searchValue);
@@ -383,8 +390,8 @@ class EstatePossessionOtherDataTable extends DataTable
             ->addTableClass('table table-hover align-middle mb-0 w-100 programme-dt-table')
             ->columns($this->getColumns())
             ->minifiedAjax('', null, [
-                'estate_filter' => '$("#epoEstateFilter").val() || ""',
-                'allotment_date_filter' => '$("#epoAllotmentDateFilter").val() || ""',
+                'bill_year_filter' => '$("#epoBillYearFilter").val() || ""',
+                'bill_date_filter' => '$("#epoBillDateFilter").val() || ""',
             ])
             ->parameters([
                 'responsive' => false,

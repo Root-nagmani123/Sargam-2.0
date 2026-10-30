@@ -519,8 +519,8 @@ $(document).ready(function() {
             params.set('order[0][dir]', order[0][1]);
         }
         var cols = [];
-        $('#defineHouseTable thead th').each(function(i) {
-            var key = DH_EXPORT_KEYS[i];
+        // Walk the key list, not the DOM: DataTables removes a hidden column's <th>.
+        DH_EXPORT_KEYS.forEach(function(key, i) {
             if (!key) return;
             if (table.column(i).visible()) cols.push(key);
         });

@@ -287,8 +287,9 @@
             var params = new URLSearchParams({ bill_month: $('#bill_month').val() || '' });
             params.set('search', dt ? (dt.search() || '') : '');
             var cols = [];
-            $('#billForOtherTable thead th').each(function (i) {
-                var key = GEBO_EXPORT_KEYS[i];
+            // Walk the key list, not the DOM: DataTables removes a hidden column's
+            // <th>, which would drop the last keys (Licence Fee, Water Fee, Grand Total).
+            GEBO_EXPORT_KEYS.forEach(function (key, i) {
                 if (!key) return;
                 if (!dt || dt.column(i).visible()) cols.push(key);
             });

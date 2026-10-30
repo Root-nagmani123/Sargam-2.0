@@ -384,7 +384,7 @@ class EstateController extends Controller
     public function requestForOthers(EstateOtherRequestDataTable $dataTable)
     {
         return $dataTable->render('admin.estate.estate_request_for_others', [
-            'sectionOptions' => EstateOtherRequestDataTable::sectionOptions(),
+            'billYearOptions' => EstateOtherRequestDataTable::billYearOptions(),
         ]);
     }
 
@@ -399,16 +399,16 @@ class EstateController extends Controller
     private function requestForOthersExportPayload(Request $request): array
     {
         $search = trim((string) $request->input('search', ''));
-        $section = trim((string) $request->input('section_filter', ''));
-        $doj = trim((string) $request->input('doj_filter', ''));
+        $billYear = trim((string) $request->input('bill_year_filter', ''));
+        $billDate = trim((string) $request->input('bill_date_filter', ''));
 
         $rows = EstateOtherRequestDataTable::listingQuery()
-            ->tap(fn ($query) => EstateOtherRequestDataTable::applyFilters($query, $search, $section, $doj))
+            ->tap(fn ($query) => EstateOtherRequestDataTable::applyFilters($query, $search, $billYear, $billDate))
             ->get();
 
-        $filters = ['Section: ' . ($section !== '' ? $section : 'All')];
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $doj) === 1) {
-            $filters[] = 'DOJ in Academy: ' . \Carbon\Carbon::parse($doj)->format('d-m-Y');
+        $filters = ['Bill Year: ' . (preg_match('/^\d{4}$/', $billYear) === 1 ? $billYear : 'All')];
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $billDate) === 1) {
+            $filters[] = 'Bill Date: ' . \Carbon\Carbon::parse($billDate)->format('d-m-Y');
         }
         if ($search !== '') {
             $filters[] = 'Search: "' . $search . '"';
@@ -6358,10 +6358,8 @@ class EstateController extends Controller
     public function possessionForOthers(EstatePossessionOtherDataTable $dataTable)
     {
         return $dataTable->render('admin.estate.estate_possession_for_others', [
-            // Estate Name filter options for the toolbar.
-            'estateCampuses' => DB::table('estate_campus_master')
-                ->orderBy('campus_name')
-                ->get(['pk', 'campus_name']),
+            // Bill Year filter options: years on record for Others' bills.
+            'billYearOptions' => EstateOtherRequestDataTable::billYearOptions(),
         ]);
     }
 
@@ -6376,25 +6374,21 @@ class EstateController extends Controller
     private function possessionForOthersExportPayload(Request $request): array
     {
         $search = trim((string) $request->input('search', ''));
-        $estateFilter = trim((string) $request->input('estate_filter', ''));
-        $allotmentDate = trim((string) $request->input('allotment_date_filter', ''));
+        $billYear = trim((string) $request->input('bill_year_filter', ''));
+        $billDate = trim((string) $request->input('bill_date_filter', ''));
 
         $rows = EstatePossessionOtherDataTable::listingQuery()
             ->tap(fn ($query) => EstatePossessionOtherDataTable::applyFilters(
                 $query,
                 $search,
-                $estateFilter,
-                $allotmentDate
+                $billYear,
+                $billDate
             ))
             ->get();
 
-        $estateLabel = $estateFilter !== ''
-            ? (DB::table('estate_campus_master')->where('pk', (int) $estateFilter)->value('campus_name') ?: 'All')
-            : 'All';
-
-        $filters = ['Estate: ' . $estateLabel];
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $allotmentDate) === 1) {
-            $filters[] = 'Allotment date: ' . \Carbon\Carbon::parse($allotmentDate)->format('d-m-Y');
+        $filters = ['Bill Year: ' . (preg_match('/^\d{4}$/', $billYear) === 1 ? $billYear : 'All')];
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $billDate) === 1) {
+            $filters[] = 'Bill Date: ' . \Carbon\Carbon::parse($billDate)->format('d-m-Y');
         }
         if ($search !== '') {
             $filters[] = 'Search: "' . $search . '"';
