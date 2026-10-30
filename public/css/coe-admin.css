@@ -646,8 +646,8 @@
     font-weight: 600;
 }
 
-/* ── Form fields inside a coe modal ── */
-.coe-modal .coe-form-label {
+/* ── Form fields inside a coe modal, or a page-level form card (.coe-form-card) ── */
+:is(.coe-modal, .coe-form-card) .coe-form-label {
     display: block;
     margin-bottom: 0.375rem;
     font-size: 0.8125rem;
@@ -655,9 +655,9 @@
     color: #344054;
 }
 
-.coe-modal .coe-req { color: var(--coe-danger); margin-left: 1px; }
+:is(.coe-modal, .coe-form-card) .coe-req { color: var(--coe-danger); margin-left: 1px; }
 
-.coe-modal .coe-control {
+:is(.coe-modal, .coe-form-card) .coe-control {
     border: 1px solid var(--coe-control-line);
     border-radius: var(--ds-radius-2);
     font-size: 0.875rem;
@@ -665,9 +665,9 @@
     box-shadow: none;
 }
 
-.coe-modal .coe-control:focus { border-color: var(--coe-brand); box-shadow: var(--ds-focus-ring); }
-.coe-modal textarea.coe-control { resize: vertical; min-height: 64px; }
-.coe-modal textarea.coe-control:disabled { background: var(--ds-surface-2); }
+:is(.coe-modal, .coe-form-card) .coe-control:focus { border-color: var(--coe-brand); box-shadow: var(--ds-focus-ring); }
+:is(.coe-modal, .coe-form-card) textarea.coe-control { resize: vertical; min-height: 64px; }
+:is(.coe-modal, .coe-form-card) textarea.coe-control:disabled { background: var(--ds-surface-2); }
 
 /* Select2 inside the modal follows the same control look. */
 .coe-modal .select2-container--default .select2-selection--single {
@@ -687,11 +687,11 @@
 }
 
 .coe-modal .select2-selection.is-invalid,
-.coe-modal .coe-control.is-invalid { border-color: var(--coe-danger); }
+:is(.coe-modal, .coe-form-card) .coe-control.is-invalid { border-color: var(--coe-danger); }
 
-.coe-modal .coe-radio-row { display: flex; gap: 1.5rem; min-height: 28px; align-items: center; }
+:is(.coe-modal, .coe-form-card) .coe-radio-row { display: flex; gap: 1.5rem; min-height: 28px; align-items: center; }
 
-.coe-modal .coe-radio {
+:is(.coe-modal, .coe-form-card) .coe-radio {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
@@ -701,9 +701,9 @@
     cursor: pointer;
 }
 
-.coe-modal .coe-radio input { accent-color: var(--coe-brand); width: 16px; height: 16px; margin: 0; }
+:is(.coe-modal, .coe-form-card) .coe-radio input { accent-color: var(--coe-brand); width: 16px; height: 16px; margin: 0; }
 
-.coe-modal .coe-field-error { margin-top: 0.25rem; font-size: 0.75rem; color: var(--coe-danger); }
+:is(.coe-modal, .coe-form-card) .coe-field-error { margin-top: 0.25rem; font-size: 0.75rem; color: var(--coe-danger); }
 
 /* ── Import instructions under the dropzone ── */
 .coe-modal .coe-instructions { margin-top: 1.25rem; }

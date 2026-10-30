@@ -2218,4 +2218,9 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('ot-laptop-status.bulk-destroy');
     Route::delete('ot-laptop-status/{response}', [\App\Http\Controllers\Admin\COE\OtLaptopStatusController::class, 'destroy'])
         ->whereNumber('response')->name('ot-laptop-status.destroy');
+    // COE -> Laptop Availability Form (the OT's own declaration)
+    Route::get('laptop-declaration', [\App\Http\Controllers\Admin\COE\LaptopDeclarationController::class, 'index'])
+        ->name('laptop-declaration.index');
+    Route::post('laptop-declaration', [\App\Http\Controllers\Admin\COE\LaptopDeclarationController::class, 'store'])
+        ->middleware('throttle:10,1')->name('laptop-declaration.store');
 });
