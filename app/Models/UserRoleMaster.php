@@ -176,3 +176,4 @@ class UserRoleMaster extends Model
         self::ensureOptionForRole($newName);
     }
 }
+
