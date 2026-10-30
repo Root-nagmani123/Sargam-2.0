@@ -125,7 +125,8 @@ class DriverMasterController extends Controller
 
             'email' => [
                 'required',
-                'email',
+                'email:rfc,filter',
+                'regex:/^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/',
                 'max:150',
             ],
 
@@ -252,7 +253,8 @@ class DriverMasterController extends Controller
 
     'email' => [
         'required',
-        'email',
+        'email:rfc,filter',
+        'regex:/^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/',
         'max:150',
     ],
 

@@ -48,6 +48,16 @@ $(document).ready(function () {
     );
 
 
+    // Email validation (needs a domain extension, e.g. name@example.com)
+    $.validator.addMethod(
+        "emailRegex",
+        function (value, element) {
+        return this.optional(element) || /^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/.test(value);
+    },
+    "Please enter a valid email address."
+    );
+
+
     /*
     |--------------------------------------------------------------------------
     | Driver Form Validation
@@ -141,6 +151,7 @@ $(document).ready(function () {
             email: {
                 required: true,
                 email: true,
+                emailRegex: true,
                 maxlength: 150
             },
 
