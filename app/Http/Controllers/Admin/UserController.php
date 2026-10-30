@@ -390,7 +390,7 @@ class UserController extends Controller
             'protocol_vehicle_pass_requests'=> ['count' => $protocolCounts['vehicle'],          'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'vehicle']) : null,    'visible' => $isProtocolStaff],
             'protocol_ticket_requests'      => ['count' => $protocolCounts['ticket'],           'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'ticket']) : null,     'visible' => $isProtocolStaff],
             'protocol_pending_my_action'    => ['count' => $protocolCounts['pending'],          'link' => $isProtocolStaff ? route('protocol.approval.queue') : null,                        'visible' => $isProtocolStaff],
-            'protocol_recommend_action'     => ['count' => $protocolCounts['recommended'],      'link' => $isProtocolStaff ? route('protocol.requests.all') : null,                          'visible' => $isProtocolStaff],
+            'protocol_recommend_action'     => ['count' => $protocolCounts['recommended'],      'link' => $isProtocolStaff ? route('protocol.requests.all', ['status' => 'recommended']) : null,                         'visible' => $isProtocolStaff],
             'my_protocol_request'         => ['count' => $myProtocolCount,                    'link' => $canRaiseProtocol ? route('protocol.requests.my') : null,                          'visible' => $canRaiseProtocol],
         ];
 

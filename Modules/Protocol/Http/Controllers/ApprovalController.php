@@ -105,6 +105,9 @@ class ApprovalController extends Controller
      */
     public function decide(ReviewProtocolRequest $request, ProtocolRequest $protocolRequest)
     {
+        abort_if($protocolRequest->status !== ProtocolRequest::STATUS_PENDING, 403,
+            'This request is no longer awaiting Protocol Staff review.');
+
         $data = $request->validated();
         // If Protocol Staff assigned a physical guest house, persist it
         // on the type-specific row (employee never sets this themselves).

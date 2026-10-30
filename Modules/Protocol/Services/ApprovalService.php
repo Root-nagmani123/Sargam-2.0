@@ -127,7 +127,24 @@ class ApprovalService
                 break;
         }
 
-        return $query->count();
+        return $this->applyStatusFilter($query)->count();
+    }
+
+    # @ Narrow to one status when the page is opened with ?status= (dashboard cards link here with it)
+    private function applyStatusFilter($query)
+    {
+        $statuses = [
+            ProtocolRequest::STATUS_PENDING,
+            ProtocolRequest::STATUS_RECOMMENDED,
+            ProtocolRequest::STATUS_APPROVED,
+            ProtocolRequest::STATUS_REJECTED,
+        ];
+
+        if (in_array(request('status'), $statuses, true)) {
+            $query->where('status', request('status'));
+        }
+
+        return $query;
     }
 
     public function columns(): array
@@ -206,7 +223,7 @@ class ApprovalService
                 break;
         }
 
-        return $query;
+        return $this->applyStatusFilter($query);
     }
 
     public function getDatatable(Request $request)

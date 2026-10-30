@@ -185,6 +185,12 @@ table.table tbody tr:hover{background:#FFF9F0;}
       </div>
     @endif
 
+    {{-- Protocol Staff decide only on pending requests; later stages are read-only here --}}
+    @if ($protocolRequest->status !== \Modules\Protocol\Entities\ProtocolRequest::STATUS_PENDING)
+    <div class="card-clean p-3 text-muted small">
+      <i class="bi bi-info-circle me-1"></i> This request is no longer awaiting Protocol Staff review ({{ $protocolRequest->current_stage }}).
+    </div>
+    @else
     <div class="card-clean p-4">
       <form method="POST" action="{{ route('protocol.approval.decide', $protocolRequest) }}" id="decisionForm">
         @csrf
@@ -223,6 +229,7 @@ table.table tbody tr:hover{background:#FFF9F0;}
         </div>
       </form>
     </div>
+    @endif
   </div>
 
   <!-- Recommend Modal -->
