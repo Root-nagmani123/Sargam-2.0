@@ -348,6 +348,17 @@ class UserController extends Controller
         // Role-scoped course IDs for "My Course Participant" ([] = all, [-1] = none, [pks] = restricted)
         $myCourseIds = get_Role_by_course();
 
+        // Protocol Staff counts, same scope as the cards on the /protocol dashboard
+        $isProtocolStaff = Auth::user()->can('protocol.protocol_requests');
+        $protocolCounts = ['guesthouse' => 0, 'vehicle' => 0, 'ticket' => 0, 'pending' => 0];
+        if ($isProtocolStaff) {
+            $protocolApproval = app(\Modules\Protocol\Services\ApprovalService::class);
+            foreach ($protocolApproval->allowedRequestTypes() as $type) {
+                $protocolCounts[$type] = $protocolApproval->scopedQuery()->where('request_type', $type)->count();
+            }
+            $protocolCounts['pending'] = \Modules\Protocol\Entities\ProtocolRequest::awaitingProtocolStaff(Auth::id())->count();
+        }
+
         // Hardcoded card definitions: count, link, visibility
         $cardDefinitions = [
             'pending_permanent_id'    => ['count' => $todayPendingPermanentIdCardRequests ?? 0,    'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
@@ -369,6 +380,10 @@ class UserController extends Controller
             'total_students'          => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'student_details'         => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'my_course_participant'   => ['count' => StudentMasterCourseMap::query()->when(!empty($myCourseIds), fn($q) => $q->whereIn('course_master_pk', $myCourseIds))->count(), 'link' => route('my.course.participant'),                                'visible' => true],
+            'protocol_guest_house_requests' => ['count' => $protocolCounts['guesthouse'],       'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'guesthouse']) : null, 'visible' => $isProtocolStaff],
+            'protocol_vehicle_pass_requests'=> ['count' => $protocolCounts['vehicle'],          'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'vehicle']) : null,    'visible' => $isProtocolStaff],
+            'protocol_ticket_requests'      => ['count' => $protocolCounts['ticket'],           'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'ticket']) : null,     'visible' => $isProtocolStaff],
+            'protocol_pending_my_action'    => ['count' => $protocolCounts['pending'],          'link' => $isProtocolStaff ? route('protocol.approval.queue') : null,                        'visible' => $isProtocolStaff],
         ];
 
         // Count map for custom cards added via UI.
