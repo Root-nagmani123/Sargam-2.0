@@ -34,18 +34,17 @@
                     <span class="programme-dt-filters-label">Filters</span>
 
                     <div class="programme-dt-filter-select">
-                        <select id="epoEstateFilter" class="form-select" aria-label="Filter by estate name"
-                            data-searchable="true" data-placeholder="Estate Name" data-allow-clear="true">
-                            <option value="">Estate Name</option>
-                            @foreach($estateCampuses ?? [] as $campus)
-                                <option value="{{ $campus->pk }}">{{ $campus->campus_name }}</option>
+                        <select id="epoBillYearFilter" class="form-select" aria-label="Filter by bill year">
+                            <option value="">Bill Year</option>
+                            @foreach($billYearOptions ?? [] as $year)
+                                <option value="{{ $year }}">{{ $year }}</option>
                             @endforeach
                         </select>
                     </div>
 
                     <div class="programme-dt-filter-select">
-                        <input type="date" id="epoAllotmentDateFilter" class="form-control"
-                            aria-label="Filter by allotment date" title="Allotment date">
+                        <input type="date" id="epoBillDateFilter" class="form-control"
+                            aria-label="Filter by bill date" title="Bill Date">
                     </div>
 
                     <button type="button" id="epoClearFilter" class="btn programme-dt-btn-reset">
@@ -313,14 +312,13 @@
         });
 
         /* ---------- Filters ---------- */
-        // estate_filter / allotment_date_filter ride on the ajax data callback
+        // bill_year_filter / bill_date_filter ride on the ajax data callback
         // declared in the DataTable class.
-        $(document).on('change', '#epoEstateFilter, #epoAllotmentDateFilter', reloadTable);
+        $(document).on('change', '#epoBillYearFilter, #epoBillDateFilter', reloadTable);
 
         $('#epoClearFilter').on('click', function() {
-            // change.select2 repaints the searchable box without re-firing the reload.
-            $('#epoEstateFilter').val('').trigger('change.select2');
-            $('#epoAllotmentDateFilter').val('');
+            $('#epoBillYearFilter').val('');
+            $('#epoBillDateFilter').val('');
             if (!$.fn.DataTable.isDataTable($table)) return;
             // "Remove Filter" resets the whole toolbar, search included.
             $table.DataTable().search('').ajax.reload(null, false);
@@ -437,7 +435,7 @@
         var EPO_EXPORT_KEY_BY_TITLE = {
             'S. No.': 'sno',
             'Request ID': 'request_id',
-            'Employee Name': 'name',
+            'Name & ID': 'name',
             'Section Name': 'section_name',
             'Estate Name': 'estate_name',
             'Building Name': 'building_name',
@@ -532,8 +530,8 @@
         /* ---------- Download / Print ---------- */
         function epoExportParams() {
             var params = {};
-            if ($('#epoEstateFilter').val()) params.estate_filter = $('#epoEstateFilter').val();
-            if ($('#epoAllotmentDateFilter').val()) params.allotment_date_filter = $('#epoAllotmentDateFilter').val();
+            if ($('#epoBillYearFilter').val()) params.bill_year_filter = $('#epoBillYearFilter').val();
+            if ($('#epoBillDateFilter').val()) params.bill_date_filter = $('#epoBillDateFilter').val();
             if ($.fn.DataTable && $.fn.DataTable.isDataTable($table)) {
                 var searchValue = $table.DataTable().search();
                 if (searchValue) params.search = searchValue;

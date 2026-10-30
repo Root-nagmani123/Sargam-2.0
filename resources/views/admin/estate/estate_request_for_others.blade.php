@@ -28,18 +28,17 @@
                         <span class="programme-dt-filters-label">Filters</span>
 
                         <div class="programme-dt-filter-select">
-                            <select id="eorSectionFilter" class="form-select" aria-label="Filter by section"
-                                data-searchable="true" data-placeholder="Section" data-allow-clear="true">
-                                <option value="">Section</option>
-                                @foreach($sectionOptions ?? [] as $section)
-                                    <option value="{{ $section }}">{{ $section }}</option>
+                            <select id="eorBillYearFilter" class="form-select" aria-label="Filter by bill year">
+                                <option value="">Bill Year</option>
+                                @foreach($billYearOptions ?? [] as $year)
+                                    <option value="{{ $year }}">{{ $year }}</option>
                                 @endforeach
                             </select>
                         </div>
 
                         <div class="programme-dt-filter-select">
-                            <input type="date" id="eorDojFilter" class="form-control"
-                                aria-label="Filter by date of joining in academy" title="DOJ in Academy">
+                            <input type="date" id="eorBillDateFilter" class="form-control"
+                                aria-label="Filter by bill date" title="Bill Date">
                         </div>
 
                         <button type="button" id="eorClearFilter" class="btn programme-dt-btn-reset">
@@ -194,16 +193,15 @@
 
         /* ---------- Toolbar filters ---------- */
         // Values ride along on every draw via minifiedAjax (see the DataTable's html()).
-        $(document).on('change', '#eorSectionFilter, #eorDojFilter', function() {
+        $(document).on('change', '#eorBillYearFilter, #eorBillDateFilter', function() {
             if ($.fn.DataTable.isDataTable($eorTable)) {
                 $eorTable.DataTable().ajax.reload(null, false);
             }
         });
 
         $('#eorClearFilter').on('click', function() {
-            // change.select2 repaints the searchable box without re-firing the reload.
-            $('#eorSectionFilter').val('').trigger('change.select2');
-            $('#eorDojFilter').val('');
+            $('#eorBillYearFilter').val('');
+            $('#eorBillDateFilter').val('');
             if (!$.fn.DataTable.isDataTable($eorTable)) return;
             // "Remove Filter" clears the search box too — it resets the whole toolbar.
             $eorTable.DataTable().search('').ajax.reload(null, false);
@@ -212,8 +210,7 @@
         /* ---------- Column visibility (persisted per browser, per user) ---------- */
         // Header index -> export column key. POSITIONAL: adding a table column means
         // adding an entry here too. '' = a column that is never exported (Action).
-        // The Name & ID column exports as two columns (Employee Name, Emp ID).
-        var EOR_EXPORT_COLUMN_KEYS = ['sno', 'request_id', 'emp_name,emp_id', 'section', 'doj_acad', ''];
+        var EOR_EXPORT_COLUMN_KEYS = ['sno', 'request_id', 'emp_name', 'section', 'doj_acad', ''];
         // v3: Emp ID folded into Name & ID. Hidden columns are stored by index, so an
         // older value would now hide the wrong column — start those users from all-visible.
         var eorColStorageKey = 'sargam.estateRequestForOthers.hiddenCols.v3.{{ auth()->id() ?? 'guest' }}';
@@ -298,10 +295,10 @@
         /* ---------- Download / Print (server-side, honour the applied filters) ---------- */
         function eorExportParams() {
             var params = {};
-            var section = $('#eorSectionFilter').val();
-            if (section) params.section_filter = section;
-            var doj = $('#eorDojFilter').val();
-            if (doj) params.doj_filter = doj;
+            var billYear = $('#eorBillYearFilter').val();
+            if (billYear) params.bill_year_filter = billYear;
+            var billDate = $('#eorBillDateFilter').val();
+            if (billDate) params.bill_date_filter = billDate;
             if ($.fn.DataTable && $.fn.DataTable.isDataTable($eorTable)) {
                 var searchValue = $eorTable.DataTable().search();
                 if (searchValue) params.search = searchValue;

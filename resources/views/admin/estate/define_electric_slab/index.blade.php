@@ -367,12 +367,19 @@
             if (dt) dt.search('').ajax.reload();
         });
 
-        // Every format honours the filter and the search box, like the grid.
+        // Grid column index -> export column key (EstateElectricSlabExport). '' = Action.
+        var ES_EXPORT_KEYS = ['sno', 'unit_range', 'rate_per_unit', 'merge_with_house', ''];
+
+        // Every format honours the filter, the search box and the visible columns, like the grid.
         function esExportParams() {
             var params = {};
             var unitType = $('#esUnitTypeFilter').val();
             if (unitType) params.unit_type_filter = unitType;
             if (dt && dt.search()) params.search = dt.search();
+            var cols = ES_EXPORT_KEYS.filter(function (key, i) {
+                return key && (!dt || dt.column(i).visible());
+            });
+            if (cols.length) params.cols = cols.join(',');
             return params;
         }
         $(document).on('click', '[data-export-for="es"]', function () {

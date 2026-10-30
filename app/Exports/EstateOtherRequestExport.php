@@ -72,17 +72,12 @@ class EstateOtherRequestExport implements
                 'width' => 16,
                 'value' => fn ($row) => $row->request_no_oth ?: '-',
             ],
+            // One "Name & ID" column, as on the grid: "NAME - ID".
             'emp_name' => [
-                'heading' => 'Employee Name',
+                'heading' => 'Name & ID',
                 'center' => false,
-                'width' => 32,
-                'value' => fn ($row) => $row->emp_name ?: '-',
-            ],
-            'emp_id' => [
-                'heading' => 'Emp ID',
-                'center' => false,
-                'width' => 16,
-                'value' => fn ($row) => self::text($row->employee_master_emp_id ?? null),
+                'width' => 40,
+                'value' => fn ($row) => self::nameAndId($row->emp_name ?? null, $row->employee_master_emp_id ?? null),
             ],
             'section' => [
                 'heading' => 'Section',
@@ -107,6 +102,18 @@ class EstateOtherRequestExport implements
         $value = trim((string) $value);
 
         return $value === '' || $value === '-' ? '-' : $value;
+    }
+
+    /** "NAME - ID", the name or the ID alone when one is blank, or the export's dash. */
+    public static function nameAndId($name, $id): string
+    {
+        $name = trim((string) $name);
+        $id = trim((string) $id);
+        if ($id === '-') {
+            $id = '';
+        }
+
+        return trim($name . ($name !== '' && $id !== '' ? ' - ' : '') . $id) ?: '-';
     }
 
     /**

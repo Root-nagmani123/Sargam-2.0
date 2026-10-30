@@ -61,8 +61,8 @@ class EstateOtherRequestDataTable extends DataTable
                 static::applyFilters(
                     $query,
                     (string) request()->input('search.value', ''),
-                    (string) request()->input('section_filter', ''),
-                    (string) request()->input('doj_filter', '')
+                    (string) request()->input('bill_year_filter', ''),
+                    (string) request()->input('bill_date_filter', '')
                 );
             }, false)
             ->orderColumn('DT_RowIndex', 'estate_other_req.pk $1')
@@ -118,16 +118,24 @@ class EstateOtherRequestDataTable extends DataTable
      *
      * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $query
      */
-    public static function applyFilters($query, string $searchValue, string $sectionFilter = '', string $dojFilter = ''): void
+    public static function applyFilters($query, string $searchValue, string $billYear = '', string $billDate = ''): void
     {
-        $sectionFilter = trim($sectionFilter);
-        if ($sectionFilter !== '') {
-            $query->where('estate_other_req.section', $sectionFilter);
-        }
-
-        $dojFilter = trim($dojFilter);
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dojFilter) === 1) {
-            $query->whereDate('estate_other_req.doj_acad', $dojFilter);
+        // Bill filters keep a request when it has a bill (via its possession) that matches:
+        // Bill Year = bill_year, Bill Date = a bill period from_date..to_date covering that day.
+        $billYear = trim($billYear);
+        $billDate = trim($billDate);
+        $hasYear = preg_match('/^\d{4}$/', $billYear) === 1;
+        $hasDate = preg_match('/^\d{4}-\d{2}-\d{2}$/', $billDate) === 1;
+        if ($hasYear || $hasDate) {
+            $query->whereExists(function ($q) use ($hasYear, $billYear, $hasDate, $billDate) {
+                $q->selectRaw('1')
+                    ->from('estate_possession_other as epo')
+                    ->join('estate_month_reading_details_other as emr', 'emr.estate_possession_other_pk', '=', 'epo.pk')
+                    ->whereColumn('epo.estate_other_req_pk', 'estate_other_req.pk')
+                    ->when($hasYear, fn ($q) => $q->where('emr.bill_year', $billYear))
+                    ->when($hasDate, fn ($q) => $q->whereDate('emr.from_date', '<=', $billDate)
+                        ->whereDate('emr.to_date', '>=', $billDate));
+            });
         }
 
         $searchValue = trim($searchValue);
@@ -148,20 +156,19 @@ class EstateOtherRequestDataTable extends DataTable
     }
 
     /**
-     * Sections present in the data — the toolbar's Section filter options.
+     * Bill years on record for Others' bills, newest first — the toolbar's Bill Year options.
      *
      * @return string[]
      */
-    public static function sectionOptions(): array
+    public static function billYearOptions(): array
     {
-        return DB::table('estate_other_req')
-            ->whereNotNull('section')
-            ->where('section', '!=', '')
+        return DB::table('estate_month_reading_details_other')
+            ->whereNotNull('bill_year')
             ->distinct()
-            ->orderBy('section')
-            ->pluck('section')
-            ->map(fn ($section) => trim((string) $section))
-            ->filter()
+            ->orderByDesc('bill_year')
+            ->pluck('bill_year')
+            ->map(fn ($year) => trim((string) $year))
+            ->filter(fn ($year) => preg_match('/^\d{4}$/', $year) === 1)
             ->unique()
             ->values()
             ->all();
@@ -195,8 +202,8 @@ class EstateOtherRequestDataTable extends DataTable
             ->addTableClass('table table-hover align-middle mb-0 w-100 programme-dt-table')
             ->columns($this->getColumns())
             ->minifiedAjax('', null, [
-                'section_filter' => '$("#eorSectionFilter").val()',
-                'doj_filter' => '$("#eorDojFilter").val()',
+                'bill_year_filter' => '$("#eorBillYearFilter").val()',
+                'bill_date_filter' => '$("#eorBillDateFilter").val()',
             ])
             ->parameters([
                 'responsive' => false,
