@@ -608,13 +608,38 @@ class MemberController extends Controller
             return [$kept, null];
         }
 
-        $names = UserRoleMaster::whereIn('pk', $dropped)->pluck('user_role_display_name')->all();
-        $one = count($names) === 1;
+        // An option can be dropped for two reasons: it was deactivated, or it is active
+        // but not offered here because it names no role on Role & Permission > Roles.
+        // Calling the second kind "no longer active" was false (PR #343 review, F-003).
+        [$notManaged, $inactive] = UserRoleMaster::whereIn('pk', $dropped)
+            ->get(['user_role_display_name', 'active_inactive'])
+            ->partition(fn ($row) => $row->active_inactive === null || (int) $row->active_inactive === 1);
 
-        return [$kept, implode(', ', $names)
-            . ($one ? ' is no longer an active role and ' : ' are no longer active roles and ')
-            . ($isUpdate ? ($one ? 'was not changed.' : 'were not changed.') : ($one ? 'was not assigned.' : 'were not assigned.'))
-            . ' The rest of the record was saved.'];
+        $outcome = fn (bool $one) => $isUpdate
+            ? ($one ? 'was not changed.' : 'were not changed.')
+            : ($one ? 'was not assigned.' : 'were not assigned.');
+
+        $parts = [];
+
+        if ($inactive->isNotEmpty()) {
+            $one = $inactive->count() === 1;
+            $parts[] = $inactive->pluck('user_role_display_name')->implode(', ')
+                . ($one ? ' is no longer an active role and ' : ' are no longer active roles and ')
+                . $outcome($one);
+        }
+
+        if ($notManaged->isNotEmpty()) {
+            $one = $notManaged->count() === 1;
+            $parts[] = $notManaged->pluck('user_role_display_name')->implode(', ')
+                . ($one ? ' is not managed from the Member wizard and ' : ' are not managed from the Member wizard and ')
+                . $outcome($one);
+        }
+
+        if ($parts === []) {
+            return [$kept, null];
+        }
+
+        return [$kept, implode(' ', $parts) . ' The rest of the record was saved.'];
     }
 
     /**
@@ -644,6 +669,30 @@ class MemberController extends Controller
         }
 
         $validator->errors()->add('userrole', 'The selected role is no longer active. Please choose an active role.');
+    }
+
+    /**
+     * Whether this member holds a Role Assignment option that Step 3 does not offer.
+     *
+     * Step 3 only offers options that are real roles (getUserRoleList()), so a member
+     * whose mappings are all hidden HR options (e.g. "Staff") shows nothing ticked.
+     * Requiring a tick there forced an administrator to grant a real role just to save
+     * an unrelated change (PR #343 review, F-009). update() keeps hidden mappings, so a
+     * member who holds one is never left with no role and the tick need not be required.
+     */
+    private function memberHoldsHiddenRoleOption($employeePk): bool
+    {
+        // Ordered as update() resolves the credential it writes (orderBy('pk')->first()), so
+        // both decisions use the same row when user_id has duplicates (PR #343 review, F-011).
+        $credentialPk = UserCredential::where('user_id', $employeePk)->orderBy('pk')->value('pk');
+
+        if ($credentialPk === null) {
+            return false;
+        }
+
+        return EmployeeRoleMapping::where('user_credentials_pk', $credentialPk)
+            ->whereNotIn('user_role_master_pk', UserRoleMaster::getUserRoleList()->keys()->all())
+            ->exists();
     }
 
     /**
@@ -1175,7 +1224,13 @@ class MemberController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        [$rules, $messages] = $this->combinedMemberRules($this->actingUserCanManageRbacRoles());
+        // F-009: no tick required when the member keeps a hidden option (see memberHoldsHiddenRoleOption()),
+        // but only when Step 3 was actually posted (its userrole_step_shown marker). Without Step 3,
+        // an empty selection would revoke the member's offered roles, so it is refused as before (F-013).
+        [$rules, $messages] = $this->combinedMemberRules(
+            $this->actingUserCanManageRbacRoles()
+                && ! ($request->filled('userrole_step_shown') && $this->memberHoldsHiddenRoleOption($request->emp_id))
+        );
 
         $validator = Validator::make($request->all(), $rules, $messages);
 
@@ -1699,10 +1754,18 @@ class MemberController extends Controller
             return response()->json(['error' => 'Unauthorized'], $e->getStatusCode());
         }
 
+        $rules = $formRequest->rules();
+
+        // F-009 / F-013: same rule as update() — no tick required when Step 3 was posted and
+        // the member keeps a hidden option.
+        if ((int) $step === 3 && $request->filled('userrole_step_shown') && $this->memberHoldsHiddenRoleOption($id)) {
+            $rules['userrole'] = ['nullable', 'array'];
+        }
+
         // Run validation with rules & messages from FormRequest
         $validator = Validator::make(
             $formRequest->all(),
-            $formRequest->rules(),
+            $rules,
             $formRequest->messages(),
             $formRequest->attributes()
         );
