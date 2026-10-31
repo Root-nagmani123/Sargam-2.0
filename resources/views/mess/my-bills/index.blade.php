@@ -49,7 +49,6 @@
                            data-default-ymd="{{ $effectiveDateToYmd ?? now()->endOfMonth()->format('Y-m-d') }}"
                            placeholder="dd-mm-yyyy" autocomplete="off">
                 </div>
-                <button type="submit" class="btn btn-outline-primary">Apply</button>
                 @if($myBillsDatesFiltered)
                     <a href="{{ route('admin.mess.my-bills.index') }}" class="btn btn-outline-danger">Remove Filter</a>
                 @endif
@@ -314,24 +313,9 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+        // The date pair is a shared two-month range calendar (MessDateRange, x-mess-master-toolbar).
         var df = document.getElementById('date_from');
         var dt = document.getElementById('date_to');
-        function ymdToDate(ymd) {
-            if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(String(ymd))) return null;
-            var p = String(ymd).split('-');
-            return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
-        }
-        function dmyToDate(dmy) {
-            var m = (dmy || '').match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-            if (!m) return null;
-            return new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10));
-        }
-        if (typeof flatpickr !== 'undefined') {
-            var defaultFrom = (df && df.getAttribute('data-default-ymd')) ? ymdToDate(df.getAttribute('data-default-ymd')) : (df && df.value ? dmyToDate(df.value) : null);
-            var defaultTo = (dt && dt.getAttribute('data-default-ymd')) ? ymdToDate(dt.getAttribute('data-default-ymd')) : (dt && dt.value ? dmyToDate(dt.value) : null);
-            flatpickr('#date_from', { dateFormat: 'd-m-Y', allowInput: true, defaultDate: defaultFrom });
-            flatpickr('#date_to', { dateFormat: 'd-m-Y', allowInput: true, defaultDate: defaultTo });
-        }
         function toYmd(val) {
             if (!val || !String(val).match(/^\d{1,2}-\d{1,2}-\d{4}$/)) return val;
             var p = String(val).split('-');

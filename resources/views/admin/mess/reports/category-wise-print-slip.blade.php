@@ -112,7 +112,7 @@
                     @endif
                 </select>
                 </div>
-                <button type="submit" name="refresh" value="1" class="btn btn-outline-primary">Apply</button>
+                <input type="hidden" name="refresh" value="1">
                 @if(request()->hasAny(['from_date', 'to_date', 'client_type_slug', 'client_type_pk', 'course_master_pk', 'buyer_name']))
                     <a href="{{ route('admin.mess.reports.category-wise-print-slip') }}" class="btn btn-outline-danger">Remove Filter</a>
                 @endif

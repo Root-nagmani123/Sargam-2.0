@@ -19,7 +19,7 @@
         @if(isset($filtersApplied) && $filtersApplied)
             No selling vouchers found for the selected filters.
         @else
-            <strong>Apply filters to view report.</strong> Select date range and/or client type / buyer name, then click <strong>Apply Filters</strong> to see data.
+            <strong>Apply filters to view report.</strong> Select a date range and/or client type / buyer name to see data.
         @endif
     </div>
 @else

@@ -25,7 +25,7 @@
     <div class="datatables">
         <div class="ds-card mess-dt-card">
             <x-mess-master-toolbar table-id="itemSubcategoriesTable">
-                <form method="GET" action="{{ route('admin.mess.itemsubcategories.index') }}" class="itemsubcategories-filter-form d-flex flex-wrap align-items-center gap-2">
+                <form method="GET" action="{{ route('admin.mess.itemsubcategories.index') }}" data-mess-auto-filter class="itemsubcategories-filter-form d-flex flex-wrap align-items-center gap-2">
                     <label for="filter_category_id" class="mb-0 text-body-secondary">Filter</label>
                     <div style="min-width: 220px;">
                         <select name="category_id" id="filter_category_id" class="form-select js-choices" data-placeholder="Category: All">
@@ -35,7 +35,6 @@
                             @endforeach
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-outline-primary">Apply</button>
                     @if($selectedCategoryId !== '')
                         <a href="{{ route('admin.mess.itemsubcategories.index') }}" class="btn btn-outline-danger">Remove Filter</a>
                     @endif

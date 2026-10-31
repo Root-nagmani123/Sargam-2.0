@@ -118,7 +118,6 @@
                         </div>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-outline-primary">Apply</button>
                 @if($svFiltersActive)
                     <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-outline-danger">Remove Filter</a>
                 @endif

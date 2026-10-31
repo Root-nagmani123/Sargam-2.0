@@ -119,7 +119,6 @@ $selectedClientType = (string) request()->input('client_type', '');
                         </div>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-outline-primary">Apply</button>
                 @if($svdrFiltersActive)
                 <a href="{{ route('admin.mess.selling-voucher-date-range.index') }}" class="btn btn-outline-danger">Remove Filter</a>
                 @endif

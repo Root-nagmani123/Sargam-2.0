@@ -98,7 +98,6 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-outline-primary">Apply</button>
                     @if($poFiltersActive)
                     <a href="{{ route('admin.mess.purchaseorders.index') }}" id="poResetFilters" class="btn btn-outline-danger">Remove Filter</a>
                     @endif
@@ -2151,17 +2150,17 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
         return `
         <tr class="po-item-row ${isEditModal ? 'edit-po-item-row' : ''}">
             <td class="py-2">
-                <select name="items[${index}][item_subcategory_id]" class="form-select form-select-sm po-item-select rounded-3 shadow-sm border-2" required aria-label="Select item for this line"${lazy ? ' data-lazy-items="1"' : ''}>
+                <select name="items[${index}][item_subcategory_id]" class="form-select form-select-sm po-item-select" required aria-label="Select item for this line"${lazy ? ' data-lazy-items="1"' : ''}>
                     <option value="">Select Item</option>
                     ${options}
                 </select>
             </td>
-            <td class="py-2"><input type="text" name="items[${index}][unit]" class="form-control form-control-sm rounded-3 po-unit" readonly placeholder="—" value="${unit}"></td>
-            <td class="py-2"><input type="text" class="form-control form-control-sm rounded-3 po-item-code" readonly placeholder="—" value="${code}"></td>
-            <td class="py-2"><input type="text" name="items[${index}][quantity]" class="form-control form-control-sm rounded-3 po-qty" value="${qty}" required></td>
-            <td class="py-2"><input type="text" name="items[${index}][unit_price]" class="form-control form-control-sm rounded-3 po-unit-price" value="${price}" required></td>
-            <td class="py-2"><input type="text" name="items[${index}][tax_percent]" class="form-control form-control-sm rounded-3 po-tax" max="100" value="${tax}"></td>
-            <td class="py-2"><input type="text" class="form-control form-control-sm rounded-3 po-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
+            <td class="py-2"><input type="text" name="items[${index}][unit]" class="form-control form-control-sm po-unit" readonly placeholder="—" value="${unit}"></td>
+            <td class="py-2"><input type="text" class="form-control form-control-sm po-item-code" readonly placeholder="—" value="${code}"></td>
+            <td class="py-2"><input type="text" name="items[${index}][quantity]" class="form-control form-control-sm po-qty" value="${qty}" required></td>
+            <td class="py-2"><input type="text" name="items[${index}][unit_price]" class="form-control form-control-sm po-unit-price" value="${price}" required></td>
+            <td class="py-2"><input type="text" name="items[${index}][tax_percent]" class="form-control form-control-sm po-tax" max="100" value="${tax}"></td>
+            <td class="py-2"><input type="text" class="form-control form-control-sm po-line-total bg-light" readonly placeholder="0.00" value="${lineTotal}"></td>
             <td class="py-2 text-center"><button type="button" class="btn btn-sm btn-outline-danger rounded-3 po-remove-row" title="Remove line">×</button></td>
         </tr>`;
     }

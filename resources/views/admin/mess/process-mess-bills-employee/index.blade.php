@@ -147,7 +147,6 @@
                         </select>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-outline-primary">Apply</button>
                     @if($billsFiltersActive)
                         <a href="{{ route('admin.mess.process-mess-bills-employee.index') }}" class="btn btn-outline-danger">Remove Filter</a>
                     @endif
@@ -843,12 +842,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     @csrf
                     <div class="row g-3 mb-3">
                         <div class="col-md-3">
-                            <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">event</i>Date From <span class="text-danger">*</span></label>
+                            <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">event</i>Date Range <span class="text-danger">*</span></label>
+                            {{-- One range input (MessDateRange) in front of these two, which it turns into hidden fields. --}}
                             <input type="text" name="modal_date_from" id="modal_date_from" class="form-control "
                                    value="{{ now()->startOfMonth()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off" required>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">event</i>Date To <span class="text-danger">*</span></label>
                             <input type="text" name="modal_date_to" id="modal_date_to" class="form-control "
                                    value="{{ now()->endOfMonth()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off" required>
                         </div>
@@ -901,10 +898,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         </div>
                         <div class="col-md-3 d-flex align-items-end justify-content-md-end">
                             <div class="d-flex flex-wrap gap-2 w-100 justify-content-start justify-content-md-end">
-                            <button type="button" class="btn btn-primary shadow btn-sm d-inline-flex align-items-center gap-2 px-3" id="modalLoadBillsBtn">
-                                <i class="material-symbols-rounded" style="font-size: 1rem;">search</i>
-                                <span>Load Bills</span>
-                            </button>
                             <button type="button" class="btn btn-outline-secondary shadow-sm btn-sm d-inline-flex align-items-center gap-2 px-3" id="modalClearFiltersBtn">
                                 <i class="material-symbols-rounded" style="font-size: 1rem;">filter_list_off</i>
                                 <span>Clear Filters</span>
@@ -968,7 +961,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             <tr>
                                 <td colspan="10" class="text-center py-5 text-muted">
                                     <i class="material-symbols-rounded d-block mb-2 text-primary" style="font-size: 3rem;">description</i>
-                                    <div class="fw-semibold">Select date range and click <strong class="text-primary">Load Bills</strong> to load unpaid bills.</div>
+                                    <div class="fw-semibold">Select a date range to load unpaid bills.</div>
                                 </td>
                             </tr>
                         </tbody>
@@ -1074,38 +1067,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Date ranges use the shared single range input (x-mess-master-toolbar): #date_from / #date_to bind
+    // themselves (they sit in .mess-filter-range, server default via data-default-ymd).
+    window.MessDateRange.bind(document.getElementById('modal_date_from'), document.getElementById('modal_date_to'));
     if (typeof flatpickr !== 'undefined') {
-        var dateFromInput = document.getElementById('date_from');
-        var dateToInput = document.getElementById('date_to');
-        // Prefer data-default-ymd (Y-m-d from server) so nothing can overwrite before we read it.
-        function ymdToDate(ymd) {
-            if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(String(ymd))) return null;
-            var p = String(ymd).split('-');
-            return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
-        }
-        function dmyToDate(dmy) {
-            var m = (dmy || '').match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
-            if (!m) return null;
-            return new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10));
-        }
-        var defaultFrom = (dateFromInput && dateFromInput.getAttribute('data-default-ymd')) ? ymdToDate(dateFromInput.getAttribute('data-default-ymd')) : (dateFromInput && dateFromInput.value ? dmyToDate(dateFromInput.value) : null);
-        var defaultTo = (dateToInput && dateToInput.getAttribute('data-default-ymd')) ? ymdToDate(dateToInput.getAttribute('data-default-ymd')) : (dateToInput && dateToInput.value ? dmyToDate(dateToInput.value) : null);
-        var fpFrom = flatpickr('#date_from', {
-            dateFormat: 'd-m-Y',
-            allowInput: true,
-            static: true, // inside the filter popover: a body-level calendar would count as an outside click
-            defaultDate: defaultFrom
-        });
-        var fpTo = flatpickr('#date_to', {
-            dateFormat: 'd-m-Y',
-            allowInput: true,
-            static: true,
-            defaultDate: defaultTo
-        });
-        if (defaultFrom && fpFrom) fpFrom.setDate(defaultFrom, false);
-        if (defaultTo && fpTo) fpTo.setDate(defaultTo, false);
-        flatpickr('#modal_date_from', { dateFormat: 'd-m-Y', allowInput: true });
-        flatpickr('#modal_date_to', { dateFormat: 'd-m-Y', allowInput: true });
         flatpickr('#modal_invoice_date', { dateFormat: 'd-m-Y', allowInput: true });
         flatpickr('#payNowPaymentDate', { dateFormat: 'd-m-Y', allowInput: true });
         flatpickr('#payNowChequeDate', { dateFormat: 'd-m-Y', allowInput: true });
@@ -1444,7 +1409,19 @@ document.addEventListener('DOMContentLoaded', function() {
         applyModalBillsColumnVisibility();
     }
 
+    var modalBillsLoadedFilters = null;
+    function modalFilterSignature() {
+        return JSON.stringify([
+            getModalDateYmd('modal_date_from'),
+            getModalDateYmd('modal_date_to'),
+            getChoicesMultiValues(document.getElementById('modal_client_type')),
+            getChoicesMultiValues(document.getElementById('modal_client_type_pk')),
+            getChoicesMultiValues(document.getElementById('modal_buyer_name'))
+        ]);
+    }
+
     function loadModalBills(page, options) {
+        modalBillsLoadedFilters = modalFilterSignature();
         options = options || {};
         var requestedPage = parseInt(page, 10);
         modalBillsCurrentPage = isNaN(requestedPage) ? 1 : Math.max(1, requestedPage);
@@ -1667,7 +1644,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var pageData = filtered;
 
         if (pageData.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">No unpaid bills found. Adjust date range and click Load Bills.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">No unpaid bills found. Try a different date range or filters.</td></tr>';
         } else {
             tbody.innerHTML = pageData.map(function(b, i) {
                 var sn = b.sno || (start + i + 1);
@@ -1765,6 +1742,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         setDateInput('modal_date_from', defaultDateFrom);
         setDateInput('modal_date_to', defaultDateTo);
+        window.MessDateRange.sync(document.getElementById('modal_date_from'));
         setDateInput('modal_invoice_date', defaultInvoiceDate);
 
         var ct = document.getElementById('modal_client_type');
@@ -1805,7 +1783,18 @@ document.addEventListener('DOMContentLoaded', function() {
             focusAddProcessMessBillsModal();
         });
     }
-    document.getElementById('modalLoadBillsBtn').addEventListener('click', function() { loadModalBills(1); });
+    // Filters reload the bills as they change (no Load Bills button). A change that leaves the filters as
+    // last loaded is skipped: Clear Filters and the cascades reload or settle on their own.
+    var modalFilterTimer = null;
+    ['modal_date_to', 'modal_client_type', 'modal_client_type_pk', 'modal_buyer_name'].forEach(function (id) {
+        document.getElementById(id).addEventListener('change', function () {
+            clearTimeout(modalFilterTimer);
+            modalFilterTimer = setTimeout(function () {
+                var shown = document.getElementById('addProcessMessBillsModal').classList.contains('show');
+                if (shown && modalFilterSignature() !== modalBillsLoadedFilters) loadModalBills(1);
+            }, 300);
+        });
+    });
     document.getElementById('modalClearFiltersBtn').addEventListener('click', clearModalFilters);
     document.getElementById('modalSearch').addEventListener('input', function() {
         loadModalBills(1);

@@ -149,7 +149,7 @@
                         </select>
                     </div>
                 </div>
-                <button type="submit" name="refresh" value="1" class="btn btn-outline-primary">Apply</button>
+                <input type="hidden" name="refresh" value="1">
                 @if(request()->hasAny(['from_date', 'to_date', 'view_type', 'category_id', 'item_id', 'store_id', 'per_page']))
                     <a href="{{ route('admin.mess.reports.purchase-sale-quantity') }}" class="btn btn-outline-danger">Remove Filter</a>
                 @endif

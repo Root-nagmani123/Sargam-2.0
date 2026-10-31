@@ -34,7 +34,6 @@
                         @endforeach
                     </select>
                 </div>
-                <button type="submit" class="btn btn-outline-primary">Apply</button>
                 @if(request()->hasAny(['till_date', 'store_id']))
                     <a href="{{ route('admin.mess.reports.low-stock') }}" class="btn btn-outline-danger">Remove Filter</a>
                 @endif
