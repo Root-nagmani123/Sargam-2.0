@@ -135,11 +135,11 @@ class VendorController extends Controller
             . ' data-ifsc-code="' . e($vendor->ifsc_code ?? '') . '"'
             . ' data-account-number="' . e($vendor->account_number ?? '') . '"';
 
-        $viewBtn = '<button type="button" class="text-primary btn-view-vendor bg-transparent border-0"'
-            . $dataAttrs . ' title="View"><i class="material-icons material-symbol-rounded">visibility</i></button>';
+        $viewBtn = '<button type="button" class="mess-row-action btn-view-vendor"'
+            . $dataAttrs . ' title="View"><i class="material-icons material-symbol-rounded" aria-hidden="true">visibility</i><span>View</span></button>';
 
-        $editBtn = '<button type="button" class="text-primary btn-edit-vendor bg-transparent border-0"'
-            . $dataAttrs . ' title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>';
+        $editBtn = '<button type="button" class="mess-row-action btn-edit-vendor"'
+            . $dataAttrs . ' title="Edit"><i class="material-icons material-symbol-rounded" aria-hidden="true">edit</i><span>Edit</span></button>';
 
         $deleteForm = '';
         if ($canDelete) {
@@ -148,12 +148,12 @@ class VendorController extends Controller
                 . ' onsubmit="return confirm(\'Are you sure you want to delete this vendor?\');">'
                 . '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">'
                 . '<input type="hidden" name="_method" value="DELETE">'
-                . '<button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">'
-                . '<i class="material-icons material-symbol-rounded">delete</i></button>'
+                . '<button type="submit" class="mess-row-action mess-row-action--danger" title="Delete">'
+                . '<i class="material-icons material-symbol-rounded" aria-hidden="true">delete</i><span>Delete</span></button>'
                 . '</form>';
         }
 
-        $actions = '<div class="d-flex gap-2 flex-wrap">' . $viewBtn . $editBtn . $deleteForm . '</div>';
+        $actions = '<div class="mess-row-actions">' . $viewBtn . $editBtn . $deleteForm . '</div>';
 
         return [
             $nameCell,
@@ -167,7 +167,8 @@ class VendorController extends Controller
 
     public function create()
     {
-        return view('mess.vendors.create');
+        // The list page does this in a pop-up; the old standalone page was removed.
+        return redirect()->route('admin.mess.vendors.index');
     }
 
     public function store(Request $request)
@@ -188,8 +189,8 @@ class VendorController extends Controller
 
     public function edit($id)
     {
-        $vendor = Vendor::findOrFail($id);
-        return view('mess.vendors.edit', compact('vendor'));
+        // The list page does this in a pop-up; the old standalone page was removed.
+        return redirect()->route('admin.mess.vendors.index');
     }
 
     public function update(Request $request, $id)

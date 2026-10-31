@@ -115,15 +115,15 @@ class ClientTypeController extends Controller
         $typeLabel = $clientTypeOptions[$clientType->client_type] ?? $clientType->client_type;
         $typeCell = '<div class="fw-semibold">' . e($typeLabel) . '</div>';
         $nameCell = '<div class="fw-semibold">' . e($clientType->client_name) . '</div>';
-        $statusCell = '<span class="badge bg-' . e($clientType->status_badge_class) . '">'
+        $statusCell = '<span class="mess-status mess-status--' . e($clientType->status_badge_class) . '">'
             . e($clientType->status_label) . '</span>';
 
-        $editBtn = '<button type="button" class="text-primary btn-edit-clienttype bg-transparent border-0"'
+        $editBtn = '<button type="button" class="mess-row-action btn-edit-clienttype"'
             . ' data-id="' . (int) $clientType->id . '"'
             . ' data-client-type="' . e($clientType->client_type) . '"'
             . ' data-client-name="' . e($clientType->client_name) . '"'
             . ' data-status="' . e($clientType->status ?? 'active') . '"'
-            . ' title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>';
+            . ' title="Edit"><i class="material-icons material-symbol-rounded" aria-hidden="true">edit</i><span>Edit</span></button>';
 
         $deleteForm = '';
         if ($canDelete) {
@@ -132,12 +132,12 @@ class ClientTypeController extends Controller
                 . ' onsubmit="return confirm(\'Are you sure you want to delete this client type?\');">'
                 . '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">'
                 . '<input type="hidden" name="_method" value="DELETE">'
-                . '<button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">'
-                . '<i class="material-icons material-symbol-rounded">delete</i></button>'
+                . '<button type="submit" class="mess-row-action mess-row-action--danger" title="Delete">'
+                . '<i class="material-icons material-symbol-rounded" aria-hidden="true">delete</i><span>Delete</span></button>'
                 . '</form>';
         }
 
-        $actions = '<div class="d-flex gap-2 flex-wrap">' . $editBtn . $deleteForm . '</div>';
+        $actions = '<div class="mess-row-actions">' . $editBtn . $deleteForm . '</div>';
 
         return [
             $typeCell,
@@ -149,7 +149,8 @@ class ClientTypeController extends Controller
 
     public function create()
     {
-        return view('mess.client-types.create');
+        // The list page does this in a pop-up; the old standalone page was removed.
+        return redirect()->route('admin.mess.client-types.index');
     }
 
     public function store(Request $request)
@@ -165,8 +166,8 @@ class ClientTypeController extends Controller
 
     public function edit($id)
     {
-        $clientType = ClientType::findOrFail($id);
-        return view('mess.client-types.edit', compact('clientType'));
+        // The list page does this in a pop-up; the old standalone page was removed.
+        return redirect()->route('admin.mess.client-types.index');
     }
 
     public function update(Request $request, $id)

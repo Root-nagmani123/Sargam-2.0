@@ -23,7 +23,6 @@
     <meta charset="utf-8">
     <title>Item Report - OFFICER'S MESS LBSNAA MUSSOORIE</title>
     <style>
-        @page { size: A4 landscape; margin: 12mm 10mm; }
         * { box-sizing: border-box; }
         html { font-size: 10.5pt; }
         body {
@@ -44,12 +43,10 @@
         .pdf-header table { width: 100%; border-collapse: collapse; }
         .pdf-header td { border: 0; padding: 0; vertical-align: middle; }
         .pdf-header .hdr-left { width: 50px; }
-        .pdf-header .hdr-left img { width: 40px; height: 40px; }
         .pdf-header .hdr-center { padding-left: 10px; }
-        .pdf-header .hdr-right { width: 50px; text-align: right; }
-        .pdf-header .hdr-right img { width: 40px; height: 40px; }
-        .brand-1 { font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.06em; color: #0b4a7e; font-weight: 600; }
-        .brand-2 { font-size: 11pt; font-weight: 700; text-transform: uppercase; color: #111; margin-top: 2px; }
+        .pdf-header .hdr-right { width: 130px; text-align: right; }
+        .brand-1 { font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.06em; color: #0b4a7e; font-weight: bold; }
+        .brand-2 { font-size: 11pt; font-weight: bold; text-transform: uppercase; color: #111; margin-top: 2px; }
         .brand-3 { font-size: 9pt; color: #555; margin-top: 2px; }
 
         /* ── Report title block ── */
@@ -61,17 +58,18 @@
         }
         .report-title {
             font-size: 10pt;
-            font-weight: 700;
+            font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 0.04em;
             color: #0f172a;
             margin: 0 0 5px;
         }
         .report-date-pill {
-            display: inline-block;
+            width: 32%;
+            margin: 0 auto;
             background: #0b4a7e;
             color: #fff;
-            font-weight: 600;
+            font-weight: bold;
             font-size: 8pt;
             padding: 3px 12px;
             border-radius: 10px;
@@ -84,7 +82,7 @@
             line-height: 1.5;
             color: #334155;
         }
-        .report-meta .meta-label { font-weight: 700; color: #0f172a; }
+        .report-meta .meta-label { font-weight: bold; color: #0f172a; }
 
         /* ── Data table ── */
         .data-table {
@@ -102,7 +100,7 @@
         .data-table thead th {
             background: #0b4a7e;
             color: #fff;
-            font-weight: 600;
+            font-weight: bold;
             font-size: 8pt;
             text-align: left;
             white-space: nowrap;
@@ -117,7 +115,7 @@
         .view-section-heading {
             margin-top: 12px;
             margin-bottom: 6px;
-            font-weight: 700;
+            font-weight: bold;
             font-size: 9pt;
             color: #0b4a7e;
             border-bottom: 2px solid #0b4a7e;
@@ -128,7 +126,7 @@
         .group-hdr td {
             background: #eef2f6;
             color: #0f172a;
-            font-weight: 700;
+            font-weight: bold;
             font-size: 8pt;
             text-transform: uppercase;
             letter-spacing: 0.03em;
@@ -166,7 +164,7 @@
     <table>
         <tr>
             <td class="hdr-left">
-                <img src="{{ $emblemSrc }}" alt="Emblem of India">
+                <img src="{{ $emblemSrc }}" alt="Emblem of India" height="40">
             </td>
             <td class="hdr-center">
                 <div class="brand-1">Government of India</div>
@@ -174,7 +172,7 @@
                 <div class="brand-3">Lal Bahadur Shastri National Academy of Administration</div>
             </td>
             <td class="hdr-right">
-                <img src="{{ $lbsnaaLogoSrc }}" alt="LBSNAA Logo">
+                <img src="{{ $lbsnaaLogoSrc }}" alt="LBSNAA Logo" width="120">
             </td>
         </tr>
     </table>
@@ -234,10 +232,10 @@
                 @endforeach
                 <tr>
                     <td class="text-center">—</td>
-                    <td colspan="2" style="font-weight: 700;">Grand Total</td>
-                    <td class="text-end" style="font-weight: 700;">{{ number_format(collect($section['reportData'])->sum('purchase_qty'), 2) }}</td>
+                    <td colspan="2" style="font-weight: bold;">Grand Total</td>
+                    <td class="text-end" style="font-weight: bold;">{{ number_format(collect($section['reportData'])->sum('purchase_qty'), 2) }}</td>
                     <td class="text-end">—</td>
-                    <td class="text-end" style="font-weight: 700;">{{ number_format(collect($section['reportData'])->sum('sale_qty'), 2) }}</td>
+                    <td class="text-end" style="font-weight: bold;">{{ number_format(collect($section['reportData'])->sum('sale_qty'), 2) }}</td>
                     <td class="text-end">—</td>
                 </tr>
                 </tbody>
@@ -279,16 +277,15 @@
                     @endforeach
                     </tbody>
                 </table>
-            @endforeach
             @if(! empty($section['reportData']))
                 <table class="purchase-sale-data">
                     <tbody>
                     <tr>
                         <td class="text-center">—</td>
-                        <td colspan="2" style="font-weight: 700;">Grand Total</td>
-                        <td class="text-end" style="font-weight: 700;">{{ number_format(collect($section['reportData'])->sum('purchase_qty'), 2) }}</td>
+                        <td colspan="2" style="font-weight: bold;">Grand Total</td>
+                        <td class="text-end" style="font-weight: bold;">{{ number_format(collect($section['reportData'])->sum('purchase_qty'), 2) }}</td>
                         <td class="text-end">—</td>
-                        <td class="text-end" style="font-weight: 700;">{{ number_format(collect($section['reportData'])->sum('sale_qty'), 2) }}</td>
+                        <td class="text-end" style="font-weight: bold;">{{ number_format(collect($section['reportData'])->sum('sale_qty'), 2) }}</td>
                         <td class="text-end">—</td>
                     </tr>
                     </tbody>

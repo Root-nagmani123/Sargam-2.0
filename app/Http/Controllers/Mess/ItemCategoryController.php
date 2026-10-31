@@ -155,16 +155,16 @@ class ItemCategoryController extends Controller
         $typeLabel = $categoryTypes[$itemcategory->category_type ?? 'raw_material'] ?? ucfirst(str_replace('_', ' ', $itemcategory->category_type ?? ''));
         $typeCell = e($typeLabel);
         $descriptionCell = e($itemcategory->description ?? '-');
-        $statusCell = '<span class="badge bg-' . e($itemcategory->status_badge_class) . '">'
+        $statusCell = '<span class="mess-status mess-status--' . e($itemcategory->status_badge_class) . '">'
             . e($itemcategory->status_label) . '</span>';
 
-        $editBtn = '<button type="button" class="text-primary btn-edit-itemcategory bg-transparent border-0"'
+        $editBtn = '<button type="button" class="mess-row-action btn-edit-itemcategory"'
             . ' data-id="' . (int) $itemcategory->id . '"'
             . ' data-category-name="' . e($itemcategory->category_name) . '"'
             . ' data-category-type="' . e($itemcategory->category_type ?? 'raw_material') . '"'
             . ' data-description="' . e($itemcategory->description ?? '') . '"'
             . ' data-status="' . e($itemcategory->status ?? 'active') . '"'
-            . ' title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>';
+            . ' title="Edit"><i class="material-icons material-symbol-rounded" aria-hidden="true">edit</i><span>Edit</span></button>';
 
         $deleteForm = '';
         if ($canDelete) {
@@ -173,12 +173,12 @@ class ItemCategoryController extends Controller
                 . ' onsubmit="return confirm(\'Are you sure you want to delete this category item?\');">'
                 . '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">'
                 . '<input type="hidden" name="_method" value="DELETE">'
-                . '<button type="submit" class="text-primary btn-delete-itemcategory bg-transparent border-0 p-0" title="Delete">'
-                . '<i class="material-icons material-symbol-rounded">delete</i></button>'
+                . '<button type="submit" class="mess-row-action mess-row-action--danger btn-delete-itemcategory" title="Delete">'
+                . '<i class="material-icons material-symbol-rounded" aria-hidden="true">delete</i><span>Delete</span></button>'
                 . '</form>';
         }
 
-        $actions = '<div class="d-flex gap-2 flex-wrap">' . $editBtn . $deleteForm . '</div>';
+        $actions = '<div class="mess-row-actions">' . $editBtn . $deleteForm . '</div>';
 
         return [
             $nameCell,
@@ -191,7 +191,8 @@ class ItemCategoryController extends Controller
 
     public function create()
     {
-        return view('mess.itemcategories.create');
+        // The list page does this in a pop-up; the old standalone page was removed.
+        return redirect()->route('admin.mess.itemcategories.index');
     }
 
     public function store(Request $request)
@@ -207,8 +208,8 @@ class ItemCategoryController extends Controller
 
     public function edit($id)
     {
-        $itemcategory = ItemCategory::findOrFail($id);
-        return view('mess.itemcategories.edit', compact('itemcategory'));
+        // The list page does this in a pop-up; the old standalone page was removed.
+        return redirect()->route('admin.mess.itemcategories.index');
     }
 
     public function update(Request $request, $id)

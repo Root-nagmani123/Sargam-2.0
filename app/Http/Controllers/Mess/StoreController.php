@@ -108,7 +108,7 @@ class StoreController extends Controller
         $canDelete = function_exists('hasRole') && (hasRole('Super Admin') || hasRole('Mess-Admin'));
         $storeTypes = Store::storeTypes();
 
-        $data = $rows->map(fn (Store $store) => $this->buildStoreDatatableRow($store, $canDelete, $storeTypes))->all();
+        $data = $rows->values()->map(fn (Store $store, int $i) => $this->buildStoreDatatableRow($store, $start + $i + 1, $canDelete, $storeTypes))->all();
 
         return response()->json([
             'draw' => $draw,
@@ -121,23 +121,23 @@ class StoreController extends Controller
     /**
      * @return string[]
      */
-    private function buildStoreDatatableRow(Store $store, bool $canDelete, array $storeTypes): array
+    private function buildStoreDatatableRow(Store $store, int $serial, bool $canDelete, array $storeTypes): array
     {
         $nameCell = '<div class="fw-semibold">' . e($store->store_name) . '</div>'
             . '<div class="text-muted small">Code: ' . e($store->store_code) . '</div>';
         $typeLabel = $storeTypes[$store->store_type ?? 'mess'] ?? ($store->store_type ?? '-');
         $typeCell = '<span class="text-capitalize">' . e($typeLabel) . '</span>';
         $locationCell = e($store->location ?? '-');
-        $statusCell = '<span class="badge bg-' . e($store->status_badge_class) . '">'
+        $statusCell = '<span class="mess-status mess-status--' . e($store->status_badge_class) . '">'
             . e($store->status_label) . '</span>';
 
-        $editBtn = '<button type="button" class="btn btn-sm btn-warning btn-edit-store bg-transparent border-0 p-0 text-primary"'
+        $editBtn = '<button type="button" class="mess-row-action btn-edit-store"'
             . ' data-id="' . (int) $store->id . '"'
             . ' data-store-name="' . e($store->store_name) . '"'
             . ' data-store-type="' . e(trim((string) ($store->store_type ?? '')) ?: 'mess') . '"'
             . ' data-location="' . e($store->location ?? '') . '"'
             . ' data-status="' . e($store->status ?? 'active') . '"'
-            . ' title="Edit"><i class="material-symbols-rounded">edit</i></button>';
+            . ' title="Edit"><i class="material-symbols-rounded" aria-hidden="true">edit</i><span>Edit</span></button>';
 
         $deleteForm = '';
         if ($canDelete) {
@@ -146,15 +146,15 @@ class StoreController extends Controller
                 . ' onsubmit="return confirm(\'Are you sure you want to delete this store?\');">'
                 . '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">'
                 . '<input type="hidden" name="_method" value="DELETE">'
-                . '<button type="submit" class="btn btn-sm btn-danger bg-transparent border-0 p-0 text-primary" title="Delete">'
-                . '<i class="material-symbols-rounded">delete</i></button>'
+                . '<button type="submit" class="mess-row-action mess-row-action--danger" title="Delete">'
+                . '<i class="material-symbols-rounded" aria-hidden="true">delete</i><span>Delete</span></button>'
                 . '</form>';
         }
 
-        $actions = '<div class="d-flex gap-2 flex-wrap">' . $editBtn . $deleteForm . '</div>';
+        $actions = '<div class="mess-row-actions">' . $editBtn . $deleteForm . '</div>';
 
         return [
-            (string) $store->id,
+            (string) $serial,
             $nameCell,
             $typeCell,
             $locationCell,
@@ -165,7 +165,8 @@ class StoreController extends Controller
 
     public function create()
     {
-        return view('mess.stores.create');
+        // The list page does this in a pop-up; the old standalone page was removed.
+        return redirect()->route('admin.mess.stores.index');
     }
 
     public function store(Request $request)
@@ -183,8 +184,8 @@ class StoreController extends Controller
 
     public function edit($id)
     {
-        $store = Store::findOrFail($id);
-        return view('mess.stores.edit', compact('store'));
+        // The list page does this in a pop-up; the old standalone page was removed.
+        return redirect()->route('admin.mess.stores.index');
     }
 
     public function update(Request $request, $id)

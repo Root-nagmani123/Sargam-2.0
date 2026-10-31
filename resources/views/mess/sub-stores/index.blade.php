@@ -1,28 +1,26 @@
 @extends('admin.layouts.master')
 @section('title', 'Sub Store Master')
 @section('content')
-<div class="container-fluid">
-    <x-breadcrum title="Sub Store Master"></x-breadcrum>
-    <div class="datatables">
-        <div class="card border-0 shadow-sm rounded-3">
-            <div class="card-header border-0 bg-body-tertiary d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div>
-                    <h4 class="mb-0 fw-semibold">Sub Store Master</h4>
-                    <p class="mb-0 text-muted small">Manage all mess sub stores in one place.</p>
-                </div>
-                <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createSubStoreModal">
-                    <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
-                    <span>Add Sub Store</span>
-                </button>
-            </div>
+<div class="container-fluid mess-master-page">
+    <x-breadcrum title="Sub Store Master">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createSubStoreModal">
+            <i class="material-symbols-rounded" aria-hidden="true">add</i>
+            <span>Add Sub Store</span>
+        </button>
+    </x-breadcrum>
 
-            <div class="card-body">
-                @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
-                        {{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                @endif
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    <x-mess-export-bar table-id="subStoresTable" title="Sub Store Master" />
+
+    <div class="datatables">
+        <div class="ds-card mess-dt-card">
+            <x-mess-master-toolbar table-id="subStoresTable" />
 
             <div class="table-responsive">
                 <table id="subStoresTable" class="table  align-middle w-100">
@@ -46,7 +44,7 @@
         <div class="modal-content border-0 shadow-lg rounded-3">
             <form method="POST" action="{{ route('admin.mess.sub-stores.store') }}">
                 @csrf
-                <div class="modal-header border-0 bg-body-tertiary">
+                <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-semibold" id="createSubStoreModalLabel">Add Sub Store</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -68,8 +66,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 bg-body-tertiary">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save</button>
                 </div>
             </form>
@@ -84,7 +82,7 @@
             <form id="editSubStoreForm" method="POST" action="">
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-0 bg-body-tertiary">
+                <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-semibold" id="editSubStoreModalLabel">Edit Sub Store</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -103,8 +101,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 bg-body-tertiary">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Update</button>
                 </div>
             </form>
@@ -138,10 +136,4 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 @endpush
 
-<style>
-.table thead th {
-    background-color: var(--bs-primary) !important;
-    color: #fff !important;
-}
-</style>
 @endsection

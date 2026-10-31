@@ -2596,11 +2596,13 @@ class SellingVoucherDateRangeController extends Controller
                         ->orWhere('cm.course_name', 'like', $term)
                         ->orWhere('ms.store_name', 'like', $term)
                         ->orWhere('mss.sub_store_name', 'like', $term)
+                        // COALESCE mixes 0900_ai_ci (mct) and unicode_ci (sv) columns, which MySQL resolves to
+                        // utf8mb4_bin with no coercibility, so LIKE failed (1267). Pin one collation.
                         ->orWhereRaw(
                             '(CASE
                                 WHEN sv.client_type_slug IN (?, ?) THEN ?
                                 ELSE COALESCE(mct.client_type, sv.client_type_slug, ?)
-                            END) LIKE ?',
+                            END) COLLATE utf8mb4_unicode_ci LIKE ?',
                             ['ot', 'course', 'course', '', $term]
                         );
 
@@ -2661,22 +2663,22 @@ class SellingVoucherDateRangeController extends Controller
             $displayClientName = '—';
         }
 
-        $paymentHtml = '<span class="badge text-bg-light border border-light-subtle fw-semibold">—</span>';
+        $paymentHtml = '—';
         if ($paymentType === 1) {
-            $paymentHtml = '<span class="badge text-bg-light border border-light-subtle fw-semibold">Credit</span>';
+            $paymentHtml = 'Credit';
         } elseif ($paymentType === 0) {
-            $paymentHtml = '<span class="badge text-bg-light border border-light-subtle fw-semibold">Cash</span>';
+            $paymentHtml = 'Cash';
         } elseif ($paymentType === 2) {
-            $paymentHtml = '<span class="badge text-bg-light border border-light-subtle fw-semibold">UPI</span>';
+            $paymentHtml = 'UPI';
         }
 
-        $statusHtml = '<span class="badge rounded-1 text-bg-secondary">Final</span>';
+        $statusHtml = '<span class="mess-status mess-status--primary">Final</span>';
         if ($status === 0) {
-            $statusHtml = '<span class="badge rounded-1 text-bg-warning">Pending</span>';
+            $statusHtml = '<span class="mess-status mess-status--warning">Pending</span>';
         } elseif ($status === 2) {
-            $statusHtml = '<span class="badge rounded-1 text-bg-success">Approved</span>';
+            $statusHtml = '<span class="mess-status mess-status--success">Approved</span>';
         } elseif ($status === 4) {
-            $statusHtml = '<span class="badge rounded-1 text-bg-primary">Completed</span>';
+            $statusHtml = '<span class="mess-status mess-status--primary">Completed</span>';
         }
 
         $requestDate = '—';
@@ -2691,11 +2693,11 @@ class SellingVoucherDateRangeController extends Controller
 
         // View / Edit / Return / Delete are voucher-level (report_id). Show on every item
         // row so actions stay visible regardless of sort order or which line is MIN(id).
-        $returnHtml = '<div class="d-flex flex-wrap align-items-center gap-1">';
+        $returnHtml = '<div class="d-flex flex-column align-items-center gap-1">';
         if ($rq > 0) {
-            $returnHtml .= '<span class="badge rounded-1 text-bg-info">Returned</span>';
+            $returnHtml .= '<span class="mess-status mess-status--warning">Returned</span>';
         }
-        $returnHtml .= '<button type="button" class="btn btn-sm btn-outline-secondary btn-return-report d-inline-flex align-items-center gap-1 rounded-2 px-2" data-report-id="'.e((string) $reportId).'" title="Return"><i class="material-symbols-rounded" style="font-size: 1rem;">assignment_return</i><span>Return</span></button>';
+        $returnHtml .= '<button type="button" class="mess-row-action mess-row-action--warning btn-return-report" data-report-id="'.e((string) $reportId).'" title="Return items"><i class="material-symbols-rounded" aria-hidden="true">undo</i><span>Return</span></button>';
         $returnHtml .= '</div>';
 
         $editDisabled = $status === SellingVoucherDateRangeReport::STATUS_APPROVED ? ' disabled' : '';
@@ -2703,34 +2705,34 @@ class SellingVoucherDateRangeController extends Controller
             ? e('Edit is disabled for approved voucher')
             : 'Edit';
 
-        $actionHtml = '<div class="d-inline-flex flex-wrap align-items-center justify-content-end gap-1">'
-            .'<button type="button" class="btn btn-sm btn-outline-primary btn-view-report voucher-icon-btn rounded-2" data-report-id="'.e((string) $reportId).'" title="View"><i class="material-symbols-rounded">visibility</i></button>'
-            .'<button type="button" class="btn btn-sm btn-outline-warning btn-edit-report voucher-icon-btn rounded-2" data-report-id="'.e((string) $reportId).'" title="'.$editTitle.'"'.$editDisabled.'><i class="material-symbols-rounded">edit</i></button>';
+        $actionHtml = '<div class="mess-row-actions">'
+            .'<button type="button" class="mess-row-action btn-view-report" data-report-id="'.e((string) $reportId).'" title="View"><i class="material-symbols-rounded" aria-hidden="true">visibility</i><span>View</span></button>'
+            .'<button type="button" class="mess-row-action btn-edit-report" data-report-id="'.e((string) $reportId).'" title="'.$editTitle.'"'.$editDisabled.'><i class="material-symbols-rounded" aria-hidden="true">edit</i><span>Edit</span></button>';
 
         if ($canDeleteSellingVoucherDateRange) {
             $destroyUrl = route('admin.mess.selling-voucher-date-range.destroy', $reportId);
             $actionHtml .= '<form action="'.e($destroyUrl).'" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this report?\');">'
                 .csrf_field()
                 .method_field('DELETE')
-                .'<button type="submit" class="btn btn-sm btn-outline-danger voucher-icon-btn rounded-2" title="Delete"><i class="material-symbols-rounded">delete</i></button></form>';
+                .'<button type="submit" class="mess-row-action mess-row-action--danger" title="Delete"><i class="material-symbols-rounded" aria-hidden="true">delete</i><span>Delete</span></button></form>';
         }
 
         $actionHtml .= '</div>';
 
         return [
-            '<span class="text-body-secondary">'.e((string) $serial).'</span>',
+            e((string) $serial),
             '<span class="cell-item-name fw-semibold text-wrap text-break">'.e((string) ($row->item_name ?? '—')).'</span>',
-            '<span class="text-end font-monospace d-block">'.e((string) ($row->quantity ?? 0)).'</span>',
-            '<span class="text-end font-monospace d-block">'.e((string) ($row->return_quantity ?? 0)).'</span>',
+            '<span class="text-end d-block">'.e((string) ($row->quantity ?? 0)).'</span>',
+            '<span class="text-end d-block">'.e((string) ($row->return_quantity ?? 0)).'</span>',
             '<span class="text-wrap text-break">'.e((string) ($row->resolved_store_name ?? 'N/A')).'</span>',
             e($clientTypeLabel),
             '<span class="text-wrap text-break">'.e($displayClientName).'</span>',
             '<span class="text-wrap text-break">'.e((string) ($row->voucher_client_name ?? '—')).'</span>',
             $paymentHtml,
-            '<span class="text-body-secondary">'.e($requestDate).'</span>',
+            e($requestDate),
             '<div class="text-center">'.$statusHtml.'</div>',
             $returnHtml,
-            '<div class="text-end pe-3">'.$actionHtml.'</div>',
+            $actionHtml,
         ];
     }
 

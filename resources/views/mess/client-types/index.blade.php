@@ -4,25 +4,27 @@
 @php
     $clientTypeOptions = \App\Models\Mess\ClientType::clientTypes();
 @endphp
-<div class="container-fluid">
-    <x-breadcrum title="Client Types Master"></x-breadcrum>
-    <div class="datatables">
-        <div class="card">
-            <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">Client Types Master</h4>
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createClientTypeModal">
-                    Add Client Type
-                </button>
-            </div>
+<div class="container-fluid mess-master-page">
+    <x-breadcrum title="Client Types Master">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createClientTypeModal">
+            <i class="material-symbols-rounded" aria-hidden="true">add</i>
+            <span>Add Client Type</span>
+        </button>
+    </x-breadcrum>
 
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-<hr class="my-2">
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    <x-mess-export-bar table-id="clientTypesTable" title="Client Types Master" />
+
+    <div class="datatables">
+        <div class="ds-card mess-dt-card">
+            <x-mess-master-toolbar table-id="clientTypesTable" />
+
             <div class="table-responsive">
                 <table id="clientTypesTable" class="table  align-middle w-100">
                     <thead>
@@ -37,7 +39,6 @@
                 </table>
             </div>
         </div>
-        </div>
     </div>
 </div>
 
@@ -47,7 +48,7 @@
         <div class="modal-content">
             <form method="POST" action="{{ route('admin.mess.client-types.store') }}">
                 @csrf
-                <div class="modal-header border-bottom bg-light">
+                <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-semibold" id="createClientTypeModalLabel">Add Client Type</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -79,8 +80,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save</button>
                 </div>
             </form>
@@ -95,7 +96,7 @@
             <form id="editClientTypeForm" method="POST" action="">
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-bottom bg-light">
+                <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-semibold" id="editClientTypeModalLabel">Edit Client Type</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -123,8 +124,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Update</button>
                 </div>
             </form>
@@ -162,7 +163,4 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 @endpush
 
-<style>
-.table thead th { background-color: #004a93 !important; color: #fff !important; }
-</style>
 @endsection

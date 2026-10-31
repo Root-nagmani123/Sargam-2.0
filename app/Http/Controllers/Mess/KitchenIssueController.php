@@ -1152,20 +1152,20 @@ class KitchenIssueController extends Controller
 
         $paymentHtml = '<span class="text-muted">—</span>';
         if ($paymentType === KitchenIssueMaster::PAYMENT_CREDIT) {
-            $paymentHtml = '<span class="badge rounded-1 text-bg-warning">Credit</span>';
+            $paymentHtml = 'Credit';
         } elseif ($paymentType === KitchenIssueMaster::PAYMENT_CASH) {
-            $paymentHtml = '<span class="badge rounded-1 text-bg-secondary">Cash</span>';
+            $paymentHtml = 'Cash';
         } elseif ($paymentType === KitchenIssueMaster::PAYMENT_ONLINE) {
-            $paymentHtml = '<span class="badge rounded-1 text-bg-info">UPI</span>';
+            $paymentHtml = 'UPI';
         }
 
-        $statusHtml = '<span class="badge rounded-1 text-bg-secondary">'.e((string) $status).'</span>';
+        $statusHtml = '<span class="mess-status mess-status--primary">'.e((string) $status).'</span>';
         if ($status === KitchenIssueMaster::STATUS_PENDING) {
-            $statusHtml = '<span class="badge rounded-1 text-bg-warning">Pending</span>';
+            $statusHtml = '<span class="mess-status mess-status--warning">Pending</span>';
         } elseif ($status === KitchenIssueMaster::STATUS_APPROVED) {
-            $statusHtml = '<span class="badge rounded-1 text-bg-success">Approved</span>';
+            $statusHtml = '<span class="mess-status mess-status--success">Approved</span>';
         } elseif ($status === KitchenIssueMaster::STATUS_COMPLETED) {
-            $statusHtml = '<span class="badge rounded-1 text-bg-primary">Completed</span>';
+            $statusHtml = '<span class="mess-status mess-status--primary">Completed</span>';
         }
 
         $reqDateRaw = $row->issue_date ?? $row->created_at ?? '';
@@ -1180,7 +1180,7 @@ class KitchenIssueController extends Controller
 
         $returnBadge = '';
         if ($rq > 0) {
-            $returnBadge = '<span class="badge rounded-1 text-bg-info">Returned</span>';
+            $returnBadge = '<span class="mess-status mess-status--warning">Returned</span>';
         }
 
         $deleteForm = '';
@@ -1189,16 +1189,16 @@ class KitchenIssueController extends Controller
             $deleteForm = '<form action="'.e($destroyUrl).'" method="POST" class="d-inline m-0" onsubmit="return confirm(\'Are you sure you want to delete this Selling Voucher?\');">'
                 .csrf_field()
                 .method_field('DELETE')
-                .'<button type="submit" class="btn btn-sm btn-light border rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" title="Delete" aria-label="Delete voucher"><i class="material-symbols-rounded text-danger" style="font-size: 1.125rem;">delete</i></button></form>';
+                .'<button type="submit" class="mess-row-action mess-row-action--danger" title="Delete voucher"><i class="material-symbols-rounded" aria-hidden="true">delete</i><span>Delete</span></button></form>';
         }
 
         $editDisabled = $status === KitchenIssueMaster::STATUS_APPROVED ? ' disabled' : '';
 
         return [
-            '<span class="text-muted font-monospace">'.e((string) $serial).'</span>',
-            '<span class="fw-medium">'.$itemCell.'</span>',
-            '<span class="font-monospace">'.e((string) ($row->quantity ?? '')).'</span>',
-            '<span class="font-monospace">'.e((string) ($row->return_quantity ?? 0)).'</span>',
+            e((string) $serial),
+            $itemCell,
+            e((string) ($row->quantity ?? '')),
+            e((string) ($row->return_quantity ?? 0)),
             e((string) ($row->resolved_store_name ?? 'N/A')),
             e((string) ($row->client_type_label ?? '—')),
             e((string) ($row->display_client_name ?? '—')),
@@ -1206,11 +1206,11 @@ class KitchenIssueController extends Controller
             $paymentHtml,
             '<span class="text-nowrap">'.e($reqDate).'</span>',
             $statusHtml,
-            '<div class="d-flex flex-wrap gap-2 align-items-center justify-content-center">'.$returnBadge
-                .'<button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 btn-return-sv" data-voucher-id="'.e((string) $pk).'" title="Return">Return</button></div>',
-            '<div class="d-inline-flex align-items-center justify-content-center gap-1">'
-                .'<button type="button" class="btn btn-sm btn-light border btn-view-sv rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" data-voucher-id="'.e((string) $pk).'" title="View" aria-label="View voucher"><i class="material-symbols-rounded text-primary" style="font-size: 1.125rem;">visibility</i></button>'
-                .'<button type="button" class="btn btn-sm btn-light border btn-edit-sv rounded-circle p-0 d-inline-flex align-items-center justify-content-center" style="width: 2.25rem; height: 2.25rem;" data-voucher-id="'.e((string) $pk).'" title="'.($status === KitchenIssueMaster::STATUS_APPROVED ? e('Edit is disabled for approved voucher') : 'Edit').'" aria-label="Edit voucher"'.$editDisabled.'><i class="material-symbols-rounded text-warning" style="font-size: 1.125rem;">edit</i></button>'
+            '<div class="d-flex flex-column align-items-center gap-1">'.$returnBadge
+                .'<button type="button" class="mess-row-action mess-row-action--warning btn-return-sv" data-voucher-id="'.e((string) $pk).'" title="Return items"><i class="material-symbols-rounded" aria-hidden="true">undo</i><span>Return</span></button></div>',
+            '<div class="mess-row-actions">'
+                .'<button type="button" class="mess-row-action btn-view-sv" data-voucher-id="'.e((string) $pk).'" title="View voucher"><i class="material-symbols-rounded" aria-hidden="true">visibility</i><span>View</span></button>'
+                .'<button type="button" class="mess-row-action btn-edit-sv" data-voucher-id="'.e((string) $pk).'" title="'.($status === KitchenIssueMaster::STATUS_APPROVED ? e('Edit is disabled for approved voucher') : 'Edit voucher').'"'.$editDisabled.'><i class="material-symbols-rounded" aria-hidden="true">edit</i><span>Edit</span></button>'
                 .$deleteForm
                 .'</div>',
         ];
@@ -1306,98 +1306,8 @@ class KitchenIssueController extends Controller
      */
     public function create()
     {
-        // Get active stores and sub-stores
-        $stores = Store::active()->get(['id', 'store_name'])->map(function ($store) {
-            return [
-                'id' => $store->id,
-                'store_name' => $store->store_name,
-                'type' => 'store'
-            ];
-        });
-        
-        $subStores = SubStore::active()->get(['id', 'sub_store_name'])->map(function ($subStore) {
-            return [
-                'id' => 'sub_' . $subStore->id,
-                'store_name' => $subStore->sub_store_name . ' (Sub-Store)',
-                'type' => 'sub_store',
-                'original_id' => $subStore->id
-            ];
-        });
-        
-        // Combine stores and sub-stores
-        $stores = $stores->concat($subStores)->sortBy('store_name')->values();
-        
-        $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get(ItemSubcategory::listSelectColumns())->map(function ($s) {
-            return [
-                'id' => $s->id,
-                'item_name' => $s->item_name ?? $s->name ?? '—',
-                'item_code' => $s->item_code ?? '—',
-                'unit_measurement' => $s->unit_measurement ?? '—',
-                'standard_cost' => $s->standard_cost ?? 0,
-            ];
-        });
-        $clientTypes = ClientType::clientTypes();
-        $clientNamesByType = ClientType::active()->orderBy('client_type')->orderBy('client_name')->get(['id', 'client_type', 'client_name'])
-            ->groupBy('client_type');
-        $faculties = FacultyMaster::whereNotNull('full_name')
-            ->where('full_name', '!=', '')
-            ->where('faculty_type', 1)
-            ->whereNotNull('employee_master_pk')
-            ->whereIn('employee_master_pk', EmployeeMaster::active()->select('pk'))
-            ->orderBy('full_name')
-            ->get(['pk', 'full_name', 'faculty_code'])
-            ->map(function ($f) {
-                $fullName = trim((string) ($f->full_name ?? ''));
-                $facultyCode = trim((string) ($f->faculty_code ?? ''));
-                $f->full_name_with_code = $facultyCode !== '' ? ($fullName . ' (' . $facultyCode . ')') : $fullName;
-                return $f;
-            });
-        $departmentNamesByPk = DepartmentMaster::query()->select(['pk', 'department_name'])->pluck('department_name', 'pk');
-
-        $buildEmployeeLabel = function ($fullName, $departmentPk) use ($departmentNamesByPk) {
-            $fullName = trim((string) $fullName);
-            if ($fullName === '') {
-                $fullName = '—';
-            }
-            $departmentName = trim((string) ($departmentNamesByPk[$departmentPk] ?? ''));
-            return $departmentName !== '' ? ($fullName . ' (' . $departmentName . ')') : $fullName;
-        };
-
-        $employees = EmployeeMaster::active()
-            ->orderBy('first_name')->orderBy('last_name')
-            ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
-            ->map(function ($e) use ($buildEmployeeLabel) {
-                $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                $fullName = $fullName ?: '—';
-                return (object) [
-                    'pk' => $e->pk,
-                    'full_name' => $fullName,
-                    'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
-                ];
-            })
-            ->filter(fn($e) => $e->full_name !== '—')
-            ->values();
-
-        $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first(['pk']);
-        $messStaff = $officersMessDept
-            ? EmployeeMaster::active()
-                ->where('department_master_pk', $officersMessDept->pk)
-                ->orderBy('first_name')->orderBy('last_name')
-                ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
-                ->map(function ($e) use ($buildEmployeeLabel) {
-                    $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                    $fullName = $fullName ?: '—';
-                    return (object) [
-                        'pk' => $e->pk,
-                        'full_name' => $fullName,
-                        'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
-                    ];
-                })
-                ->filter(fn($e) => $e->full_name !== '—')
-                ->values()
-            : collect();
-
-        return view('mess.kitchen-issues.create', compact('stores', 'itemSubcategories', 'clientTypes', 'clientNamesByType', 'faculties', 'employees', 'messStaff'));
+        // The list page does this in a pop-up; the old standalone page was removed.
+        return redirect()->route('admin.mess.material-management.index');
     }
 
     /**
@@ -1670,7 +1580,8 @@ class KitchenIssueController extends Controller
             ]);
         }
 
-        return view('mess.kitchen-issues.show', compact('kitchenIssue'));
+        // The list page does this in a pop-up; the old standalone page was removed.
+        return redirect()->route('admin.mess.material-management.index');
     }
 
     /**
@@ -1757,35 +1668,8 @@ class KitchenIssueController extends Controller
             return response()->json(['voucher' => $voucher, 'items' => $items]);
         }
 
-        // Get active stores and sub-stores
-        $stores = Store::active()->get(['id', 'store_name'])->map(function ($store) {
-            return [
-                'id' => $store->id,
-                'store_name' => $store->store_name,
-                'type' => 'store'
-            ];
-        });
-        
-        $subStores = SubStore::active()->get(['id', 'sub_store_name'])->map(function ($subStore) {
-            return [
-                'id' => 'sub_' . $subStore->id,
-                'store_name' => $subStore->sub_store_name . ' (Sub-Store)',
-                'type' => 'sub_store',
-                'original_id' => $subStore->id
-            ];
-        });
-        
-        // Combine stores and sub-stores
-        $stores = $stores->concat($subStores)->sortBy('store_name')->values();
-        
-        $items = ItemSubcategory::active()
-            ->orderBy('name')
-            ->get(ItemSubcategory::listSelectColumns())
-            ->map(fn ($s) => (object) [
-                'id' => $s->id,
-                'item_name' => $s->item_name ?? $s->name ?? '—',
-            ]);
-        return view('mess.kitchen-issues.edit', compact('kitchenIssue', 'stores', 'items'));
+        // The list page does this in a pop-up; the old standalone page was removed.
+        return redirect()->route('admin.mess.material-management.index');
     }
 
     /**

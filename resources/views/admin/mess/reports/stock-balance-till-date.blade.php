@@ -12,136 +12,60 @@
     }
 @endphp
 @include('admin.mess.reports.partials.report-styles')
-<div class="container-fluid stock-balance-report min-vh-100 d-flex flex-column">
+<div class="container-fluid stock-balance-report mess-master-page mess-report-page">
     <x-breadcrum title="Stock Balance as of Till Date"></x-breadcrum>
-    <!-- Header Section -->
-    <div class="card mb-4 border-0 shadow-sm no-print">
-        <div class="card-header bg-white border-0 pb-0">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <h5 class="mb-0 fw-semibold text-dark">Filter Stock Balance as of Till Date</h5>
-                <span class="text-muted small">Refine results by till date &amp; store</span>
-            </div>
-        </div>
-        <div class="card-body p-3 p-lg-4">
-            <form method="GET" action="{{ route('admin.mess.reports.stock-balance-till-date') }}">
-                <div class="row g-3 g-lg-4 align-items-end">
-                    <div class="col-12 col-md-6 col-xl-3">
-                        <label for="till_date" class="form-label small fw-semibold text-uppercase mb-1">Till Date</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-body-secondary" id="till_date_addon">
-                                <span class="material-symbols-rounded" style="font-size: 20px;" aria-hidden="true">event</span>
-                            </span>
-                            <input type="date"
-                                   name="till_date"
-                                   id="till_date"
-                                   class="form-control"
-                                   value="{{ $tillDate }}"
-                                   aria-describedby="till_date_addon">
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-6 col-xl-3">
-                        <label for="store_id" class="form-label small fw-semibold text-uppercase mb-1">Select Store Name</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-body-secondary" id="store_id_addon">
-                                <span class="material-symbols-rounded" style="font-size: 20px;" aria-hidden="true">storefront</span>
-                            </span>
-                            <select name="store_id[]"
-                                    id="store_id"
-                                    class="form-select stock-balance-store-multiselect"
-                                    multiple
-                                    data-placeholder="All Stores"
-                                    aria-describedby="store_id_addon">
-                                @foreach($stores as $store)
-                                    <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $storeIds, true))>
-                                        {{ $store->store_name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-12 col-xl-6">
-                        <div class="d-flex flex-column flex-sm-row flex-wrap gap-2 align-items-stretch align-items-sm-center justify-content-xl-end">
-                            <div class="btn-group shadow-sm" role="group" aria-label="Filter actions">
-                                <button type="submit" name="refresh" value="1" class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-1 px-3">
-                                    <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">filter_list</span>
-                                    <span>Apply Filters</span>
-                                </button>
-                                <a href="{{ route('admin.mess.reports.stock-balance-till-date') }}" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-1 px-3">
-                                    <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">refresh</span>
-                                    <span>Reset</span>
-                                </a>
-                            </div>
-                            <div class="vr d-none d-sm-block text-body-secondary opacity-25 align-self-stretch"></div>
-                            <div class="btn-group shadow-sm" role="group" aria-label="Export actions">
-                                <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center justify-content-center gap-1 px-3" onclick="printStockBalance()" title="Print or Save as PDF">
-                                    <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">print</span>
-                                    <span>Print</span>
-                                </button>
-                                <a href="{{ route('admin.mess.reports.stock-balance-till-date.pdf', request()->query()) }}" class="btn btn-danger d-inline-flex align-items-center justify-content-center gap-1 px-3" title="Download PDF">
-                                    <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">picture_as_pdf</span>
-                                    <span>Download PDF</span>
-                                </a>
-                                <a href="{{ route('admin.mess.reports.stock-balance-till-date.excel', request()->query()) }}" class="btn btn-success d-inline-flex align-items-center justify-content-center gap-1 px-3" title="Export to Excel">
-                                    <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">table_view</span>
-                                    <span>Export Excel</span>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
+
+    @include('admin.mess.reports.partials.report-export-bar', [
+        'excelUrl' => route('admin.mess.reports.stock-balance-till-date.excel', request()->query()),
+        'pdfUrl' => route('admin.mess.reports.stock-balance-till-date.pdf', request()->query()),
+        'printOnclick' => 'printStockBalance()',
+    ])
+
+    <div class="ds-card mess-dt-card">
+        <x-mess-master-toolbar table-id="stockBalanceTable" :columns="false">
+            <form method="GET" action="{{ route('admin.mess.reports.stock-balance-till-date') }}" class="mess-filterbar" aria-label="Stock balance filters">
+                <span class="mess-filterbar-label">Filter</span>
+                <input type="date" name="till_date" id="till_date" class="form-control" value="{{ $tillDate }}" aria-label="Till date">
+                <div class="mess-filter-field">
+                    <select name="store_id[]" id="store_id" class="form-select stock-balance-store-multiselect"
+                            multiple data-placeholder="Store" aria-label="Store">
+                        @foreach($stores as $store)
+                            <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $storeIds, true))>
+                                {{ $store->store_name }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
+                <button type="submit" name="refresh" value="1" class="btn btn-outline-primary">Apply</button>
+                @if(request()->hasAny(['till_date', 'store_id']))
+                    <a href="{{ route('admin.mess.reports.stock-balance-till-date') }}" class="btn btn-outline-danger">Remove Filter</a>
+                @endif
             </form>
+        </x-mess-master-toolbar>
+
+        <div class="table-responsive">
+            <table id="stockBalanceTable" class="table align-middle mb-0 w-100">
+                <thead>
+                    <tr>
+                        <th>S. No.</th>
+                        <th>Item Code</th>
+                        <th>Item Name</th>
+                        <th class="text-end">Remaining Quantity</th>
+                        <th>Unit</th>
+                        <th class="text-end">Avg Rate</th>
+                        <th class="text-end">Amount</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="6" class="text-end">Total Amount:</td>
+                        <td class="text-end" id="stockBalanceTotalAmount">₹0.00</td>
+                    </tr>
+                </tfoot>
+            </table>
         </div>
     </div>
-
-<div class="card border-0 shadow-sm flex-grow-1 d-flex flex-column min-h-0">
-    <div class="card-body d-flex flex-column flex-grow-1 min-h-0">
-        <!-- Report Heading -->
-        <div class="report-header text-center mb-4 pb-3 border-bottom border-body-secondary border-opacity-25">
-            <h4 class="fw-bold text-uppercase mb-3 fs-5 text-body-emphasis">Stock Balance as of Till Date</h4>
-            <p class="small text-body-secondary mb-2 no-print" id="stockBalanceReportMeta"></p>
-            <div class="d-flex flex-wrap justify-content-center gap-2 gap-md-3">
-                <span class="badge text-bg-body-secondary text-body-emphasis fw-normal rounded-pill px-3 py-2 border border-body-secondary border-opacity-50">
-                    <span class="material-symbols-rounded icon-16 align-text-bottom me-1">event</span>
-                    Till: {{ date('d-F-Y', strtotime($tillDate)) }}
-                </span>
-                <span class="badge text-bg-primary fw-normal rounded-pill px-3 py-2 stock-balance-store-badge">
-                    <span class="material-symbols-rounded icon-16 align-text-bottom me-1">store</span>
-                    {{ $selectedStoreName ?? 'All Stores' }}
-                </span>
-            </div>
-        </div>
-
-        <!-- Report Table -->
-        <div class="card flex-grow-1 d-flex flex-column min-h-0">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 flex-shrink-0">
-                <span class="fw-semibold text-dark">Stock Balance Details</span>
-                <span class="text-muted small" id="stockBalanceReportCount"></span>
-            </div>
-            <div class="table-responsive flex-grow-1 min-h-0">
-                <table id="stockBalanceTable" class="table table-hover align-middle mb-0 w-100">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Item Code</th>
-                            <th>Item Name</th>
-                            <th class="text-end">Remaining Quantity</th>
-                            <th>Unit</th>
-                            <th class="text-end">Avg rate</th>
-                            <th class="text-end">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                    <tfoot>
-                        <tr class="table-light fw-bold">
-                            <td colspan="6" class="text-end">Total Amount:</td>
-                            <td class="text-end" id="stockBalanceTotalAmount">₹0.00</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
 </div>
 
 @include('components.mess-master-datatables', [

@@ -179,10 +179,10 @@ class ItemSubcategoryController extends Controller
         $alertQty = isset($itemsubcategory->alert_quantity) && $itemsubcategory->alert_quantity !== null && $itemsubcategory->alert_quantity !== ''
             ? e(number_format((float) $itemsubcategory->alert_quantity, 2))
             : '-';
-        $statusCell = '<span class="badge bg-' . e($itemsubcategory->status_badge_class) . '">'
+        $statusCell = '<span class="mess-status mess-status--' . e($itemsubcategory->status_badge_class) . '">'
             . e($itemsubcategory->status_label) . '</span>';
 
-        $editBtn = '<button type="button" class="text-primary btn-edit-itemsubcategory bg-transparent border-0"'
+        $editBtn = '<button type="button" class="mess-row-action btn-edit-itemsubcategory"'
             . ' data-id="' . (int) $itemsubcategory->id . '"'
             . ' data-category-id="' . e((string) ($itemsubcategory->category_id ?? '')) . '"'
             . ' data-item-name="' . e($itemsubcategory->item_name ?? '') . '"'
@@ -191,7 +191,7 @@ class ItemSubcategoryController extends Controller
             . ' data-alert-quantity="' . e((string) ($itemsubcategory->alert_quantity ?? '')) . '"'
             . ' data-description="' . e($itemsubcategory->description ?? '') . '"'
             . ' data-status="' . e($itemsubcategory->status ?? 'active') . '"'
-            . ' title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>';
+            . ' title="Edit"><i class="material-icons material-symbol-rounded" aria-hidden="true">edit</i><span>Edit</span></button>';
 
         $deleteForm = '';
         if ($canDelete) {
@@ -200,12 +200,12 @@ class ItemSubcategoryController extends Controller
                 . ' onsubmit="return confirm(\'Are you sure you want to delete this item?\');">'
                 . '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">'
                 . '<input type="hidden" name="_method" value="DELETE">'
-                . '<button type="submit" class="text-primary btn-delete-itemsubcategory bg-transparent border-0" title="Delete">'
-                . '<i class="material-icons material-symbol-rounded">delete</i></button>'
+                . '<button type="submit" class="mess-row-action mess-row-action--danger btn-delete-itemsubcategory" title="Delete">'
+                . '<i class="material-icons material-symbol-rounded" aria-hidden="true">delete</i><span>Delete</span></button>'
                 . '</form>';
         }
 
-        $actions = '<div class="d-flex gap-2 flex-wrap">' . $editBtn . $deleteForm . '</div>';
+        $actions = '<div class="mess-row-actions">' . $editBtn . $deleteForm . '</div>';
 
         return [
             $categoryCell,
@@ -220,9 +220,8 @@ class ItemSubcategoryController extends Controller
 
     public function create()
     {
-        $categories = ItemCategory::active()->orderBy('category_name')->get();
-
-        return view('mess.itemsubcategories.create', compact('categories'));
+        // The list page does this in a pop-up; the old standalone page was removed.
+        return redirect()->route('admin.mess.itemsubcategories.index');
     }
 
     public function store(Request $request)
@@ -245,10 +244,8 @@ class ItemSubcategoryController extends Controller
 
     public function edit($id)
     {
-        $itemsubcategory = ItemSubcategory::findOrFail($id);
-        $categories = ItemCategory::active()->orderBy('category_name')->get();
-
-        return view('mess.itemsubcategories.edit', compact('itemsubcategory', 'categories'));
+        // The list page does this in a pop-up; the old standalone page was removed.
+        return redirect()->route('admin.mess.itemsubcategories.index');
     }
 
     public function update(Request $request, $id)

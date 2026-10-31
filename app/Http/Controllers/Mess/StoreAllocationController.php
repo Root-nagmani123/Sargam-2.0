@@ -175,8 +175,8 @@ class StoreAllocationController extends Controller
         }
 
         $allocationId = (int) $row->allocation_id;
-        $editBtn = '<button type="button" class="btn btn-sm btn-info btn-edit-allocation text-primary bg-transparent border-0 p-0 d-inline-flex align-items-center justify-content-center" data-allocation-id="' . $allocationId . '" title="Edit allocation">'
-            . '<span class="material-symbols-rounded" style="font-size: 1.1rem;">edit</span>'
+        $editBtn = '<button type="button" class="mess-row-action btn-edit-allocation" data-allocation-id="' . $allocationId . '" title="Edit allocation">'
+            . '<i class="material-symbols-rounded" aria-hidden="true">edit</i><span>Edit</span>'
             . '</button>';
 
         $deleteForm = '';
@@ -185,13 +185,13 @@ class StoreAllocationController extends Controller
             $deleteForm = '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline-flex align-items-center justify-content-center m-0" onsubmit="return confirm(\'Are you sure you want to delete this store allocation?\');">'
                 . '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">'
                 . '<input type="hidden" name="_method" value="DELETE">'
-                . '<button type="submit" class="btn btn-sm btn-outline-danger bg-transparent border-0 p-0 text-primary d-inline-flex align-items-center justify-content-center" title="Delete allocation">'
-                . '<span class="material-symbols-rounded" style="font-size: 1.1rem;">delete</span>'
+                . '<button type="submit" class="mess-row-action mess-row-action--danger" title="Delete allocation">'
+                . '<i class="material-symbols-rounded" aria-hidden="true">delete</i><span>Delete</span>'
                 . '</button>'
                 . '</form>';
         }
 
-        $actions = '<div class="d-inline-flex align-items-center justify-content-center gap-2">' . $editBtn . $deleteForm . '</div>';
+        $actions = '<div class="mess-row-actions justify-content-center">' . $editBtn . $deleteForm . '</div>';
 
         return [
             '<span class="col-sno">' . $sno . '</span>',

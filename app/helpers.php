@@ -1029,13 +1029,36 @@ function pdf_local_image_data_uri(array $relativePaths): string
     return '';
 }
 
-/** The national emblem for a PDF header. Local only. See pdf_local_image_data_uri(). */
-function pdf_emblem_src(): string
+/**
+ * First readable candidate under public/, as an absolute file path ('' if none).
+ *
+ * For an mPDF document that repeats its header many times: a path is loaded once, whereas the
+ * same data URI is carried in every section (the 220-buyer Sale Voucher PDF was 27 MB of repeated
+ * base64 out of 32 MB of HTML). mPDF only: DomPDF, with this app's options, did not load these paths.
+ *
+ * @param  string[]  $relativePaths  candidates relative to public/, best first
+ */
+function pdf_local_image_path(array $relativePaths): string
 {
-    return pdf_local_image_data_uri([
+    foreach ($relativePaths as $relative) {
+        $path = public_path($relative);
+        if (is_file($path) && is_readable($path)) {
+            return $path;
+        }
+    }
+
+    return '';
+}
+
+/** The national emblem for a PDF header. Local only. See pdf_local_image_data_uri(). */
+function pdf_emblem_src(bool $asFilePath = false): string
+{
+    $candidates = [
         'admin_assets/images/logos/ashoka.png',
         'images/ashoka.png',
-    ]);
+    ];
+
+    return $asFilePath ? pdf_local_image_path($candidates) : pdf_local_image_data_uri($candidates);
 }
 
 /**
@@ -1045,14 +1068,16 @@ function pdf_emblem_src(): string
  * old remote fallback fetched (/admin_assets/images/logo.png) and is a third the size
  * of images/lbsnaa_logo.jpg, which every render would otherwise embed.
  */
-function pdf_lbsnaa_logo_src(): string
+function pdf_lbsnaa_logo_src(bool $asFilePath = false): string
 {
-    return pdf_local_image_data_uri([
+    $candidates = [
         'admin_assets/images/logos/logo.png',
         'admin_assets/images/logos/logo_new.png',
         'images/lbsnaa_logo.jpg',
         'images/lbsnaa_logo.png',
-    ]);
+    ];
+
+    return $asFilePath ? pdf_local_image_path($candidates) : pdf_local_image_data_uri($candidates);
 }
 
 /**

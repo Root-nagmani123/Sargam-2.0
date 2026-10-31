@@ -5,42 +5,40 @@
     $categoryTypes = \App\Models\Mess\ItemCategory::categoryTypes();
     $selectedCategoryType = $categoryTypeFilter ?? request('category_type', '');
 @endphp
-<div class="container-fluid">
-    <x-breadcrum title="Category Item Master"></x-breadcrum>
-    <div class="datatables">
-        <div class="card">
-            <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                <h4 class="mb-0">Category Item Master</h4>
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createItemCategoryModal">
-                    Add Category Item
-                </button>
-            </div>
+<div class="container-fluid mess-master-page">
+    <x-breadcrum title="Category Item Master">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createItemCategoryModal">
+            <i class="material-symbols-rounded" aria-hidden="true">add</i>
+            <span>Add Category Item</span>
+        </button>
+    </x-breadcrum>
 
-            <form method="GET" action="{{ route('admin.mess.itemcategories.index') }}" class="mb-3 row g-2 align-items-end">
-                <div class="col-auto">
-                    <label for="filter_category_type" class="form-label mb-0">Category type</label>
-                    <select name="category_type" id="filter_category_type" class="form-select form-select-sm" style="min-width: 180px;">
-                        <option value="">All</option>
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    <x-mess-export-bar table-id="itemCategoriesTable" title="Category Item Master" />
+
+    <div class="datatables">
+        <div class="ds-card mess-dt-card">
+            <x-mess-master-toolbar table-id="itemCategoriesTable">
+                <form method="GET" action="{{ route('admin.mess.itemcategories.index') }}" class="d-flex flex-wrap align-items-center gap-2">
+                    <label for="filter_category_type" class="mb-0 text-body-secondary">Filter</label>
+                    <select name="category_type" id="filter_category_type" class="form-select" style="min-width: 180px;" onchange="this.form.submit()">
+                        <option value="">Category type: All</option>
                         @foreach($categoryTypes as $value => $label)
                             <option value="{{ $value }}" {{ (string) $selectedCategoryType === (string) $value ? 'selected' : '' }}>{{ $label }}</option>
                         @endforeach
                     </select>
-                </div>
-                <div class="col-auto">
-                    <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
+                    <noscript><button type="submit" class="btn btn-outline-primary">Filter</button></noscript>
                     @if($selectedCategoryType !== '')
-                        <a href="{{ route('admin.mess.itemcategories.index') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
+                        <a href="{{ route('admin.mess.itemcategories.index') }}" class="btn btn-outline-danger">Remove Filter</a>
                     @endif
-                </div>
-            </form>
-
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
+                </form>
+            </x-mess-master-toolbar>
 
             <div class="table-responsive">
                 <table id="itemCategoriesTable" class="table align-middle w-100">
@@ -57,7 +55,6 @@
                 </table>
             </div>
         </div>
-        </div>
     </div>
 </div>
 
@@ -67,7 +64,7 @@
         <div class="modal-content">
             <form method="POST" action="{{ route('admin.mess.itemcategories.store') }}">
                 @csrf
-                <div class="modal-header border-bottom bg-light">
+                <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-semibold" id="createItemCategoryModalLabel">Add Category Item</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -104,8 +101,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save</button>
                 </div>
             </form>
@@ -120,7 +117,7 @@
             <form id="editItemCategoryForm" method="POST" action="">
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-bottom bg-light">
+                <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-semibold" id="editItemCategoryModalLabel">Edit Category Item</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -152,8 +149,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Update</button>
                 </div>
             </form>
@@ -189,7 +186,4 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 @endpush
 
-<style>
-.table thead th { background-color: #004a93 !important; color: #fff !important; }
-</style>
 @endsection

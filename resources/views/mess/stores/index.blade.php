@@ -4,34 +4,32 @@
 @php
     $storeTypes = \App\Models\Mess\Store::storeTypes();
 @endphp
-<div class="container-fluid">
-    <x-breadcrum title="Store Master"></x-breadcrum>
-    <div class="datatables">
-        <div class="card border-0 shadow-sm rounded-3">
-            <div class="card-header border-0 bg-body-tertiary d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div>
-                    <h4 class="mb-0 fw-semibold">Store Master</h4>
-                    <p class="mb-0 text-muted small">Manage all mess stores in one place.</p>
-                </div>
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createStoreModal">
-                    <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
-                    <span>Add Store</span>
-                </button>
-            </div>
-            <div class="card-body">
+<div class="container-fluid mess-master-page">
+    <x-breadcrum title="Store Master">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createStoreModal">
+            <i class="material-symbols-rounded" aria-hidden="true">add</i>
+            <span>Add Store</span>
+        </button>
+    </x-breadcrum>
 
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    <x-mess-export-bar table-id="storesTable" title="Store Master" />
+
+    <div class="datatables">
+        <div class="ds-card mess-dt-card">
+            <x-mess-master-toolbar table-id="storesTable" />
 
             <div class="table-responsive">
                 <table id="storesTable" class="table text-nowrap align-middle w-100">
                     <thead>
                         <tr>
-                            <th>#</th>
+                            <th>S. No.</th>
                             <th>Store Name</th>
                             <th>Store Type</th>
                             <th>Location</th>
@@ -43,7 +41,6 @@
                 </table>
             </div>
         </div>
-        </div>
     </div>
 </div>
 
@@ -53,7 +50,7 @@
         <div class="modal-content">
             <form method="POST" action="{{ route('admin.mess.stores.store') }}">
                 @csrf
-                <div class="modal-header border-bottom bg-light">
+                <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-semibold" id="createStoreModalLabel">Add Store</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -96,8 +93,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save</button>
                 </div>
             </form>
@@ -112,7 +109,7 @@
             <form id="editStoreForm" method="POST" action="">
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-bottom bg-light">
+                <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-semibold" id="editStoreModalLabel">Edit Store</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -150,8 +147,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Update</button>
                 </div>
             </form>

@@ -4,17 +4,12 @@
 @php
 $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
-<div class="container-fluid po-ux">
+<div class="container-fluid po-ux mess-master-page">
     <div class="no-print">
-        <x-breadcrum title="Purchase Orders">
-            <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-2"
-                id="poPrintListBtn" title="Print purchase order list">
-                <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">print</i>
-                <span class="d-none d-sm-inline">Print List</span>
-            </button>
+        <x-breadcrum title="Purchase Order">
             <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2"
                 data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
-                <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+                <i class="material-symbols-rounded" aria-hidden="true">add</i>
                 <span>Create Purchase Order</span>
             </button>
         </x-breadcrum>
@@ -44,28 +39,22 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
     </div>
     @endif
 
+    <x-mess-export-bar table-id="purchaseOrdersTable" title="Purchase Orders" />
+
+    @php
+        $poFiltersActive = ($filterDateFrom ?? '') !== '' || ($filterDateTo ?? '') !== ''
+            || !empty($filterVendorIds) || !empty($filterStoreIds) || ($filterStatus ?? '') !== '';
+    @endphp
     <div class="datatables">
-        <div class="ds-card">
-            <div class="ds-card-body">
-                {{-- Filters: single inline toolbar --}}
+        <div class="ds-card mess-dt-card">
+                <x-mess-master-toolbar table-id="purchaseOrdersTable">
                 <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}"
-                    class="po-filterbar mb-3 no-print" aria-label="Purchase order list filters">
-                    <span class="po-filters-label">Filters</span>
+                    class="mess-filterbar no-print" aria-label="Purchase order list filters">
+                    <span class="mess-filterbar-label">Filter</span>
 
-                    <label class="po-filter-field" for="poFilterDateFrom">
-                        <span>From</span>
-                        <input type="date" name="date_from" id="poFilterDateFrom" class="form-control"
-                            value="{{ $filterDateFrom }}">
-                    </label>
-                    <label class="po-filter-field" for="poFilterDateTo">
-                        <span>To</span>
-                        <input type="date" name="date_to" id="poFilterDateTo" class="form-control"
-                            value="{{ $filterDateTo }}">
-                    </label>
-
-                    <div class="po-filter-ms">
+                    <div class="mess-filter-field po-filter-ms">
                         <select name="vendor_id[]" id="poFilterVendor" multiple class="form-select"
-                            data-placeholder="All vendors" aria-label="Filter by one or more vendors">
+                            data-placeholder="Vendor" aria-label="Filter by one or more vendors">
                             @foreach($vendors as $v)
                             <option value="{{ $v->id }}"
                                 {{ in_array((int) $v->id, $filterVendorIds ?? [], true) ? 'selected' : '' }}>
@@ -73,9 +62,9 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                             @endforeach
                         </select>
                     </div>
-                    <div class="po-filter-ms">
+                    <div class="mess-filter-field po-filter-ms">
                         <select name="store_id[]" id="poFilterStore" multiple class="form-select"
-                            data-placeholder="All stores" aria-label="Filter by one or more stores">
+                            data-placeholder="Store" aria-label="Filter by one or more stores">
                             @foreach($stores as $s)
                             <option value="{{ $s->id }}"
                                 {{ in_array((int) $s->id, $filterStoreIds ?? [], true) ? 'selected' : '' }}>
@@ -84,26 +73,37 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                         </select>
                     </div>
 
-                    <select name="status" id="poFilterStatus" class="form-select po-filter-control"
-                        aria-label="Filter by status">
-                        <option value="">All statuses</option>
-                        @foreach(['pending' => 'Pending approval', 'approved' => 'Approved', 'rejected' => 'Rejected'] as $value => $label)
-                        <option value="{{ $value }}" {{ ($filterStatus ?? '') === $value ? 'selected' : '' }}>{{ $label }}</option>
-                        @endforeach
-                    </select>
-
-                    <div class="ms-auto d-flex align-items-center gap-2">
-                        <button type="submit" class="btn btn-primary po-filter-btn d-inline-flex align-items-center gap-1">
-                            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">filter_alt</i>
-                            Apply
-                        </button>
-                        <a href="{{ route('admin.mess.purchaseorders.index') }}" id="poResetFilters"
-                            class="btn btn-outline-danger po-filter-btn d-inline-flex align-items-center gap-1">
-                            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">restart_alt</i>
-                            Reset Filters
-                        </a>
+                    <div class="mess-filter-range">
+                        <input type="date" name="date_from" id="poFilterDateFrom" class="form-control"
+                            value="{{ $filterDateFrom }}" aria-label="Order date from">
+                        <span aria-hidden="true">&ndash;</span>
+                        <input type="date" name="date_to" id="poFilterDateTo" class="form-control"
+                            value="{{ $filterDateTo }}" aria-label="Order date to">
                     </div>
+
+                    <div class="dropdown">
+                        <button type="button" class="mess-filter-more-btn {{ ($filterStatus ?? '') !== '' ? 'is-active' : '' }}"
+                            data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">+1 Filter</button>
+                        <div class="dropdown-menu mess-filter-more">
+                            <div class="mess-filter-more-head">
+                                <span>Filters</span>
+                                <button type="button" class="btn-close" data-mess-filter-more-close aria-label="Close filters"></button>
+                            </div>
+                            <select name="status" id="poFilterStatus" class="form-select" aria-label="Filter by status">
+                                <option value="">Status: All</option>
+                                @foreach(['pending' => 'Pending approval', 'approved' => 'Approved', 'rejected' => 'Rejected'] as $value => $label)
+                                <option value="{{ $value }}" {{ ($filterStatus ?? '') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-outline-primary">Apply</button>
+                    @if($poFiltersActive)
+                    <a href="{{ route('admin.mess.purchaseorders.index') }}" id="poResetFilters" class="btn btn-outline-danger">Remove Filter</a>
+                    @endif
                 </form>
+                </x-mess-master-toolbar>
 
                 {{-- Printable area: isolation in @media print shows only header + table (LBSNAA branding + list) --}}
                 <div class="po-print-area">
@@ -128,19 +128,18 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                         <table id="purchaseOrdersTable" class="table align-middle mb-0 w-100 po-data-table">
                             <thead>
                                 <tr>
-                                    <th scope="col">#</th>
+                                    <th scope="col">S. No.</th>
                                     <th scope="col">Order No.</th>
                                     <th scope="col">Vendor</th>
                                     <th scope="col">Store</th>
                                     <th scope="col">Status</th>
-                                    <th scope="col" class="text-end d-print-none">Actions</th>
+                                    <th scope="col" class="d-print-none">Action</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
                         </table>
                     </div>
                 </div>{{-- /.po-print-area --}}
-            </div>
         </div>
     </div>
 </div>
@@ -571,17 +570,6 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
     window.addEventListener('beforeprint', poPrepareBrowserPrint);
     window.addEventListener('afterprint', poRestoreAfterBrowserPrint);
 
-    document.getElementById('poPrintListBtn')?.addEventListener('click', function() {
-        if (!window.MessColumnManager || typeof window.MessColumnManager.printDataTable !== 'function') {
-            window.print();
-            return;
-        }
-        window.MessColumnManager.printDataTable('purchaseOrdersTable', {
-            template: 'lbsnaa',
-            title: 'Purchase Orders',
-            periodText: document.title || ''
-        });
-    });
 })();
 </script>
 @endpush
@@ -861,59 +849,11 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
     border-width: 2px;
 }
 
-/* ── Inline filter toolbar (design.md: --ds-* tokens, matches student_medical_exemption) ── */
-.po-filterbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--ds-space-2);
-}
-
-.po-filters-label {
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: var(--ds-ink);
-    margin-right: var(--ds-space-1);
-}
-
-.po-filter-field {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--ds-space-1);
-    margin: 0;
-    font-size: 0.8125rem;
-    color: var(--ds-ink-muted);
-}
-
-.po-filterbar .form-control,
-.po-filterbar .po-filter-control,
-.po-filterbar .po-filter-btn {
-    min-height: 42px;
-    font-size: 0.875rem;
-    border-radius: var(--ds-radius-1);
-}
-
-.po-filterbar .form-control,
-.po-filterbar .po-filter-control {
-    border-color: var(--ds-line);
-    color: var(--ds-ink);
-}
-
-.po-filterbar .po-filter-control {
-    width: auto;
-    min-width: 160px;
-}
-
-.po-filter-ms {
-    min-width: 200px;
-    max-width: 280px;
-    flex: 1 1 200px;
-}
-
+/* Vendor / Store multi-selects (Tom Select) in the list filter row */
 .po-filter-ms .ts-control {
-    min-height: 42px;
-    border-color: var(--ds-line);
-    border-radius: var(--ds-radius-1);
+    box-sizing: border-box;
+    min-height: var(--ds-control-h);
+    border-radius: var(--ds-radius-card);
     font-size: 0.875rem;
 }
 
@@ -949,16 +889,71 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 .modal-body {
     scroll-behavior: smooth;
 }
+
+/* Create / Edit PO modals (Figma "Create Purchase Order"): flat sections, grey item header, tinted total bar */
+#createPurchaseOrderModal .modal-body,
+#editPurchaseOrderModal .modal-body {
+    background: var(--ds-surface) !important;
+}
+#createPurchaseOrderModal .modal-body .card,
+#editPurchaseOrderModal .modal-body .card {
+    border: 0 !important;
+    border-radius: 0;
+    box-shadow: none;
+}
+#createPurchaseOrderModal .modal-body .card-header,
+#editPurchaseOrderModal .modal-body .card-header,
+#createPurchaseOrderModal .modal-body .card-body:not(.p-0),
+#editPurchaseOrderModal .modal-body .card-body:not(.p-0) {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+#createPurchaseOrderModal .modal-body .card-header > .material-icons,
+#createPurchaseOrderModal .modal-body .card-header > div > .material-icons,
+#editPurchaseOrderModal .modal-body .card-header > .material-icons,
+#editPurchaseOrderModal .modal-body .card-header > div > .material-icons {
+    display: none;
+}
+#createPurchaseOrderModal .modal-body .card-header .fw-semibold,
+#editPurchaseOrderModal .modal-body .card-header .fw-semibold,
+#createPurchaseOrderModal .modal-title,
+#editPurchaseOrderModal .modal-title {
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+    color: var(--ds-ink) !important;
+}
+#createPurchaseOrderModal .modal-title,
+#editPurchaseOrderModal .modal-title {
+    font-size: 1.125rem !important;
+}
+#createPurchaseOrderModal .card-footer .text-body-secondary,
+#editPurchaseOrderModal .card-footer .text-body-secondary {
+    color: inherit !important;
+}
+#poItemsTable thead th,
+#editPurchaseOrderModal table thead th {
+    background: var(--ds-line);
+}
+#createPurchaseOrderModal .card-footer,
+#editPurchaseOrderModal .card-footer {
+    background: rgba(var(--bs-primary-rgb), .1) !important;
+    border: 0;
+    color: var(--ds-primary);
+}
+#createPurchaseOrderModal .modal-footer,
+#editPurchaseOrderModal .modal-footer {
+    background: var(--ds-surface) !important;
+    border-top: 0 !important;
+}
 </style>
-<div class="modal fade" id="createPurchaseOrderModal" tabindex="-1" aria-labelledby="createPurchaseOrderModalLabel"
+<div class="modal fade" id="createPurchaseOrderModal" data-mess-confirm-leave tabindex="-1" aria-labelledby="createPurchaseOrderModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-3">
             <form method="POST" action="{{ route('admin.mess.purchaseorders.store') }}" id="createPOForm"
                 enctype="multipart/form-data">
                 @csrf
-                <div class="modal-header bg-white border-bottom border-light-subtle py-3 px-4"
-                    style="border-top:4px solid var(--ds-primary) !important;">
+                <div class="modal-header bg-white border-bottom border-light-subtle py-3 px-4">
                     <div>
                         <h5 class="modal-title fw-semibold mb-0 text-body" id="createPurchaseOrderModalLabel">Create
                             Purchase Order</h5>
@@ -1152,10 +1147,8 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                     </div>
                 </div>
                 <div class="modal-footer bg-body-tertiary border-top border-light-subtle py-3 px-4">
-                    <button type="button" class="btn btn-light border px-4" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary px-4 d-inline-flex align-items-center gap-2">
-                        <i class="material-icons material-symbol-rounded" style="font-size:1rem;">check</i> Create
-                    </button>
+                    <button type="button" class="btn btn-outline-danger px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">Create Purchase Order</button>
                 </div>
             </form>
         </div>
@@ -1373,7 +1366,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                     </div>
                 </div>
                 <div class="modal-footer bg-body-tertiary border-top border-light-subtle py-3 px-4">
-                    <button type="button" class="btn btn-outline-secondary rounded-1 px-4 fw-semibold"
+                    <button type="button" class="btn btn-outline-danger px-4"
                         data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary px-4 fw-semibold"
                         id="editPoSubmitBtn">Update purchase order</button>

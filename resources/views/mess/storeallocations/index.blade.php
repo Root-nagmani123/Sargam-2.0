@@ -1,36 +1,31 @@
 @extends('admin.layouts.master')
 @section('title', 'Mess Store Allocation')
 @section('content')
-<div class="container-fluid mess-store-allocation-page">
-    <x-breadcrum title="Mess Store Allocation"></x-breadcrum>
-
-   <div class="card border-0 shadow-sm rounded-3">
-    <div class="card-body">
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <div>
-            <h4 class="mb-1 fw-bold text-dark">Mess Store Allocation</h4>
-            <p class="mb-0 text-muted small">View and manage allocation of items from sub stores to mess.</p>
-        </div>
-        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#createStoreAllocationModal">
-            <span class="material-symbols-rounded" style="font-size: 1.1rem;">add</span>
+<div class="container-fluid mess-store-allocation-page mess-master-page">
+    <x-breadcrum title="Mess Store Allocation">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createStoreAllocationModal">
+            <i class="material-symbols-rounded" aria-hidden="true">add</i>
             <span>Add Mess Store Allocation</span>
         </button>
-    </div>
+    </x-breadcrum>
+
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             {{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
-    <hr class="my-2">
 
-    {{-- DataTables-style top: length (left) + search (right) --}}
+    <x-mess-export-bar table-id="storeAllocationTable" title="Mess Store Allocation" />
+
+   <div class="ds-card mess-dt-card">
+    <x-mess-master-toolbar table-id="storeAllocationTable" />
 
     <div class="table-responsive">
         <table class="table align-middle mb-0 w-100" id="storeAllocationTable">
             <thead>
                 <tr>
-                    <th style="width: 60px;">S.No</th>
+                    <th style="width: 60px;">S. No.</th>
                     <th>Store Name</th>
                     <th>Item Name</th>
                     <th>Item Type</th>
@@ -41,7 +36,6 @@
             </thead>
             <tbody></tbody>
         </table>
-    </div>
     </div>
    </div>
 </div>
@@ -202,12 +196,12 @@
 {{-- Choices.js for enhanced dropdowns --}}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css"/>
 <script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
-<div class="modal fade" id="createStoreAllocationModal" tabindex="-1" aria-labelledby="createStoreAllocationModalLabel" aria-hidden="true">
+<div class="modal fade" id="createStoreAllocationModal" data-mess-confirm-leave tabindex="-1" aria-labelledby="createStoreAllocationModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
             <form method="POST" action="{{ route('admin.mess.storeallocations.store') }}" id="createAllocationForm" novalidate>
                 @csrf
-                <div class="modal-header border-bottom bg-light">
+                <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-semibold" id="createStoreAllocationModalLabel">Add Mess Store Allocation</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -275,9 +269,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Store Allocation</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Mess Store Allocation</button>
                 </div>
             </form>
         </div>
@@ -291,7 +285,7 @@
             <form method="POST" id="editAllocationForm" action="" novalidate>
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-bottom bg-light">
+                <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-semibold" id="editStoreAllocationModalLabel">Edit Mess Store Allocation</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -342,8 +336,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Update Store Allocation</button>
                 </div>
             </form>

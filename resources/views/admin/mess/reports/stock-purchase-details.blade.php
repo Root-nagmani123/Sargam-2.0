@@ -1,6 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'Stock Purchase Details Report')
 @section('content')
+@include('admin.mess.reports.partials.report-styles')
 @php
     $selectedVendorIds = $selectedVendors->pluck('id')->map(fn ($id) => (int) $id)->all();
     $selectedStoreIds = $selectedStores->pluck('id')->map(fn ($id) => (int) $id)->all();
@@ -36,142 +37,61 @@
         'storeDetails' => $stockPurchasePrintStoreDetails,
     ], JSON_THROW_ON_ERROR);
 @endphp
-<div class="container-fluid stock-purchase-report">
+<div class="container-fluid stock-purchase-report mess-master-page mess-report-page">
     <div id="stock-purchase-print-config" class="d-none" hidden
          data-config="{{ htmlspecialchars($stockPurchasePrintConfigJson, ENT_QUOTES, 'UTF-8') }}"></div>
     <x-breadcrum title="Stock Purchase Details Report"></x-breadcrum>
-    <!-- Filters Section (Top - same pattern as other report pages) -->
+    @include('admin.mess.reports.partials.report-export-bar', [
+        'excelUrl' => route('admin.mess.reports.stock-purchase-details.excel', request()->query()),
+        'pdfUrl' => route('admin.mess.reports.stock-purchase-details.pdf', request()->query()),
+        'printOnclick' => 'printStockPurchaseTable()',
+    ])
 
-    <div class="card mb-4 border-0 shadow-sm rounded-3 overflow-hidden no-print">
-        <div style="height:3px;background:linear-gradient(90deg,#0b4a7e 0%,#2980b9 50%,#0b4a7e 100%);" aria-hidden="true"></div>
-        <div class="card-header bg-body-tertiary border-0 py-3 px-3 px-lg-4">
-            <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
-                <div class="d-flex align-items-start gap-3">
-                    <span class="d-none d-sm-flex align-items-center justify-content-center flex-shrink-0 rounded-3 bg-primary-subtle text-primary p-2" aria-hidden="true">
-                        <span class="material-symbols-rounded" style="font-size: 1.5rem;">tune</span>
-                    </span>
-                    <div>
-                        <h5 class="mb-1 fw-semibold text-body">Filter Purchases</h5>
-                        <p class="mb-0 small text-body-secondary">Refine results by date, vendor &amp; store</p>
-                    </div>
+    <div class="ds-card mess-dt-card report-content">
+        <x-mess-master-toolbar table-id="stockPurchaseReport" :columns="false" :search="false">
+            <form method="GET" action="{{ route('admin.mess.reports.stock-purchase-details') }}" class="mess-filterbar" aria-label="Stock purchase filters">
+                <span class="mess-filterbar-label">Filter</span>
+                <div class="mess-filter-range">
+                    <input type="date" name="from_date" class="form-control" value="{{ $fromDate }}" required aria-label="From date">
+                    <span aria-hidden="true">&ndash;</span>
+                    <input type="date" name="to_date" class="form-control" value="{{ $toDate }}" required aria-label="To date">
                 </div>
-            </div>
-        </div>
-        <div class="card-body pt-3 p-3 p-lg-4">
-            <form method="GET" action="{{ route('admin.mess.reports.stock-purchase-details') }}">
-                <div class="row g-3">
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <label class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">From Date</label>
-                        <input type="date" name="from_date" class="form-control" value="{{ $fromDate }}" required>
-                    </div>
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <label class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">To Date</label>
-                        <input type="date" name="to_date" class="form-control" value="{{ $toDate }}" required>
-                    </div>
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <label class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">Vendor Name</label>
-                        <select name="vendor_id[]" class="form-select choices-select" multiple data-placeholder="All Vendors">
-                            @foreach($vendors as $vendor)
-                                <option value="{{ $vendor->id }}" @selected(in_array((int) $vendor->id, $selectedVendorIds, true))>{{ $vendor->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <label class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">Store Name</label>
-                        <select name="store_id[]" class="form-select choices-select" multiple data-placeholder="All Stores">
-                            @foreach($stores as $store)
-                                <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $selectedStoreIds, true))>{{ $store->store_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                <div class="mess-filter-field">
+                    <select name="vendor_id[]" class="form-select choices-select" multiple data-placeholder="Vendor" aria-label="Vendor">
+                        @foreach($vendors as $vendor)
+                            <option value="{{ $vendor->id }}" @selected(in_array((int) $vendor->id, $selectedVendorIds, true))>{{ $vendor->name }}</option>
+                        @endforeach
+                    </select>
                 </div>
-                <div class="d-flex flex-wrap align-items-center gap-2 pt-3 mt-3 border-top border-light-subtle">
-                    <button type="submit" name="refresh" value="1" class="btn btn-primary btn-sm rounded-1 d-inline-flex align-items-center gap-1 px-3">
-                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">filter_list</span>
-                        <span>Apply filters</span>
-                    </button>
-                    <a href="{{ route('admin.mess.reports.stock-purchase-details') }}" class="btn btn-outline-secondary btn-sm rounded-1 d-inline-flex align-items-center gap-1 px-3">
-                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">refresh</span>
-                        <span>Reset</span>
-                    </a>
-                    <div class="vr d-none d-md-block text-secondary mx-1 align-self-stretch my-1" role="separator" aria-hidden="true"></div>
-                    <div class="btn-group shadow-sm rounded-1" role="group" aria-label="Print or download PDF">
-                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3 rounded-0 rounded-start-2" onclick="printStockPurchaseTable()" title="Print report or choose Save as PDF in print dialog">
-                            <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;" aria-hidden="true">print</span>
-                            <span>Print</span>
-                        </button>
-                        <a href="{{ route('admin.mess.reports.stock-purchase-details.pdf', request()->query()) }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3 rounded-0 rounded-end-2" title="Download PDF">
-                            <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;" aria-hidden="true">picture_as_pdf</span>
-                            <span>PDF</span>
-                        </a>
-                    </div>
-                    <a href="{{ route('admin.mess.reports.stock-purchase-details.excel', request()->query()) }}" class="btn btn-success btn-sm rounded-1 d-inline-flex align-items-center gap-1 px-3" title="Export to Excel">
-                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">table_view</span>
-                        <span>Export Excel</span>
-                    </a>
+                <div class="mess-filter-field">
+                    <select name="store_id[]" class="form-select choices-select" multiple data-placeholder="Store" aria-label="Store">
+                        @foreach($stores as $store)
+                            <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $selectedStoreIds, true))>{{ $store->store_name }}</option>
+                        @endforeach
+                    </select>
                 </div>
+                <button type="submit" name="refresh" value="1" class="btn btn-outline-primary">Apply</button>
+                @if(request()->hasAny(['from_date', 'to_date', 'vendor_id', 'store_id']))
+                    <a href="{{ route('admin.mess.reports.stock-purchase-details') }}" class="btn btn-outline-danger">Remove Filter</a>
+                @endif
             </form>
+        </x-mess-master-toolbar>
+
+        @if(isset($reportLineCount) && $reportLineCount > 0)
+            <p class="small text-body-secondary mb-2 no-print">
+                Showing page {{ $reportPage->currentPage() }} of {{ $reportPage->lastPage() }}
+                ({{ $reportPage->count() }} of {{ $reportLineCount }} lines).
+                Use PDF/Excel for full export; print uses current page only.
+            </p>
+        @endif
+        <div id="stock-purchase-table-wrap">
+            @include('admin.mess.reports.partials.stock-purchase-details-table', [
+                'purchaseDetailLines' => $purchaseDetailLines,
+                'reportPage' => $reportPage,
+                'reportGrandTotalAmount' => $reportGrandTotalAmount,
+                'reportLineCount' => $reportLineCount,
+            ])
         </div>
-    </div>
-
-    <!-- Report Area (full width below filters) -->
-    <div class="report-area">
-            <!-- Report content -->
-            <div class="report-content card border-0 shadow-sm rounded-3">
-                <div class="card-body p-3 p-lg-4">
-                    <!-- Report header (title centered, date bar, vendor) -->
-                    <div class="report-header text-center mb-4 rounded-3 p-4" style="background:linear-gradient(135deg,#f0f4f8 0%,#e8edf4 50%,#f0f4f8 100%);border:1px solid #e2e8f0;">
-                        <div class="d-flex align-items-center justify-content-center gap-2 mb-3">
-                            <span class="material-symbols-rounded text-primary" style="font-size:1.75rem;" aria-hidden="true">receipt_long</span>
-                            <h4 class="fw-bold mb-0 text-body text-uppercase mess-title-tracking">Stock Purchase Details</h4>
-                        </div>
-                        <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center justify-content-center gap-2 mb-2">
-                            <span class="badge rounded-1 bg-white text-body-emphasis fw-normal px-3 py-2 shadow-sm border">
-                                <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">date_range</span>
-                                {{ date('d-F-Y', strtotime($fromDate)) }} to {{ date('d-F-Y', strtotime($toDate)) }}
-                            </span>
-                        </div>
-                        @if(config('app.debug') && isset($reportTimingMs))
-                            <p class="small text-body-secondary mb-2 no-print" id="stock-purchase-timing-hint">
-                                Server: {{ $reportTimingMs }} ms
-                                @if(isset($reportCacheStatus))
-                                    · cache {{ $reportCacheStatus }}
-                                @endif
-                                @if(isset($reportLineCount))
-                                    · {{ $reportLineCount }} line(s)
-                                @endif
-                            </p>
-                        @endif
-                        <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center justify-content-center gap-2">
-                            <span class="badge rounded-1 bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-normal px-3 py-2 shadow-sm text-wrap text-start" style="max-width: min(100%, 42rem);">
-                                <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">person</span>
-                                <span class="fw-semibold">{{ $stockPurchasePrintVendorHeaderLabel }}</span> {{ $stockPurchasePrintVendorLine }}
-                            </span>
-                            <span class="badge rounded-1 bg-success-subtle text-success-emphasis border border-success-subtle fw-normal px-3 py-2 shadow-sm">
-                                <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">store</span>
-                                <span class="fw-semibold">Store:</span> {{ $stockPurchasePrintStoreDetails }}
-                            </span>
-                        </div>
-                    </div>
-
-                    @if(isset($reportLineCount) && $reportLineCount > 0)
-                        <p class="small text-body-secondary mb-2 no-print">
-                            Showing page {{ $reportPage->currentPage() }} of {{ $reportPage->lastPage() }}
-                            ({{ $reportPage->count() }} of {{ $reportLineCount }} lines).
-                            Use PDF/Excel for full export; print uses current page only.
-                        </p>
-                    @endif
-                    <div id="stock-purchase-table-wrap">
-                        @include('admin.mess.reports.partials.stock-purchase-details-table', [
-                            'purchaseDetailLines' => $purchaseDetailLines,
-                            'reportPage' => $reportPage,
-                            'reportGrandTotalAmount' => $reportGrandTotalAmount,
-                            'reportLineCount' => $reportLineCount,
-                        ])
-                    </div>
-                </div>
-            </div>
-
     </div>
 
     {{-- Tom Select for vendor & store dropdowns (deferred so table paints first) --}}
@@ -566,15 +486,10 @@ function printStockPurchaseTable() {
         position: sticky !important;
         top: 0;
         z-index: 10;
-        background: #0b4a7e !important;
-        color: #fff !important;
-        font-weight: 600;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        border-bottom: 2px solid #004a93;
-        /* fill gap caused by border-collapse:separate */
-        border-top: none;
-        border-left: 1px solid rgba(255,255,255,0.15);
-        border-right: 1px solid rgba(255,255,255,0.15);
+        background: var(--ds-line) !important;
+        color: var(--ds-ink) !important;
+        font-weight: 500;
+        border: 0;
     }
     .stock-purchase-report .stock-purchase-table-wrapper .stock-purchase-thead th:first-child {
         border-left: none;
@@ -594,15 +509,14 @@ function printStockPurchaseTable() {
 
 /* Table header */
 .stock-purchase-report .spr-th {
-    background: #0b4a7e;
-    color: #fff;
-    font-weight: 600;
+    background: var(--ds-line);
+    color: var(--ds-ink);
+    font-weight: 500;
     padding: 0.6rem 0.75rem;
     text-align: left;
     white-space: nowrap;
-    border-color: rgba(255, 255, 255, 0.15);
-    font-size: 0.8125rem;
-    letter-spacing: 0.01em;
+    border-color: var(--ds-line);
+    font-size: 0.75rem;
 }
 .stock-purchase-report .spr-th.text-end { text-align: right; }
 
@@ -612,34 +526,23 @@ function printStockPurchaseTable() {
 }
 
 /* Vendor section header */
-.stock-purchase-report .vendor-section-header-row .vendor-section-header {
-    background: linear-gradient(135deg, #eef2f6 0%, #e8edf2 100%);
-    color: #0f172a;
-    font-weight: 700;
-    padding: 0.6rem 0.75rem;
-    border-top: 2px solid #cbd5e1;
-    border-bottom: 1px solid #d8dee6;
+.stock-purchase-report .vendor-section-header-row .vendor-section-header,
+.stock-purchase-report .bill-header-row .bill-header {
+    background: rgba(var(--bs-primary-rgb), .1);
+    color: var(--ds-primary) !important;
+    font-weight: 500;
+    padding: 0.5rem 0.75rem;
+    border-color: var(--ds-surface);
     font-size: 0.8125rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
 }
 
 /* Vendor total row */
 .stock-purchase-report .vendor-total-row td {
     background: #e8edf4 !important;
     padding: 0.5rem 0.75rem;
-    border-top: 2px solid #0b4a7e;
-    color: #0b4a7e;
-    font-weight: 700;
-}
-
-/* Bill header */
-.stock-purchase-report .bill-header-row .bill-header {
-    background: linear-gradient(135deg, #475569 0%, #334155 100%);
-    color: #fff;
+    border-top: 1px solid var(--ds-line);
+    color: var(--ds-primary);
     font-weight: 600;
-    padding: 0.5rem 0.75rem;
-    border-color: #475569;
 }
 
 /* Bill total row */
@@ -653,9 +556,9 @@ function printStockPurchaseTable() {
 /* Grand total row */
 .stock-purchase-report .grand-total-row td {
     padding: 0.6rem 0.75rem;
-    border-top: 3px double #0b4a7e !important;
-    background: linear-gradient(135deg, #0b4a7e 0%, #1a6fa0 100%) !important;
-    color: #fff !important;
+    border-top: 1px solid var(--ds-line) !important;
+    background: var(--ds-surface-2) !important;
+    color: var(--ds-ink) !important;
     font-size: 0.875rem;
 }
 
@@ -806,7 +709,7 @@ function printStockPurchaseTable() {
         // Create sticky wrapper
         var stickyWrap = document.createElement('div');
         stickyWrap.className = 'spr-sticky-head';
-        stickyWrap.style.cssText = 'position:sticky;top:0;z-index:20;overflow:hidden;background:#0b4a7e;';
+        stickyWrap.style.cssText = 'position:sticky;top:0;z-index:20;overflow:hidden;background:var(--ds-line);';
 
         var stickyTable = document.createElement('table');
         stickyTable.style.cssText = 'width:100%;border-collapse:separate;border-spacing:0;margin:0;';
@@ -814,7 +717,7 @@ function printStockPurchaseTable() {
         var clonedThead = thead.cloneNode(true);
         // Force styles on cloned th
         clonedThead.querySelectorAll('th').forEach(function(th) {
-            th.style.cssText = 'background:#0b4a7e !important;color:#fff !important;font-weight:600;padding:0.6rem 0.75rem;border:1px solid rgba(255,255,255,0.15);border-bottom:2px solid #004a93;box-shadow:0 2px 4px rgba(0,0,0,0.1);font-size:0.8125rem;white-space:nowrap;';
+            th.style.cssText = 'background:var(--ds-line) !important;color:var(--ds-ink) !important;font-weight:500;padding:0.6rem 0.75rem;border:0;font-size:0.75rem;white-space:nowrap;';
         });
         // Preserve text-end alignment
         clonedThead.querySelectorAll('th.text-end').forEach(function(th) {

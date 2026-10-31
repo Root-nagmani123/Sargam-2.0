@@ -341,6 +341,14 @@
             '</' + tag + '>'
         );
 
+        // An explicit mount wins over the DataTables filter row.
+        var mountEl = document.getElementById('messColManagerMount-' + this.tableId);
+        if (mountEl) {
+            mountEl.innerHTML = '';
+            mountEl.appendChild($dropdown[0]);
+            return;
+        }
+
         if (this.mode === 'datatable' && this.dt) {
             var $wrapper = this.$table.closest('.dataTables_wrapper');
             var $filter = $wrapper.find('.dataTables_filter');
@@ -349,13 +357,6 @@
                 $filter.append($dropdown);
                 return;
             }
-        }
-
-        var mountEl = document.getElementById('messColManagerMount-' + this.tableId);
-        if (mountEl) {
-            mountEl.innerHTML = '';
-            mountEl.appendChild($dropdown[0]);
-            return;
         }
 
         var toolbarId = 'messColManagerToolbar-' + this.tableId;
@@ -559,11 +560,12 @@
         },
 
         _stripHtml: function (html) {
+            // Icon fonts render ligature text ("undo", "edit"); keep it out of exported cells.
+            var d = new DOMParser().parseFromString(String(html == null ? '' : html), 'text/html').body; // inert: no handlers run
+            d.querySelectorAll('i[class*="material"], span[class*="material"]').forEach(function (el) { el.remove(); });
             if (typeof window.messDataTableStripHtmlForSearch === 'function') {
-                return window.messDataTableStripHtmlForSearch(html);
+                return window.messDataTableStripHtmlForSearch(d.innerHTML);
             }
-            var d = document.createElement('div');
-            d.innerHTML = String(html || '');
             return (d.textContent || d.innerText || '').trim();
         },
 
@@ -582,8 +584,10 @@
                 headerCells = Array.from(theadRow.querySelectorAll('th, td'));
             }
 
+            // DataTables detaches the <th> of a hidden column, so DOM position != column index.
+            var dtForHeaders = ($ && $.fn.DataTable && $.fn.DataTable.isDataTable('#' + tableId)) ? $('#' + tableId).DataTable() : null;
             var headers = visibleIndexes.map(function (i) {
-                var th = headerCells[i];
+                var th = dtForHeaders ? dtForHeaders.column(i).header() : headerCells[i];
                 var label = '';
                 if (th) {
                     label = (th.getAttribute('data-mess-col-original') || '').trim();

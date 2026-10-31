@@ -107,14 +107,14 @@ class SubStoreController extends Controller
     private function buildSubStoreDatatableRow(SubStore $subStore, bool $canDelete): array
     {
         $nameCell = '<div class="fw-semibold">' . e($subStore->sub_store_name) . '</div>';
-        $statusCell = '<span class="badge bg-' . e($subStore->status_badge_class) . '">'
+        $statusCell = '<span class="mess-status mess-status--' . e($subStore->status_badge_class) . '">'
             . e($subStore->status_label) . '</span>';
 
-        $editBtn = '<button type="button" class="text-primary btn-edit-substore bg-transparent border-0"'
+        $editBtn = '<button type="button" class="mess-row-action btn-edit-substore"'
             . ' data-id="' . (int) $subStore->id . '"'
             . ' data-sub-store-name="' . e($subStore->sub_store_name) . '"'
             . ' data-status="' . e($subStore->status ?? 'active') . '"'
-            . ' title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>';
+            . ' title="Edit"><i class="material-icons material-symbol-rounded" aria-hidden="true">edit</i><span>Edit</span></button>';
 
         $deleteForm = '';
         if ($canDelete) {
@@ -123,12 +123,12 @@ class SubStoreController extends Controller
                 . ' onsubmit="return confirm(\'Are you sure you want to delete this sub store?\');">'
                 . '<input type="hidden" name="_token" value="' . e(csrf_token()) . '">'
                 . '<input type="hidden" name="_method" value="DELETE">'
-                . '<button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">'
-                . '<i class="material-icons material-symbol-rounded">delete</i></button>'
+                . '<button type="submit" class="mess-row-action mess-row-action--danger" title="Delete">'
+                . '<i class="material-icons material-symbol-rounded" aria-hidden="true">delete</i><span>Delete</span></button>'
                 . '</form>';
         }
 
-        $actions = '<div class="d-flex gap-2 flex-wrap">' . $editBtn . $deleteForm . '</div>';
+        $actions = '<div class="mess-row-actions">' . $editBtn . $deleteForm . '</div>';
 
         return [
             $nameCell,
@@ -139,7 +139,8 @@ class SubStoreController extends Controller
 
     public function create()
     {
-        return view('mess.sub-stores.create');
+        // The list page does this in a pop-up; the old standalone page was removed.
+        return redirect()->route('admin.mess.sub-stores.index');
     }
 
     public function store(Request $request)
@@ -155,8 +156,8 @@ class SubStoreController extends Controller
 
     public function edit($id)
     {
-        $subStore = SubStore::findOrFail($id);
-        return view('mess.sub-stores.edit', compact('subStore'));
+        // The list page does this in a pop-up; the old standalone page was removed.
+        return redirect()->route('admin.mess.sub-stores.index');
     }
 
     public function update(Request $request, $id)

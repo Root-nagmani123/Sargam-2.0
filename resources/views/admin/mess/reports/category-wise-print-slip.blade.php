@@ -1,11 +1,12 @@
 @extends('admin.layouts.master')
 @section('title', 'Sale Voucher Report')
 @section('content')
+@include('admin.mess.reports.partials.report-styles')
 @php
     $cwBuyerReqTop = is_array(request('buyer_name')) ? request('buyer_name') : (request('buyer_name') !== null && request('buyer_name') !== '' ? [request('buyer_name')] : []);
     $preservedBuyerNames = array_values(array_filter(array_map(static fn ($n) => trim((string) $n), $cwBuyerReqTop), static fn ($n) => $n !== ''));
 @endphp
-<div class="container-fluid py-3 py-md-4 {{ request('print_all') ? 'print-all-mode' : '' }}">
+<div class="container-fluid mess-master-page mess-report-page {{ request('print_all') ? 'print-all-mode' : '' }}">
     <x-breadcrum title="Sale Voucher Report"></x-breadcrum>
     @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show no-print" role="alert">
@@ -13,145 +14,111 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
+    @php $cwExportQs = request()->query(); $cwExportQuery = $cwExportQs ? '?' . http_build_query($cwExportQs) : ''; @endphp
+    @php
+        $cwSlugs = array_values(array_unique(array_filter(array_map(
+            static fn ($s) => strtolower(trim((string) $s)),
+            is_array(request('client_type_slug')) ? request('client_type_slug') : (request('client_type_slug') !== null && request('client_type_slug') !== '' ? [request('client_type_slug')] : [])
+        ))));
+        $selClientPks = array_values(array_filter(array_map('intval', (array) request('client_type_pk', []))));
+        $selCoursePks = array_values(array_filter(array_map('intval', (array) request('course_master_pk', []))));
+        $cwNeedCourse = count(array_intersect($cwSlugs, ['ot', 'course'])) > 0;
+        $cwNeedCat = count(array_diff($cwSlugs, ['ot', 'course'])) > 0;
+        $cwMergedCats = collect();
+        foreach ($cwSlugs as $sg) {
+            if (in_array($sg, ['ot', 'course'], true)) {
+                continue;
+            }
+            if (isset($clientTypeCategories[$sg])) {
+                $cwMergedCats = $cwMergedCats->concat($clientTypeCategories[$sg]);
+            }
+        }
+        $cwMergedCats = $cwMergedCats->unique('id')->values();
+    @endphp
     @if(!request('print_all'))
-    <!-- Header Section -->
-    <div class="card mb-4 border-0 shadow-sm rounded-3 no-print cw-sale-voucher-filter-card">
-        <div class="card-header bg-white border-0 pb-0">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <div>
-                    <h5 class="mb-0 fw-semibold text-dark">Filter Sale Voucher Report</h5>
-                    <p class="mb-0 text-muted small">Refine results by date, client type &amp; buyer name</p>
-                </div>
-                <span class="badge bg-light text-secondary fw-normal d-flex align-items-center">
-                    <span class="material-icons me-1" style="font-size: 16px;">info</span>
-                    Smart filters
-                </span>
-            </div>
-        </div>
-        <div class="card-body pt-3">
-            @php
-                $cwSlugs = array_values(array_unique(array_filter(array_map(
-                    static fn ($s) => strtolower(trim((string) $s)),
-                    is_array(request('client_type_slug')) ? request('client_type_slug') : (request('client_type_slug') !== null && request('client_type_slug') !== '' ? [request('client_type_slug')] : [])
-                ))));
-                $selClientPks = array_values(array_filter(array_map('intval', (array) request('client_type_pk', []))));
-                $selCoursePks = array_values(array_filter(array_map('intval', (array) request('course_master_pk', []))));
-                $cwNeedCourse = count(array_intersect($cwSlugs, ['ot', 'course'])) > 0;
-                $cwNeedCat = count(array_diff($cwSlugs, ['ot', 'course'])) > 0;
-                $cwMergedCats = collect();
-                foreach ($cwSlugs as $sg) {
-                    if (in_array($sg, ['ot', 'course'], true)) {
-                        continue;
-                    }
-                    if (isset($clientTypeCategories[$sg])) {
-                        $cwMergedCats = $cwMergedCats->concat($clientTypeCategories[$sg]);
-                    }
-                }
-                $cwMergedCats = $cwMergedCats->unique('id')->values();
-            @endphp
-            <form method="GET" action="{{ route('admin.mess.reports.category-wise-print-slip') }}" id="filterForm">
-                <div class="row g-3 g-md-4">
-                    <div class="col-12 col-md-3 col-lg-2">
-                        <label class="form-label fw-semibold small text-uppercase text-muted mb-1">From Date</label>
-                        <input type="date" name="from_date" class="form-control" value="{{ request('from_date') }}">
-                    </div>
-                    <div class="col-12 col-md-3 col-lg-2">
-                        <label class="form-label fw-semibold small text-uppercase text-muted mb-1">To Date</label>
-                        <input type="date" name="to_date" class="form-control" value="{{ request('to_date') }}">
-                    </div>
-                    <div class="col-12 col-md-3 col-lg-2">
-                        <label for="clientTypeSlug" class="form-label fw-semibold small text-uppercase text-muted mb-1">Employee / OT / Course</label>
-                        <select name="client_type_slug[]" id="clientTypeSlug" class="form-select w-100 cw-report-multiselect" multiple data-placeholder="All Client Types">
-                            @foreach($clientTypes as $key => $label)
-                                <option value="{{ $key }}" @selected(in_array($key, $cwSlugs, true))>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-12 col-md-3 col-lg-3" id="wrapClientTypePks" style="{{ $cwNeedCat ? '' : 'display:none' }}">
-                        <label for="clientTypePk" class="form-label fw-semibold small text-uppercase text-muted mb-1">Client category</label>
-                        <select id="clientTypePk" name="client_type_pk[]" class="form-select w-100 cw-report-multiselect" multiple data-placeholder="All categories">
-                            @foreach($cwMergedCats as $category)
-                                <option value="{{ $category->id }}" data-client-name="{{ strtolower($category->client_name ?? '') }}" @selected(in_array((int) $category->id, $selClientPks, true))>{{ $category->client_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-12 col-md-3 col-lg-3" id="wrapCoursePks" style="{{ $cwNeedCourse ? '' : 'display:none' }}">
-                        <label for="courseMasterPk" class="form-label fw-semibold small text-uppercase text-muted mb-1">Course (OT / Course)</label>
-                        <select id="courseMasterPk" name="course_master_pk[]" class="form-select w-100 cw-report-multiselect" multiple data-placeholder="All courses">
-                            @isset($otCourses)
-                                @foreach($otCourses as $course)
-                                    <option value="{{ $course->pk }}" @selected(in_array((int) $course->pk, $selCoursePks, true))>{{ $course->course_name }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
-                                @endforeach
-                            @endisset
-                        </select>
-                    </div>
-                    <div class="col-12 col-md-3 col-lg-3">
-                        <label for="clientTypePkBuyer" class="form-label fw-semibold small text-uppercase text-muted mb-1">Buyer Name (Selling Voucher)</label>
-                        <select name="buyer_name[]" id="clientTypePkBuyer" class="form-select w-100 cw-report-multiselect" multiple data-placeholder="All Buyers">
-                            @if(in_array('employee', $cwSlugs, true) && count($selClientPks) === 1 && isset($clientTypeCategories['employee']))
-                                @php
-                                    $cat = $clientTypeCategories['employee']->firstWhere('id', $selClientPks[0]);
-                                    $catName = $cat ? strtolower(trim($cat->client_name ?? '')) : '';
-                                @endphp
-                                @if($catName === 'academy staff' && isset($employees))
-                                    @foreach($employees as $e)
-                                        <option value="{{ $e->full_name }}" @selected(in_array($e->full_name, $preservedBuyerNames, true))>{{ $e->full_name }}</option>
-                                    @endforeach
-                                @elseif($catName === 'faculty' && isset($faculties))
-                                    @foreach($faculties as $f)
-                                        <option value="{{ $f->full_name }}" @selected(in_array($f->full_name, $preservedBuyerNames, true))>{{ $f->full_name }}</option>
-                                    @endforeach
-                                @elseif($catName === 'mess staff' && isset($messStaff))
-                                    @foreach($messStaff as $m)
-                                        <option value="{{ $m->full_name }}" @selected(in_array($m->full_name, $preservedBuyerNames, true))>{{ $m->full_name }}</option>
-                                    @endforeach
-                                @endif
-                            @elseif(in_array('course', $cwSlugs, true) && isset($courseBuyerNames) && $courseBuyerNames->isNotEmpty())
-                                @foreach($courseBuyerNames as $buyerName)
-                                    <option value="{{ $buyerName }}" @selected(in_array($buyerName, $preservedBuyerNames, true))>{{ $buyerName }}</option>
-                                @endforeach
-                            @elseif(in_array('other', $cwSlugs, true) && isset($otherBuyerNames) && $otherBuyerNames->isNotEmpty())
-                                @foreach($otherBuyerNames as $buyerName)
-                                    <option value="{{ $buyerName }}" @selected(in_array($buyerName, $preservedBuyerNames, true))>{{ $buyerName }}</option>
-                                @endforeach
-                            @elseif(in_array('section', $cwSlugs, true) && isset($sectionBuyerNames) && $sectionBuyerNames->isNotEmpty())
-                                @foreach($sectionBuyerNames as $buyerName)
-                                    <option value="{{ $buyerName }}" @selected(in_array($buyerName, $preservedBuyerNames, true))>{{ $buyerName }}</option>
-                                @endforeach
-                            @endif
-                        </select>
-                    </div>
-                </div>
-                <div class="mt-3 pt-2 border-top d-flex flex-wrap gap-2 align-items-center">
-                    <button type="submit" name="refresh" value="1" class="btn btn-primary d-inline-flex align-items-center">
-                        <span class="material-icons me-1" style="font-size: 18px;">filter_list</span>
-                        Apply Filters
-                    </button>
-                    <a href="{{ route('admin.mess.reports.category-wise-print-slip') }}" class="btn btn-outline-secondary d-inline-flex align-items-center">
-                        <span class="material-icons me-1" style="font-size: 18px;">refresh</span>
-                        Reset
-                    </a>
-                    <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center" id="btnPrintAll" title="Print or Save as PDF">
-                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">print</span>
-                        Print
-                    </button>
-                    @php $cwExportQs = request()->query(); $cwExportQuery = $cwExportQs ? '?' . http_build_query($cwExportQs) : ''; @endphp
-                    <a href="{{ route('admin.mess.reports.category-wise-print-slip.excel') }}{{ $cwExportQuery }}" class="btn btn-success d-inline-flex align-items-center" title="Export to Excel">
-                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">table_view</span>
-                        Export Excel
-                    </a>
-                    <a href="{{ route('admin.mess.reports.category-wise-print-slip.pdf') }}{{ $cwExportQuery }}" class="btn btn-danger d-inline-flex align-items-center" title="Download PDF">
-                        <span class="material-symbols-rounded me-1" style="font-size: 18px;">picture_as_pdf</span>
-                        Download PDF
-                    </a>
-                </div>
-            </form>
-        </div>
-    </div>
+    @include('admin.mess.reports.partials.report-export-bar', [
+        'excelUrl' => route('admin.mess.reports.category-wise-print-slip.excel') . $cwExportQuery,
+        'pdfUrl' => route('admin.mess.reports.category-wise-print-slip.pdf') . $cwExportQuery,
+        'printId' => 'btnPrintAll',
+    ])
     @endif
 
-    <div class="card">
-        <div class="card-body">
+    <div class="ds-card mess-dt-card">
+        @if(!request('print_all'))
+        <x-mess-master-toolbar table-id="cwSaleVoucherReport" :columns="false" :search="false">
+            <form method="GET" action="{{ route('admin.mess.reports.category-wise-print-slip') }}" id="filterForm"
+                  class="mess-filterbar cw-sale-voucher-filter-card no-print" aria-label="Sale voucher report filters">
+                <span class="mess-filterbar-label">Filter</span>
+                <div class="mess-filter-range">
+                    <input type="date" name="from_date" class="form-control" value="{{ request('from_date') }}" aria-label="From date">
+                    <span aria-hidden="true">&ndash;</span>
+                    <input type="date" name="to_date" class="form-control" value="{{ request('to_date') }}" aria-label="To date">
+                </div>
+                <div class="mess-filter-field">
+                <select name="client_type_slug[]" id="clientTypeSlug" class="form-select cw-report-multiselect" multiple aria-label="Client type" data-placeholder="Client Type">
+                    @foreach($clientTypes as $key => $label)
+                        <option value="{{ $key }}" @selected(in_array($key, $cwSlugs, true))>{{ $label }}</option>
+                    @endforeach
+                </select>
+                </div>
+                <div class="mess-filter-field" id="wrapClientTypePks" style="{{ $cwNeedCat ? '' : 'display:none' }}">
+                <select id="clientTypePk" name="client_type_pk[]" class="form-select cw-report-multiselect" multiple aria-label="Client category" data-placeholder="Client Category">
+                    @foreach($cwMergedCats as $category)
+                        <option value="{{ $category->id }}" data-client-name="{{ strtolower($category->client_name ?? '') }}" @selected(in_array((int) $category->id, $selClientPks, true))>{{ $category->client_name }}</option>
+                    @endforeach
+                </select>
+                </div>
+                <div class="mess-filter-field" id="wrapCoursePks" style="{{ $cwNeedCourse ? '' : 'display:none' }}">
+                <select id="courseMasterPk" name="course_master_pk[]" class="form-select cw-report-multiselect" multiple aria-label="Course" data-placeholder="Course">
+                    @isset($otCourses)
+                        @foreach($otCourses as $course)
+                            <option value="{{ $course->pk }}" @selected(in_array((int) $course->pk, $selCoursePks, true))>{{ $course->course_name }} [{{ (int)($course->active_inactive ?? 0) === 1 ? 'Active' : 'Archived' }}]</option>
+                        @endforeach
+                    @endisset
+                </select>
+                </div>
+                <div class="mess-filter-field">
+                <select name="buyer_name[]" id="clientTypePkBuyer" class="form-select cw-report-multiselect" multiple aria-label="Buyer name" data-placeholder="Buyer Name">
+                    @if(in_array('employee', $cwSlugs, true) && count($selClientPks) === 1 && isset($clientTypeCategories['employee']))
+                        @php
+                            $cat = $clientTypeCategories['employee']->firstWhere('id', $selClientPks[0]);
+                            $catName = $cat ? strtolower(trim($cat->client_name ?? '')) : '';
+                        @endphp
+                        @if($catName === 'academy staff' && isset($employees))
+                            @foreach($employees as $e)
+                                <option value="{{ $e->full_name }}" @selected(in_array($e->full_name, $preservedBuyerNames, true))>{{ $e->full_name }}</option>
+                            @endforeach
+                        @elseif($catName === 'faculty' && isset($faculties))
+                            @foreach($faculties as $f)
+                                <option value="{{ $f->full_name }}" @selected(in_array($f->full_name, $preservedBuyerNames, true))>{{ $f->full_name }}</option>
+                            @endforeach
+                        @elseif($catName === 'mess staff' && isset($messStaff))
+                            @foreach($messStaff as $m)
+                                <option value="{{ $m->full_name }}" @selected(in_array($m->full_name, $preservedBuyerNames, true))>{{ $m->full_name }}</option>
+                            @endforeach
+                        @endif
+                    @elseif(in_array('course', $cwSlugs, true) && isset($courseBuyerNames) && $courseBuyerNames->isNotEmpty())
+                        @foreach($courseBuyerNames as $buyerName)
+                            <option value="{{ $buyerName }}" @selected(in_array($buyerName, $preservedBuyerNames, true))>{{ $buyerName }}</option>
+                        @endforeach
+                    @elseif(in_array('other', $cwSlugs, true) && isset($otherBuyerNames) && $otherBuyerNames->isNotEmpty())
+                        @foreach($otherBuyerNames as $buyerName)
+                            <option value="{{ $buyerName }}" @selected(in_array($buyerName, $preservedBuyerNames, true))>{{ $buyerName }}</option>
+                        @endforeach
+                    @elseif(in_array('section', $cwSlugs, true) && isset($sectionBuyerNames) && $sectionBuyerNames->isNotEmpty())
+                        @foreach($sectionBuyerNames as $buyerName)
+                            <option value="{{ $buyerName }}" @selected(in_array($buyerName, $preservedBuyerNames, true))>{{ $buyerName }}</option>
+                        @endforeach
+                    @endif
+                </select>
+                </div>
+                <button type="submit" name="refresh" value="1" class="btn btn-outline-primary">Apply</button>
+                @if(request()->hasAny(['from_date', 'to_date', 'client_type_slug', 'client_type_pk', 'course_master_pk', 'buyer_name']))
+                    <a href="{{ route('admin.mess.reports.category-wise-print-slip') }}" class="btn btn-outline-danger">Remove Filter</a>
+                @endif
+            </form>
+        </x-mess-master-toolbar>
+        @endif
             @if(config('app.debug') && isset($reportTimingMs))
                 <p class="small text-body-secondary mb-2 no-print" id="cw-sale-voucher-timing-hint">
                     Server: {{ $reportTimingMs }} ms
@@ -172,11 +139,28 @@
                     'freezeSaleVoucherTableHeader' => $freezeSaleVoucherTableHeader ?? false,
                 ])
             </div>
-        </div>
     </div>
 </div>
 
 <style>
+    /* Screen (Figma): the LBSNAA heading + title bar belong to the printed sheet; on screen each
+       buyer section opens with a light-blue banner. Print, print_all and the PDF view are untouched. */
+    @media screen {
+        .mess-report-page:not(.print-all-mode) .print-page-wrap > .report-header { display: none; }
+        .mess-report-page .report-buyer-client-banner { border: 0 !important; }
+        .mess-report-page .report-buyer-client-banner td {
+            background: rgba(var(--bs-primary-rgb), .1) !important;
+            color: var(--ds-primary) !important;
+            font-weight: 500 !important;
+            font-size: .8125rem;
+        }
+        .mess-report-page .print-slip-table thead th {
+            background: var(--ds-line) !important;
+            color: var(--ds-ink) !important;
+            font-weight: 500;
+        }
+    }
+
     /* Report header – same on screen and print */
     .report-mess-title {
         color: #000;
@@ -270,7 +254,7 @@
             position: sticky;
             top: 0;
             z-index: 3;
-            background: #e8f4fc !important;
+            background: var(--ds-line) !important;
             background-clip: padding-box;
             box-shadow: 0 1px 0 rgba(0, 74, 147, 0.12);
         }
@@ -281,7 +265,7 @@
             position: sticky;
             top: 0;
             z-index: 2;
-            background: #e8f4fc !important;
+            background: var(--ds-line) !important;
         }
     }
     .print-slip-table thead th {

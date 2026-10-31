@@ -28,6 +28,8 @@ use App\Exports\Mess\PurchaseSaleQuantityExport;
 use App\Exports\Mess\CategoryWisePrintSlipExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Mpdf\HTMLParserMode;
+use Mpdf\Mpdf;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Support\DataTableRedisCache;
 use App\Support\DataTableSearchHelper;
@@ -1166,6 +1168,44 @@ class ReportController extends Controller
 
 
     /**
+     * mPDF set up like the app's other mPDF exports (ExportsBrandedGrid::brandedGridMpdf()):
+     * Hindi buyer names shape correctly, Latin stays sans. Margins here, not in an @page rule,
+     * which mPDF misreads.
+     */
+    private function messReportMpdf(string $format, int $sideMarginMm): Mpdf
+    {
+        $tempDir = storage_path('app/mpdf-temp');
+        if (! is_dir($tempDir)) {
+            @mkdir($tempDir, 0775, true);
+        }
+        // mPDF refuses HTML over pcre.backtrack_limit (1 MB default); a month's Item Report is ~0.7 MB.
+        if ((int) ini_get('pcre.backtrack_limit') < 50000000) {
+            ini_set('pcre.backtrack_limit', '50000000');
+        }
+
+        return new Mpdf([
+            'mode' => 'utf-8',
+            'format' => $format,
+            'tempDir' => $tempDir,
+            'autoScriptToLang' => true,
+            'autoLangToFont' => true,
+            'default_font' => 'dejavusans',
+            'margin_top' => 12,
+            'margin_bottom' => 12,
+            'margin_left' => $sideMarginMm,
+            'margin_right' => $sideMarginMm,
+        ]);
+    }
+
+    private function messReportPdfDownload(Mpdf $mpdf, string $fileName)
+    {
+        return response($mpdf->Output('', 'S'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+        ]);
+    }
+
+    /**
      * LBSNAA header logo for the mess PDF headers. Local assets only.
      *
      * Review finding F-027. This used to try the local files, then fetch
@@ -1423,18 +1463,13 @@ class ReportController extends Controller
             'lbsnaaLogoSrc' => $this->messPdfLbsnaaLogoForDompdf(),
         ];
 
-        $pdf = Pdf::loadView('admin.mess.reports.pdf.purchase-sale-quantity-pdf', $data)
-            ->setPaper('a4', 'landscape')
-            ->setOptions([
-                'defaultFont'           => 'DejaVu Sans',
-                'isHtml5ParserEnabled'  => true,
-                'isRemoteEnabled'       => false,
-                'dpi'                   => 96,
-            ]);
+        // mPDF, not DomPDF: DomPDF needed 520 MB for a month of all ~1,170 items and died at the 512M limit.
+        $mpdf = $this->messReportMpdf('A4-L', 10);
+        $mpdf->WriteHTML(view('admin.mess.reports.pdf.purchase-sale-quantity-pdf', $data)->render());
 
         $fileName = 'purchase-sale-quantity-' . $fromDate . '-to-' . $toDate . '-' . now()->format('Y-m-d_His') . '.pdf';
 
-        return $pdf->download($fileName);
+        return $this->messReportPdfDownload($mpdf, $fileName);
     }
 
     /**
@@ -1503,29 +1538,44 @@ class ReportController extends Controller
             ? \Carbon\Carbon::parse($request->to_date)->format('d-F-Y')
             : null;
 
-        $data = [
-            'sectionsToShow' => $report['allBuyersSections'],
-            'fromDateFormatted' => $fromDateFormatted,
-            'toDateFormatted' => $toDateFormatted,
-            'otCourses' => $report['otCourses'],
-            'grandTotal' => (float) $report['grandTotal'],
-            'emblemSrc' => $this->messPdfIndiaEmblemForDompdf(),
-            'lbsnaaLogoSrc' => $this->messPdfLbsnaaLogoForDompdf(),
-        ];
+        // One buyer section per WriteHTML() call. DomPDF laid out the whole document at once: a month
+        // (220 buyers, ~900 pages) took 4.8 GB and 13 minutes. mPDF writes it chunk by chunk.
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(300);
 
-        $pdf = Pdf::loadView('admin.mess.reports.pdf.category-wise-print-slip-pdf', $data)
-            ->setPaper('a4', 'portrait')
-            ->setOptions([
-                'defaultFont' => 'DejaVu Sans',
-                'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => false,
-                'isPhpEnabled' => false,
-                'chroot' => realpath(public_path()) ?: public_path(),
-                'dpi' => 96,
-            ]);
+        $mpdf = $this->messReportMpdf('A4', 12);
+        $mpdf->WriteHTML(view('admin.mess.reports.pdf.category-wise-print-slip-pdf-styles')->render(), HTMLParserMode::HEADER_CSS);
+
+        $sections = collect($report['allBuyersSections'])->values();
+        $body = [
+            'fromDateFormatted' => $fromDateFormatted ?? 'Start',
+            'toDateFormatted' => $toDateFormatted ?? 'End',
+            'otCourses' => $report['otCourses'] ?? collect(),
+            'grandTotal' => (float) $report['grandTotal'],
+            'filtersApplied' => true,
+            'printPageBreakPerBuyer' => false,
+            'showBrandingHeader' => true,
+            // File paths, not data URIs: the header repeats once per buyer section (see pdf_local_image_path()).
+            'emblemSrc' => pdf_emblem_src(true),
+            'lbsnaaLogoSrc' => pdf_lbsnaa_logo_src(true),
+            'dompdfSafeTables' => true,
+        ];
+        // An empty report still renders the partial once, for its "no vouchers" message.
+        $chunks = $sections->isEmpty() ? [collect()] : $sections->map(fn ($section) => collect([$section]))->all();
+        foreach (array_values($chunks) as $i => $chunk) {
+            if ($i > 0) {
+                $mpdf->AddPage();
+            }
+            $html = view('admin.mess.reports.partials.category-wise-print-slip-body', $body + [
+                'sectionsToShow' => $chunk,
+                'showGrandTotal' => $i === count($chunks) - 1,
+            ])->render();
+            $mpdf->WriteHTML('<div class="cw-slip-pdf-inner container-fluid">' . $html . '</div>', HTMLParserMode::HTML_BODY);
+        }
 
         $fileName = 'category-wise-print-slip-' . now()->format('Y-m-d_His') . '.pdf';
-        return $pdf->download($fileName);
+
+        return $this->messReportPdfDownload($mpdf, $fileName);
     }
 
     /**
@@ -3244,11 +3294,11 @@ class ReportController extends Controller
             $alert = (float) ($row['alert_quantity'] ?? 0);
 
             if ($remaining <= 0) {
-                $statusBadge = '<span class="badge text-bg-danger rounded-pill px-3 py-2">Out of Stock</span>';
+                $statusBadge = '<span class="mess-status mess-status--danger">Out of Stock</span>';
             } elseif ($remaining <= $alert) {
-                $statusBadge = '<span class="badge text-bg-warning text-dark rounded-pill px-3 py-2">Below Minimum</span>';
+                $statusBadge = '<span class="mess-status mess-status--warning">Below Minimum</span>';
             } else {
-                $statusBadge = '<span class="badge text-bg-success rounded-pill px-3 py-2">OK</span>';
+                $statusBadge = '<span class="mess-status mess-status--success">OK</span>';
             }
 
             $data[] = [

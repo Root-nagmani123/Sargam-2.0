@@ -1,24 +1,4 @@
 <div class="card border-0 stock-summary-table-root ssr-card">
-    <div class="ssr-card-topbar" aria-hidden="true"></div>
-    <div class="ssr-toolbar px-3 px-lg-4 py-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
-        <div class="d-flex align-items-center gap-3 min-w-0">
-            <div class="ssr-toolbar-icon d-none d-sm-flex" aria-hidden="true">
-                <span class="material-symbols-rounded">table_chart</span>
-            </div>
-            <div class="min-w-0">
-                <p class="ssr-toolbar-title mb-0 text-truncate">Stock movement summary</p>
-                <p class="ssr-toolbar-sub mb-0 small text-body-secondary">Opening, purchase, sale and closing by item</p>
-            </div>
-        </div>
-        <div class="d-flex align-items-center gap-2 flex-shrink-0">
-            <span class="ssr-count-badge" title="Total items in this report">
-                <span class="material-symbols-rounded ssr-count-badge-icon" aria-hidden="true">inventory_2</span>
-                <span class="ssr-count-badge-label">{{ isset($reportPage) ? $reportPage->total() : (isset($reportData) ? count($reportData) : 0) }}</span>
-                <span class="ssr-count-badge-text">items</span>
-            </span>
-        </div>
-    </div>
-
     <p class="stock-summary-scroll-hint no-print d-md-none mb-0 px-3 pb-2 small" role="note">
         <span class="ssr-scroll-hint-inner">
             <span class="material-symbols-rounded ssr-scroll-hint-icon" aria-hidden="true">swap_horiz</span>

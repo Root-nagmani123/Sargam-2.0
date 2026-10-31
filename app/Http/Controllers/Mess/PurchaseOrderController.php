@@ -224,25 +224,25 @@ class PurchaseOrderController extends Controller
         $rowStart = $start + 1;
 
         $data = $purchaseOrders->map(function ($po, $index) use ($canDeletePurchaseOrder, $canApprove, $canEdit, $rowStart, $forPrint) {
-            $statusBadgeClass = $po->status === 'approved'
-                ? 'text-bg-success'
-                : ($po->status === 'rejected' ? 'text-bg-danger' : ($po->status === 'completed' ? 'text-bg-primary' : 'text-bg-warning'));
+            $statusTone = $po->status === 'approved'
+                ? 'success'
+                : ($po->status === 'rejected' ? 'danger' : ($po->status === 'completed' ? 'primary' : 'warning'));
 
             $row = [
-                '<span class="ps-4 d-inline-block text-body-secondary fw-medium">' . ($rowStart + $index) . '</span>',
-                '<span class="fw-semibold text-body">' . e($po->po_number) . '</span>',
-                '<span class="text-body-secondary">' . e(optional($po->vendor)->name ?? 'N/A') . '</span>',
-                '<span class="text-body-secondary">' . e(optional($po->store)->store_name ?? 'N/A') . '</span>',
-                '<span class="badge rounded-1 ' . $statusBadgeClass . ' px-3 py-1 fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.02em;">' . e(ucfirst($po->status)) . '</span>',
+                (string) ($rowStart + $index),
+                e($po->po_number),
+                e(optional($po->vendor)->name ?? 'N/A'),
+                e(optional($po->store)->store_name ?? 'N/A'),
+                '<span class="mess-status mess-status--' . $statusTone . '">' . e(ucfirst($po->status)) . '</span>',
             ];
 
             if (! $forPrint) {
-                $viewBtn = '<button type="button" class="btn btn-sm btn-outline-primary btn-view-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="View">'
-                    . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">visibility</i>'
+                $viewBtn = '<button type="button" class="mess-row-action btn-view-po po-action-btn" data-po-id="' . $po->id . '" title="View">'
+                    . '<i class="material-symbols-rounded" aria-hidden="true">visibility</i><span>View</span>'
                     . '</button>';
                 // Only users update() lets save see Edit, so nobody fills the form just to be refused.
-                $editBtn = (! $canEdit || $po->status === 'rejected') ? '' : '<button type="button" class="btn btn-sm btn-outline-info btn-edit-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="' . ($po->status === 'approved' ? 'Edit bill details' : 'Edit') . '">'
-                    . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">edit</i>'
+                $editBtn = (! $canEdit || $po->status === 'rejected') ? '' : '<button type="button" class="mess-row-action btn-edit-po po-action-btn" data-po-id="' . $po->id . '" title="' . ($po->status === 'approved' ? 'Edit bill details' : 'Edit') . '">'
+                    . '<i class="material-symbols-rounded" aria-hidden="true">edit</i><span>Edit</span>'
                     . '</button>';
                 $deleteForm = '';
                 $approvalForms = '';
@@ -252,14 +252,14 @@ class PurchaseOrderController extends Controller
                     $poNumber = e(addslashes($po->po_number));
                     $approvalForms = '<form action="' . e(route('admin.mess.purchaseorders.approve', $po->id)) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Approve purchase order ' . $poNumber . '? Its items go into stock and can be sold, and its quantities and rates are locked.\');">'
                         . '<input type="hidden" name="_token" value="' . e($csrf) . '">'
-                        . '<button type="submit" class="btn btn-sm btn-outline-success rounded-2 po-action-btn" title="Approve">'
-                        . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">check_circle</i>'
+                        . '<button type="submit" class="mess-row-action mess-row-action--success po-action-btn" title="Approve">'
+                        . '<i class="material-symbols-rounded" aria-hidden="true">check_circle</i><span>Approve</span>'
                         . '</button>'
                         . '</form>'
                         . '<form action="' . e(route('admin.mess.purchaseorders.reject', $po->id)) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Reject purchase order ' . $poNumber . '? Its items will not go into stock.\');">'
                         . '<input type="hidden" name="_token" value="' . e($csrf) . '">'
-                        . '<button type="submit" class="btn btn-sm btn-outline-danger rounded-2 po-action-btn" title="Reject">'
-                        . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">cancel</i>'
+                        . '<button type="submit" class="mess-row-action mess-row-action--danger po-action-btn" title="Reject">'
+                        . '<i class="material-symbols-rounded" aria-hidden="true">cancel</i><span>Reject</span>'
                         . '</button>'
                         . '</form>';
                 }
@@ -281,7 +281,7 @@ class PurchaseOrderController extends Controller
                 //         . '</form>';
                 // }
 
-                $row[] = '<div class="po-actions-cell d-inline-flex align-items-center justify-content-end gap-1">' . $viewBtn . $editBtn . $approvalForms . $deleteForm . '</div>';
+                $row[] = '<div class="po-actions-cell mess-row-actions">' . $viewBtn . $editBtn . $approvalForms . $deleteForm . '</div>';
             }
 
             return $row;
@@ -297,18 +297,8 @@ class PurchaseOrderController extends Controller
 
     public function create(Request $request)
     {
-        $vendors = Vendor::orderBy('name')->get(['id', 'name']);
-        $stores = Store::where('status', 1)->orderBy('store_name')->get(['id', 'store_name']);
-        $itemSubcategories = ItemSubcategory::active()
-            ->orderBy('name')
-            ->get(ItemSubcategory::listSelectColumns())
-            ->map(fn ($s) => (object) [
-                'id' => $s->id,
-                'item_name' => $s->item_name ?? $s->name ?? '—',
-            ]);
-        $po_number = $this->generatePoNumber();
-
-        return view('mess.purchaseorders.create', compact('vendors', 'stores', 'itemSubcategories', 'po_number'));
+        // The list page does this in a pop-up; the old standalone page was removed.
+        return redirect()->route('admin.mess.purchaseorders.index');
     }
 
     public function store(Request $request)
@@ -445,8 +435,8 @@ class PurchaseOrderController extends Controller
 
     public function show($id)
     {
-        $purchaseOrder = PurchaseOrder::with(['vendor', 'store', 'creator', 'approver', 'items.itemSubcategory'])->findOrFail($id);
-        return view('mess.purchaseorders.show', compact('purchaseOrder'));
+        // The list page does this in a pop-up; the old standalone page was removed.
+        return redirect()->route('admin.mess.purchaseorders.index');
     }
 
     public function edit($id)

@@ -200,6 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
         @if($columnManager && $colReorder)
         colReorder: { realtime: false, fixedColumnsRight: {{ count($actionColumnIndices) > 0 ? 1 : 0 }} },
         @endif
+        pagingType: 'simple_numbers',
         dom: {!! json_encode($dom) !!},
         language: {
             search: '',
@@ -209,7 +210,7 @@ document.addEventListener('DOMContentLoaded', function() {
             infoEmpty: 'No {{ $infoLabel }}',
             emptyTable: 'No {{ $infoLabel }}',
             infoFiltered: '(filtered from _MAX_ total)',
-            paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+            paginate: { first: 'First', last: 'Last', next: '›', previous: '‹' }
         },
         columnDefs: columnDefsMerged,
         initComplete: function(settings) {
@@ -248,6 +249,7 @@ document.addEventListener('DOMContentLoaded', function() {
         @if($columnManager)
         colReorder: { realtime: false, fixedColumnsRight: {{ count($actionColumnIndices) > 0 ? 1 : 0 }} },
         @endif
+        pagingType: 'simple_numbers',
         dom: {!! json_encode($dom) !!},
         language: {
             search: '',
@@ -257,7 +259,7 @@ document.addEventListener('DOMContentLoaded', function() {
             infoEmpty: 'No {{ $infoLabel }}',
             emptyTable: 'No {{ $infoLabel }}',
             infoFiltered: '(filtered from _MAX_ total)',
-            paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+            paginate: { first: 'First', last: 'Last', next: '›', previous: '‹' }
         },
         columnDefs: columnDefsMerged,
         initComplete: function(settings) {

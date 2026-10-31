@@ -1,14 +1,6 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>Sale Voucher Report - OFFICER'S MESS LBSNAA MUSSOORIE</title>
-    <style>
-        @page {
-            size: A4 portrait;
-            margin: 12mm;
-        }
-
+{{-- Sale Voucher PDF stylesheet. ReportController::categoryWisePrintSlipPdf() writes it once as mPDF
+     header CSS, then each buyer section as its own chunk. Page size and margins are set on the
+     mPDF constructor (mPDF misreads @page), and mPDF only bolds "font-weight: bold". --}}
         /* Match standalone print view (category-wise-print-slip-print) for PDF output */
         html, body {
             height: auto !important;
@@ -72,7 +64,7 @@
         .report-mess-title {
             color: #1a1a1a;
             font-size: 18px;
-            font-weight: 700;
+            font-weight: bold;
             letter-spacing: 0.5px;
             margin: 0 0 4px 0;
         }
@@ -92,13 +84,13 @@
             color: #004a93;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            font-weight: 600;
+            font-weight: bold;
         }
 
         .lbsnaa-brand-line-2 {
             font-size: 17px;
             color: #222;
-            font-weight: 700;
+            font-weight: bold;
             margin-top: 2px;
         }
 
@@ -165,7 +157,7 @@
         .print-slip-table thead th {
             background: #2c3e50;
             color: #fff;
-            font-weight: 600;
+            font-weight: bold;
             border: 1px solid #1a252f;
             padding: 8px 6px;
         }
@@ -181,12 +173,17 @@
             text-align: right;
         }
 
-        .print-slip-table .th-item {
-            width: 22%;
-        }
-        .print-slip-table .th-remark {
-            width: 14%;
-        }
+        /* Every column sized: under table-layout: fixed the unsized ones shared what was left, and a
+           section long enough to cross pages (mPDF cannot shrink those) split slip numbers, dates and
+           amounts mid-token ("132,322.0 / 9"). Sized for the longest slip no. at 11px. */
+        .print-slip-table { font-size: 11px; }
+        .print-slip-table .th-slip-no { width: 19%; }
+        .print-slip-table .th-item { width: 20%; }
+        .print-slip-table .th-date { width: 13%; }
+        .print-slip-table .th-qty { width: 11%; }
+        .print-slip-table .th-price { width: 10%; }
+        .print-slip-table .th-amount { width: 13%; }
+        .print-slip-table .th-remark { width: 14%; }
 
         .print-slip-table .text-center {
             text-align: center;
@@ -281,23 +278,4 @@
             display: block;
             margin-left: auto;
         }
-    </style>
-</head>
-<body class="cw-slip-pdf-body">
-<div class="cw-slip-pdf-inner container-fluid">
-@include('admin.mess.reports.partials.category-wise-print-slip-body', [
-    'sectionsToShow' => $sectionsToShow,
-    'fromDateFormatted' => $fromDateFormatted ?? 'Start',
-    'toDateFormatted' => $toDateFormatted ?? 'End',
-    'otCourses' => $otCourses ?? collect(),
-    'grandTotal' => $grandTotal ?? 0,
-    'filtersApplied' => true,
-    'printPageBreakPerBuyer' => true,
-    'showBrandingHeader' => true,
-    'emblemSrc' => $emblemSrc ?? pdf_emblem_src(),
-    'lbsnaaLogoSrc' => $lbsnaaLogoSrc ?? pdf_lbsnaa_logo_src(),
-    'dompdfSafeTables' => true,
-])
-</div>
-</body>
-</html>
+    

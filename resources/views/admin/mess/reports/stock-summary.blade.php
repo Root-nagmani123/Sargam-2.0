@@ -6,135 +6,59 @@
     /** @var array<int> $storeIds */
     $storeIds = $storeIds ?? [];
 @endphp
-<div class="container-fluid stock-summary-report pb-4">
+<div class="container-fluid stock-summary-report mess-master-page mess-report-page">
     <div id="stock-summary-print-meta" class="d-none" hidden data-store-name="{{ e($selectedStoreName ?? ($storeType == 'main' ? 'Officer\'s Main Mess(Primary)' : 'All Sub Stores')) }}"></div>
     <x-breadcrum title="Stock Summary Report"></x-breadcrum>
 
-    <div class="row no-print mb-3 mb-md-4">
-        <div class="col-12 col-lg-10 col-xl-8">
-            <div class="d-flex align-items-start gap-2 p-3 rounded-3 bg-primary-subtle bg-opacity-50 border border-primary-subtle ssr-info-banner">
-                <span class="material-symbols-rounded text-primary flex-shrink-0" style="font-size:1.25rem;margin-top:1px;" aria-hidden="true">info</span>
-                <p class="mb-0 text-primary-emphasis small lh-sm">
-                    Opening, purchase, sale, and closing stock for the selected period and stores. Use filters to narrow the view, then print or export if needed.
-                </p>
-            </div>
-        </div>
-    </div>
+    @include('admin.mess.reports.partials.report-export-bar', [
+        'excelUrl' => route('admin.mess.reports.stock-summary.excel', request()->query()),
+        'pdfUrl' => route('admin.mess.reports.stock-summary.pdf', request()->query()),
+        'printOnclick' => 'printStockSummary()',
+    ])
 
-    <!-- Filters Section (Hide on Print) -->
-    <div class="card mb-4 border-0 shadow-sm rounded-3 no-print stock-summary-filter-card">
-        <div class="rounded-top-3" style="height:3px;background:linear-gradient(90deg,#0b4a7e 0%,#2980b9 50%,#0b4a7e 100%);" aria-hidden="true"></div>
-        <div class="card-header bg-body-tertiary border-0 py-3 px-3 px-lg-4">
-            <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
-                <div class="d-flex align-items-start gap-3">
-                    <span class="d-none d-sm-flex align-items-center justify-content-center flex-shrink-0 rounded-3 bg-primary-subtle text-primary p-2" aria-hidden="true">
-                        <span class="material-symbols-rounded" style="font-size: 1.5rem;">tune</span>
-                    </span>
-                    <div>
-                        <h5 class="mb-1 fw-semibold text-body">Filters</h5>
-                        <p class="mb-0 small text-body-secondary">Refine results by date, store type, and store selection.</p>
-                    </div>
+    <div class="ds-card mess-dt-card">
+        <x-mess-master-toolbar table-id="stockSummaryReport" :columns="false" :search="false">
+            <form method="GET" action="{{ route('admin.mess.reports.stock-summary') }}" id="stockSummaryFilterForm" class="mess-filterbar" aria-label="Stock summary filters">
+                <span class="mess-filterbar-label">Filter</span>
+                <div class="mess-filter-range">
+                    <input type="date" name="from_date" id="stock_summary_from_date" class="form-control" value="{{ $fromDate }}" required aria-label="From date">
+                    <span aria-hidden="true">&ndash;</span>
+                    <input type="date" name="to_date" id="stock_summary_to_date" class="form-control" value="{{ $toDate }}" required aria-label="To date">
                 </div>
-            </div>
-        </div>
-        <div class="card-body p-3 p-lg-4">
-            <form method="GET" action="{{ route('admin.mess.reports.stock-summary') }}" id="stockSummaryFilterForm">
-                <div class="row g-3">
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <label for="stock_summary_from_date" class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">From Date</label>
-                        <input type="date" name="from_date" id="stock_summary_from_date" class="form-control rounded-2"
-                               value="{{ $fromDate }}" required>
-                    </div>
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <label for="stock_summary_to_date" class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">To Date</label>
-                        <input type="date" name="to_date" id="stock_summary_to_date" class="form-control rounded-2"
-                               value="{{ $toDate }}" required>
-                    </div>
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <label for="store_type" class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">Store Type</label>
-                        <select name="store_type" id="store_type" class="form-select rounded-2 stock-summary-store-type" data-placeholder="Select Store Type">
-                            <option value="main" @selected($storeType == 'main')>Main Store</option>
-                            <option value="sub" @selected($storeType == 'sub')>Sub Store</option>
-                        </select>
-                    </div>
-                    <div class="col-12 col-sm-6 col-xl-3{{ $storeType == 'main' ? '' : ' d-none' }}" id="main_store_div">
-                        <label for="stock_summary_main_store" class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">Main Store</label>
-                        <select name="main_store_id[]" id="stock_summary_main_store" class="form-select form-select-sm rounded-2 stock-summary-store-multiselect" multiple data-placeholder="All Main Stores">
-                            @foreach($stores as $store)
-                                <option value="{{ $store->id }}" @selected($storeType === 'main' && in_array((int) $store->id, $storeIds, true))>
-                                    {{ $store->store_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-12 col-sm-6 col-xl-3{{ $storeType == 'sub' ? '' : ' d-none' }}" id="sub_store_div">
-                        <label for="stock_summary_sub_store" class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">Sub Store</label>
-                        <select name="sub_store_id[]" id="stock_summary_sub_store" class="form-select form-select-sm rounded-2 stock-summary-store-multiselect" multiple data-placeholder="All Sub Stores">
-                            @foreach($subStores as $subStore)
-                                <option value="{{ $subStore->id }}" @selected($storeType === 'sub' && in_array((int) $subStore->id, $storeIds, true))>
-                                    {{ $subStore->sub_store_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
+                <select name="store_type" id="store_type" class="form-select stock-summary-store-type" data-placeholder="Select Store Type" aria-label="Store type">
+                    <option value="main" @selected($storeType == 'main')>Main Store</option>
+                    <option value="sub" @selected($storeType == 'sub')>Sub Store</option>
+                </select>
+                <div class="mess-filter-field{{ $storeType == 'main' ? '' : ' d-none' }}" id="main_store_div">
+                    <select name="main_store_id[]" id="stock_summary_main_store" class="form-select stock-summary-store-multiselect" multiple data-placeholder="Main Store" aria-label="Main store">
+                        @foreach($stores as $store)
+                            <option value="{{ $store->id }}" @selected($storeType === 'main' && in_array((int) $store->id, $storeIds, true))>
+                                {{ $store->store_name }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
-                <div class="d-flex flex-wrap align-items-center gap-2 pt-3 mt-3 border-top border-light-subtle">
-                    <button type="submit" name="refresh" value="1" class="btn btn-primary btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3">
-                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">filter_list</span>
-                        <span>Apply filters</span>
-                    </button>
-                    <a href="{{ route('admin.mess.reports.stock-summary') }}" class="btn btn-outline-secondary btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3">
-                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">refresh</span>
-                        <span>Reset</span>
-                    </a>
-                    <div class="vr d-none d-md-block text-secondary mx-1 align-self-stretch my-1" role="separator" aria-hidden="true"></div>
-                    <div class="btn-group shadow-sm rounded-2" role="group" aria-label="Print or download PDF">
-                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3 rounded-0 rounded-start-2" onclick="printStockSummary()" title="Print report or choose Save as PDF in print dialog">
-                            <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;" aria-hidden="true">print</span>
-                            <span>Print</span>
-                        </button>
-                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3 rounded-0 rounded-end-2" title="Download PDF" data-stock-summary-pdf-url="{{ route('admin.mess.reports.stock-summary.pdf', request()->query()) }}" onclick="window.location.href=this.getAttribute('data-stock-summary-pdf-url')">
-                            <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;" aria-hidden="true">picture_as_pdf</span>
-                            <span>PDF</span>
-                        </button>
-                    </div>
-                    <a href="{{ route('admin.mess.reports.stock-summary.excel', request()->query()) }}" class="btn btn-success btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3" title="Export to Excel">
-                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">table_view</span>
-                        <span>Export Excel</span>
-                    </a>
+                <div class="mess-filter-field{{ $storeType == 'sub' ? '' : ' d-none' }}" id="sub_store_div">
+                    <select name="sub_store_id[]" id="stock_summary_sub_store" class="form-select stock-summary-store-multiselect" multiple data-placeholder="Sub Store" aria-label="Sub store">
+                        @foreach($subStores as $subStore)
+                            <option value="{{ $subStore->id }}" @selected($storeType === 'sub' && in_array((int) $subStore->id, $storeIds, true))>
+                                {{ $subStore->sub_store_name }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
+                <button type="submit" name="refresh" value="1" class="btn btn-outline-primary">Apply</button>
+                @if(request()->hasAny(['from_date', 'to_date', 'store_type', 'main_store_id', 'sub_store_id']))
+                    <a href="{{ route('admin.mess.reports.stock-summary') }}" class="btn btn-outline-danger">Remove Filter</a>
+                @endif
             </form>
-        </div>
-    </div>
+        </x-mess-master-toolbar>
 
-    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
-        <div class="card-body p-3 p-lg-4">
-            <!-- Report Header -->
-            <div class="report-header text-center mb-4 rounded-3 p-4" style="background:linear-gradient(135deg,#f0f4f8 0%,#e8edf4 50%,#f0f4f8 100%);border:1px solid #e2e8f0;">
-                <div class="d-flex align-items-center justify-content-center gap-2 mb-3">
-                    <span class="material-symbols-rounded text-primary" style="font-size:1.75rem;" aria-hidden="true">assessment</span>
-                    <h4 class="fw-bold text-uppercase mb-0 text-body">Stock Summary Report</h4>
-                </div>
-                <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center justify-content-center gap-2">
-                    <span class="badge rounded-1 bg-white text-body-emphasis fw-normal px-3 py-2 shadow-sm border">
-                        <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">date_range</span>
-                        Period: {{ date('d-F-Y', strtotime($fromDate)) }} to {{ date('d-F-Y', strtotime($toDate)) }}
-                    </span>
-                    <span class="badge rounded-1 bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-normal px-3 py-2 text-wrap text-start shadow-sm" style="max-width: min(100%, 42rem);">
-                        <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">store</span>
-                        <span class="fw-semibold">Store:</span>
-                        {{ $selectedStoreName ?? ($storeType == 'main' ? "Officer's Main Mess(Primary)" : 'All Sub Stores') }}
-                    </span>
-                </div>
-            </div>
-
-            <!-- Report Table -->
-            <div id="stock-summary-table-wrap">
-                @include('admin.mess.reports.partials.stock-summary-table', [
-                    'reportPage' => $reportPage,
-                    'reportTotals' => $reportTotals,
-                ])
-            </div>
+        <div id="stock-summary-table-wrap">
+            @include('admin.mess.reports.partials.stock-summary-table', [
+                'reportPage' => $reportPage,
+                'reportTotals' => $reportTotals,
+            ])
         </div>
     </div>
 </div>
@@ -702,9 +626,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     .stock-summary-report .ssr-thead .sss-th-fixed {
-        background: #0b4a7e;
-        color: #fff;
-        border-color: rgba(255, 255, 255, 0.2);
+        background: var(--ds-line);
+        color: var(--ds-ink);
+        border-color: var(--ds-line);
     }
 
     .stock-summary-report .ssr-thead .sss-grp,
@@ -713,26 +637,22 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /* Distinct color-coded group headers */
-    .stock-summary-report .ssr-thead .sss-grp.ssr-grp-opening,
-    .stock-summary-report .ssr-thead .sss-sub.ssr-grp-opening {
+    .stock-summary-report .ssr-thead .sss-grp.ssr-grp-opening {
         background: #1a73b5;
         border-color: rgba(255, 255, 255, 0.18);
     }
 
-    .stock-summary-report .ssr-thead .sss-grp.ssr-grp-purchase,
-    .stock-summary-report .ssr-thead .sss-sub.ssr-grp-purchase {
+    .stock-summary-report .ssr-thead .sss-grp.ssr-grp-purchase {
         background: #198754;
         border-color: rgba(255, 255, 255, 0.18);
     }
 
-    .stock-summary-report .ssr-thead .sss-grp.ssr-grp-sale,
-    .stock-summary-report .ssr-thead .sss-sub.ssr-grp-sale {
+    .stock-summary-report .ssr-thead .sss-grp.ssr-grp-sale {
         background: #d97706;
         border-color: rgba(255, 255, 255, 0.18);
     }
 
-    .stock-summary-report .ssr-thead .sss-grp.ssr-grp-closing,
-    .stock-summary-report .ssr-thead .sss-sub.ssr-grp-closing {
+    .stock-summary-report .ssr-thead .sss-grp.ssr-grp-closing {
         background: #6f42c1;
         border-color: rgba(255, 255, 255, 0.18);
     }
@@ -991,35 +911,39 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     .stock-summary-report .ssr-sticky-head .sss-th-fixed {
-        background: #0b4a7e !important;
-        color: #fff !important;
-        border-color: rgba(255, 255, 255, 0.22) !important;
+        background: var(--ds-line) !important;
+        color: var(--ds-ink) !important;
+        border-color: var(--ds-line) !important;
+    }
+
+    /* Figma: coloured band per group, grey Quantity/Rate/Total row under it. */
+    .stock-summary-report .ssr-thead .sss-sub,
+    .stock-summary-report .ssr-sticky-head .sss-sub {
+        background: var(--ds-line) !important;
+        color: var(--ds-ink) !important;
+        font-weight: 500;
     }
 
     /* Group headers in sticky clone — preserve distinct group colors */
-    .stock-summary-report .ssr-sticky-head .sss-grp.ssr-grp-opening,
-    .stock-summary-report .ssr-sticky-head .sss-sub.ssr-grp-opening {
+    .stock-summary-report .ssr-sticky-head .sss-grp.ssr-grp-opening {
         background: #1a73b5 !important;
         color: #fff !important;
         border-color: rgba(255, 255, 255, 0.18) !important;
     }
 
-    .stock-summary-report .ssr-sticky-head .sss-grp.ssr-grp-purchase,
-    .stock-summary-report .ssr-sticky-head .sss-sub.ssr-grp-purchase {
+    .stock-summary-report .ssr-sticky-head .sss-grp.ssr-grp-purchase {
         background: #198754 !important;
         color: #fff !important;
         border-color: rgba(255, 255, 255, 0.18) !important;
     }
 
-    .stock-summary-report .ssr-sticky-head .sss-grp.ssr-grp-sale,
-    .stock-summary-report .ssr-sticky-head .sss-sub.ssr-grp-sale {
+    .stock-summary-report .ssr-sticky-head .sss-grp.ssr-grp-sale {
         background: #d97706 !important;
         color: #fff !important;
         border-color: rgba(255, 255, 255, 0.18) !important;
     }
 
-    .stock-summary-report .ssr-sticky-head .sss-grp.ssr-grp-closing,
-    .stock-summary-report .ssr-sticky-head .sss-sub.ssr-grp-closing {
+    .stock-summary-report .ssr-sticky-head .sss-grp.ssr-grp-closing {
         background: #6f42c1 !important;
         color: #fff !important;
         border-color: rgba(255, 255, 255, 0.18) !important;

@@ -92,6 +92,12 @@ class ProcessMessBillsEmployeeController extends Controller
     private ?string $processMessBillsResolvedCacheStore = null;
 
     /**
+     * Stores that threw this request. An unreachable Redis costs a ~2 s connect timeout per call and
+     * the version loops below call it several times per request, so try a dead store only once.
+     */
+    private array $processMessBillsDeadCacheStores = [];
+
+    /**
      * Cache keys of modal summary entries written this request, so a payment can patch just the
      * paying buyer's row instead of dropping every buyer's cached summaries.
      */
@@ -441,11 +447,11 @@ class ProcessMessBillsEmployeeController extends Controller
         foreach ($rows as $idx => $cb) {
             $status = (int) ($cb->status ?? 0);
             if ($status === 2) {
-                $statusBadge = '<span class="badge rounded-1 text-bg-success shadow-sm px-3 py-2">✓ Paid</span>';
+                $statusBadge = '<span class="mess-status mess-status--success">Paid</span>';
             } elseif ($status === 1) {
-                $statusBadge = '<span class="badge rounded-1 text-bg-warning text-dark shadow-sm px-3 py-2">⏱ Partial</span>';
+                $statusBadge = '<span class="mess-status mess-status--primary">Partial</span>';
             } else {
-                $statusBadge = '<span class="badge rounded-1 text-bg-secondary shadow-sm px-3 py-2">○ Unpaid</span>';
+                $statusBadge = '<span class="mess-status mess-status--warning">Unpaid</span>';
             }
 
             $row = [
@@ -466,10 +472,10 @@ class ProcessMessBillsEmployeeController extends Controller
                     . '&date_to=' . rawurlencode($effectiveDateToYmd);
 
                 $row[] = '<a href="' . e($receiptUrl) . '" target="_blank"'
-                    . ' class="btn btn-sm btn-outline-primary shadow-sm d-inline-flex align-items-center justify-content-center gap-1 px-3"'
+                    . ' class="mess-row-action"'
                     . ' title="Print receipt (' . e((string) ($cb->combined_invoice_no ?? 'Invoice')) . ')">'
-                    . '<i class="material-symbols-rounded" style="font-size: 1.1rem;">receipt</i>'
-                    . '<span class="d-none d-sm-inline">Receipt</span>'
+                    . '<i class="material-symbols-rounded" aria-hidden="true">receipt_long</i>'
+                    . '<span>Receipt</span>'
                     . '</a>';
             }
 
@@ -496,6 +502,14 @@ class ProcessMessBillsEmployeeController extends Controller
     /**
      * @return list<string>
      */
+    /**
+     * @return list<string>
+     */
+    private function liveProcessMessBillsCacheStoreNames(): array
+    {
+        return array_values(array_diff($this->processMessBillsCacheStoreNames(), $this->processMessBillsDeadCacheStores));
+    }
+
     private function processMessBillsCacheStoreNames(): array
     {
         $primary = RedisBackedCache::projectDefaultStoreName();
@@ -521,7 +535,7 @@ class ProcessMessBillsEmployeeController extends Controller
             return RedisBackedCache::repositoryForStore($this->processMessBillsResolvedCacheStore);
         }
 
-        foreach ($this->processMessBillsCacheStoreNames() as $storeName) {
+        foreach ($this->liveProcessMessBillsCacheStoreNames() as $storeName) {
             try {
                 $repo = RedisBackedCache::repositoryForStore($storeName);
                 $repo->put('process_mess_bills_cache_probe', 1, 10);
@@ -529,7 +543,7 @@ class ProcessMessBillsEmployeeController extends Controller
 
                 return $repo;
             } catch (\Throwable $e) {
-                continue;
+                $this->processMessBillsDeadCacheStores[] = $storeName;
             }
         }
 
@@ -576,14 +590,14 @@ class ProcessMessBillsEmployeeController extends Controller
     private function readProcessMessBillsCacheVersion(string $versionKey): int
     {
         $version = 1;
-        foreach ($this->processMessBillsCacheStoreNames() as $storeName) {
+        foreach ($this->liveProcessMessBillsCacheStoreNames() as $storeName) {
             try {
                 $v = (int) RedisBackedCache::repositoryForStore($storeName)->get($versionKey, 0);
                 if ($v > $version) {
                     $version = $v;
                 }
             } catch (\Throwable $e) {
-                continue;
+                $this->processMessBillsDeadCacheStores[] = $storeName;
             }
         }
 
@@ -721,7 +735,7 @@ class ProcessMessBillsEmployeeController extends Controller
 
     private function bumpProcessMessBillsCacheVersion(string $versionKey): void
     {
-        foreach ($this->processMessBillsCacheStoreNames() as $storeName) {
+        foreach ($this->liveProcessMessBillsCacheStoreNames() as $storeName) {
             try {
                 $repo = RedisBackedCache::repositoryForStore($storeName);
                 if (! $repo->has($versionKey)) {
@@ -731,6 +745,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 }
                 $repo->increment($versionKey);
             } catch (\Throwable $e) {
+                $this->processMessBillsDeadCacheStores[] = $storeName;
                 Log::warning('ProcessMessBillsEmployeeController: failed to bump combined bills cache version.', [
                     'store' => $storeName,
                     'key' => $versionKey,
@@ -2403,27 +2418,51 @@ class ProcessMessBillsEmployeeController extends Controller
     /**
      * @param  array{name: string, slug: string, client_id: int}  $entry
      */
-    private function billMatchesMessBuyerEntry($bill, array $entry): bool
+    /**
+     * Positions of each bill keyed by "slug|client_id" (client_id > 0 only) and "slug|trimmed client_name".
+     *
+     * @return array{0: array<string, list<int>>, 1: array<string, list<int>>}
+     */
+    private function indexBillsForBuyerMatching(Collection $bills): array
     {
-        $slug = $this->getBillClientTypeSlug($bill);
-        if ($slug !== $entry['slug']) {
-            return false;
-        }
-
-        $billClientId = $this->getBillClientId($bill);
-        if ($entry['client_id'] > 0) {
-            if ($billClientId > 0 && $billClientId === $entry['client_id']) {
-                return true;
+        $byClientId = [];
+        $byName = [];
+        foreach ($bills as $position => $bill) {
+            $slug = $this->getBillClientTypeSlug($bill);
+            $clientId = $this->getBillClientId($bill);
+            if ($clientId > 0) {
+                $byClientId[$slug . '|' . $clientId][] = $position;
             }
-
-            $variants = MessBuyerClientFilter::nameVariants($entry['name'], $entry['client_id']);
-
-            return in_array(trim((string) ($bill->client_name ?? '')), $variants, true);
+            $byName[$slug . '|' . trim((string) ($bill->client_name ?? ''))][] = $position;
         }
 
-        $billName = trim((string) ($bill->client_name ?? ''));
+        return [$byClientId, $byName];
+    }
 
-        return $billName === $entry['name'];
+    /**
+     * A buyer's bills, in list order. Same rule as matching bill by bill: the slug must match; then
+     * with a client_id, a bill matches on that id or on any of its name variants; without one, on
+     * the exact name.
+     */
+    private function billsMatchingBuyerEntry(Collection $bills, array $index, array $entry): Collection
+    {
+        [$byClientId, $byName] = $index;
+        $slug = $entry['slug'];
+
+        if ($entry['client_id'] > 0) {
+            $positions = $byClientId[$slug . '|' . $entry['client_id']] ?? [];
+            foreach (MessBuyerClientFilter::nameVariants($entry['name'], $entry['client_id']) as $variant) {
+                if (is_string($variant)) {
+                    array_push($positions, ...($byName[$slug . '|' . $variant] ?? []));
+                }
+            }
+            $positions = array_unique($positions);
+            sort($positions);
+        } else {
+            $positions = $byName[$slug . '|' . $entry['name']] ?? [];
+        }
+
+        return collect($positions)->map(fn (int $position) => $bills[$position]);
     }
 
     private function getBillClientTypeSlug($bill): string
@@ -4767,16 +4806,21 @@ class ProcessMessBillsEmployeeController extends Controller
             $kitchenQuery->where('issue_date', '<=', $dateToYmd);
         }
 
-        $kiBills = $kitchenQuery->orderBy('issue_date')->get();
+        $kiBills = $kitchenQuery->orderBy('issue_date')->get()->values();
+        $drBills = $drBills->values();
+
+        // Index each list once: scanning every bill for every buyer was O(buyers × bills) and took
+        // most of a full-list print. billsMatchingBuyerEntry() applies the same per-bill match rule.
+        $drIndex = $this->indexBillsForBuyerMatching($drBills);
+        $kiIndex = $this->indexBillsForBuyerMatching($kiBills);
 
         foreach ($buyerEntries as $entry) {
             if (isset($this->buyerBillsForAllocationCache[$entry['cache_key']])) {
                 continue;
             }
 
-            $allocationBills = $drBills
-                ->filter(fn ($bill) => $this->billMatchesMessBuyerEntry($bill, $entry))
-                ->concat($kiBills->filter(fn ($bill) => $this->billMatchesMessBuyerEntry($bill, $entry)))
+            $allocationBills = $this->billsMatchingBuyerEntry($drBills, $drIndex, $entry)
+                ->concat($this->billsMatchingBuyerEntry($kiBills, $kiIndex, $entry))
                 ->sortBy(function ($bill) {
                     $issueDate = $bill->issue_date ?? null;
                     if ($issueDate instanceof Carbon) {

@@ -5,50 +5,42 @@
     $selectedCategoryId = $categoryIdFilter ?? request('category_id', '');
     $canDeleteItemSubcategory = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
-<div class="container-fluid">
-    <x-breadcrum title="Subcategory Item Master"></x-breadcrum>
-    <div class="card shadow-sm border-0">
-            <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                <div>
-                    <h4 class="mb-0">Subcategory Item Master</h4>
-                    <p class="mb-0 text-muted small">Manage mess item subcategories, codes and alert quantities.</p>
-                </div>
-                <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#createItemSubcategoryModal">
-                    <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;">add</i>
-                    <span>Add Subcategory Item</span>
-                </button>
-            </div>
+<div class="container-fluid mess-master-page">
+    <x-breadcrum title="Subcategory Item Master">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createItemSubcategoryModal">
+            <i class="material-symbols-rounded" aria-hidden="true">add</i>
+            <span>Add Subcategory Item</span>
+        </button>
+    </x-breadcrum>
 
-            <form method="GET" action="{{ route('admin.mess.itemsubcategories.index') }}" class="itemsubcategories-filter-form mb-3 row g-3 align-items-end">
-                <div class="col-sm-6 col-md-4 col-lg-3">
-                    <label for="filter_category_id" class="form-label mb-1 small fw-semibold">Category name</label>
-                    <select name="category_id" id="filter_category_id" class="form-select js-choices" data-placeholder="All">
-                        <option value="">All</option>
-                        @foreach($categories as $cat)
-                            <option value="{{ $cat->id }}" {{ (string) $selectedCategoryId === (string) $cat->id ? 'selected' : '' }}>{{ $cat->category_name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-sm-6 col-md-auto d-flex gap-2">
-                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
-                        <i class="material-symbols-rounded">filter_list</i>
-                        <span>Filter</span>
-                    </button>
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    <x-mess-export-bar table-id="itemSubcategoriesTable" title="Subcategory Item Master" />
+
+    <div class="datatables">
+        <div class="ds-card mess-dt-card">
+            <x-mess-master-toolbar table-id="itemSubcategoriesTable">
+                <form method="GET" action="{{ route('admin.mess.itemsubcategories.index') }}" class="itemsubcategories-filter-form d-flex flex-wrap align-items-center gap-2">
+                    <label for="filter_category_id" class="mb-0 text-body-secondary">Filter</label>
+                    <div style="min-width: 220px;">
+                        <select name="category_id" id="filter_category_id" class="form-select js-choices" data-placeholder="Category: All">
+                            <option value="">Category: All</option>
+                            @foreach($categories as $cat)
+                                <option value="{{ $cat->id }}" {{ (string) $selectedCategoryId === (string) $cat->id ? 'selected' : '' }}>{{ $cat->category_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary">Apply</button>
                     @if($selectedCategoryId !== '')
-                        <a href="{{ route('admin.mess.itemsubcategories.index') }}" class="btn  btn-outline-secondary">
-                            Clear
-                        </a>
+                        <a href="{{ route('admin.mess.itemsubcategories.index') }}" class="btn btn-outline-danger">Remove Filter</a>
                     @endif
-                </div>
-            </form>
-
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
+                </form>
+            </x-mess-master-toolbar>
 
             <div class="table-responsive">
                 <table id="itemSubcategoriesTable" class="table align-middle mb-0">
@@ -67,6 +59,7 @@
                 </table>
             </div>
         </div>
+    </div>
 </div>
 
 {{-- Tom Select CSS --}}
@@ -81,7 +74,7 @@
         <div class="modal-content">
             <form method="POST" action="{{ route('admin.mess.itemsubcategories.store') }}">
                 @csrf
-                <div class="modal-header border-bottom bg-light">
+                <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-semibold" id="createItemSubcategoryModalLabel">Add Subcategory Item</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -136,8 +129,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save</button>
                 </div>
             </form>
@@ -152,7 +145,7 @@
             <form id="editItemSubcategoryForm" method="POST" action="">
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-bottom bg-light">
+                <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-semibold" id="editItemSubcategoryModalLabel">Edit Subcategory Item</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -202,8 +195,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">Update</button>
                 </div>
             </form>
@@ -461,8 +454,6 @@ if (document.readyState === 'loading') {
 @endpush
 
 <style>
-.table thead th { background-color: #004a93 !important; color: #fff !important; }
-
 /* Ensure Tom Select dropdowns appear above modals/backdrop */
 .ts-dropdown {
     z-index: 10000 !important;

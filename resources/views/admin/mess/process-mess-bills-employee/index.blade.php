@@ -1,8 +1,13 @@
 @extends('admin.layouts.master')
 @section('title', 'Process Mess Bills')
 @section('content')
-<div class="container-fluid py-3 py-md-4 process-mess-bills-employee-report">
-    <x-breadcrum title="Process Mess Bills"></x-breadcrum>
+<div class="container-fluid process-mess-bills-employee-report mess-master-page">
+    <x-breadcrum title="Process Mess Bills">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addProcessMessBillsModal">
+            <i class="material-symbols-rounded" aria-hidden="true">add</i>
+            <span>Generate Invoice</span>
+        </button>
+    </x-breadcrum>
     {{-- Report Header (Print Only) --}}
     @php
         $dateFromDisplay = $effectiveDateFrom ?? now()->startOfMonth()->format('d-m-Y');
@@ -21,182 +26,82 @@
         <p class="text-muted mb-0 small">Generated on: {{ now()->format('d-m-Y H:i:s') }}</p>
     </div>
 
-    {{-- Page header --}}
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 no-print p-4 rounded-3 shadow-sm" style="background: #004a93; color: white;">
-        <div>
-            <h4 class="mb-2 fw-bold d-flex align-items-center gap-2">
-                <i class="material-symbols-rounded" style="font-size: 2rem;">receipt_long</i>
-                Process Mess Bills
-            </h4>
-            <p class="mb-0 small opacity-90 text-white">View mess bills for Employee, OT, Course & Other, generate invoices, and mark payments. Filter by date to see bills from Selling Voucher and Date Range reports.</p>
-        </div>
-        <button type="button" class="btn btn-light shadow d-inline-flex align-items-center gap-2 px-4" data-bs-toggle="modal" data-bs-target="#addProcessMessBillsModal" style="font-weight: 600;">
-            <i class="material-symbols-rounded" style="font-size: 1.3rem;">add_circle</i>
-            Generate Invoice
+    @php
+        $stats = $stats ?? ['total_bills' => 0, 'paid_count' => 0, 'unpaid_count' => 0, 'total_amount' => 0, 'total_due_amount' => 0];
+        $exportQuery = request()->only(['date_from', 'date_to', 'client_type', 'client_type_pk', 'buyer_name', 'status', 'search']);
+        $exportQuery['invoice_sent'] = request()->has('invoice_sent')
+            ? request('invoice_sent')
+            : ($invoiceSentFilter ?? 'sent');
+    @endphp
+    {{-- Summary tiles: values refreshed from the table feed by applyProcessMessBillStats() (ids below) --}}
+    <section class="no-print row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 mb-3" aria-label="Bill statistics">
+        <div class="col"><div class="ds-stat-card"><div><p class="ds-stat-label">Total Bills</p><p class="ds-stat-value mb-0" id="process-mess-stats-total-bills">{{ number_format($stats['total_bills']) }}</p></div></div></div>
+        <div class="col"><div class="ds-stat-card"><div><p class="ds-stat-label">Unpaid</p><p class="ds-stat-value mb-0" id="process-mess-stats-unpaid">{{ number_format($stats['unpaid_count']) }}</p></div></div></div>
+        <div class="col"><div class="ds-stat-card"><div><p class="ds-stat-label">Paid</p><p class="ds-stat-value mb-0" id="process-mess-stats-paid">{{ number_format($stats['paid_count']) }}</p></div></div></div>
+        <div class="col"><div class="ds-stat-card"><div><p class="ds-stat-label">Total Amount</p><p class="ds-stat-value mb-0" id="process-mess-stats-total-amount">₹ {{ number_format($stats['total_amount'], 2) }}</p></div></div></div>
+        <div class="col"><div class="ds-stat-card"><div><p class="ds-stat-label">Total Amount Due</p><p class="ds-stat-value mb-0" id="process-mess-stats-total-due-amount">₹ {{ number_format($stats['total_due_amount'] ?? 0, 2) }}</p></div></div></div>
+    </section>
+
+    {{-- Download = server Excel export (keeps visible-column sync via data-mess-excel-export); Print = LBSNAA print --}}
+    <div class="mess-export-bar no-print">
+        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query($exportQuery) }}"
+           class="btn" data-mess-excel-export="processMessBillsTable">
+            <i class="material-symbols-rounded" aria-hidden="true">download</i>
+            <span>Download</span>
+        </a>
+        <button type="button" class="btn" onclick="printProcessMessBillsMainTable()">
+            <i class="material-symbols-rounded" aria-hidden="true">print</i>
+            <span>Print</span>
         </button>
     </div>
 
-    {{-- Summary cards --}}
-    <section class="no-print process-mess-stats-section mb-4" aria-labelledby="process-mess-stats-heading">
-        @php
-            $stats = $stats ?? ['total_bills' => 0, 'paid_count' => 0, 'unpaid_count' => 0, 'total_amount' => 0, 'total_due_amount' => 0];
-            $statsPaidPct = ($stats['total_bills'] ?? 0) > 0
-                ? (int) round((($stats['paid_count'] ?? 0) / $stats['total_bills']) * 100)
-                : 0;
-        @endphp
-        <div class="card border border-light-subtle shadow-sm rounded-4 overflow-hidden bg-body-tertiary bg-opacity-50">
-            <div class="card-body p-3 p-lg-4">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 mb-3 border-bottom border-light-subtle">
-                    <div class="d-flex align-items-center gap-3 min-w-0">
-                        <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-primary-subtle text-primary process-mess-stat-icon flex-shrink-0" aria-hidden="true">
-                            <span class="material-symbols-rounded">insights</span>
-                        </span>
-                        <div class="min-w-0">
-                            <h2 id="process-mess-stats-heading" class="h6 mb-0 fw-semibold text-body-emphasis">Bill overview</h2>
-                            <p class="small text-body-secondary mb-0 text-truncate">Key metrics for the selected period</p>
-                        </div>
-                    </div>
-                    <span class="badge text-bg-light border border-light-subtle text-body-secondary fw-normal px-3 py-2 rounded-pill d-inline-flex align-items-center gap-1 flex-shrink-0">
-                        <span class="material-symbols-rounded" style="font-size: 1rem;" aria-hidden="true">date_range</span>
-                        <span class="text-truncate">{{ $dateFromDisplay }} – {{ $dateToDisplay }}</span>
-                    </span>
-                </div>
-                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-5 g-3 g-lg-4 animate__animated animate__fadeIn" role="list" aria-label="Bill statistics">
-                    <div class="col" role="listitem">
-                        <article class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden hover-lift transition-all border-start border-4 border-primary bg-primary-subtle bg-opacity-50">
-                            <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
-                                <span class="flex-shrink-0 rounded-3 bg-primary text-white d-inline-flex align-items-center justify-content-center process-mess-stat-icon shadow-sm" aria-hidden="true">
-                                    <span class="material-symbols-rounded">description</span>
-                                </span>
-                                <div class="flex-grow-1 min-w-0">
-                                    <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Total bills</p>
-                                    <p class="fs-3 fw-bold text-primary mb-1 lh-1 tabular-nums" id="process-mess-stats-total-bills">{{ number_format($stats['total_bills']) }}</p>
-                                    <p class="small text-body-secondary mb-0 opacity-75">Combined invoices in range</p>
-                                </div>
-                            </div>
-                        </article>
-                    </div>
-                    <div class="col" role="listitem">
-                        <article class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden hover-lift transition-all border-start border-4 border-warning bg-warning-subtle bg-opacity-50">
-                            <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
-                                <span class="flex-shrink-0 rounded-3 bg-warning text-dark d-inline-flex align-items-center justify-content-center process-mess-stat-icon shadow-sm" aria-hidden="true">
-                                    <span class="material-symbols-rounded">pending_actions</span>
-                                </span>
-                                <div class="flex-grow-1 min-w-0">
-                                    <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Unpaid</p>
-                                    <p class="fs-3 fw-bold text-warning-emphasis mb-1 lh-1 tabular-nums" id="process-mess-stats-unpaid">{{ number_format($stats['unpaid_count']) }}</p>
-                                    <p class="small text-body-secondary mb-0 opacity-75">Awaiting payment</p>
-                                </div>
-                            </div>
-                        </article>
-                    </div>
-                    <div class="col" role="listitem">
-                        <article class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden hover-lift transition-all border-start border-4 border-success bg-success-subtle bg-opacity-50">
-                            <div class="card-body p-3 p-md-4 d-flex flex-column gap-2">
-                                <div class="d-flex align-items-start gap-3">
-                                    <span class="flex-shrink-0 rounded-3 bg-success text-white d-inline-flex align-items-center justify-content-center process-mess-stat-icon shadow-sm" aria-hidden="true">
-                                        <span class="material-symbols-rounded">check_circle</span>
-                                    </span>
-                                    <div class="flex-grow-1 min-w-0">
-                                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                                            <p class="text-body-secondary small text-uppercase fw-semibold mb-0 lh-sm">Paid</p>
-                                            <span class="badge rounded-1 bg-success-subtle text-success-emphasis border border-success-subtle" id="process-mess-stats-paid-pct">{{ $statsPaidPct }}% cleared</span>
-                                        </div>
-                                        <p class="fs-3 fw-bold text-success mb-0 lh-1 tabular-nums" id="process-mess-stats-paid">{{ number_format($stats['paid_count']) }}</p>
-                                    </div>
-                                </div>
-                                <div class="progress rounded-pill process-mess-stats-progress" id="process-mess-stats-paid-progress" role="progressbar" aria-label="Paid bills percentage" aria-valuenow="{{ $statsPaidPct }}" aria-valuemin="0" aria-valuemax="100">
-                                    <div class="progress-bar bg-success" id="process-mess-stats-paid-progress-bar" style="width: {{ $statsPaidPct }}%"></div>
-                                </div>
-                                <p class="small text-body-secondary mb-0 opacity-75">Fully settled bills</p>
-                            </div>
-                        </article>
-                    </div>
-                    <div class="col" role="listitem">
-                        <article class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden hover-lift transition-all border-start border-4 border-info bg-info-subtle bg-opacity-50">
-                            <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
-                                <span class="flex-shrink-0 rounded-3 bg-info text-white d-inline-flex align-items-center justify-content-center process-mess-stat-icon shadow-sm" aria-hidden="true">
-                                    <span class="material-symbols-rounded">payments</span>
-                                </span>
-                                <div class="flex-grow-1 min-w-0">
-                                    <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Total amount</p>
-                                    <p class="fs-3 fw-bold text-info-emphasis mb-1 lh-1 tabular-nums text-truncate" id="process-mess-stats-total-amount">₹ {{ number_format($stats['total_amount'], 2) }}</p>
-                                    <p class="small text-body-secondary mb-0 opacity-75">Bill value for period</p>
-                                </div>
-                            </div>
-                        </article>
-                    </div>
-                    <div class="col" role="listitem">
-                        <article class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden hover-lift transition-all border-start border-4 border-danger bg-danger-subtle bg-opacity-50">
-                            <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
-                                <span class="flex-shrink-0 rounded-3 bg-danger text-white d-inline-flex align-items-center justify-content-center process-mess-stat-icon shadow-sm" aria-hidden="true">
-                                    <span class="material-symbols-rounded">account_balance_wallet</span>
-                                </span>
-                                <div class="flex-grow-1 min-w-0">
-                                    <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Total due amount</p>
-                                    <p class="fs-3 fw-bold text-danger-emphasis mb-1 lh-1 tabular-nums text-truncate" id="process-mess-stats-total-due-amount">₹ {{ number_format($stats['total_due_amount'] ?? 0, 2) }}</p>
-                                    <p class="small text-body-secondary mb-0 opacity-75">Outstanding balance for period</p>
-                                </div>
-                            </div>
-                        </article>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-
-    {{-- Filters card --}}
-    <div class="card border-0 shadow mb-4 no-print" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-        <div class="card-body p-3 p-lg-4">
-            <form method="GET" action="{{ route('admin.mess.process-mess-bills-employee.index') }}" id="mainFilterForm">
-                <input type="hidden" name="refresh" value="1">
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">event</i>Date From <span class="text-danger">*</span></label>
-                        <input type="text" name="date_from" id="date_from" class="form-select"
-                               value="{{ $effectiveDateFrom ?? request('date_from', now()->startOfMonth()->format('d-m-Y')) }}"
-                               data-default-ymd="{{ $effectiveDateFromYmd ?? now()->startOfMonth()->format('Y-m-d') }}"
-                               placeholder="dd-mm-yyyy" autocomplete="off">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">event</i>Date To <span class="text-danger">*</span></label>
-                        <input type="text" name="date_to" id="date_to" class="form-select"
-                               value="{{ $effectiveDateTo ?? request('date_to', now()->endOfMonth()->format('d-m-Y')) }}"
-                               data-default-ymd="{{ $effectiveDateToYmd ?? now()->endOfMonth()->format('Y-m-d') }}"
-                               placeholder="dd-mm-yyyy" autocomplete="off">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">person</i>Employee / OT / Course</label>
-                        @php
+    {{-- Table card – server-side DataTable (mess-master-datatables) --}}
+    <div class="ds-card mess-dt-card">
+            @php
+                $billsMoreActive = request()->filled('date_from') || request()->filled('date_to') || request()->has('invoice_sent');
+                $billsFiltersActive = $billsMoreActive || request()->filled('client_type') || request()->filled('client_type_pk')
+                    || request()->filled('buyer_name') || request()->filled('status');
+            @endphp
+            <x-mess-master-toolbar table-id="processMessBillsTable">
+                <form method="GET" action="{{ route('admin.mess.process-mess-bills-employee.index') }}" id="mainFilterForm"
+                      class="mess-filterbar" aria-label="Bill filters">
+                    <input type="hidden" name="refresh" value="1">
+                    <span class="mess-filterbar-label">Filter</span>
+                    @php $currentStatus = $statusFilter ?? request('status', ''); @endphp
+                    <select name="status" id="filterStatus" class="form-select" aria-label="Status">
+                            <option value="">Status</option>
+                            <option value="unpaid" {{ $currentStatus === 'unpaid' ? 'selected' : '' }}>Unpaid</option>
+                            <option value="partial" {{ $currentStatus === 'partial' ? 'selected' : '' }}>Partial</option>
+                            <option value="paid" {{ $currentStatus === 'paid' ? 'selected' : '' }}>Paid</option>
+                        </select>
+                    @php
                             $selectedClientTypes = request('client_type', []);
                             if (!is_array($selectedClientTypes)) {
                                 $selectedClientTypes = $selectedClientTypes !== null ? [$selectedClientTypes] : [];
                             }
                         @endphp
-                        <select name="client_type[]" id="filterClientTypeSlug" class="form-select choices-select" multiple data-placeholder="All client types">
+                    <div class="mess-filter-field">
+                        <select name="client_type[]" id="filterClientTypeSlug" class="form-select choices-select" multiple data-placeholder="Client Type" aria-label="Client type">
                             @foreach($clientTypes ?? [] as $key => $label)
                                 <option value="{{ $key }}" {{ in_array($key, $selectedClientTypes) ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">category</i>Client Type</label>
-                        @php
+                    @php
                             $selectedClientTypePks = request('client_type_pk', []);
                             if (!is_array($selectedClientTypePks)) {
                                 $selectedClientTypePks = $selectedClientTypePks !== null ? [$selectedClientTypePks] : [];
                             }
                         @endphp
-                        <select name="client_type_pk[]" id="filterClientTypePk" class="form-select choices-select" multiple data-placeholder="All">
+                    <div class="mess-filter-field">
+                        <select name="client_type_pk[]" id="filterClientTypePk" class="form-select choices-select" multiple data-placeholder="Client Category" aria-label="Client category">
                         </select>
                     </div>
                     @php
                         $selectedBuyerNames = (array) ($buyerName ?? request('buyer_name', []));
                     @endphp
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">badge</i>Buyer Name</label>
-                        <select name="buyer_name[]" id="filterBuyerName" class="form-select shadow-sm border-0 choices-select" multiple data-placeholder="All Buyers">
+                    <div class="mess-filter-field">
+                        <select name="buyer_name[]" id="filterBuyerName" class="form-select choices-select" multiple data-placeholder="Buyer" aria-label="Buyer name">
                             @if(($clientType ?? request('client_type')) === 'ot' && isset($otBuyerNames) && $otBuyerNames->isNotEmpty())
                                 @foreach($otBuyerNames as $buyer)
                                     <option value="{{ $buyer }}" {{ in_array($buyer, $selectedBuyerNames, true) ? 'selected' : '' }}>{{ $buyer }}</option>
@@ -216,86 +121,44 @@
                             @endif
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold">Status</label>
-                        @php $currentStatus = $statusFilter ?? request('status', ''); @endphp
-                        <select name="status" id="filterStatus" class="form-select">
-                            <option value="">All Status</option>
-                            <option value="unpaid" {{ $currentStatus === 'unpaid' ? 'selected' : '' }}>Unpaid</option>
-                            <option value="partial" {{ $currentStatus === 'partial' ? 'selected' : '' }}>Partial</option>
-                            <option value="paid" {{ $currentStatus === 'paid' ? 'selected' : '' }}>Paid</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">mail</i>Invoice Sent</label>
-                        @php $currentInvoiceSent = $invoiceSentFilter ?? (request()->has('invoice_sent') ? request('invoice_sent') : 'sent'); @endphp
-                        <select name="invoice_sent" id="filterInvoiceSent" class="form-select">
-                            <option value="">All</option>
+                    <div class="dropdown">
+                        <button type="button" class="mess-filter-more-btn {{ $billsMoreActive ? 'is-active' : '' }}"
+                                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">+2 Filter</button>
+                        <div class="dropdown-menu mess-filter-more">
+                            <div class="mess-filter-more-head">
+                                <span>Filters</span>
+                                <button type="button" class="btn-close" data-mess-filter-more-close aria-label="Close filters"></button>
+                            </div>
+                            <div class="mess-filter-range">
+                                <input type="text" name="date_from" id="date_from" class="form-control" aria-label="Date from"
+                                       value="{{ $effectiveDateFrom ?? request('date_from', now()->startOfMonth()->format('d-m-Y')) }}"
+                                       data-default-ymd="{{ $effectiveDateFromYmd ?? now()->startOfMonth()->format('Y-m-d') }}"
+                                       placeholder="dd-mm-yyyy" autocomplete="off">
+                                <span aria-hidden="true">&ndash;</span>
+                                <input type="text" name="date_to" id="date_to" class="form-control" aria-label="Date to"
+                                       value="{{ $effectiveDateTo ?? request('date_to', now()->endOfMonth()->format('d-m-Y')) }}"
+                                       data-default-ymd="{{ $effectiveDateToYmd ?? now()->endOfMonth()->format('Y-m-d') }}"
+                                       placeholder="dd-mm-yyyy" autocomplete="off">
+                            </div>
+                            @php $currentInvoiceSent = $invoiceSentFilter ?? (request()->has('invoice_sent') ? request('invoice_sent') : 'sent'); @endphp
+                            <select name="invoice_sent" id="filterInvoiceSent" class="form-select" aria-label="Invoice sent">
+                            <option value="">Invoice Sent: All</option>
                             <option value="sent" {{ ($currentInvoiceSent ?? '') === 'sent' ? 'selected' : '' }}>Invoice Sent</option>
                         </select>
+                        </div>
                     </div>
-                    <div class="col-md-2 d-flex gap-1">
-                        <button type="submit" class="btn btn-primary  flex-grow-1">
-                            <i class="material-symbols-rounded align-middle">filter_list</i>
-                            Apply
-                        </button>
-                        @php
-                            $clearFilterParams = [];
-                        @endphp
-                        <a href="{{ route('admin.mess.process-mess-bills-employee.index', $clearFilterParams) }}" class="btn btn-outline-secondary shadow-sm" title="Clear all filters">
-                            <i class="material-symbols-rounded" style="font-size: 1.1rem;">filter_list_off</i>
-                        </a>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    {{-- Table card – DataTables client-side search/sort like mess master --}}
-    <div class="card border-0 shadow">
-        <div class="card-body p-3 p-lg-4">
-            <form method="GET" action="{{ route('admin.mess.process-mess-bills-employee.index') }}" id="filterForm" class="no-print">
-                <input type="hidden" name="date_from" value="{{ $effectiveDateFrom ?? request('date_from') }}">
-                <input type="hidden" name="date_to" value="{{ $effectiveDateTo ?? request('date_to') }}">
-                @foreach((array) request('client_type', []) as $selectedClientType)
-                    <input type="hidden" name="client_type[]" value="{{ $selectedClientType }}">
-                @endforeach
-                @foreach((array) request('client_type_pk', []) as $selectedClientTypePk)
-                    <input type="hidden" name="client_type_pk[]" value="{{ $selectedClientTypePk }}">
-                @endforeach
-                @foreach((array) ($buyerName ?? request('buyer_name', [])) as $selectedBuyerName)
-                    <input type="hidden" name="buyer_name[]" value="{{ $selectedBuyerName }}">
-                @endforeach
-                <input type="hidden" name="status" value="{{ $statusFilter ?? request('status') }}">
-                <input type="hidden" name="invoice_sent" value="{{ $invoiceSentFilter ?? (request()->has('invoice_sent') ? request('invoice_sent') : 'sent') }}">
-                <div class="d-flex flex-wrap justify-content-end align-items-right mb-3 gap-2">
-                    <div class="d-flex align-items-center gap-2">
-                        @php
-                            $exportQuery = request()->only(['date_from', 'date_to', 'client_type', 'client_type_pk', 'buyer_name', 'status', 'search']);
-                            $exportQuery['invoice_sent'] = request()->has('invoice_sent')
-                                ? request('invoice_sent')
-                                : ($invoiceSentFilter ?? 'sent');
-                        @endphp
-                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query($exportQuery) }}"
-                           class="btn btn-outline-success shadow-sm d-inline-flex align-items-center gap-2 px-3"
-                           title="Export to Excel"
-                           data-mess-excel-export="processMessBillsTable">
-                            <i class="material-symbols-rounded" style="font-size: 1.1rem;">file_download</i>
-                            <span>Export</span>
-                        </a>
-                        <button type="button" class="btn btn-outline-primary shadow-sm d-inline-flex align-items-center gap-2 px-3" title="Print" onclick="printProcessMessBillsMainTable()">
-                            <i class="material-symbols-rounded" style="font-size: 1.1rem;">print</i>
-                            <span>Print</span>
-                        </button>
-                    </div>
-                </div>
-            </form>
+                    <button type="submit" class="btn btn-outline-primary">Apply</button>
+                    @if($billsFiltersActive)
+                        <a href="{{ route('admin.mess.process-mess-bills-employee.index') }}" class="btn btn-outline-danger">Remove Filter</a>
+                    @endif
+                </form>
+            </x-mess-master-toolbar>
 
             <div class="table-responsive">
                 <table class="table text-nowrap align-middle mb-0" id="processMessBillsTable" data-mess-datatable-server-side="1">
-                    <thead class="table-light">
+                    <thead>
                         <tr>
-                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="S.No."><span class="d-inline-flex align-items-center gap-1"><span>S.No.</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="S. No."><span class="d-inline-flex align-items-center gap-1"><span>S. No.</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
                             <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th mess-th-sorted" data-mess-col-original="Buyer Name"><span class="d-inline-flex align-items-center gap-1"><span>Buyer Name</span><span class="mess-report-sort-icon material-symbols-rounded" aria-hidden="true">arrow_upward</span></span></th>
                             <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="Slip No."><span class="d-inline-flex align-items-center gap-1"><span>Slip No.</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
                             <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="Invoice Date"><span class="d-inline-flex align-items-center gap-1"><span>Invoice Date</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
@@ -304,7 +167,7 @@
                             <th class="text-nowrap py-2 text-end mess-sort-th mess-report-sort-th" data-mess-col-original="Total Due Amount"><span class="d-inline-flex align-items-center gap-1"><span>Total Due Amount</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
                             <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="Payment Type"><span class="d-inline-flex align-items-center gap-1"><span>Payment Type</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
                             <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="Status"><span class="d-inline-flex align-items-center gap-1"><span>Status</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
-                            <th class="text-nowrap py-2 text-center no-print">Actions</th>
+                            <th class="text-nowrap py-2 text-center no-print">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -324,18 +187,18 @@
                                 <td>{{ $cb->payment_type ?? '—' }}</td>
                                 <td>
                                     @if(($cb->status ?? 0) == 2)
-                                        <span class="badge rounded-1 text-bg-success shadow-sm px-3 py-2">✓ Paid</span>
+                                        <span class="mess-status mess-status--success">Paid</span>
                                     @elseif(($cb->status ?? 0) == 1)
-                                        <span class="badge rounded-1 text-bg-warning text-dark shadow-sm px-3 py-2">⏱ Partial</span>
+                                        <span class="mess-status mess-status--primary">Partial</span>
                                     @else
-                                        <span class="badge rounded-1 text-bg-secondary shadow-sm px-3 py-2">○ Unpaid</span>
+                                        <span class="mess-status mess-status--warning">Unpaid</span>
                                     @endif
                                 </td>
                                 <td class="text-center no-print">
                                     <a href="{{ route('admin.mess.process-mess-bills-employee.print-receipt', ['id' => $cb->combined_id]) }}?date_from={{ urlencode($effectiveDateFromYmd ?? '') }}&date_to={{ urlencode($effectiveDateToYmd ?? '') }}" target="_blank"
-                                       class="btn btn-sm btn-outline-primary shadow-sm d-inline-flex align-items-center justify-content-center gap-1 px-3" title="Print receipt ({{ $cb->combined_invoice_no ?? 'Invoice' }})">
-                                        <i class="material-symbols-rounded" style="font-size: 1.1rem;">receipt</i>
-                                        <span class="d-none d-sm-inline">Receipt</span>
+                                       class="mess-row-action" title="Print receipt ({{ $cb->combined_invoice_no ?? 'Invoice' }})">
+                                        <i class="material-symbols-rounded" aria-hidden="true">receipt_long</i>
+                                        <span>Receipt</span>
                                     </a>
                                 </td>
                             </tr>
@@ -351,7 +214,6 @@
                     </tbody>
                 </table>
             </div>
-        </div>
     </div>
 </div>
 
@@ -624,6 +486,31 @@ document.addEventListener('DOMContentLoaded', function () {
 {{-- Generate Invoice & Payment Modal --}}
 @include('admin.mess.reports.partials.report-styles')
 <style>
+/* Summary tiles: keep "₹ 1,084,431.31" on one line in a 5-across tile */
+.process-mess-bills-employee-report .ds-stat-value { white-space: nowrap; }
+#process-mess-stats-total-amount,
+#process-mess-stats-total-due-amount { font-size: 1.125rem; }
+/* List filter row: Choices multi-selects at the shared 40px control height, narrower so the row fits beside Columns/search */
+.process-mess-bills-employee-report .mess-filterbar .mess-filter-field { width: 9rem; }
+.process-mess-bills-employee-report .mess-filterbar .choices { margin-bottom: 0; }
+.process-mess-bills-employee-report .mess-filterbar .choices__inner {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: var(--ds-control-h);
+    min-height: 0;
+    padding: 0 2rem 0 0.75rem;
+    border-radius: var(--ds-radius-card);
+    background-color: #fff;
+    font-size: 0.875rem;
+    overflow: hidden;
+}
+.process-mess-bills-employee-report .mess-filterbar .choices__input--cloned {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    font-size: 0.875rem;
+}
 /* Bill Receipt (Payment Details) modal – match reference design */
 #paymentDetailsModal .modal-dialog { max-width: 720px; }
 .bill-receipt-modal-content { border-radius: 8px; margin: 1rem auto; }
@@ -887,26 +774,6 @@ document.addEventListener('DOMContentLoaded', function () {
         display: none !important;
         font-size: 0 !important;
         visibility: hidden !important;
-    }
-}
-
-/* Summary stat cards */
-.process-mess-stats-section .process-mess-stat-icon {
-    width: 3rem;
-    height: 3rem;
-}
-.process-mess-stats-section .process-mess-stat-icon .material-symbols-rounded {
-    font-size: 1.5rem;
-}
-.process-mess-stats-section .process-mess-stats-progress {
-    height: 0.35rem;
-}
-.process-mess-stats-section > .card > .card-body > .row .card .card-body {
-    --bs-card-spacer-y: 0;
-}
-@media (prefers-reduced-motion: reduce) {
-    .process-mess-stats-section .hover-lift:hover {
-        transform: none;
     }
 }
 
@@ -1226,11 +1093,13 @@ document.addEventListener('DOMContentLoaded', function() {
         var fpFrom = flatpickr('#date_from', {
             dateFormat: 'd-m-Y',
             allowInput: true,
+            static: true, // inside the filter popover: a body-level calendar would count as an outside click
             defaultDate: defaultFrom
         });
         var fpTo = flatpickr('#date_to', {
             dateFormat: 'd-m-Y',
             allowInput: true,
+            static: true,
             defaultDate: defaultTo
         });
         if (defaultFrom && fpFrom) fpFrom.setDate(defaultFrom, false);
@@ -3293,76 +3162,6 @@ function printProcessMessBillsMainTable() {
     }
     if (window.alert) {
         window.alert('Print is not available. Please refresh the page and try again.');
-
-    // Remove action column (last column) for print
-    var actionColIdx = 9;
-
-    var originalThead = table.querySelector('thead');
-    var headerCells = originalThead ? Array.from(originalThead.querySelectorAll('tr th')) : [];
-    var printHeaderCells = headerCells.filter(function (_, idx) { return idx !== actionColIdx; });
-    var headerHtml = '<tr>' + printHeaderCells.map(function (th) { return '<th>' + th.innerHTML + '</th>'; }).join('') + '</tr>';
-
-    var bodyRowsHtml = rowsData.map(function (row) {
-        var cells = Array.isArray(row) ? row : (row && row.length != null ? Array.from(row) : []);
-        var filteredCells = cells.filter(function (_, idx) { return idx !== actionColIdx; });
-        return '<tr>' + filteredCells.map(function (c) { return '<td>' + c + '</td>'; }).join('') + '</tr>';
-    }).join('');
-
-    var columnsCount = printHeaderCells.length || 9;
-    var title = 'Process Mess Bills - Employee';
-    var periodText = 'Period: {{ $dateFromDisplay }} to {{ $dateToDisplay }}';
-
-    var printableTable = `
-      <table class="table table-sm table-bordered align-middle mb-0">
-        <thead>
-          <tr>
-            <th colspan="${columnsCount}">
-              <div class="d-flex justify-content-between align-items-center mb-2 lbsnaa-header">
-                <div class="d-flex align-items-center gap-2">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="India Emblem" height="40">
-                  <div>
-                    <div class="brand-line-1">Government of India</div>
-                    <div class="brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
-                    <div class="brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
-                  </div>
-                </div>
-                <div class="d-none d-print-block">
-                  <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo" height="40">
-                </div>
-              </div>
-              <div class="d-flex flex-wrap justify-content-between align-items-center report-meta">
-                <span><strong>${title}</strong></span>
-                <span>${periodText}</span>
-                <span><strong>Printed on:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</span>
-              </div>
-            </th>
-          </tr>
-          ${headerHtml}
-        </thead>
-        <tbody>
-          ${bodyRowsHtml}
-        </tbody>
-      </table>`;
-
-    var printWindow = window.open('', '_blank');
-    if (!printWindow) { window.print(); return; }
-
-    printWindow.document.open();
-    printWindow.document.write(`<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${title} - OFFICER'S MESS LBSNAA MUSSOORIE</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-size: 10px;
-      margin: 0;
-      padding: 0;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
     }
 }
 

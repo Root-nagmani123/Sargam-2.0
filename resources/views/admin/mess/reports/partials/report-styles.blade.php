@@ -1,4 +1,20 @@
 <style>
+/* ── Report chrome (Figma "Mess Management View" → Reports) ── */
+.mess-report-page .mess-export-bar .dropdown-menu { min-width: 10rem; }
+/* Light-blue caption row above each group's table (vendor / buyer). */
+.mess-report-group-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--ds-space-2);
+    padding: var(--ds-space-2) var(--ds-space-3);
+    background: rgba(var(--bs-primary-rgb), .1);
+    color: var(--ds-primary);
+    font-size: .8125rem;
+    font-weight: 500;
+}
+.mess-report-page .mess-dt-card .table tfoot td { background: var(--ds-surface-2); font-weight: 600; }
+
 .mess-report-sno-th,
 .mess-report-sno-cell {
     width: 4.5rem;

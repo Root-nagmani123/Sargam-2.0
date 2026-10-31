@@ -75,163 +75,87 @@
         'lbsnaaLogoSvgInline' => $messLbsnaaLogoSvgInline,
     ];
 @endphp
-<div class="container-fluid purchase-sale-quantity-report py-3 py-md-4">
+<div class="container-fluid purchase-sale-quantity-report mess-master-page mess-report-page">
     <script>
         window.__purchaseSalePrintConfig = @json($purchaseSalePrintConfig);
         window.__purchaseSalePrintImages = @json($purchaseSalePrintImages);
     </script>
     <x-breadcrum title="Item Report"></x-breadcrum>
 
-    {{-- Filter card --}}
-    <div class="card mb-4 border-0 rounded-4 shadow-sm no-print psq-filter-card">
-        <div class="card-header bg-white border-0 py-3 px-4 psq-filter-header">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="psq-icon-circle bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width:38px;height:38px;">
-                        <span class="material-symbols-rounded text-primary" style="font-size:1.25rem;">filter_list</span>
-                    </div>
-                    <div>
-                        <h5 class="mb-0 fw-semibold text-dark lh-sm">Filter Item Report</h5>
-                        <span class="text-body-tertiary small">Refine results by date range, view type, category, items &amp; store</span>
-                    </div>
+    @include('admin.mess.reports.partials.report-export-bar', [
+        'excelUrl' => route('admin.mess.reports.purchase-sale-quantity.excel', request()->query()),
+        'pdfUrl' => route('admin.mess.reports.purchase-sale-quantity.pdf', request()->query()),
+        'printOnclick' => 'printPurchaseSaleQuantity()',
+    ])
+
+    <div class="ds-card mess-dt-card">
+        <x-mess-master-toolbar table-id="purchaseSaleReport" :columns="false" :search="false">
+            <form id="purchaseSaleQuantityFilterForm" method="GET" action="{{ route('admin.mess.reports.purchase-sale-quantity') }}"
+                  class="mess-filterbar" aria-label="Item report filters">
+                <span class="mess-filterbar-label">Filter</span>
+                <div class="mess-filter-range">
+                    <input type="date" name="from_date" class="form-control" value="{{ $fromDate }}" aria-label="From date">
+                    <span aria-hidden="true">&ndash;</span>
+                    <input type="date" name="to_date" class="form-control" value="{{ $toDate }}" aria-label="To date">
                 </div>
-                <span class="badge bg-primary bg-opacity-10 text-primary fw-medium px-3 py-2 rounded-1 d-none d-md-inline-flex align-items-center gap-1">
-                    <span class="material-symbols-rounded" style="font-size:0.875rem;">tune</span>
-                    Smart Filters
-                </span>
-            </div>
-        </div>
-        <div class="card-body pt-2 pb-3 px-4">
-            <form id="purchaseSaleQuantityFilterForm" method="GET" action="{{ route('admin.mess.reports.purchase-sale-quantity') }}">
-                <div class="row g-3">
-                    <div class="col-12 col-sm-6 col-md-6 col-lg-2">
-                        <label class="form-label fw-medium small text-uppercase text-body-secondary mb-1">From Date</label>
-                        <input type="date" name="from_date" class="form-control" value="{{ $fromDate }}">
-                    </div>
-                    <div class="col-12 col-sm-6 col-md-6 col-lg-2">
-                        <label class="form-label fw-medium small text-uppercase text-body-secondary mb-1">To Date</label>
-                        <input type="date" name="to_date" class="form-control" value="{{ $toDate }}">
-                    </div>
-                    <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                        <label class="form-label fw-medium small text-uppercase text-body-secondary mb-1" for="viewType">View</label>
-                        <select name="view_type[]" id="viewType" class="form-select purchase-sale-view-tomselect" multiple data-placeholder="Select view type(s)">
-                            <option value="item_wise" @selected(in_array('item_wise', $viewTypes, true))>Item-wise</option>
-                            <option value="subcategory_wise" @selected(in_array('subcategory_wise', $viewTypes, true))>Subcategory-wise</option>
-                            <option value="category_wise" @selected(in_array('category_wise', $viewTypes, true))>Category-wise</option>
-                        </select>
-                    </div>
-                    <div class="col-12 col-sm-6 col-md-4 col-lg-3{{ in_array('category_wise', $viewTypes, true) ? '' : ' d-none' }}" id="categoryIdWrap">
-                        <label class="form-label fw-medium small text-uppercase text-body-secondary mb-1" for="categoryId">Category</label>
-                        <select name="category_id" id="categoryId" class="form-select purchase-sale-category-tomselect" data-placeholder="All categories">
-                            <option value="">All Categories</option>
-                            @foreach($categories as $cat)
-                                <option value="{{ $cat->id }}" {{ $categoryId == $cat->id ? 'selected' : '' }}>{{ $cat->category_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-                        <label for="purchase_sale_item_id" class="form-label fw-medium small text-uppercase text-body-secondary mb-1">Item</label>
-                        <select name="item_id[]"
-                                id="purchase_sale_item_id"
-                                class="form-select purchase-sale-item-multiselect"
-                                multiple
-                                data-placeholder="All Items">
-                            @foreach($allItems as $it)
-                                <option
-                                    value="{{ $it->id }}"
-                                    data-category-id="{{ $it->category_id ?? '' }}"
-                                    @selected(in_array((int) $it->id, $itemIds, true))
-                                >
-                                    {{ $it->item_name ?? $it->subcategory_name ?? $it->name ?? '—' }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
+                <div class="mess-filter-field">
+                    <select name="view_type[]" id="viewType" class="form-select purchase-sale-view-tomselect" multiple data-placeholder="View" aria-label="View">
+                        <option value="item_wise" @selected(in_array('item_wise', $viewTypes, true))>Item-wise</option>
+                        <option value="subcategory_wise" @selected(in_array('subcategory_wise', $viewTypes, true))>Subcategory-wise</option>
+                        <option value="category_wise" @selected(in_array('category_wise', $viewTypes, true))>Category-wise</option>
+                    </select>
                 </div>
-                <div class="row g-3 mt-1">
-                    <div class="col-12 col-sm-6 col-md-4 col-lg-2">
-                        <label class="form-label fw-medium small text-uppercase text-body-secondary mb-1" for="purchase_sale_per_page">Rows per page</label>
+                <div class="mess-filter-field{{ in_array('category_wise', $viewTypes, true) ? '' : ' d-none' }}" id="categoryIdWrap">
+                    <select name="category_id" id="categoryId" class="form-select purchase-sale-category-tomselect" data-placeholder="Category" aria-label="Category">
+                        <option value="">All Categories</option>
+                        @foreach($categories as $cat)
+                            <option value="{{ $cat->id }}" {{ $categoryId == $cat->id ? 'selected' : '' }}>{{ $cat->category_name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="mess-filter-field">
+                    <select name="store_id[]" id="purchase_sale_store_id" class="form-select purchase-sale-store-multiselect"
+                            multiple data-placeholder="Store" aria-label="Store">
+                        @foreach($stores ?? [] as $store)
+                            <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $storeIds, true))>
+                                {{ $store->store_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="mess-filter-field">
+                    <select name="item_id[]" id="purchase_sale_item_id" class="form-select purchase-sale-item-multiselect"
+                            multiple data-placeholder="Item" aria-label="Item">
+                        @foreach($allItems as $it)
+                            <option value="{{ $it->id }}" data-category-id="{{ $it->category_id ?? '' }}" @selected(in_array((int) $it->id, $itemIds, true))>
+                                {{ $it->item_name ?? $it->subcategory_name ?? $it->name ?? '—' }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="dropdown">
+                    <button type="button" class="mess-filter-more-btn {{ request()->filled('per_page') ? 'is-active' : '' }}"
+                            data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">+1 Filter</button>
+                    <div class="dropdown-menu mess-filter-more">
+                        <div class="mess-filter-more-head">
+                            <span>Filters</span>
+                            <button type="button" class="btn-close" data-mess-filter-more-close aria-label="Close filters"></button>
+                        </div>
+                        <label for="purchase_sale_per_page" class="small text-body-secondary mb-1">Rows per page</label>
                         <select name="per_page" id="purchase_sale_per_page" class="form-select">
                             @foreach([10, 25, 50, 100] as $n)
                                 <option value="{{ $n }}" @selected((int) $perPage === (int) $n)>{{ $n }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-12 col-md-6 col-lg-4">
-                        <label for="purchase_sale_store_id" class="form-label fw-medium small text-uppercase text-body-secondary mb-1">Store</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-body-secondary border-end-0" id="store_id_addon">
-                                <span class="material-symbols-rounded" style="font-size: 1.1rem;" aria-hidden="true">storefront</span>
-                            </span>
-                            <select name="store_id[]"
-                                    id="purchase_sale_store_id"
-                                    class="form-select purchase-sale-store-multiselect"
-                                    multiple
-                                    data-placeholder="All Stores"
-                                    aria-describedby="store_id_addon">
-                                @foreach($stores ?? [] as $store)
-                                    <option value="{{ $store->id }}" @selected(in_array((int) $store->id, $storeIds, true))>
-                                        {{ $store->store_name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
                 </div>
+                <button type="submit" name="refresh" value="1" class="btn btn-outline-primary">Apply</button>
+                @if(request()->hasAny(['from_date', 'to_date', 'view_type', 'category_id', 'item_id', 'store_id', 'per_page']))
+                    <a href="{{ route('admin.mess.reports.purchase-sale-quantity') }}" class="btn btn-outline-danger">Remove Filter</a>
+                @endif
             </form>
-        </div>
-        <div class="card-footer bg-body-tertiary bg-opacity-50 border-top py-3 px-4 d-flex flex-wrap gap-2 align-items-center justify-content-between">
-            <div class="d-flex flex-wrap gap-2">
-                <button type="submit" form="purchaseSaleQuantityFilterForm" name="refresh" value="1"
-                        class="btn btn-primary rounded-1 px-4 d-inline-flex align-items-center gap-1 shadow-sm">
-                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">filter_list</span>
-                    <span>Apply Filters</span>
-                </button>
-                <a href="{{ route('admin.mess.reports.purchase-sale-quantity') }}" class="btn btn-outline-secondary rounded-1 px-3 d-inline-flex align-items-center gap-1">
-                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">refresh</span>
-                    <span>Reset</span>
-                </a>
-            </div>
-            <div class="d-flex flex-wrap gap-2">
-                <button type="button" class="btn btn-outline-primary rounded-1 px-3 d-inline-flex align-items-center gap-1" onclick="printPurchaseSaleQuantity()" title="Print or Save as PDF">
-                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">print</span>
-                    <span>Print</span>
-                </button>
-                <a href="{{ route('admin.mess.reports.purchase-sale-quantity.pdf', request()->query()) }}" target="_blank" rel="noopener" class="btn btn-outline-danger rounded-1 px-3 d-inline-flex align-items-center gap-1" title="Download PDF">
-                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">picture_as_pdf</span>
-                    <span>PDF</span>
-                </a>
-                <a href="{{ route('admin.mess.reports.purchase-sale-quantity.excel', request()->query()) }}" class="btn btn-success rounded-1 px-3 d-inline-flex align-items-center gap-1 shadow-sm" title="Export to Excel">
-                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">table_view</span>
-                    <span>Export Excel</span>
-                </a>
-            </div>
-        </div>
-    </div>
+        </x-mess-master-toolbar>
 
-    {{-- Report card --}}
-    <div class="card border-0 rounded-4 shadow-sm overflow-hidden">
-        <div class="card-header border-0 py-4 text-center report-header psq-report-header">
-            <h4 class="fw-bold mb-2 text-white lh-sm">Item Report</h4>
-            <span class="badge bg-white bg-opacity-25 rounded-1 px-3 py-2 mb-2 d-inline-flex align-items-center gap-1 text-white">
-                <span class="material-symbols-rounded" style="font-size:0.9rem;">date_range</span>
-                From {{ $purchaseSalePeriodFromLabel }} to {{ $purchaseSalePeriodToLabel }}
-            </span>
-            <div class="d-flex flex-wrap justify-content-center gap-2 mt-2">
-                <span class="badge bg-white bg-opacity-15 rounded-1 px-2 py-1 small d-inline-flex align-items-center gap-1 text-primary">
-                    <span class="material-symbols-rounded" style="font-size:0.8rem;">visibility</span>
-                    {{ $messViewLabel }}
-                </span>
-                <span class="badge bg-white bg-opacity-15 rounded-1 px-2 py-1 small d-inline-flex align-items-center gap-1 text-primary">
-                    <span class="material-symbols-rounded" style="font-size:0.8rem;">storefront</span>
-                    {{ ($selectedStoreName !== null && $selectedStoreName !== '') ? $selectedStoreName : 'All Stores' }}
-                </span>
-                <span class="badge bg-white bg-opacity-15 rounded-1 px-2 py-1 small d-inline-flex align-items-center gap-1 text-primary">
-                    <span class="material-symbols-rounded" style="font-size:0.8rem;">inventory_2</span>
-                    {{ ($selectedItemNamesLabel !== null && $selectedItemNamesLabel !== '') ? $selectedItemNamesLabel : 'All Items' }}
-                </span>
-            </div>
-        </div>
         <div id="purchaseSaleReportCardBody" class="card-body p-0 psq-scroll-wrapper" data-view-types='@json($viewTypes)'>
             @php $viewTypeSections = $viewTypeSections ?? []; $multiView = count($viewTypeSections) > 1; @endphp
             @forelse($viewTypeSections as $section)
@@ -264,7 +188,7 @@
                                         <tr class="psq-data-row">
                                             <td class="text-center text-body-secondary small fw-medium mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $psqItemPaginator ?? ($section['paginator'] ?? null), 'index' => $index])</td>
                                             <td class="fw-medium">{{ $row['item_name'] }}</td>
-                                            <td><span class="badge bg-body-secondary text-body-emphasis rounded-1 px-2">{{ $row['unit'] }}</span></td>
+                                            <td>{{ $row['unit'] }}</td>
                                             <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
                                             <td class="text-end">{{ $row['avg_purchase_price'] !== null ? '₹' . number_format($row['avg_purchase_price'], 2) : '—' }}</td>
                                             <td class="text-end">{{ number_format($row['sale_qty'], 2) }}</td>
@@ -334,7 +258,7 @@
                                                 <tr class="psq-data-row">
                                                     <td class="text-center text-body-secondary small fw-medium mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['start' => $psqGroupedSerial, 'index' => 0])</td>
                                                     <td class="fw-medium">{{ $row['item_name'] }}</td>
-                                                    <td><span class="badge bg-body-secondary text-body-emphasis rounded-1 px-2">{{ $row['unit'] }}</span></td>
+                                                    <td>{{ $row['unit'] }}</td>
                                                     <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
                                                     <td class="text-end">
                                                         {{ isset($row['avg_purchase_price']) && $row['avg_purchase_price'] !== null ? '₹' . number_format($row['avg_purchase_price'], 2) : '—' }}
@@ -400,29 +324,6 @@
 
 <style>
     /* ── Filter card polish ── */
-    .purchase-sale-quantity-report .psq-filter-card {
-        border-top: 3px solid var(--bs-primary, #0d6efd) !important;
-    }
-    .purchase-sale-quantity-report .psq-filter-header {
-        border-bottom: 1px solid rgba(0,0,0,0.06);
-    }
-    .purchase-sale-quantity-report .psq-filter-card .form-control,
-    .purchase-sale-quantity-report .psq-filter-card .form-select {
-        border-radius: 0.5rem;
-        border-color: #dee2e6;
-        transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .purchase-sale-quantity-report .psq-filter-card .form-control:focus,
-    .purchase-sale-quantity-report .psq-filter-card .form-select:focus {
-        border-color: var(--bs-primary, #0d6efd);
-        box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.15);
-    }
-
-    /* ── Report header gradient ── */
-    .purchase-sale-quantity-report .psq-report-header {
-        background: linear-gradient(135deg, #0b4a7e 0%, #1565c0 50%, #1976d2 100%) !important;
-    }
-
     /* ── Scrollable table body with sticky header ── */
     @media screen {
         .purchase-sale-quantity-report .psq-scroll-wrapper {
@@ -452,19 +353,17 @@
             position: sticky !important;
             top: 0;
             z-index: 10;
-            background: #0b4a7e !important;
-            color: #fff !important;
-            font-weight: 600;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-            border-bottom: 2px solid #004a93 !important;
-            border-top: none !important;
-            border-left: 1px solid rgba(255,255,255,0.12) !important;
-            border-right: 1px solid rgba(255,255,255,0.12) !important;
+            background: var(--ds-line) !important;
+            color: var(--ds-ink) !important;
+            font-weight: 500;
+            border: 0 !important;
             padding: 0.65rem 0.75rem;
-            font-size: 0.8125rem;
+            font-size: 0.75rem;
             white-space: nowrap;
-            letter-spacing: 0.02em;
-            text-transform: uppercase;
+        }
+        .purchase-sale-quantity-report .psq-table > tbody > tr.table-secondary > td {
+            --bs-table-bg: var(--ds-surface-2);
+            --bs-table-color: var(--ds-ink);
         }
         .purchase-sale-quantity-report .psq-table > thead > tr > th:first-child {
             border-left: none !important;
@@ -519,7 +418,6 @@
     @media print {
         .no-print { display: none !important; }
         .report-header { display: block !important; }
-        .purchase-sale-quantity-report .psq-report-header { background: #0b4a7e !important; }
         .purchase-sale-quantity-report .psq-scroll-wrapper { max-height: none !important; overflow: visible !important; }
         .purchase-sale-quantity-report .psq-table > thead > tr > th { position: static !important; box-shadow: none !important; text-transform: none !important; }
     }

@@ -16,10 +16,14 @@ $selectedStores = collect((array) request()->input('store', []))
 $selectedReturnStatus = (string) request()->input('return_status', '');
 $selectedClientType = (string) request()->input('client_type', '');
 @endphp
-<div class="container-fluid py-2 py-lg-3">
-    <x-breadcrum title="Selling Voucher with Date Range"></x-breadcrum>
-
-
+<div class="container-fluid mess-master-page">
+    <x-breadcrum title="Selling Voucher with Date Range">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2"
+            data-bs-toggle="modal" data-bs-target="#addReportModal">
+            <i class="material-symbols-rounded" aria-hidden="true">add</i>
+            <span>Add Selling Voucher</span>
+        </button>
+    </x-breadcrum>
     @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -31,153 +35,120 @@ $selectedClientType = (string) request()->input('client_type', '');
     </div>
     @endif
 
-    <div class="card mb-4 border-0 shadow-sm rounded-4 selling-voucher-filter">
-        <div class="card-body p-3 p-lg-4">
-            <div class="d-flex justify-content-between align-items-start align-items-md-center mb-4 flex-wrap gap-3">
-                <div>
-                    <h4 class="mb-1 fw-semibold">Selling Voucher with Date Range</h4>
-                    <p class="mb-0 small">Review and manage selling vouchers across a selected date range.</p>
-                </div>
-                <button type="button" class="btn btn-primary shadow-sm d-inline-flex align-items-center gap-2 px-3"
-                    data-bs-toggle="modal" data-bs-target="#addReportModal">
-                    <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
-                    <span>Add Voucher</span>
-                </button>
-            </div>
-            <hr class="my-4">
-            <form method="GET" action="{{ route('admin.mess.selling-voucher-date-range.index') }}" id="sellingVoucherFilterForm">
+    <x-mess-export-bar table-id="sellingVoucherDateRangeTable" title="Selling Voucher with Date Range" />
+
+    @php
+        $svdrMoreActive = $selectedReturnStatus !== '' || request()->filled('start_date') || request()->filled('end_date');
+        $svdrFiltersActive = $svdrMoreActive || !empty($selectedStatuses) || !empty($selectedStores)
+            || $selectedClientType !== '' || (string) ($selectedClientTypePk ?? '') !== '' || (string) ($selectedBuyerName ?? '') !== '';
+    @endphp
+    <div class="ds-card mess-dt-card selling-voucher-card">
+        <x-mess-master-toolbar table-id="sellingVoucherDateRangeTable">
+            <form method="GET" action="{{ route('admin.mess.selling-voucher-date-range.index') }}" id="sellingVoucherFilterForm"
+                class="mess-filterbar selling-voucher-filter" aria-label="Selling voucher filters">
                 <input type="hidden" name="refresh" value="1">
-                <div class="sv-filter-fields-grid">
-                    <div class="sv-filter-field">
-                        <label class="form-label small fw-semibold text-uppercase mb-1">Status</label>
-                        <select name="status[]" class="form-select  voucher-filter-multiselect w-100" multiple
-                            data-placeholder="All Statuses">
-                            <option value="" disabled>All</option>
-                            <option value="0" {{ in_array('0', $selectedStatuses, true) ? 'selected' : '' }}>Pending
-                            </option>
-                            <option value="1" {{ in_array('1', $selectedStatuses, true) ? 'selected' : '' }}>Final
-                            </option>
-                            <option value="2" {{ in_array('2', $selectedStatuses, true) ? 'selected' : '' }}>Approved
-                            </option>
-                        </select>
-                    </div>
-                    <div class="sv-filter-field">
-                        <label class="form-label small fw-semibold text-uppercase mb-1">Store</label>
-                        <select name="store[]" class="form-select  voucher-filter-multiselect w-100" multiple
-                            data-placeholder="All Stores">
-                            <option value="" disabled>All</option>
-                            @foreach($stores as $store)
-                            <option value="{{ $store['id'] }}"
-                                {{ in_array((string) $store['id'], $selectedStores, true) ? 'selected' : '' }}>
-                                {{ $store['store_name'] }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="sv-filter-field">
-                        <label class="form-label small fw-semibold text-uppercase mb-1">Client type</label>
-                        <select name="client_type" id="filter_client_type" class="form-select  w-100">
-                            <option value="" {{ $selectedClientType === '' ? 'selected' : '' }}>All</option>
-                            @foreach(\App\Models\Mess\ClientType::clientTypes() as $slug => $label)
-                            <option value="{{ $slug }}" {{ $selectedClientType === $slug ? 'selected' : '' }}>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="sv-filter-field">
-                        <label class="form-label small fw-semibold text-uppercase mb-1">Client category</label>
-                        <select name="client_type_pk" id="filter_client_type_pk" class="form-select w-100">
-                            <option value="">All categories</option>
-                            @foreach(($filterClientTypePkOptions ?? collect()) as $option)
-                            <option value="{{ $option['value'] }}" {{ (string) ($selectedClientTypePk ?? '') === (string) $option['value'] ? 'selected' : '' }}>
-                                {{ $option['text'] }}
-                            </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="sv-filter-field">
-                        <label class="form-label small fw-semibold text-uppercase mb-1">Person / buyer name</label>
-                        <select name="buyer_name" id="filter_buyer_name" class="form-select w-100">
-                            <option value="">All persons</option>
-                            @foreach(($filterBuyerNames ?? collect()) as $buyerName)
-                            @php
-                                $buyerValue = is_array($buyerName) ? (string) ($buyerName['value'] ?? '') : (string) $buyerName;
-                                $buyerLabel = is_array($buyerName) ? (string) ($buyerName['text'] ?? $buyerValue) : (string) $buyerName;
-                            @endphp
-                            <option value="{{ $buyerValue }}" {{ (string) ($selectedBuyerName ?? '') === $buyerValue ? 'selected' : '' }}>
-                                {{ $buyerLabel }}
-                            </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="sv-filter-field">
-                        <label class="form-label small fw-semibold text-uppercase mb-1">Return status</label>
-                        <select name="return_status" class="form-select  w-100">
-                            <option value="" {{ $selectedReturnStatus === '' ? 'selected' : '' }}>All</option>
+                <span class="mess-filterbar-label">Filter</span>
+                <div class="mess-filter-field">
+                    <select name="status[]" class="form-select voucher-filter-multiselect w-100" multiple aria-label="Status"
+                        data-placeholder="All Statuses">
+                        <option value="" disabled>All</option>
+                        <option value="0" {{ in_array('0', $selectedStatuses, true) ? 'selected' : '' }}>Pending
+                        </option>
+                        <option value="1" {{ in_array('1', $selectedStatuses, true) ? 'selected' : '' }}>Final
+                        </option>
+                        <option value="2" {{ in_array('2', $selectedStatuses, true) ? 'selected' : '' }}>Approved
+                        </option>
+                    </select>
+                </div>
+                <div class="mess-filter-field">
+                    <select name="store[]" class="form-select voucher-filter-multiselect w-100" multiple aria-label="Store"
+                        data-placeholder="All Stores">
+                        <option value="" disabled>All</option>
+                        @foreach($stores as $store)
+                        <option value="{{ $store['id'] }}"
+                            {{ in_array((string) $store['id'], $selectedStores, true) ? 'selected' : '' }}>
+                            {{ $store['store_name'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <select name="client_type" id="filter_client_type" class="form-select" aria-label="Client type">
+                    <option value="" {{ $selectedClientType === '' ? 'selected' : '' }}>Client Type</option>
+                    @foreach(\App\Models\Mess\ClientType::clientTypes() as $slug => $label)
+                    <option value="{{ $slug }}" {{ $selectedClientType === $slug ? 'selected' : '' }}>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <select name="client_type_pk" id="filter_client_type_pk" class="form-select" aria-label="Client category">
+                    <option value="">Client Category</option>
+                    @foreach(($filterClientTypePkOptions ?? collect()) as $option)
+                    <option value="{{ $option['value'] }}" {{ (string) ($selectedClientTypePk ?? '') === (string) $option['value'] ? 'selected' : '' }}>
+                        {{ $option['text'] }}
+                    </option>
+                    @endforeach
+                </select>
+                <select name="buyer_name" id="filter_buyer_name" class="form-select" aria-label="Buyer name">
+                    <option value="">Buyer Name</option>
+                    @foreach(($filterBuyerNames ?? collect()) as $buyerName)
+                    @php
+                        $buyerValue = is_array($buyerName) ? (string) ($buyerName['value'] ?? '') : (string) $buyerName;
+                        $buyerLabel = is_array($buyerName) ? (string) ($buyerName['text'] ?? $buyerValue) : (string) $buyerName;
+                    @endphp
+                    <option value="{{ $buyerValue }}" {{ (string) ($selectedBuyerName ?? '') === $buyerValue ? 'selected' : '' }}>
+                        {{ $buyerLabel }}
+                    </option>
+                    @endforeach
+                </select>
+                <div class="dropdown">
+                    <button type="button" class="mess-filter-more-btn {{ $svdrMoreActive ? 'is-active' : '' }}"
+                        data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">+2 Filter</button>
+                    <div class="dropdown-menu mess-filter-more">
+                        <div class="mess-filter-more-head">
+                            <span>Filters</span>
+                            <button type="button" class="btn-close" data-mess-filter-more-close aria-label="Close filters"></button>
+                        </div>
+                        <select name="return_status" class="form-select" aria-label="Return status">
+                            <option value="" {{ $selectedReturnStatus === '' ? 'selected' : '' }}>Return Status: All</option>
                             <option value="returned" {{ $selectedReturnStatus === 'returned' ? 'selected' : '' }}>Returned</option>
                             <option value="not_returned" {{ $selectedReturnStatus === 'not_returned' ? 'selected' : '' }}>Not returned</option>
                         </select>
-                    </div>
-                    <div class="sv-filter-field">
-                        <label class="form-label small fw-semibold text-uppercase mb-1">Start Date</label>
-                        <input type="date" name="start_date" id="filter_start_date" class="form-control  w-100"
-                            value="{{ request('start_date') }}">
-                    </div>
-                    <div class="sv-filter-field">
-                        <label class="form-label small fw-semibold text-uppercase mb-1">End Date</label>
-                        <input type="date" name="end_date" id="filter_end_date" class="form-control  w-100"
-                            value="{{ request('end_date') }}" @if(request()->filled('start_date')) min="{{ request('start_date') }}" @endif>
+                        <div class="mess-filter-range">
+                            <input type="date" name="start_date" id="filter_start_date" class="form-control" aria-label="Start date"
+                                value="{{ request('start_date') }}">
+                            <span aria-hidden="true">&ndash;</span>
+                            <input type="date" name="end_date" id="filter_end_date" class="form-control" aria-label="End date"
+                                value="{{ request('end_date') }}" @if(request()->filled('start_date')) min="{{ request('start_date') }}" @endif>
+                        </div>
                     </div>
                 </div>
-                <div class="d-flex flex-wrap gap-2 justify-content-lg-end align-items-center mt-3 pt-3 border-top">
-                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1 px-3">
-                        <i class="material-symbols-rounded" style="font-size: 1rem;">filter_list</i>
-                        <span>Filter</span>
-                    </button>
-                    <a href="{{ route('admin.mess.selling-voucher-date-range.index') }}"
-                        class="btn btn-outline-secondary d-inline-flex align-items-center gap-1 px-3">
-                        <i class="material-symbols-rounded" style="font-size: 1rem;">refresh</i>
-                        <span>Clear</span>
-                    </a>
-                </div>
+                <button type="submit" class="btn btn-outline-primary">Apply</button>
+                @if($svdrFiltersActive)
+                <a href="{{ route('admin.mess.selling-voucher-date-range.index') }}" class="btn btn-outline-danger">Remove Filter</a>
+                @endif
             </form>
+        </x-mess-master-toolbar>
+
+        <div class="table-responsive selling-voucher-table-wrap">
+            <table class="table table-sm align-middle mb-0 w-100" id="sellingVoucherDateRangeTable">
+                <thead class="position-sticky top-0" style="z-index: 1;">
+                    <tr>
+                        <th scope="col" class="ps-3 text-center">S. No.</th>
+                        <th scope="col">Item Name</th>
+                        <th scope="col" class="text-end">Item Qty</th>
+                        <th scope="col" class="text-end">Return Qty</th>
+                        <th scope="col">Transfer From Store</th>
+                        <th scope="col">Client Type</th>
+                        <th scope="col">Client Name</th>
+                        <th scope="col">Name</th>
+                        <th scope="col">Payment</th>
+                        <th scope="col">Request Date</th>
+                        <th scope="col" class="text-center">Status</th>
+                        <th scope="col" class="text-center">Return Item</th>
+                        <th scope="col">Action</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
     </div>
-
-    <div class="card border-0 shadow-sm rounded-4 selling-voucher-card">
-        <div class="card-body">
-            <div class="d-flex justify-content-end mb-2">
-                <div class="input-group input-group-sm selling-voucher-search-wrapper" style="max-width: 260px;">
-                    <span class="input-group-text">
-                        <i class="material-symbols-rounded" style="font-size: 1rem;">search</i>
-                    </span>
-                    <input type="text" id="sellingVoucherCustomSearch" class="form-control"
-                        placeholder="Search person, item, store…" autocomplete="off">
-                </div>
-            </div>
-            <div class="table-responsive selling-voucher-table-wrap">
-                <table class="table table-sm align-middle mb-0 w-100" id="sellingVoucherDateRangeTable">
-                    <thead class="position-sticky top-0" style="z-index: 1;">
-                        <tr>
-                            <th scope="col" class="ps-3 text-center">#</th>
-                            <th scope="col">Item Name</th>
-                            <th scope="col" class="text-end">Qty</th>
-                            <th scope="col" class="text-end">Return Qty</th>
-                            <th scope="col">Store</th>
-                            <th scope="col">Client Type</th>
-                            <th scope="col">Client Name</th>
-                            <th scope="col">Name</th>
-                            <th scope="col">Payment</th>
-                            <th scope="col">Request Date</th>
-                            <th scope="col" class="text-center">Status</th>
-                            <th scope="col">Return</th>
-                            <th scope="col" class="text-end pe-3">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody class="border-top-0 small"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
     @include('components.mess-master-datatables', [
     'tableId' => 'sellingVoucherDateRangeTable',
     'searchPlaceholder' => 'Search person, item, store…',
@@ -187,7 +158,6 @@ $selectedClientType = (string) request()->input('client_type', '');
     'scrollX' => true,
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.selling-voucher-date-range.datatable'),
-    'dom' => '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l>>rt<"row align-items-center mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
     ])
     @include('mess.partials.modal-dropdown-stability')
 
@@ -199,37 +169,11 @@ $selectedClientType = (string) request()->input('client_type', '');
         var $table = $('#sellingVoucherDateRangeTable');
         if (!$table.length) return;
 
-        function bindSellingVoucherSearch(dtApi) {
-            var $input = $('#sellingVoucherCustomSearch');
-            if (!$input.length) return;
-            var searchTimer = null;
-            $input.on('keyup change', function(e) {
-                var val = this.value;
-                clearTimeout(searchTimer);
-                if (e.type === 'change' || e.key === 'Enter') {
-                    dtApi.search(val).draw();
-                    return;
-                }
-                searchTimer = setTimeout(function() {
-                    dtApi.search(val).draw();
-                }, 250);
-            });
-        }
-
         window.reloadSellingVoucherDateRangeTable = function() {
             if ($.fn.DataTable.isDataTable($table)) {
                 $table.DataTable().ajax.reload(null, false);
             }
         };
-
-        if ($.fn.DataTable.isDataTable($table)) {
-            bindSellingVoucherSearch($table.DataTable());
-        } else {
-            $table.on('init.dt', function(e, settings) {
-                var api = new $.fn.dataTable.Api(settings);
-                bindSellingVoucherSearch(api);
-            });
-        }
     });
     </script>
     @endpush
@@ -253,40 +197,16 @@ $selectedClientType = (string) request()->input('client_type', '');
     z-index: 1065;
 }
 
-.selling-voucher-filter .card-body,
-.selling-voucher-filter .row,
-.selling-voucher-filter .col-12,
-.selling-voucher-filter .col,
-.selling-voucher-filter .sv-filter-fields-grid,
 .selling-voucher-filter .ts-wrapper {
     overflow: visible;
 }
 
-.selling-voucher-filter .sv-filter-fields-grid {
-    display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 1rem;
-    align-items: end;
+/* Inline native selects size to their longest option; keep the row compact */
+.selling-voucher-filter > .form-select {
+    max-width: 12rem;
 }
-@media (max-width: 1199.98px) {
-    .selling-voucher-filter .sv-filter-fields-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-}
-@media (max-width: 767.98px) {
-    .selling-voucher-filter .sv-filter-fields-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-}
-@media (max-width: 575.98px) {
-    .selling-voucher-filter .sv-filter-fields-grid {
-        grid-template-columns: 1fr;
-    }
-}
-.selling-voucher-filter .sv-filter-field {
-    min-width: 0;
-}
-.selling-voucher-filter .sv-filter-field .ts-wrapper {
+
+.selling-voucher-filter .mess-filter-field .ts-wrapper {
     width: 100%;
     max-width: 100%;
 }
@@ -329,12 +249,14 @@ $selectedClientType = (string) request()->input('client_type', '');
 }
 
 .selling-voucher-filter .ts-wrapper.choices .choices__inner {
-    min-height: calc(1.5em + 0.5rem + calc(var(--bs-border-width) * 2));
-    padding: 0.25rem 2.25rem 0.25rem 0.5rem;
-    font-size: 0.765625rem;
+    box-sizing: border-box;
+    height: var(--ds-control-h);
+    min-height: 0;
+    padding: 0 2.25rem 0 0.75rem;
+    font-size: 0.875rem;
     line-height: 1.5;
     border: var(--bs-border-width) solid #e0e6eb;
-    border-radius: var(--bs-border-radius-sm);
+    border-radius: var(--ds-radius-card);
     background-color: #fff;
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
     background-repeat: no-repeat;
@@ -404,12 +326,12 @@ $selectedClientType = (string) request()->input('client_type', '');
 }
 
 .selling-voucher-filter .ts-wrapper.choices[data-type*="select-multiple"] .choices__inner {
-    min-height: calc(1.5em + 0.5rem + calc(var(--bs-border-width) * 2));
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 0.35rem;
-    padding: 0.3rem 0.45rem;
+    overflow: hidden;
+    padding: 0 2rem 0 0.75rem;
 }
 
 .selling-voucher-filter .choices__list--multiple .choices__item {
@@ -428,9 +350,11 @@ $selectedClientType = (string) request()->input('client_type', '');
 
 .selling-voucher-filter .ts-wrapper.choices[data-type*="select-multiple"] .choices__input--cloned {
     margin: 0 !important;
-    padding: 0.2rem 0 !important;
-    flex: 1 1 120px;
-    min-width: 120px;
+    padding: 0 !important;
+    background: transparent;
+    font-size: 0.875rem;
+    flex: 1 1 4rem;
+    min-width: 4rem;
 }
 
 .selling-voucher-filter .ts-wrapper.choices[data-type*="select-multiple"] .choices__list--multiple {
@@ -572,7 +496,7 @@ $selectedClientType = (string) request()->input('client_type', '');
     position: sticky;
     top: 0;
     z-index: 2;
-    background: var(--bs-tertiary-bg) !important;
+    background: var(--ds-surface) !important;
 }
 
 #addReportModal .modal-footer,
@@ -852,15 +776,6 @@ $selectedClientType = (string) request()->input('client_type', '');
     position: relative;
 }
 
-.selling-voucher-card .dataTables_wrapper .dataTables_filter {
-    display: none;
-    /* hide default DataTables search for this table */
-}
-
-.selling-voucher-search-wrapper {
-    max-width: 260px;
-}
-
 /* Keep DataTables controls in normal flow (no floating) */
 .selling-voucher-card .dataTables_wrapper .dataTables_length,
 .selling-voucher-card .dataTables_wrapper .dataTables_info,
@@ -869,7 +784,7 @@ $selectedClientType = (string) request()->input('client_type', '');
     background-color: transparent;
 }
 </style>
-<div class="modal fade" id="addReportModal" tabindex="-1" aria-labelledby="addReportModalLabel" aria-hidden="true">
+<div class="modal fade" id="addReportModal" data-mess-confirm-leave tabindex="-1" aria-labelledby="addReportModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <form action="{{ route('admin.mess.selling-voucher-date-range.store') }}" method="POST" id="addReportForm"
@@ -877,8 +792,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                 @csrf
                 <input type="hidden" name="client_id" id="drClientId" value="">
                 <div class="modal-header border-bottom">
-                    <h5 class="modal-title fw-semibold" id="addReportModalLabel">ADD Selling Voucher with Date Range
-                    </h5>
+                    <h5 class="modal-title fw-semibold" id="addReportModalLabel">Add Selling Voucher</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -1098,11 +1012,8 @@ $selectedClientType = (string) request()->input('client_type', '');
                     </div>
                 </div>
                 <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
-                        <i class="material-symbols-rounded" style="font-size: 1rem;">save</i>
-                        <span>Save Selling Voucher</span>
-                    </button>
+                    <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Selling Voucher</button>
                 </div>
             </form>
         </div>
@@ -1373,11 +1284,8 @@ $selectedClientType = (string) request()->input('client_type', '');
                     </div>
                 </div>
                 <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
-                        <i class="material-symbols-rounded" style="font-size: 1rem;">sync</i>
-                        <span>Update</span>
-                    </button>
+                    <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update</button>
                 </div>
             </form>
         </div>
@@ -1590,11 +1498,8 @@ $selectedClientType = (string) request()->input('client_type', '');
                     </div>
                 </div>
                 <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1">
-                        <i class="material-symbols-rounded" style="font-size: 1rem;">save</i>
-                        <span>Update Selling Voucher</span>
-                    </button>
+                    <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Selling Voucher</button>
                 </div>
             </form>
         </div>
@@ -2589,12 +2494,12 @@ $selectedClientType = (string) request()->input('client_type', '');
 
         if (filterStatus) {
             if (filterStatus.tomselect) filterStatus.tomselect.destroy();
-            createChoicesInstance(filterStatus, createFilterChoicesConfig('All Statuses'));
+            createChoicesInstance(filterStatus, createFilterChoicesConfig('Status'));
         }
 
         if (filterStore) {
             if (filterStore.tomselect) filterStore.tomselect.destroy();
-            createChoicesInstance(filterStore, createFilterChoicesConfig('All Stores'));
+            createChoicesInstance(filterStore, createFilterChoicesConfig('Store'));
         }
     });
 
@@ -5212,13 +5117,8 @@ $selectedClientType = (string) request()->input('client_type', '');
     // Reset add modal when closed (so next open starts fresh)
     const addReportModal = document.getElementById('addReportModal');
     if (addReportModal) {
-        // Reset ASAP when user closes via X/Cancel/backdrop.
-        // (hidden.bs.modal is sometimes late; do both for a reliable "refreshed" feel.)
-        addReportModal.addEventListener('hide.bs.modal', function() {
-            resetAddReportForm();
-            var body = addReportModal.querySelector('.modal-body');
-            if (body) body.scrollTop = 0;
-        });
+        // Reset only once the modal has really closed: a hide can still be cancelled by the
+        // "Leave the Form?" check (data-mess-confirm-leave), which must not find the form wiped.
         addReportModal.addEventListener('hidden.bs.modal', function() {
             resetAddReportForm();
             var body = addReportModal.querySelector('.modal-body');
@@ -5449,7 +5349,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                 .finally(function() {
                     if (btn) {
                         btn.disabled = false;
-                        btn.textContent = btn.dataset.originalText || 'Save Selling Voucher';
+                        btn.textContent = btn.dataset.originalText || 'Add Selling Voucher';
                     }
                 });
         });
@@ -5610,7 +5510,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                 };
             }).filter(function(option) {
                 return option.value !== '' && option.text !== '';
-            }), 'All persons', preserveSelection ? selectedBuyer : '');
+            }), 'Buyer Name', preserveSelection ? selectedBuyer : '');
         }
 
         function getFilterParamsForBuyerList() {
@@ -5710,7 +5610,7 @@ $selectedClientType = (string) request()->input('client_type', '');
             } else if (slug && typePkOptionsBySlug[slug]) {
                 options = typePkOptionsBySlug[slug];
             }
-            fillSelect(filterTypePk, options, 'All categories', preserveSelection ? selectedTypePk : '');
+            fillSelect(filterTypePk, options, 'Client Category', preserveSelection ? selectedTypePk : '');
             loadBuyerOptions(preserveSelection);
         }
 

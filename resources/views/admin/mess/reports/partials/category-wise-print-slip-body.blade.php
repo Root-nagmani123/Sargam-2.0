@@ -8,6 +8,7 @@
     $showBrandingHeader = (bool) ($showBrandingHeader ?? false);
     $dompdfSafeTables = (bool) ($dompdfSafeTables ?? false);
     $freezeSaleVoucherTableHeader = (bool) ($freezeSaleVoucherTableHeader ?? false);
+    $showGrandTotal = (bool) ($showGrandTotal ?? true);
     $cwSlipUseSplitTable = $freezeSaleVoucherTableHeader && ! $dompdfSafeTables;
     $emblemSrc = $emblemSrc ?? pdf_emblem_src();
     $lbsnaaLogoSrc = $lbsnaaLogoSrc ?? pdf_lbsnaa_logo_src();
@@ -30,7 +31,7 @@
                         <table class="lbsnaa-branding-table">
                             <tr>
                                 <td class="lbsnaa-branding-emblem">
-                                    <img src="{{ $emblemSrc }}" alt="Emblem of India" class="lbsnaa-header-logo">
+                                    <img src="{{ $emblemSrc }}" alt="Emblem of India" class="lbsnaa-header-logo" height="34">
                                 </td>
                                 <td class="lbsnaa-branding-lines">
                                     <div class="lbsnaa-brand-line-1">Government of India</div>
@@ -38,7 +39,7 @@
                                     <div class="lbsnaa-brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
                                 </td>
                                 <td class="lbsnaa-branding-logo">
-                                    <img src="{{ $lbsnaaLogoSrc }}" alt="LBSNAA Logo" class="lbsnaa-header-logo lbsnaa-header-logo-right">
+                                    <img src="{{ $lbsnaaLogoSrc }}" alt="LBSNAA Logo" class="lbsnaa-header-logo lbsnaa-header-logo-right" width="150">
                                 </td>
                             </tr>
                         </table>
@@ -178,6 +179,7 @@
         </div>
     @endforeach
 
+    @if($showGrandTotal)
     <div class="print-grand-total-block mt-2">
         <div class="table-responsive">
             <table class="table table-sm mb-0 print-slip-table align-middle print-grand-total-table">
@@ -199,4 +201,5 @@
             </table>
         </div>
     </div>
+    @endif
 @endif
