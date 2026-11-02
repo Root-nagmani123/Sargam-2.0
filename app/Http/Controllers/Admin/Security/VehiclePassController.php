@@ -718,7 +718,8 @@ class VehiclePassController extends Controller
             $vehiclePass->pk ?? null,
             'New Vehicle Pass request',
             $notifier->actorName() . ' has submitted a Vehicle Pass request for vehicle '
-                . $vehiclePass->vehicle_no . '. Awaiting your approval.'
+                . $vehiclePass->vehicle_no . '. Awaiting your approval.',
+            SecurityRequestNotifier::vehicleApprovalLink('tw', $vehicleTwPk)
         );
 
         return redirect()->route('admin.security.vehicle_pass.index')->with('success', 'Vehicle Pass application submitted successfully');

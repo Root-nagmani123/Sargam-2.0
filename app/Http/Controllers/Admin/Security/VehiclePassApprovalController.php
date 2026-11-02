@@ -528,7 +528,15 @@ class VehiclePassApprovalController extends Controller
                 SecurityRequestNotifier::MODULE_VEHICLE_APPROVAL,
                 $application->pk ?? null,
                 'Vehicle Pass awaiting final approval',
-                "Vehicle Pass request {$vehicleLabel} has been recommended at Approval II and awaits your final approval."
+                "Vehicle Pass request {$vehicleLabel} has been recommended at Approval II and awaits your final approval.",
+                SecurityRequestNotifier::vehicleApprovalLink($kind, (string) $vehicleKey)
+            );
+            $notifier->toEmployee(
+                $application->veh_created_by ?? $application->emp_master_pk ?? null,
+                SecurityRequestNotifier::MODULE_VEHICLE_STATUS,
+                $application->pk ?? null,
+                'Vehicle Pass request moved to final approval',
+                "Your Vehicle Pass request {$vehicleLabel} has been recommended at Approval II and forwarded for final approval."
             );
         } else {
             $notifier->toEmployee(

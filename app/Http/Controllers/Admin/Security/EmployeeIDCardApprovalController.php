@@ -995,37 +995,45 @@ class EmployeeIDCardApprovalController extends Controller
 
         if (is_string($decoded) && str_starts_with($decoded, 'c-dup-')) {
             $applyId = substr($decoded, 6);
+            $before = DB::table('security_dup_other_id_apply')->where('emp_id_apply', $applyId)->first();
             DB::table('security_dup_other_id_apply')
                 ->where('emp_id_apply', $applyId)
                 ->update(['id_card_generate_date' => $now]);
             self::bumpApproval1ListCacheEpoch();
+            $this->notifyIdCardIssued($before, true);
             return redirect()->back()->with('success', 'Record moved to archive successfully.');
         }
 
         if (is_string($decoded) && str_starts_with($decoded, 'p-dup-')) {
             $applyId = substr($decoded, 6);
+            $before = DB::table('security_dup_perm_id_apply')->where('emp_id_apply', $applyId)->first();
             DB::table('security_dup_perm_id_apply')
                 ->where('emp_id_apply', $applyId)
                 ->update(['id_card_generate_date' => $now]);
             self::bumpApplicantEmployeeIdcardIndexCaches();
+            $this->notifyIdCardIssued($before, true);
             return redirect()->back()->with('success', 'Record marked as issued. You can view it under the Issued tab.');
         }
 
         if (is_string($decoded) && str_starts_with($decoded, 'c-')) {
             $pk = (int) substr($decoded, 2);
+            $before = DB::table('security_con_oth_id_apply')->where('pk', $pk)->first();
             DB::table('security_con_oth_id_apply')
                 ->where('pk', $pk)
                 ->update(['id_card_generate_date' => $now]);
             self::bumpApproval1ListCacheEpoch();
+            $this->notifyIdCardIssued($before, false, 'c-' . $pk);
             return redirect()->back()->with('success', 'Record moved to archive successfully.');
         }
 
         // Permanent regular (emp_id_apply)
+        $before = DB::table('security_parm_id_apply')->where('emp_id_apply', $decoded)->first();
         DB::table('security_parm_id_apply')
             ->where('emp_id_apply', $decoded)
             ->update(['id_card_generate_date' => $now]);
 
         self::bumpApplicantEmployeeIdcardIndexCaches();
+        $this->notifyIdCardIssued($before, false, (string) $decoded);
         return redirect()->back()->with('success', 'Record marked as issued. You can view it under the Issued tab.');
     }
 
@@ -1591,7 +1599,7 @@ class EmployeeIDCardApprovalController extends Controller
             ]);
 
             self::bumpApproval1ListCacheEpoch();
-            $this->notifyIdCardForwarded(2, $row, true);
+            $this->notifyIdCardForwarded(2, $row, true, (string) $decrypted);
 
             return redirect()->route('admin.security.employee_idcard_approval.approval1')
                 ->with('success', 'Contractual duplicate ID Card request approved at Level 1 and forwarded to Security for further approval.');
@@ -1639,7 +1647,7 @@ class EmployeeIDCardApprovalController extends Controller
                
 
             self::bumpApproval1ListCacheEpoch();
-            $this->notifyIdCardForwarded(2, $row, false);
+            $this->notifyIdCardForwarded(2, $row, false, (string) $decrypted);
 
             return redirect()->route('admin.security.employee_idcard_approval.approval1')
                 ->with('success', 'Contractual ID Card request approved at Level 1 and forwarded to Security for further approval.');
@@ -1665,7 +1673,7 @@ class EmployeeIDCardApprovalController extends Controller
         ]);
 
         self::bumpApproval1ListCacheEpoch();
-        $this->notifyIdCardForwarded(2, $row, false);
+        $this->notifyIdCardForwarded(2, $row, false, (string) $decrypted);
 
         return redirect()->route('admin.security.employee_idcard_approval.approval1')
             ->with('success', 'Request approved successfully. It will now move to Approver 2.');
@@ -1740,7 +1748,7 @@ class EmployeeIDCardApprovalController extends Controller
             }
 
             self::bumpApplicantEmployeeIdcardIndexCaches();
-            $this->notifyIdCardForwarded(3, $row, true);
+            $this->notifyIdCardForwarded(3, $row, true, (string) $pk);
             return redirect()->route('admin.security.employee_idcard_approval.approval2')
                 ->with('success', 'Duplicate ID Card request recommended at Level 2. It will now move to Approval III.');
         }
@@ -1778,7 +1786,7 @@ class EmployeeIDCardApprovalController extends Controller
             ]);
 
             self::bumpApplicantEmployeeIdcardIndexCaches();
-            $this->notifyIdCardForwarded(3, $row, true);
+            $this->notifyIdCardForwarded(3, $row, true, (string) $pk);
             return redirect()->route('admin.security.employee_idcard_approval.approval2')
                 ->with('success', 'Duplicate ID Card request approved successfully.');
         }
@@ -1833,7 +1841,7 @@ class EmployeeIDCardApprovalController extends Controller
 
             // Do not mark id_status approved here; final approval at Level 3 (ID number generated there).
             self::bumpApplicantEmployeeIdcardIndexCaches();
-            $this->notifyIdCardForwarded(3, $row, false);
+            $this->notifyIdCardForwarded(3, $row, false, (string) $pk);
             return redirect()->route('admin.security.employee_idcard_approval.approval2')
                 ->with('success', 'Contractual ID Card request approved at Level 2 and forwarded for final approval.');
         }
@@ -1897,7 +1905,7 @@ class EmployeeIDCardApprovalController extends Controller
         $row->save();
 
         self::bumpApplicantEmployeeIdcardIndexCaches();
-        $this->notifyIdCardForwarded(3, $row, false);
+        $this->notifyIdCardForwarded(3, $row, false, (string) $pk);
         return redirect()->route('admin.security.employee_idcard_approval.approval2')
             ->with('success', 'Request recommended successfully at Level 2. It will now move to Approval III.');
     }
@@ -2142,7 +2150,7 @@ class EmployeeIDCardApprovalController extends Controller
             //     ->with('success', 'Contractual ID Card request approved at Level 3. ID card is now fully approved.');
 
             self::bumpApplicantEmployeeIdcardIndexCaches();
-            $this->notifyIdCardDecision(true, $row, false);
+            $this->notifyIdCardDecision(true, $row, false, null, (string) $empIdApply);
             return redirect()->route('admin.security.employee_idcard_approval.approval3')
                 ->with('success', 'Contractual ID Card request approved successfully at final level.');
         }
@@ -2214,31 +2222,46 @@ class EmployeeIDCardApprovalController extends Controller
         }
 
         self::bumpApplicantEmployeeIdcardIndexCaches();
-        $this->notifyIdCardDecision(true, $row, false);
+        $this->notifyIdCardDecision(true, $row, false, null, (string) $empIdApply);
         return redirect()->route('admin.security.employee_idcard_approval.approval3')
             ->with('success', 'Request approved successfully at Level 3. ID card is now fully approved.');
     }
 
     /**
      * The request moved on to Approval II or III: tell that stage's approvers.
+     * $key is the decrypted id this request was approved under; the link opens it at the next stage.
      */
-    private function notifyIdCardForwarded(int $toStage, object $row, bool $isDuplicate): void
+    private function notifyIdCardForwarded(int $toStage, object $row, bool $isDuplicate, string $key): void
     {
         $notifier = app(SecurityRequestNotifier::class);
         $what = ($isDuplicate ? 'Duplicate ID Card' : 'ID Card') . ' request ' . $this->idCardNotificationSubject($row);
         $title = ($isDuplicate ? 'Duplicate ID Card' : 'ID Card') . ' request awaiting Approval ' . ($toStage === 2 ? 'II' : 'III');
+        $link = SecurityRequestNotifier::idCardApprovalLink($key, $toStage);
 
         if ($toStage === 2) {
-            $notifier->toApproverII(SecurityRequestNotifier::MODULE_IDCARD_APPROVAL2, null, $title, "{$what} has been approved at Approval I and awaits your approval.");
+            $notifier->toApproverII(SecurityRequestNotifier::MODULE_IDCARD_APPROVAL2, null, $title, "{$what} has been approved at Approval I and awaits your approval.", $link);
         } else {
-            $notifier->toApproverIII(SecurityRequestNotifier::MODULE_IDCARD_APPROVAL3, null, $title, "{$what} has been recommended at Approval II and awaits your final approval.");
+            $notifier->toApproverIII(SecurityRequestNotifier::MODULE_IDCARD_APPROVAL3, null, $title, "{$what} has been recommended at Approval II and awaits your final approval.", $link);
         }
+
+        // The applicant: their request moved on (same receiver as notifyIdCardDecision).
+        $label = $isDuplicate ? 'Duplicate ID Card' : 'ID Card';
+        $notifier->toEmployee(
+            $row->created_by ?? $row->employee_master_pk ?? null,
+            $isDuplicate ? SecurityRequestNotifier::MODULE_DUPLICATE_IDCARD_STATUS : SecurityRequestNotifier::MODULE_IDCARD_STATUS,
+            null,
+            "{$label} request moved to Approval " . ($toStage === 2 ? 'II' : 'III'),
+            "Your {$label} request " . $this->idCardNotificationSubject($row)
+                . ($toStage === 2 ? ' has been approved at Approval I and forwarded to Approval II.' : ' has been recommended at Approval II and forwarded for final approval.'),
+            $isDuplicate ? null : SecurityRequestNotifier::idCardStatusLink($key)
+        );
     }
 
     /**
      * Final approval or a rejection at any stage: tell the applicant.
+     * $key (non-duplicate only) is the request's id; the notification then opens the applicant's request page.
      */
-    private function notifyIdCardDecision(bool $approved, object $row, bool $isDuplicate, ?string $remarks = null): void
+    private function notifyIdCardDecision(bool $approved, object $row, bool $isDuplicate, ?string $remarks = null, ?string $key = null): void
     {
         $label = $isDuplicate ? 'Duplicate ID Card' : 'ID Card';
         $subject = $this->idCardNotificationSubject($row);
@@ -2251,7 +2274,30 @@ class EmployeeIDCardApprovalController extends Controller
             $isDuplicate ? SecurityRequestNotifier::MODULE_DUPLICATE_IDCARD_STATUS : SecurityRequestNotifier::MODULE_IDCARD_STATUS,
             null,
             "{$label} " . ($approved ? 'approved' : 'rejected'),
-            $message
+            $message,
+            ! $isDuplicate && $key !== null ? SecurityRequestNotifier::idCardStatusLink($key) : null
+        );
+    }
+
+    /**
+     * Card printed / issued (markGenerated): tell the applicant, once — re-marking an issued
+     * card does not notify again. $before is the row as it was before the update; $key (non-duplicate
+     * only) opens the applicant's request page.
+     */
+    private function notifyIdCardIssued(?object $before, bool $isDuplicate, ?string $key = null): void
+    {
+        if (! $before || ! empty($before->id_card_generate_date)) {
+            return;
+        }
+        $label = $isDuplicate ? 'Duplicate ID Card' : 'ID Card';
+
+        app(SecurityRequestNotifier::class)->toEmployee(
+            $before->created_by ?? $before->employee_master_pk ?? null,
+            $isDuplicate ? SecurityRequestNotifier::MODULE_DUPLICATE_IDCARD_STATUS : SecurityRequestNotifier::MODULE_IDCARD_STATUS,
+            null,
+            "{$label} issued",
+            "Your {$label} " . $this->idCardNotificationSubject($before) . ' has been printed and issued.',
+            ! $isDuplicate && $key !== null ? SecurityRequestNotifier::idCardStatusLink($key) : null
         );
     }
 
@@ -2419,7 +2465,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'modified_date' => now()->format('Y-m-d H:i:s'),
             ]);
             DB::table('security_con_oth_id_apply')->where('pk', $contPk)->update(['id_status' => 3]);
-            $this->notifyIdCardDecision(false, $row, false, $validated['rejection_reason']);
+            $this->notifyIdCardDecision(false, $row, false, $validated['rejection_reason'], (string) $pk);
             $route = $stage === 1
                 ? 'admin.security.employee_idcard_approval.approval1'
                 : ($stage === 2 ? 'admin.security.employee_idcard_approval.approval2' : 'admin.security.employee_idcard_approval.approval3');
@@ -2464,7 +2510,7 @@ class EmployeeIDCardApprovalController extends Controller
         ]);
         $row->id_status = SecurityParmIdApply::ID_STATUS_REJECTED;
         $row->save();
-        $this->notifyIdCardDecision(false, $row, false, $validated['rejection_reason']);
+        $this->notifyIdCardDecision(false, $row, false, $validated['rejection_reason'], (string) $pk);
 
         $route = $stage === 1
             ? 'admin.security.employee_idcard_approval.approval1'

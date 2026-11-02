@@ -1028,7 +1028,8 @@ class DuplicateIDCardRequestController extends Controller
         $photoPath = SecurityFiles::storeForRow($request->file('photo'), $fileTable, $fileKeys);
 
         $approval1AuthorityPk = null; // set inside the transaction for contractual duplicates
-        DB::transaction(function () use ($validated, $employeePk, $approvers, $now, $photoPath, $request, $cardReason, $fileTable, $fileKeys, &$approval1AuthorityPk) {
+        $approvalKey = null; // id the approval pages open this request under
+        DB::transaction(function () use ($validated, $employeePk, $approvers, $now, $photoPath, $request, $cardReason, $fileTable, $fileKeys, &$approval1AuthorityPk, &$approvalKey) {
             if ($validated['id_card_type'] === 'Permanent') {
                 $nextPk = (int) DB::table('security_dup_perm_id_apply')->max('pk') + 1;
                 $applyId = 'DUP' . str_pad((string) $nextPk, 5, '0', STR_PAD_LEFT);
@@ -1080,11 +1081,14 @@ class DuplicateIDCardRequestController extends Controller
                     'modified_date' => $now,
                 ]);
 
+                $approvalKey = 'p-dup-' . $applyId;
+
                 // Case 2 - Extension/Duplicate ID Card (Own Permanent): Only security_dup_perm_id_apply at request time.
                 // security_dup_perm_id_apply_approval rows are inserted when approvers approve.
             } else {
                 $nextPk = (int) DB::table('security_dup_other_id_apply')->max('pk') + 1;
                 $applyId = 'DUO' . str_pad((string) $nextPk, 5, '0', STR_PAD_LEFT);
+                $approvalKey = 'c-dup-' . $applyId;
 
                 $aadharFile = null;
                 if ($request->hasFile('aadhar_doc')) {
@@ -1161,9 +1165,11 @@ class DuplicateIDCardRequestController extends Controller
         $message = "{$applicant} has submitted a duplicate {$cardType} ID Card request"
             . ($reason !== '' ? " ({$reason})" : '') . '. Awaiting your approval.';
         if ($approval1AuthorityPk) {
-            $notifier->toEmployee($approval1AuthorityPk, SecurityRequestNotifier::MODULE_IDCARD_APPROVAL1, null, 'New duplicate ID Card request (Approval I)', $message);
+            $notifier->toEmployee($approval1AuthorityPk, SecurityRequestNotifier::MODULE_IDCARD_APPROVAL1, null, 'New duplicate ID Card request (Approval I)', $message,
+                $approvalKey !== null ? SecurityRequestNotifier::idCardApprovalLink($approvalKey, 1) : null);
         } else {
-            $notifier->toApproverII(SecurityRequestNotifier::MODULE_IDCARD_APPROVAL2, null, 'New duplicate ID Card request', $message);
+            $notifier->toApproverII(SecurityRequestNotifier::MODULE_IDCARD_APPROVAL2, null, 'New duplicate ID Card request', $message,
+                $approvalKey !== null ? SecurityRequestNotifier::idCardApprovalLink($approvalKey, 2) : null);
         }
 
         return redirect()->route('admin.duplicate_idcard.index')->with('success', 'Duplicate ID Card request submitted successfully.');

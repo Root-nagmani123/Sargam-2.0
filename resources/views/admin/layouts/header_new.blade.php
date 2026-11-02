@@ -177,14 +177,14 @@
                                  data-peek-message and shown in the styled peek card instead. --}}
                             <a class="dropdown-item notification-item {{ $notification->is_read ? '' : 'unread' }}"
                                href="javascript:void(0)"
-                               data-peek-message="{{ $notification->message ?? '' }}"
+                               data-peek-message="{{ \App\Services\NotificationService::stripMessCombinedReceiptPayloadForDisplay($notification->message ?? '') }}"
                                onclick="markAsRead({{ $notification->pk }})">
 
                                 <div class="notification-title">
                                     {{ $notification->title ?? 'Notification' }}
                                 </div>
                                 <div class="notification-message mt-1">
-                                    {{ Str::limit($notification->message ?? '', 100) }}
+                                    {{ Str::limit(\App\Services\NotificationService::stripMessCombinedReceiptPayloadForDisplay($notification->message ?? ''), 100) }}
                                 </div>
                                 <div class="notification-time mt-2">
                                     {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
@@ -461,10 +461,10 @@
                              card reads from data-peek-message. --}}
                         <a class="notification-item text-decoration-none {{ $notification->is_read ? '' : 'unread' }}"
                             href="javascript:void(0)"
-                            data-peek-message="{{ $notification->message ?? '' }}"
+                            data-peek-message="{{ \App\Services\NotificationService::stripMessCombinedReceiptPayloadForDisplay($notification->message ?? '') }}"
                             onclick="markAsRead({{ $notification->pk }})">
                             <div class="notification-title">{{ $notification->title ?? 'Notification' }}</div>
-                            <div class="notification-message mt-1">{{ Str::limit($notification->message ?? '', 100) }}</div>
+                            <div class="notification-message mt-1">{{ Str::limit(\App\Services\NotificationService::stripMessCombinedReceiptPayloadForDisplay($notification->message ?? ''), 100) }}</div>
                             <div class="notification-time mt-2">
                                 {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
                             </div>
@@ -1630,7 +1630,7 @@
 
             // Notification functions
             function markAsRead(notificationId) {
-                fetch('/admin/notifications/mark-read-redirect/' + notificationId, {
+                fetch('{{ route("admin.notifications.mark-read-redirect", ["id" => "__ID__"]) }}'.replace('__ID__', encodeURIComponent(notificationId)), {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

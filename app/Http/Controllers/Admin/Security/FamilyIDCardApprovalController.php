@@ -612,7 +612,7 @@ class FamilyIDCardApprovalController extends Controller
     }
 
     /**
-     * Level 1 (Approval II) done → tell Approval III; final approval → tell the applicant.
+     * Level 1 (Approval II) done → tell Approval III and the applicant; final approval → tell the applicant.
      */
     private function notifyFamilyApproved(SecurityFamilyIdApply $application, bool $wasLevel1, int $memberCount): void
     {
@@ -625,6 +625,13 @@ class FamilyIDCardApprovalController extends Controller
                 $application->fml_id_apply,
                 'Family ID Card awaiting final approval',
                 "Family ID Card request {$subject} has been recommended at Approval II and awaits your final approval."
+            );
+            $notifier->toEmployee(
+                $application->created_by,
+                SecurityRequestNotifier::MODULE_FAMILY_STATUS,
+                $application->fml_id_apply,
+                'Family ID Card request moved to Approval III',
+                "Your Family ID Card request {$subject} has been recommended at Approval II and forwarded for final approval."
             );
 
             return;

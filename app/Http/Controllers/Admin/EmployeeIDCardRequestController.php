@@ -1076,7 +1076,11 @@ class EmployeeIDCardRequestController extends Controller
             $userDepartmentPk = $authEmp->department_master_pk ?? null;
         }
 
+        // Id the approval pages open this request under (see SecurityRequestNotifier::idCardApprovalLink).
+        $approvalKey = null;
+
         DB::transaction(function () use (
+            &$approvalKey,
             $employeeType,
             $employeePk,
             $authEmpPk,
@@ -1149,6 +1153,8 @@ class EmployeeIDCardRequestController extends Controller
                         'name_change_doc' => null,
                     ]);
 
+                    $approvalKey = 'p-dup-' . $applyId;
+
                     // Case 2 - Extension/Duplicate ID Card (Own Permanent): Only security_dup_perm_id_apply at request time.
                     // security_dup_perm_id_apply_approval rows are inserted when approvers approve.
                 } else {
@@ -1206,6 +1212,8 @@ class EmployeeIDCardRequestController extends Controller
                         'aadhar_doc' => null,
                     ]);
 
+                    $approvalKey = 'c-dup-' . $applyId;
+
                     // Case 4 - Extension/Duplicate ID Card (Other/Contractual): Only security_dup_other_id_apply at request time.
                     // security_dup_other_id_apply_approval rows are inserted when approvers approve.
                 }
@@ -1240,6 +1248,8 @@ class EmployeeIDCardRequestController extends Controller
                     'permanent_type' => $cardMasterPk, // sec_id_cardno_master.pk
                     'perm_sub_type' => $configMap->map_pk, // sec_id_cardno_config_map.pk
                 ]);
+
+                $approvalKey = $empIdApply;
 
                 // Case 1 - Permanent Employee (Own ID Card): Only security_parm_id_apply at request time.
                 // security_parm_id_apply_approval rows are inserted when approvers approve (EmployeeIDCardApprovalController).
@@ -1284,7 +1294,8 @@ class EmployeeIDCardRequestController extends Controller
                 if ($docPath !== null && Schema::hasColumn('security_con_oth_id_apply', 'joining_letter_path')) {
                     $contRow['joining_letter_path'] = $docPath;
                 }
-                DB::table('security_con_oth_id_apply')->insert($contRow);
+                $contPk = DB::table('security_con_oth_id_apply')->insertGetId($contRow);
+                $approvalKey = $contPk ? 'c-' . $contPk : null; // no id: the notification opens the list
                 if ($employeePk) {
                     static::syncEmployeeDojIfEmpty((int) $employeePk, $validated['academy_joining'] ?? null);
                 }
@@ -1303,7 +1314,7 @@ class EmployeeIDCardRequestController extends Controller
         }
         static::bumpIndexListCacheEpoch();
         DuplicateIDCardRequestController::bumpIndexListCacheEpoch();
-        $this->notifyNewIdCardRequest($employeeType, $isDupOrExt, $validated);
+        $this->notifyNewIdCardRequest($employeeType, $isDupOrExt, $validated, $approvalKey);
         return redirect()
             ->route('admin.employee_idcard.index')
             ->with('success', $successMsg);
@@ -1314,7 +1325,7 @@ class EmployeeIDCardRequestController extends Controller
      *  - contractual new card → the Approval Authority chosen on the form (Approval I);
      *  - permanent (new or duplicate) and contractual duplicate/extension → Approval II.
      */
-    private function notifyNewIdCardRequest(string $employeeType, bool $isDupOrExt, array $validated): void
+    private function notifyNewIdCardRequest(string $employeeType, bool $isDupOrExt, array $validated, ?string $approvalKey): void
     {
         $notifier = app(SecurityRequestNotifier::class);
         $applicant = trim((string) ($validated['name'] ?? '')) ?: $notifier->actorName();
@@ -1323,12 +1334,14 @@ class EmployeeIDCardRequestController extends Controller
 
         $authorityPk = ! empty($validated['approval_authority']) ? (int) $validated['approval_authority'] : 0;
         if ($employeeType !== 'Permanent Employee' && ! $isDupOrExt && $authorityPk > 0) {
-            $notifier->toEmployee($authorityPk, SecurityRequestNotifier::MODULE_IDCARD_APPROVAL1, null, 'New ID Card request (Approval I)', $message);
+            $notifier->toEmployee($authorityPk, SecurityRequestNotifier::MODULE_IDCARD_APPROVAL1, null, 'New ID Card request (Approval I)', $message,
+                $approvalKey !== null ? SecurityRequestNotifier::idCardApprovalLink($approvalKey, 1) : null);
 
             return;
         }
 
-        $notifier->toApproverII(SecurityRequestNotifier::MODULE_IDCARD_APPROVAL2, null, 'New ID Card request', $message);
+        $notifier->toApproverII(SecurityRequestNotifier::MODULE_IDCARD_APPROVAL2, null, 'New ID Card request', $message,
+            $approvalKey !== null ? SecurityRequestNotifier::idCardApprovalLink($approvalKey, 2) : null);
     }
 
     /**
@@ -1767,7 +1780,9 @@ class EmployeeIDCardRequestController extends Controller
         $nextPk = (int) DB::table('security_dup_perm_id_apply')->max('pk') + 1;
         $applyId = 'DUP' . str_pad((string) $nextPk, 5, '0', STR_PAD_LEFT);
         $now = now()->format('Y-m-d H:i:s');
-        $createdBy = Auth::id() ?? $parentRow->created_by;
+        // employee_master.pk, like every other ID card insert (Auth::id() is the login row's pk);
+        // the applicant's approval / rejection notifications are addressed by this value.
+        $createdBy = Auth::user()->user_id ?? $parentRow->created_by;
 
         $cardValidFrom = null;
         $cardValidTo = null;
@@ -1834,6 +1849,17 @@ class EmployeeIDCardRequestController extends Controller
             'card_reason' => $cardReason,
             'name_change_doc' => $nameChangeDoc,
         ]);
+
+        // Permanent duplicates start at Approval II (same routing as notifyNewIdCardRequest).
+        $notifier = app(SecurityRequestNotifier::class);
+        $applicant = trim(($parentRow->employee->first_name ?? '') . ' ' . ($parentRow->employee->last_name ?? '')) ?: $notifier->actorName();
+        $notifier->toApproverII(
+            SecurityRequestNotifier::MODULE_IDCARD_APPROVAL2,
+            null,
+            'New duplicate ID Card request',
+            "{$applicant} (Permanent Employee) has submitted a duplicate ID Card request ({$cardReason}). Awaiting your approval.",
+            SecurityRequestNotifier::idCardApprovalLink('p-dup-' . $applyId, 2)
+        );
 
         return true;
     }

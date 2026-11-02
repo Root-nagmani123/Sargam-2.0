@@ -19,7 +19,11 @@ use Illuminate\Support\Facades\Log;
  * bell reads (Auth::user()->user_id). A notification failure is logged and never blocks
  * the request or the approval that triggered it.
  *
- * Click-through routes are mapped in config/notifications.php under the 'security' type.
+ * Click-through: ID card and vehicle approver notifications, and the applicant's own ID card
+ * (non-duplicate) notifications, carry a link to that request's detail page (see the *Link()
+ * builders), so the bell opens the request itself. Everything
+ * else opens the list mapped in config/notifications.php under the 'security' type — Family
+ * ID cards included, since a group is approved together from the list, not the member page.
  */
 class SecurityRequestNotifier
 {
@@ -45,33 +49,72 @@ class SecurityRequestNotifier
 
     public const MODULE_VEHICLE_STATUS = 'VehiclePassStatus';
 
+    /** Routes a notification link may open (checked again when the link is followed). */
+    public const LINK_ROUTES = [
+        'admin.security.employee_idcard_approval.show',
+        'admin.security.vehicle_pass_approval.show',
+        'admin.employee_idcard.show',
+    ];
+
     public function __construct(private NotificationService $notifications)
     {
     }
 
-    /** Request has reached Approval II (Family / Vehicle Level 1, Employee ID Card Approval II). */
-    public function toApproverII(string $module, int|string|null $referencePk, string $title, string $message): void
+    /**
+     * Employee / duplicate ID card approval page for one request.
+     * $key is the id the approval lists encrypt: emp_id_apply (permanent), "c-{pk}" (contractual),
+     * "p-dup-{emp_id_apply}" / "c-dup-{emp_id_apply}" (duplicates).
+     *
+     * @return array{route: string, encrypt: array<string, string>, query: array<string, int>}
+     */
+    public static function idCardApprovalLink(string $key, int $stage): array
     {
-        $this->send($this->userIdsWithRoles(SecurityApproverRoles::APPROVER_II), $module, $referencePk, $title, $message);
+        return ['route' => 'admin.security.employee_idcard_approval.show', 'encrypt' => ['id' => $key], 'query' => ['stage' => $stage]];
+    }
+
+    /**
+     * Applicant's own ID card request page (non-duplicate; duplicates have no applicant detail page).
+     * Same key as idCardApprovalLink: emp_id_apply (permanent) or "c-{pk}" (contractual), not encrypted.
+     *
+     * @return array{route: string, encrypt: array<string, string>, query: array<string, string>}
+     */
+    public static function idCardStatusLink(string $key): array
+    {
+        return ['route' => 'admin.employee_idcard.show', 'encrypt' => [], 'query' => ['id' => $key]];
+    }
+
+    /**
+     * @param  'tw'|'fw'  $kind
+     * @return array{route: string, encrypt: array<string, string>, query: array<string, int>}
+     */
+    public static function vehicleApprovalLink(string $kind, string $vehiclePk): array
+    {
+        return ['route' => 'admin.security.vehicle_pass_approval.show', 'encrypt' => ['id' => "{$kind}-{$vehiclePk}"], 'query' => []];
+    }
+
+    /** Request has reached Approval II (Family / Vehicle Level 1, Employee ID Card Approval II). */
+    public function toApproverII(string $module, int|string|null $referencePk, string $title, string $message, ?array $link = null): void
+    {
+        $this->send($this->userIdsWithRoles(SecurityApproverRoles::APPROVER_II), $module, $referencePk, $title, $message, $link);
     }
 
     /** Request has reached Approval III (final stage). */
-    public function toApproverIII(string $module, int|string|null $referencePk, string $title, string $message): void
+    public function toApproverIII(string $module, int|string|null $referencePk, string $title, string $message, ?array $link = null): void
     {
-        $this->send($this->userIdsWithRoles(SecurityApproverRoles::APPROVER_III), $module, $referencePk, $title, $message);
+        $this->send($this->userIdsWithRoles(SecurityApproverRoles::APPROVER_III), $module, $referencePk, $title, $message, $link);
     }
 
     /**
      * A single employee: the Approval I authority of a contractual request, or the applicant.
      * $employeePk may be employee_master.pk or a legacy pk_old; it is resolved to pk.
      */
-    public function toEmployee(int|string|null $employeePk, string $module, int|string|null $referencePk, string $title, string $message): void
+    public function toEmployee(int|string|null $employeePk, string $module, int|string|null $referencePk, string $title, string $message, ?array $link = null): void
     {
         $canonical = $this->canonicalEmployeePk($employeePk);
         if ($canonical === null) {
             return;
         }
-        $this->send([$canonical], $module, $referencePk, $title, $message);
+        $this->send([$canonical], $module, $referencePk, $title, $message, $link);
     }
 
     /** Display name of the logged-in user, for "X has submitted ..." messages. */
@@ -96,10 +139,15 @@ class SecurityRequestNotifier
 
     /**
      * @param  list<int>  $receiverUserIds
+     * @param  array{route: string, encrypt: array<string, string>, query: array<string, int>}|null  $link
      */
-    private function send(array $receiverUserIds, string $module, int|string|null $referencePk, string $title, string $message): void
+    private function send(array $receiverUserIds, string $module, int|string|null $referencePk, string $title, string $message, ?array $link = null): void
     {
         try {
+            if ($link !== null) {
+                $message = NotificationService::appendLinkPayload($message, $link['route'], $link['encrypt'], $link['query']);
+            }
+
             $self = (int) (auth()->user()->user_id ?? 0);
             // Never notify the person who just acted (e.g. an approver who is also the applicant).
             $receivers = array_values(array_filter(

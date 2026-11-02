@@ -13,6 +13,9 @@ class NotificationService
     /** Invisible trailer on notification message: combined mess bill id + date range for correct print-receipt URL */
     private const MESS_COMBINED_RECEIPT_MARKER = "\u{2060}MESS_COMBINED_RECEIPT\x1F";
 
+    /** Invisible trailer on notification message: click-through target (route + params) for one record */
+    private const LINK_MARKER = "\u{2060}NOTIFICATION_LINK\x1F";
+
     /**
      * Estate workflow alerts (new request / HAC routing): Estate Admin and Super Admin only.
      */
@@ -185,17 +188,85 @@ class NotificationService
         return $parsed;
     }
 
+    /**
+     * Append a click-through target so the notification opens one record instead of a list.
+     * 'e' params are stored raw and encrypted only when the link is built (see linkPayloadUrl).
+     *
+     * @param  array<string, string|int>  $encryptedParams  route params to pass through encrypt()
+     * @param  array<string, string|int>  $query  plain route params; any the route does not take become the query string
+     */
+    public static function appendLinkPayload(string $visibleMessage, string $routeName, array $encryptedParams = [], array $query = []): string
+    {
+        $payload = json_encode(
+            ['r' => $routeName, 'e' => $encryptedParams, 'q' => $query],
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+        );
+
+        return $visibleMessage . self::LINK_MARKER . base64_encode((string) $payload);
+    }
+
+    /**
+     * @return array{r: string, e: array<string, string>, q: array<string, string>}|null
+     */
+    public static function parseLinkPayload(?string $message): ?array
+    {
+        if ($message === null || $message === '') {
+            return null;
+        }
+        $pos = strpos($message, self::LINK_MARKER);
+        if ($pos === false) {
+            return null;
+        }
+        $json = base64_decode(substr($message, $pos + strlen(self::LINK_MARKER)), true);
+        $data = $json === false ? null : json_decode($json, true);
+        if (! is_array($data) || empty($data['r']) || ! is_string($data['r'])) {
+            return null;
+        }
+        $scalars = static fn ($v) => is_array($v)
+            ? array_map('strval', array_filter($v, static fn ($x) => is_string($x) || is_int($x)))
+            : [];
+
+        return ['r' => $data['r'], 'e' => $scalars($data['e'] ?? []), 'q' => $scalars($data['q'] ?? [])];
+    }
+
+    /**
+     * URL for a link payload, or null when it is missing, its route is not in $allowedRoutes, or it cannot be built.
+     *
+     * @param  list<string>  $allowedRoutes
+     */
+    public static function linkPayloadUrl(?string $message, array $allowedRoutes): ?string
+    {
+        $link = self::parseLinkPayload($message);
+        if ($link === null || ! in_array($link['r'], $allowedRoutes, true) || ! Route::has($link['r'])) {
+            return null;
+        }
+        try {
+            $params = array_map(static fn ($v) => encrypt($v), $link['e']);
+
+            return route($link['r'], array_merge($params, $link['q']));
+        } catch (\Throwable $e) {
+            \Log::warning('Notification link could not be built', ['route' => $link['r'], 'error' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
+    /** Message without any hidden trailer (mess receipt payload or click-through link). */
     public static function stripMessCombinedReceiptPayloadForDisplay(?string $message): string
     {
         if ($message === null || $message === '') {
             return '';
         }
-        $pos = strpos($message, self::MESS_COMBINED_RECEIPT_MARKER);
-        if ($pos === false) {
-            return $message;
+        $stripped = false;
+        foreach ([self::MESS_COMBINED_RECEIPT_MARKER, self::LINK_MARKER] as $marker) {
+            $pos = strpos($message, $marker);
+            if ($pos !== false) {
+                $message = substr($message, 0, $pos);
+                $stripped = true;
+            }
         }
 
-        return trim(substr($message, 0, $pos));
+        return $stripped ? trim($message) : $message;
     }
 
     /**
@@ -609,6 +680,14 @@ class NotificationService
                     'store_id' => $storeId,
                     'till_date' => now()->format('Y-m-d'),
                 ]);
+            }
+        }
+
+        // Security requests carry the record they are about; fall back to the module list below.
+        if ($type === SecurityRequestNotifier::TYPE) {
+            $url = self::linkPayloadUrl($notification->message, SecurityRequestNotifier::LINK_ROUTES);
+            if ($url !== null) {
+                return $url;
             }
         }
 
