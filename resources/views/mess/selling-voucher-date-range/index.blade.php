@@ -5305,6 +5305,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                             updateAddGrandTotal();
                             var body = modalRoot && modalRoot.querySelector('.modal-body');
                             if (body) body.scrollTop = 0;
+                            if (window.messFormSaved) window.messFormSaved(form);
                         }
 
                         if (savedStoreId) {

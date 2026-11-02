@@ -109,13 +109,20 @@ class DataTableSearchHelper
     }
 
     /**
-     * Page length for a server-side DataTables request: -1 (every filtered row) when the
-     * Download/Print fetch sends `for_print`, otherwise the requested length (10 when outside 1..100).
+     * Most rows one Download/Print fetch returns. Above it, mess-column-manager.js sees
+     * data < recordsFiltered: Print says "Showing first N of M rows.", Download refuses to save.
+     * Selling Voucher's 14,815 rows peaked near 118 MB, so 50,000 stays under the 512 MB memory_limit.
+     */
+    public const EXPORT_MAX_ROWS = 50000;
+
+    /**
+     * Page length for a server-side DataTables request: EXPORT_MAX_ROWS when the Download/Print
+     * fetch sends `for_print`, otherwise the requested length (10 when outside 1..100).
      */
     public static function pageLength(Request $request): int
     {
         if ($request->boolean('for_print')) {
-            return -1;
+            return self::EXPORT_MAX_ROWS;
         }
 
         $length = (int) $request->input('length', 10);

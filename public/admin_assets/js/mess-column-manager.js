@@ -659,7 +659,7 @@
                     if (!json || !Array.isArray(json.data)) {
                         if (window.alert) window.alert('Download failed. Please try again.');
                     } else if (shortfall) {
-                        if (window.alert) window.alert('Download stopped: ' + shortfall + ' The file would be incomplete, so it was not saved.');
+                        if (window.alert) window.alert('Download stopped: ' + shortfall + ' The file would be incomplete, so it was not saved. Narrow the filters and try again.');
                     } else {
                         self.exportCsv(tableId, $.extend({}, options, { rowsData: json.data }));
                     }
@@ -727,7 +727,7 @@
             params.draw = params.draw || ((settings && settings.iDraw) ? settings.iDraw + 1 : 1);
             params.start = 0;
             params.length = Math.max(info.recordsFiltered || info.recordsDisplay || 0, 1);
-            params.for_print = 1; // server returns every filtered row (DataTableSearchHelper::pageLength)
+            params.for_print = 1; // server returns every filtered row, up to DataTableSearchHelper::EXPORT_MAX_ROWS
             if (!params.search) {
                 params.search = { value: dt.search(), regex: false };
             }

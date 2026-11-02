@@ -122,7 +122,10 @@ class MessDataTableExportLengthTest extends TestCase
         $this->assertSame(10, $length(['length' => 0]));
         $this->assertSame(10, $length(['length' => -1]), 'a normal request cannot ask for everything');
         $this->assertSame(10, $length([]));
-        $this->assertSame(-1, $length(['length' => 10, 'for_print' => 1]));
+        $this->assertSame(DataTableSearchHelper::EXPORT_MAX_ROWS, $length(['length' => 10, 'for_print' => 1]));
+        $this->assertSame(DataTableSearchHelper::EXPORT_MAX_ROWS, $length(['length' => -1, 'for_print' => 1]), 'for_print is capped, never unbounded');
         $this->assertSame(10, $length(['length' => 10, 'for_print' => 0]));
+        // The cap must stay above the largest grid on record (Selling Voucher, 14,815 rows) or Download refuses it.
+        $this->assertGreaterThan(14815, DataTableSearchHelper::EXPORT_MAX_ROWS);
     }
 }

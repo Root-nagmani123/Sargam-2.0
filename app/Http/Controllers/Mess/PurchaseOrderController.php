@@ -157,7 +157,7 @@ class PurchaseOrderController extends Controller
 
         $draw = (int) $request->input('draw', 0);
         $start = max((int) $request->input('start', 0), 0);
-        $length = (int) $request->input('length', 10);
+        $length = $request->boolean('for_print') ? DataTableSearchHelper::pageLength($request) : (int) $request->input('length', 10);
         $searchTokens = DataTableSearchHelper::tokens((string) $request->input('search.value', ''));
 
         $recordsTotal = (clone $query)->count();

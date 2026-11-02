@@ -3068,6 +3068,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                     var data = res.payload;
                     if (res.ok && data && data.success) {
                         resetCreatePurchaseOrderForm();
+                        if (window.messFormSaved) window.messFormSaved(form);
                         if (window.toastr && data.message) {
                             toastr.success(data.message);
                         } else if (data.message) {

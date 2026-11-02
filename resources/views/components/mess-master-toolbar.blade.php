@@ -858,8 +858,18 @@ window.MessToolbarLayout = (function () {
         var form = modal.hasAttribute('data-mess-confirm-leave') && modal.querySelector('form');
         if (!form) return;
         setTimeout(function () { modal._messClean = formSnapshot(form); }, 300); // after the page's own on-open defaults
-        form.addEventListener('submit', function () { modal._messClean = null; }, { capture: true, once: true });
     });
+    // Bubble phase on window runs after the page's own submit handlers: only a submit none of them
+    // blocked (validation, or an AJAX save that calls preventDefault) is a save that ends the edit.
+    window.addEventListener('submit', function (e) {
+        var modal = e.target.closest && e.target.closest('[data-mess-confirm-leave]');
+        if (modal && !e.defaultPrevented) modal._messClean = null;
+    });
+    // An AJAX save that keeps the modal open calls this once its post-save reset is done.
+    window.messFormSaved = function (form) {
+        var modal = form && form.closest('[data-mess-confirm-leave]');
+        if (modal && modal._messClean) modal._messClean = formSnapshot(modal.querySelector('form'));
+    };
     document.addEventListener('hide.bs.modal', function (e) {
         var modal = e.target;
         if (!modal._messClean || modal._messLeaving || !window.Swal) return;
