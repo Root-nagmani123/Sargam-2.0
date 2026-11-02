@@ -976,7 +976,7 @@ class ProcessMessBillsEmployeeController extends Controller
      *   (the name, the name without a "(...)" suffix, the employee display name, names on the
      *   buyer's SV vouchers), unless a bill in the group's period carries that exact name;
      * - any buyer: rows named "<name> (...)" (the filter's LIKE 'name (%' match).
-     * MessGenerateInvoiceModalPaidTest covers only name-only buyers on the uncached modal path.
+     * MessGenerateInvoiceModalPaidTest covers name-only and client-id buyers on the uncached modal path.
      *
      * @param  array<int, int>  $clientIds
      * @param  array<int, string>  $names
