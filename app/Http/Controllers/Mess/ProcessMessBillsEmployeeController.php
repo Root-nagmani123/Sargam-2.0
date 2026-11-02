@@ -910,7 +910,8 @@ class ProcessMessBillsEmployeeController extends Controller
 
     /**
      * Modal only: period paid / due / status per buyer the way computeCombinedBillFinancials
-     * does it — all of the buyer's payments (bills up to date_to) pooled and settled against
+     * does it — the buyer's payments (bills up to date_to, matched as in
+     * fetchBuyerPaidPoolByGroupKey) pooled and settled against
      * line items oldest first. FIFO by date reduces to three aggregates, so no per-buyer loads:
      * period paid = min(period total, max(0, paid pool - net of lines dated before date_from)).
      *
@@ -964,9 +965,12 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * Paid pool and pre-range net per buyer group key, over the same bills
-     * resolveBuyerBillsForPaymentAllocation loads (sale-status SV vouchers with items up to
-     * date_to, mess-selling kitchen issues issued up to date_to).
+     * Paid pool and pre-range net per buyer group key: sale-status SV vouchers with items up to
+     * date_to and mess-selling kitchen issues issued up to date_to, matched on the exact client
+     * ids and trimmed client names of the period's bills. resolveBuyerBillsForPaymentAllocation
+     * matches more loosely (client id or name variants via MessBuyerClientFilter), so bills under
+     * another spelling of a buyer's name without a client id are not pooled here.
+     * MessGenerateInvoiceModalPaidTest pins the two against each other.
      *
      * @param  array<int, int>  $clientIds
      * @param  array<int, string>  $names
