@@ -77,13 +77,41 @@ class ExaminationDriveFacultyDataTable extends ExaminationDriveDataTable
         return 'ExaminationDriveFaculty_' . date('YmdHis');
     }
 
+    /** "Complete Setup", or "Setup Completed" (still opens the page to edit) once done. */
     protected function actionsCell(ExaminationDrive $row): string
     {
         $url = route('admin.coe.faculty-examination-drive.setup', $row->id);
 
+        if ($this->setupCompleted($row)) {
+            return '<a href="' . $url . '" class="edc-setup-link is-done" title="Setup completed - open to view or edit">'
+                . '<i class="bi bi-check2-circle" aria-hidden="true"></i><span>Setup<br>Completed</span></a>';
+        }
+
         return '<a href="' . $url . '" class="edc-setup-link" title="Complete Setup">'
             . '<i class="bi bi-pencil-square" aria-hidden="true"></i><span>Complete<br>Setup</span></a>';
     }
+
+    /**
+     * Setup is complete when every subject the viewer sets up on the drive has
+     * component rows saved: a mapped faculty's own subjects, or (an admin) all of
+     * the drive's subjects. Uses the facultyMaps / componentMaps the query loads.
+     */
+    protected function setupCompleted(ExaminationDrive $row): bool
+    {
+        $user = auth()->user();
+        $facultyPks = $this->viewerFacultyPks ??= $user
+            ? \App\Models\FacultyMaster::where('employee_master_pk', $user->user_id)->pluck('pk')->all()
+            : [];
+
+        $own = $row->facultyMaps->whereIn('faculty_master_pk', $facultyPks);
+        $subjects = ($own->isNotEmpty() ? $own : $row->facultyMaps)->pluck('subject_master_pk')->unique();
+        $saved = $row->componentMaps->pluck('subject_master_pk')->unique();
+
+        return $subjects->isNotEmpty() && $subjects->diff($saved)->isEmpty();
+    }
+
+    /** @var int[]|null faculty_master.pk of the logged-in user, looked up once per page */
+    private ?array $viewerFacultyPks = null;
 
     protected function plainCountCell(int $count): string
     {

@@ -12,6 +12,7 @@
                   text-decoration:none;color:#004384;font-size:11px;font-weight:600; }
 .edc-setup-link i { font-size:20px; }
 .edc-setup-link:hover{ opacity:.75; }
+.edc-setup-link.is-done { color:#0d6832; }
 </style>
 @endpush
 

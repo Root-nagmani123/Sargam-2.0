@@ -93,6 +93,9 @@
 .fedc-rn-item    { display:flex;align-items:center;gap:10px;padding:8px 12px;font-size:13px;
                    border-bottom:1px solid var(--ds-line); }
 .fedc-rn-item:last-child { border-bottom:none; }
+.fedc-multi-uniq { width:100%;text-align:left;font-size:12px;padding:4px 8px;border:1px solid var(--ds-line);border-radius:6px;
+                   background:#fff;color:var(--ds-ink); }
+.fedc-multi-uniq.has-codes { border-color:var(--ds-brand);color:var(--ds-brand);font-weight:600; }
 .fedc-rn-item input[type=checkbox] { width:16px;height:16px;accent-color:var(--ds-brand);flex-shrink:0; }
 </style>
 @endpush
@@ -222,6 +225,7 @@
                                         data-faculty="{{ $systemSource ? '' : ($row['sub_coordinators'][0] ?? '') }}"
                                         data-sub='@json($systemSource ? [] : array_slice($row['sub_coordinators'], 1))'
                                         data-codes='@json($systemSource ? new \stdClass : (object) $row['faculty_codes'])'
+                                        data-uniq='@json($systemSource ? new \stdClass : (object) $row['faculty_unique_codes'])'
                                         @disabled($systemSource)
                                         title="Click to assign Faculty & Sub coordinates">
                                     <span class="fedc-fac-text">
@@ -334,50 +338,7 @@
                                 </tr>
                             </thead>
                             <tbody id="fedcMultiBody">
-                                <tr class="fedc-multi-row">
-                                    <td>
-                                        <select class="form-select form-select-sm fedc-multi-fac">
-                                            <option value="">Faculty</option>
-                                            @foreach ($faculty as $f)
-                                            <option value="{{ $f }}">{{ $f }}</option>
-                                            @endforeach
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <select class="form-select form-select-sm fedc-multi-codes">
-                                            <option value="">Codes</option>
-                                            @foreach ([32, 24, 18, 12] as $n)
-                                            <option value="{{ $n }}">{{ $n }}</option>
-                                            @endforeach
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <button type="button" class="fedc-row-del fedc-multi-del me-1" aria-label="Remove"><i class="bi bi-dash"></i></button>
-                                        <button type="button" class="fedc-row-add fedc-multi-add" aria-label="Add"><i class="bi bi-plus"></i></button>
-                                    </td>
-                                </tr>
-                                <tr class="fedc-multi-row">
-                                    <td>
-                                        <select class="form-select form-select-sm fedc-multi-fac">
-                                            <option value="">Faculty</option>
-                                            @foreach ($faculty as $f)
-                                            <option value="{{ $f }}">{{ $f }}</option>
-                                            @endforeach
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <select class="form-select form-select-sm fedc-multi-codes">
-                                            <option value="">Codes</option>
-                                            @foreach ([32, 24, 18, 12] as $n)
-                                            <option value="{{ $n }}">{{ $n }}</option>
-                                            @endforeach
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <button type="button" class="fedc-row-del fedc-multi-del me-1" aria-label="Remove"><i class="bi bi-dash"></i></button>
-                                        <button type="button" class="fedc-row-add fedc-multi-add" aria-label="Add"><i class="bi bi-plus"></i></button>
-                                    </td>
-                                </tr>
+                                {{-- Rows built by JS from the row's faculty when the window opens --}}
                             </tbody>
                         </table>
                     </div>
@@ -393,7 +354,7 @@
     </div>
 </div>
 
-{{-- ── Select Roll Number sub-modal ────────────────────────────────────── --}}
+{{-- ── Code picker: Select Roll Number / Select Unique Codes (list built by JS) ── --}}
 <div class="modal fade" id="fedcRollModal" tabindex="-1" aria-labelledby="fedcRollModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width:360px">
         <div class="modal-content border-0 shadow rounded-4">
@@ -403,34 +364,13 @@
             </div>
             <div class="modal-body pt-2">
                 <p class="small text-muted mb-2" id="fedcRnFor"></p>
-                @if (count($otList) > 0)
-                    {{-- Range quick-select tabs, in steps of 50 over the course's OTs --}}
-                    <div class="fedc-rn-ranges" id="fedcRnRanges">
-                        @for ($lo = 0; $lo < count($otList); $lo += 50)
-                            <span class="fedc-rn-range" data-range="{{ $lo }}-{{ min($lo + 50, count($otList)) }}">
-                                {{ $lo + 1 }}-{{ min($lo + 50, count($otList)) }}
-                            </span>
-                        @endfor
-                        <span class="fedc-rn-range" data-range="all">Select All</span>
-                        <span class="fedc-rn-range" data-range="none">Clear</span>
-                    </div>
-                    <div class="fedc-rn-list" id="fedcRnList">
-                        @foreach ($otList as $ot)
-                        <div class="fedc-rn-item">
-                            <input type="checkbox" class="fedc-rn-check" value="{{ $ot['code'] }}" id="fedc_ot_{{ $loop->index }}">
-                            <label for="fedc_ot_{{ $loop->index }}"><strong>{{ $ot['code'] }}</strong> &mdash; {{ $ot['name'] }}</label>
-                        </div>
-                        @endforeach
-                    </div>
-                @else
-                    <div class="alert alert-warning small mb-0">No OTs with an OT code are enrolled in this drive's course yet.</div>
-                @endif
+                <div class="fedc-rn-ranges" id="fedcRnRanges"></div>
+                <div class="fedc-rn-list" id="fedcRnList"></div>
+                <div class="alert alert-warning small mb-0 d-none" id="fedcRnEmpty"></div>
             </div>
             <div class="modal-footer border-0 pt-1">
                 <button type="button" class="btn coe-btn coe-btn-cancel" data-bs-dismiss="modal">Close</button>
-                @if (count($otList) > 0)
-                    <button type="button" class="btn coe-btn coe-btn-primary" id="fedcRnAssign">Assign</button>
-                @endif
+                <button type="button" class="btn coe-btn coe-btn-primary" id="fedcRnAssign">Assign</button>
             </div>
         </div>
     </div>
@@ -446,6 +386,9 @@ $(function () {
     var COMPONENTS = @json($components);
     var SOURCES    = @json($sources);
     var FACULTY    = @json($faculty);
+    // Generated in COE › Roll Numbers / Unique Participant Code for the drive's course.
+    var ROLL_NUMBERS = @json($rollNumbers);
+    var UNIQUE_CODES = @json($uniqueCodes);
     var EXAM_MODES = @json($examModes);
     var EXAM_TYPES = @json($componentExamTypes);
     // null = no limit / not set; see the warnings above the table.
@@ -514,7 +457,7 @@ $(function () {
             '<td><input type="number" class="form-control fedc-max-marks" min="0" step="0.01" value=""></td>' +
             '<td><input type="number" class="form-control fedc-pass-marks" readonly title="From Service Passing Marks" value="' + (PASS_FIXED === null ? '' : PASS_FIXED) + '"></td>' +
             '<td><select class="form-select fedc-source">' + sourceOptions(SOURCES[0]) + '</select></td>' +
-            '<td><button type="button" class="fedc-fac-open-btn" data-faculty="" data-sub="[]" data-codes="{}">' +
+            '<td><button type="button" class="fedc-fac-open-btn" data-faculty="" data-sub="[]" data-codes="{}" data-uniq="{}">' +
             '<span class="fedc-fac-text"><span class="fedc-fac-placeholder">Click to add Faculty &amp; Sub coordinates.</span></span></button></td>' +
             '<td><input type="number" class="form-control fedc-weightage" min="0" max="100" step="0.01" value="0"></td>' +
             '<td><input type="text" class="form-control fedc-exam-range" readonly placeholder="dd/mm/yyyy - dd/mm/yyyy"></td>' +
@@ -534,7 +477,7 @@ $(function () {
         var source = $(this).val();
         var $btn = $(this).closest('.fedc-map-row').find('.fedc-fac-open-btn');
         if (SYSTEM_SOURCES.indexOf(source) !== -1) {
-            $btn.data('faculty', '').data('sub', []).data('codes', {}).prop('disabled', true)
+            $btn.data('faculty', '').data('sub', []).data('codes', {}).data('uniq', {}).prop('disabled', true)
                 .empty().append($('<span class="fedc-fac-text"></span>').text(source));
         } else if ($btn.prop('disabled')) {
             $btn.prop('disabled', false);
@@ -584,6 +527,7 @@ $(function () {
                 // Every name after the first; JSON so an emptied list still reaches the server.
                 sub_faculty: JSON.stringify($r.find('.fedc-fac-open-btn').data('sub') || []),
                 codes: JSON.stringify($r.find('.fedc-fac-open-btn').data('codes') || {}),
+                unique_codes: JSON.stringify($r.find('.fedc-fac-open-btn').data('uniq') || {}),
                 weightage: $r.find('.fedc-weightage').val(),
                 exam_date: $r.find('.fedc-exam-range').attr('data-start') || '',
                 exam_end_date: $r.find('.fedc-exam-range').attr('data-end') || '',
@@ -597,8 +541,11 @@ $(function () {
             method: 'PUT',
             headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
             data: { subject_master_pk: SUBJECT_PK, rows: rows }
-        }).done(function () {
-            Swal.fire({ icon: 'success', title: 'Saved', text: 'Faculty mapping saved.' });
+        }).done(function (res) {
+            // Setup done: back to the drive list, where the drive now shows as set up.
+            Swal.fire({ icon: 'success', title: 'Saved', text: (res && res.message) || 'Faculty mapping saved.',
+                        timer: 1800, showConfirmButton: false })
+                .then(function () { window.location.href = @json(route('admin.coe.faculty-examination-drive.index')); });
         }).fail(function (xhr) {
             Swal.fire({ icon: 'error', title: 'Error', text: (xhr.responseJSON && xhr.responseJSON.message) || 'Could not save faculty mapping.' });
         });
@@ -620,11 +567,11 @@ $(function () {
         if ($activeRowBtn.data('faculty')) { current.push($activeRowBtn.data('faculty')); }
         current = current.concat($activeRowBtn.data('sub') || []);
         var $multi = $('#fedcMultiBody').empty();
-        var currentCodes = $activeRowBtn.data('codes') || {};
+        var currentUniq = $activeRowBtn.data('uniq') || {};
         (current.length ? current : ['']).forEach(function (name) {
             var $tr = $(buildMultiRow());
             $tr.find('.fedc-multi-fac').val(name);
-            $tr.find('.fedc-multi-codes').val(currentCodes[name] || '');
+            setMultiCodes($tr, currentUniq[name] || []);
             $multi.append($tr);
         });
 
@@ -685,19 +632,18 @@ $(function () {
             Swal.fire({ icon: 'warning', title: 'Pick a component first', text: 'Choose a component for this row before assigning faculty.' });
             return;
         }
-        var names = [], codes = {};
+        var names = [], uniq = {};
         $('#fedcMultiBody .fedc-multi-row').each(function () {
             var v = $.trim($(this).find('.fedc-multi-fac').val() || '');
-            var code = $.trim($(this).find('.fedc-multi-codes').val() || '');
+            var picked = $(this).data('uniq') || [];
             if (v && names.indexOf(v) === -1) { names.push(v); }
-            if (v && code) { codes[v] = code; }
-            else if (v && Array.isArray(($activeRowBtn.data('codes') || {})[v])) { codes[v] = $activeRowBtn.data('codes')[v]; }
+            if (v && picked.length) { uniq[v] = picked; }
         });
         if (!names.length) {
             Swal.fire({ icon: 'warning', title: 'No faculty selected', text: 'Pick at least one faculty.' });
             return;
         }
-        setRowFaculty($activeRowBtn, names, codes);
+        setRowFaculty($activeRowBtn, names, null, uniq);
         bootstrap.Modal.getOrCreateInstance($assignModal[0]).hide();
         persistRowFaculty($activeRowBtn, names, true);
     });
@@ -720,7 +666,8 @@ $(function () {
             method: 'PUT',
             headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
             data: { subject_master_pk: SUBJECT_PK, component: component, faculty: names[0] || '', sub_faculty: names.slice(1),
-                    codes: $.isEmptyObject($btn.data('codes') || {}) ? '' : $btn.data('codes') }
+                    codes: $.isEmptyObject($btn.data('codes') || {}) ? '' : $btn.data('codes'),
+                    unique_codes: $.isEmptyObject($btn.data('uniq') || {}) ? '' : $btn.data('uniq') }
         }).done(function () {
             if (announce) {
                 Swal.fire({ icon: 'success', title: 'Saved', text: names.length + ' faculty assigned to ' + component + '.', timer: 1800, showConfirmButton: false });
@@ -732,11 +679,12 @@ $(function () {
     }
 
     /* Row faculty = first name; the rest are further sub-coordinators. Saved on Save. */
-    function setRowFaculty($btn, names, codes) {
-        // Codes not given (single tab) = keep the existing code of any name that stays.
-        var source = codes || $btn.data('codes') || {}, kept = {};
-        names.forEach(function (n) { if (source[n]) { kept[n] = source[n]; } });
-        $btn.data('faculty', names[0] || '').data('sub', names.slice(1)).data('codes', kept);
+    function setRowFaculty($btn, names, codes, uniq) {
+        // A list not given = keep the existing codes of any name that stays.
+        function keep(source) { var kept = {}; names.forEach(function (n) { if (source[n]) { kept[n] = source[n]; } }); return kept; }
+        $btn.data('faculty', names[0] || '').data('sub', names.slice(1))
+            .data('codes', keep(codes || $btn.data('codes') || {}))
+            .data('uniq', keep(uniq || $btn.data('uniq') || {}));
         var $text = $('<span class="fedc-fac-text"></span>');
         if (names.length) {
             $text.text(names.join(', '));
@@ -751,8 +699,7 @@ $(function () {
         return '<tr class="fedc-multi-row">' +
             '<td><select class="form-select form-select-sm fedc-multi-fac"><option value="">Faculty</option>' +
             FACULTY.map(function (f) { return '<option>' + f + '</option>'; }).join('') + '</select></td>' +
-            '<td><select class="form-select form-select-sm fedc-multi-codes"><option value="">Codes</option>' +
-            [32,24,18,12].map(function (n) { return '<option>' + n + '</option>'; }).join('') + '</select></td>' +
+            '<td><button type="button" class="fedc-multi-uniq">Select codes</button></td>' +
             '<td><button type="button" class="fedc-row-del fedc-multi-del me-1"><i class="bi bi-dash"></i></button>' +
             '<button type="button" class="fedc-row-add fedc-multi-add"><i class="bi bi-plus"></i></button></td></tr>';
     }
@@ -763,18 +710,60 @@ $(function () {
         $(this).closest('.fedc-multi-row').after(buildMultiRow());
     });
 
-    /* ── Select Roll Number sub-modal ─────────────────────────────────── */
-    var rollTarget = null; // { $btn, name } the window was opened for
-
-    function openRollModal($btn, name) {
-        rollTarget = { $btn: $btn, name: name };
-        var current = ($btn.data('codes') || {})[name];
-        var picked = Array.isArray(current) ? current : [];
-        $('#fedcRnFor').text('OTs for ' + name);
-        $('#fedcRnList .fedc-rn-check').each(function () { $(this).prop('checked', picked.indexOf(this.value) !== -1); });
-        $('.fedc-rn-range').removeClass('is-active');
-        setTimeout(function () { bootstrap.Modal.getOrCreateInstance($('#fedcRollModal')[0]).show(); }, 300);
+    /* A Multi row's Unique Participant Codes live on the row until Assign Faculty. */
+    function setMultiCodes($tr, picked) {
+        $tr.data('uniq', picked);
+        $tr.find('.fedc-multi-uniq').toggleClass('has-codes', picked.length > 0)
+            .text(picked.length ? picked.length + ' code' + (picked.length === 1 ? '' : 's') + ' selected' : 'Select codes');
     }
+    $('#fedcMultiBody').on('click', '.fedc-multi-uniq', function () {
+        var $tr = $(this).closest('.fedc-multi-row');
+        var name = $.trim($tr.find('.fedc-multi-fac').val() || '');
+        if (!name) {
+            Swal.fire({ icon: 'warning', title: 'Pick a faculty first', text: 'Choose the faculty before selecting their codes.' });
+            return;
+        }
+        // Bootstrap modals do not stack: step out of Assign Faculty, come back after.
+        bootstrap.Modal.getOrCreateInstance($assignModal[0]).hide();
+        openPicker({
+            title: 'Select Unique Codes', forText: 'Unique Participant Codes for ' + name,
+            items: UNIQUE_CODES.map(function (c) { return { value: c, label: '<strong>' + esc(c) + '</strong>' }; }),
+            picked: $tr.data('uniq') || [],
+            empty: 'No Unique Participant Codes have been generated for this drive\'s course yet (COE › Master Data › Unique Participant Code).',
+            onAssign: function (picked) { setMultiCodes($tr, picked); },
+            onClose: function () { bootstrap.Modal.getOrCreateInstance($assignModal[0]).show(); }
+        });
+    });
+
+    /* ── Code picker (Select Roll Number / Select Unique Codes) ─────────── */
+    function esc(v) { return $('<div>').text(v == null ? '' : v).html(); }
+    var picker = null; // { onAssign, onClose } of the open window
+    var $pickModal = $('#fedcRollModal');
+
+    function openPicker(opts) {
+        picker = opts;
+        $('#fedcRollModalLabel').text(opts.title);
+        $('#fedcRnFor').text(opts.forText);
+        var $list = $('#fedcRnList').empty(), $ranges = $('#fedcRnRanges').empty(), n = opts.items.length;
+        opts.items.forEach(function (item, i) {
+            $list.append('<div class="fedc-rn-item"><input type="checkbox" class="fedc-rn-check" id="fedc_pick_' + i + '" value="' + esc(item.value) + '"' +
+                (opts.picked.indexOf(item.value) !== -1 ? ' checked' : '') + '><label for="fedc_pick_' + i + '">' + item.label + '</label></div>');
+        });
+        // Range quick-select tabs, in steps of 50 over the list.
+        for (var lo = 0; lo < n; lo += 50) {
+            $ranges.append('<span class="fedc-rn-range" data-range="' + lo + '-' + Math.min(lo + 50, n) + '">' + (lo + 1) + '-' + Math.min(lo + 50, n) + '</span>');
+        }
+        if (n) { $ranges.append('<span class="fedc-rn-range" data-range="all">Select All</span><span class="fedc-rn-range" data-range="none">Clear</span>'); }
+        $('#fedcRnEmpty').toggleClass('d-none', n > 0).text(opts.empty);
+        $list.toggleClass('d-none', n === 0);
+        $('#fedcRnAssign').toggleClass('d-none', n === 0);
+        setTimeout(function () { bootstrap.Modal.getOrCreateInstance($pickModal[0]).show(); }, 300);
+    }
+
+    $pickModal.on('hidden.bs.modal', function () {
+        var done = picker; picker = null;
+        if (done && done.onClose) { done.onClose(); }
+    });
 
     $('#fedcRnRanges').on('click', '.fedc-rn-range', function () {
         $('.fedc-rn-range').removeClass('is-active');
@@ -790,17 +779,30 @@ $(function () {
         $checks.each(function (i) { $(this).prop('checked', i >= lo && i < hi); });
     });
 
-    /* Assign: the ticked OT codes become this faculty's roll numbers on the row. */
     $('#fedcRnAssign').on('click', function () {
-        if (!rollTarget) { return; }
+        if (!picker) { return; }
         var picked = $('#fedcRnList .fedc-rn-check:checked').map(function () { return this.value; }).get();
-        var $btn = rollTarget.$btn, codes = $.extend({}, $btn.data('codes') || {});
-        if (picked.length) { codes[rollTarget.name] = picked; } else { delete codes[rollTarget.name]; }
-        var names = [$btn.data('faculty')].concat($btn.data('sub') || []).filter(Boolean);
-        setRowFaculty($btn, names, codes);
-        bootstrap.Modal.getOrCreateInstance($('#fedcRollModal')[0]).hide();
-        persistRowFaculty($btn, names, true);
+        picker.onAssign(picked);
+        bootstrap.Modal.getOrCreateInstance($pickModal[0]).hide();
     });
+
+    /* Single Faculty: the ticked roll numbers become this faculty's roll numbers on the row. */
+    function openRollModal($btn, name) {
+        var current = ($btn.data('codes') || {})[name];
+        openPicker({
+            title: 'Select Roll Number', forText: 'OTs for ' + name,
+            items: ROLL_NUMBERS.map(function (r) { return { value: r.code, label: '<strong>' + esc(r.code) + '</strong> &mdash; ' + esc(r.name) }; }),
+            picked: Array.isArray(current) ? current : [],
+            empty: 'Roll numbers have not been generated for this drive\'s course yet (COE › Examination Management › Roll Numbers).',
+            onAssign: function (picked) {
+                var codes = $.extend({}, $btn.data('codes') || {});
+                if (picked.length) { codes[name] = picked; } else { delete codes[name]; }
+                var names = [$btn.data('faculty')].concat($btn.data('sub') || []).filter(Boolean);
+                setRowFaculty($btn, names, codes);
+                persistRowFaculty($btn, names, true);
+            }
+        });
+    }
 });
 </script>
 @endpush

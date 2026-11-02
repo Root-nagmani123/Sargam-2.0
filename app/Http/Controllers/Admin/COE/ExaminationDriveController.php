@@ -7,6 +7,8 @@ use App\DataTables\ExaminationDriveCoeDataTable;
 use App\DataTables\ExaminationDriveDataTable;
 use App\DataTables\ExaminationDriveFacultyDataTable;
 use App\Http\Controllers\Controller;
+use App\Models\COE\ParticipantCode;
+use App\Models\COE\RollNumberAllocation;
 use App\Models\ComponentMaster;
 use App\Models\CourseMaster;
 use App\Models\ExaminationDrive;
@@ -334,8 +336,10 @@ class ExaminationDriveController extends Controller
             // JSON-encoded string, not an array: jQuery drops an empty array from the
             // request, so "[]" (cleared) would be indistinguishable from "not sent".
             'rows.*.sub_faculty'    => ['nullable', 'string', 'json'],
-            // {"Faculty Name": "24"} - same JSON-string reason as sub_faculty.
+            // {"Faculty Name": ["FC101-001", ...]} roll numbers - same JSON-string reason as sub_faculty.
             'rows.*.codes'          => ['nullable', 'string', 'json'],
+            // {"Faculty Name": ["UPC0001", ...]} Unique Participant Codes (Multi Faculty tab).
+            'rows.*.unique_codes'   => ['nullable', 'string', 'json'],
         ], [
             'rows.*.exam_end_date.after_or_equal' => 'An exam range cannot end before it starts.',
         ]);
@@ -352,10 +356,12 @@ class ExaminationDriveController extends Controller
                 unset($row['sub_faculty']);
             }
 
-            if (array_key_exists('codes', $row) && $row['codes'] !== null) {
-                $row['codes'] = (array) json_decode($row['codes'], true);
-            } else {
-                unset($row['codes']);
+            foreach (['codes', 'unique_codes'] as $key) {
+                if (array_key_exists($key, $row) && $row[$key] !== null) {
+                    $row[$key] = (array) json_decode($row[$key], true);
+                } else {
+                    unset($row[$key]);
+                }
             }
 
             return $row;
@@ -375,9 +381,10 @@ class ExaminationDriveController extends Controller
             return response()->json(['message' => 'Unknown faculty: ' . implode(', ', $unknown)], 422);
         }
 
-        $otCodes = $this->courseOtCodes($drive);
+        $rollNumbers = array_column($this->courseRollNumbers($drive), 'code');
+        $uniqueCodes = $this->courseUniqueCodes($drive);
 
-        DB::transaction(function () use ($drive, $rows, $otCodes, $limits, $subjectPk) {
+        DB::transaction(function () use ($drive, $rows, $rollNumbers, $uniqueCodes, $limits, $subjectPk) {
             // Only this subject's rows: other faculty's subjects are left alone.
             $subjectRows = fn () => ExaminationDriveComponentMap::where('examination_drive_id', $drive->id)
                 ->where('subject_master_pk', $subjectPk);
@@ -386,7 +393,7 @@ class ExaminationDriveController extends Controller
             // that does not send them (admin Map Faculty) does not wipe what faculty
             // set on Complete Setup.
             $previous = $subjectRows()
-                ->get(['component_master_pk', 'sub_faculty_names', 'faculty_codes', 'exam_end_date', 'exam_type'])
+                ->get(['component_master_pk', 'sub_faculty_names', 'faculty_codes', 'faculty_unique_codes', 'exam_end_date', 'exam_type'])
                 ->keyBy('component_master_pk');
 
             $subjectRows()->delete();
@@ -422,8 +429,13 @@ class ExaminationDriveController extends Controller
                         : ($previous[$componentPk]->sub_faculty_names ?? null),
                     'faculty_codes'        => $this->cleanCodes(
                         array_key_exists('codes', $row) ? $row['codes'] : ($previous[$componentPk]->faculty_codes ?? []),
-                        array_merge([trim((string) ($row['faculty'] ?? ''))], $subs ?? []),
-                        $otCodes
+                        $people = array_merge([trim((string) ($row['faculty'] ?? ''))], $subs ?? []),
+                        $rollNumbers
+                    ),
+                    'faculty_unique_codes' => $this->cleanCodes(
+                        array_key_exists('unique_codes', $row) ? $row['unique_codes'] : ($previous[$componentPk]->faculty_unique_codes ?? []),
+                        $people,
+                        $uniqueCodes
                     ),
                     'created_date'         => now(),
                 ]);
@@ -532,8 +544,10 @@ class ExaminationDriveController extends Controller
             'faculty'     => ['nullable', 'string', 'max:150'],
             'sub_faculty' => ['array'],
             'sub_faculty.*' => ['string', 'max:150'],
-            // Per faculty: a Multi-tab code (string) or a list of OT codes; cleanCodes() sanitises.
+            // Per faculty: roll numbers picked in Select Roll Number; cleanCodes() sanitises.
             'codes'       => ['nullable', 'array'],
+            // Per faculty: Unique Participant Codes picked on the Multi Faculty tab.
+            'unique_codes' => ['nullable', 'array'],
         ]);
 
         if (! array_key_exists((int) $data['subject_master_pk'], $this->accessibleSubjects($drive))) {
@@ -565,11 +579,16 @@ class ExaminationDriveController extends Controller
         $map->update([
             'faculty_master_pk'  => $facultyPk,
             'sub_faculty_names'  => $subNames ?: null,
-            // Only sent by the setup page's Multi tab; otherwise keep what is stored.
+            // Either list is kept as stored when the request does not send it.
             'faculty_codes'      => $this->cleanCodes(
                 array_key_exists('codes', $data) ? ($data['codes'] ?? []) : ($map->faculty_codes ?? []),
-                array_merge([trim((string) ($data['faculty'] ?? ''))], $subNames),
-                $this->courseOtCodes($drive)
+                $people = array_merge([trim((string) ($data['faculty'] ?? ''))], $subNames),
+                array_column($this->courseRollNumbers($drive), 'code')
+            ),
+            'faculty_unique_codes' => $this->cleanCodes(
+                array_key_exists('unique_codes', $data) ? ($data['unique_codes'] ?? []) : ($map->faculty_unique_codes ?? []),
+                $people,
+                $this->courseUniqueCodes($drive)
             ),
             'modified_date'      => now(),
         ]);
@@ -755,8 +774,10 @@ class ExaminationDriveController extends Controller
             'faculty'     => $this->facultyNames(),
             'examModes'   => self::EXAM_MODES,
             'componentExamTypes' => self::COMPONENT_EXAM_TYPES,
-            // Select Roll Number lists the real OTs enrolled in the drive's course.
-            'otList'      => $this->courseOts((int) $drive->course_master_pk),
+            // Select Roll Number / Select Unique Codes list the course's generated
+            // roll numbers and Unique Participant Codes (COE › Roll Numbers / Unique Participant Code).
+            'rollNumbers' => $this->courseRollNumbers($drive),
+            'uniqueCodes' => $this->courseUniqueCodes($drive),
             'limits'      => $this->marksLimits($drive, $subjectPk),
             'subjectTabs' => $this->accessibleSubjects($drive),
             'subjectPk'   => $subjectPk,
@@ -764,23 +785,50 @@ class ExaminationDriveController extends Controller
     }
 
     /**
-     * Active OTs of a course as [code, name], ordered naturally by OT code
-     * (A2 before A10). Only OTs with a generated code are listed.
+     * The drive course's roll numbers (coe_roll_numbers, generated or frozen) as
+     * [code, name], in serial order. A course with several batches uses the batch
+     * matching the drive's academic session, else its latest one.
      *
      * @return array<int, array{code: string, name: string}>
      */
-    private function courseOts(int $coursePk): array
+    private function courseRollNumbers(ExaminationDrive $drive): array
     {
-        return DB::table('student_master_course__map as m')
-            ->join('student_master as s', 's.pk', '=', 'm.student_master_pk')
-            ->where('m.course_master_pk', $coursePk)
-            ->where('m.active_inactive', 1)
-            ->whereNotNull('s.generated_OT_code')
-            ->where('s.generated_OT_code', '!=', '')
-            ->get(['s.generated_OT_code as code', 's.display_name as name'])
-            ->map(fn ($ot) => ['code' => trim($ot->code), 'name' => trim((string) $ot->name)])
-            ->unique('code')
-            ->sort(fn ($a, $b) => $this->compareOtCodes($a['code'], $b['code']))
+        $allocations = RollNumberAllocation::where('course_master_pk', $drive->course_master_pk);
+        $allocation = (clone $allocations)->where('batch', (int) $drive->academic_session)->first()
+            ?? $allocations->orderByDesc('batch')->first();
+        if (! $allocation) {
+            return [];
+        }
+
+        return DB::table('coe_roll_numbers as r')
+            ->join('student_master as s', 's.pk', '=', 'r.student_master_pk')
+            ->where('r.roll_number_allocation_pk', $allocation->pk)
+            ->orderBy('r.serial_number')
+            ->get(['r.roll_number as code', 's.display_name as name'])
+            ->map(fn ($r) => ['code' => trim($r->code), 'name' => trim((string) $r->name)])
+            ->all();
+    }
+
+    /**
+     * The drive course's Unique Participant Codes (coe_participant_codes, pending
+     * or frozen), codes only, in code order; same batch rule as roll numbers.
+     *
+     * @return string[]
+     */
+    private function courseUniqueCodes(ExaminationDrive $drive): array
+    {
+        $codes = ParticipantCode::where('course_master_pk', $drive->course_master_pk);
+        $batch = (clone $codes)->where('batch', (int) $drive->academic_session)->exists()
+            ? (int) $drive->academic_session
+            : (clone $codes)->max('batch');
+        if ($batch === null) {
+            return [];
+        }
+
+        return $codes->where('batch', $batch)
+            ->pluck('unique_code')
+            ->map(fn ($c) => trim($c))
+            ->sort(fn ($a, $b) => $this->compareOtCodes($a, $b))
             ->values()
             ->all();
     }
@@ -813,13 +861,15 @@ class ExaminationDriveController extends Controller
     }
 
     /**
-     * OT code per faculty, kept only for names still on the row, values trimmed.
+     * Codes per faculty (roll numbers or Unique Participant Codes), kept only for
+     * names still on the row and, when $allowed is given, only codes in it.
      *
      * @param  array<mixed>  $codes
      * @param  string[]  $names
-     * @return array<string, string>|null
+     * @param  string[]|null  $allowed
+     * @return array<string, string[]|string>|null
      */
-    private function cleanCodes(array $codes, array $names, ?array $allowedOtCodes = null): ?array
+    private function cleanCodes(array $codes, array $names, ?array $allowed = null): ?array
     {
         $clean = [];
         foreach ($codes as $name => $code) {
@@ -827,12 +877,12 @@ class ExaminationDriveController extends Controller
                 continue;
             }
             if (is_array($code)) {
-                // OT codes picked in Select Roll Number: only the course's real OTs.
+                // Codes picked from a list: only the course's real ones.
                 $list = collect($code)
                     ->filter(fn ($c) => is_scalar($c))
                     ->map(fn ($c) => trim((string) $c))
                     ->filter()
-                    ->when($allowedOtCodes !== null, fn ($l) => $l->filter(fn ($c) => in_array($c, $allowedOtCodes, true)))
+                    ->when($allowed !== null, fn ($l) => $l->filter(fn ($c) => in_array($c, $allowed, true)))
                     ->unique()
                     ->sort(fn ($a, $b) => $this->compareOtCodes($a, $b))
                     ->values()
@@ -840,8 +890,8 @@ class ExaminationDriveController extends Controller
                 if ($list) {
                     $clean[trim($name)] = $list;
                 }
-            } elseif (is_scalar($code) && trim((string) $code) !== '') {
-                // Multi Faculty tab "Unique Codes of OT's" value.
+            } elseif ($allowed === null && is_scalar($code) && trim((string) $code) !== '') {
+                // A single free-text code, only where no list restricts the values.
                 $clean[trim($name)] = mb_substr(trim((string) $code), 0, 20);
             }
         }
@@ -850,20 +900,17 @@ class ExaminationDriveController extends Controller
     }
 
     /**
-     * Orders OT codes by prefix, then number value: A2 < A5 < A10 < A044 (=44).
-     * strnatcmp() reads a leading zero as a fraction and puts A044 before A05.
+     * Orders codes by prefix, then number value: A2 < A5 < A10 < A044 (=44), and
+     * then the rest naturally, so IT128-001 < IT128-002 < IT128-010.
+     * strnatcmp() alone reads a leading zero as a fraction and puts A044 before A05;
+     * the rest is compared as text because "-002" <=> "-001" compares as numbers (-2 < -1).
      */
     private function compareOtCodes(string $a, string $b): int
     {
         $split = fn (string $c) => preg_match('/^(\D*)(\d+)(.*)$/', $c, $m) ? [strtoupper($m[1]), (int) $m[2], $m[3]] : [strtoupper($c), 0, ''];
+        [$pa, $pb] = [$split($a), $split($b)];
 
-        return $split($a) <=> $split($b);
-    }
-
-    /** @return string[] */
-    private function courseOtCodes(ExaminationDrive $drive): array
-    {
-        return array_column($this->courseOts((int) $drive->course_master_pk), 'code');
+        return [$pa[0], $pa[1]] <=> [$pb[0], $pb[1]] ?: strnatcmp($pa[2], $pb[2]);
     }
 
     /**
@@ -953,6 +1000,7 @@ class ExaminationDriveController extends Controller
                 // Setup faculty + further names, as shown in SUB-COORDINATES.
                 'sub_coordinators' => $map->subCoordinatorNames(),
                 'faculty_codes'    => $map->faculty_codes ?? [],
+                'faculty_unique_codes' => $map->faculty_unique_codes ?? [],
             ])->values()->all(),
         ];
     }

@@ -17,6 +17,7 @@ class ExaminationDriveComponentMap extends Model
     protected $casts = [
         'sub_faculty_names' => 'array',
         'faculty_codes' => 'array',
+        'faculty_unique_codes' => 'array',
         'exam_date' => 'date',
         'exam_end_date' => 'date',
     ];
