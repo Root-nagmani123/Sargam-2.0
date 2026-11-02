@@ -606,7 +606,9 @@
             });
 
             var rowsData = [];
-            if ($ && $.fn.DataTable && $.fn.DataTable.isDataTable('#' + tableId)) {
+            if (options.rowsData) {
+                rowsData = options.rowsData;
+            } else if ($ && $.fn.DataTable && $.fn.DataTable.isDataTable('#' + tableId)) {
                 var dt = $('#' + tableId).DataTable();
                 var scope = options.allPages === false ? 'current' : { search: 'applied' };
                 rowsData = dt.rows(scope).data().toArray();
@@ -640,6 +642,31 @@
 
         exportCsv: function (tableId, options) {
             options = options || {};
+            var self = this;
+            var dt = ($ && $.fn.DataTable && $.fn.DataTable.isDataTable('#' + tableId)) ? $('#' + tableId).DataTable() : null;
+            // A server-side table holds only the visible page: fetch every filtered row, and never
+            // fall back to the page silently, or the file looks complete while missing rows.
+            if (!options.rowsData && this._isServerSideDataTable(dt)) {
+                var params = this._buildPrintAjaxParams(dt);
+                params.length = Math.max(dt.page.info().recordsDisplay || 0, 1); // no 500-row print cap
+                $.ajax({
+                    url: self._resolveDataTableAjaxUrl(tableId),
+                    type: 'GET',
+                    data: params,
+                    dataType: 'json',
+                    cache: false,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                }).done(function (json) {
+                    if (json && Array.isArray(json.data)) {
+                        self.exportCsv(tableId, $.extend({}, options, { rowsData: json.data }));
+                    } else if (window.alert) {
+                        window.alert('Download failed. Please try again.');
+                    }
+                }).fail(function () {
+                    if (window.alert) window.alert('Download failed. Please try again.');
+                });
+                return;
+            }
             var data = this.extractTableData(tableId, options);
             if (!data || !data.headers.length) {
                 if (window.alert) window.alert('No data to export.');

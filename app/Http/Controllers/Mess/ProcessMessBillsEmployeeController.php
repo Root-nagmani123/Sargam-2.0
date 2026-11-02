@@ -502,14 +502,14 @@ class ProcessMessBillsEmployeeController extends Controller
     /**
      * @return list<string>
      */
-    /**
-     * @return list<string>
-     */
     private function liveProcessMessBillsCacheStoreNames(): array
     {
         return array_values(array_diff($this->processMessBillsCacheStoreNames(), $this->processMessBillsDeadCacheStores));
     }
 
+    /**
+     * @return list<string>
+     */
     private function processMessBillsCacheStoreNames(): array
     {
         $primary = RedisBackedCache::projectDefaultStoreName();
@@ -735,7 +735,9 @@ class ProcessMessBillsEmployeeController extends Controller
 
     private function bumpProcessMessBillsCacheVersion(string $versionKey): void
     {
-        foreach ($this->liveProcessMessBillsCacheStoreNames() as $storeName) {
+        // Every store, dead or not: a store that failed earlier this request may answer now, and
+        // skipping it would leave its old version serving pre-payment paid/due totals.
+        foreach ($this->processMessBillsCacheStoreNames() as $storeName) {
             try {
                 $repo = RedisBackedCache::repositoryForStore($storeName);
                 if (! $repo->has($versionKey)) {
@@ -2416,9 +2418,6 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * @param  array{name: string, slug: string, client_id: int}  $entry
-     */
-    /**
      * Positions of each bill keyed by "slug|client_id" (client_id > 0 only) and "slug|trimmed client_name".
      *
      * @return array{0: array<string, list<int>>, 1: array<string, list<int>>}
@@ -2443,6 +2442,8 @@ class ProcessMessBillsEmployeeController extends Controller
      * A buyer's bills, in list order. Same rule as matching bill by bill: the slug must match; then
      * with a client_id, a bill matches on that id or on any of its name variants; without one, on
      * the exact name.
+     *
+     * @param  array{name: string, slug: string, client_id: int}  $entry
      */
     private function billsMatchingBuyerEntry(Collection $bills, array $index, array $entry): Collection
     {

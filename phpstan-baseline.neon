@@ -1207,7 +1207,7 @@ parameters:
 
 		-
 			message: "#^Relation 'items' is not found in App\\\\Models\\\\Mess\\\\PurchaseOrder model\\.$#"
-			count: 2
+			count: 1
 			path: app/Http/Controllers/Mess/PurchaseOrderController.php
 
 		-

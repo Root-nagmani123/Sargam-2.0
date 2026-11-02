@@ -467,10 +467,14 @@ window.MessDateRange = (function () {
             var css = document.createElement('link');
             css.rel = 'stylesheet';
             css.href = base + 'flatpickr.min.css';
+            css.integrity = 'sha512-MQXduO8IQnJVq1qmySpN87QQkiR1bZHtorbJBD0tzy7/0U9+YIC93QWHeGTEoojMVHWWNkoCp8V6OzVSYrX0oQ==';
+            css.crossOrigin = 'anonymous';
             document.head.appendChild(css);
         }
         var js = document.createElement('script');
         js.src = base + 'flatpickr.min.js';
+        js.integrity = 'sha512-K/oyQtMXpxI4+K0W7H25UopjM8pzq0yrVdFdG21Fh5dBe91I40pDd9A4lzNlHPHBIP2cwZuoxaUSX0GJSObvGA==';
+        js.crossOrigin = 'anonymous';
         js.onload = function () { waiting.forEach(function (f) { f(); }); waiting = null; };
         document.head.appendChild(js);
     }

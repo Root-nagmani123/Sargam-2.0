@@ -210,7 +210,8 @@ document.addEventListener('DOMContentLoaded', function() {
             infoEmpty: 'No {{ $infoLabel }}',
             emptyTable: 'No {{ $infoLabel }}',
             infoFiltered: '(filtered from _MAX_ total)',
-            paginate: { first: 'First', last: 'Last', next: '›', previous: '‹' }
+            paginate: { first: 'First', last: 'Last', next: '›', previous: '‹' },
+            aria: { paginate: { first: 'First page', last: 'Last page', next: 'Next page', previous: 'Previous page' } }
         },
         columnDefs: columnDefsMerged,
         initComplete: function(settings) {
@@ -259,7 +260,8 @@ document.addEventListener('DOMContentLoaded', function() {
             infoEmpty: 'No {{ $infoLabel }}',
             emptyTable: 'No {{ $infoLabel }}',
             infoFiltered: '(filtered from _MAX_ total)',
-            paginate: { first: 'First', last: 'Last', next: '›', previous: '‹' }
+            paginate: { first: 'First', last: 'Last', next: '›', previous: '‹' },
+            aria: { paginate: { first: 'First page', last: 'Last page', next: 'Next page', previous: 'Previous page' } }
         },
         columnDefs: columnDefsMerged,
         initComplete: function(settings) {

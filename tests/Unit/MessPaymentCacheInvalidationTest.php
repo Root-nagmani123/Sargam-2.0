@@ -119,4 +119,23 @@ class MessPaymentCacheInvalidationTest extends TestCase
 
         $this->assertGreaterThan(11, $this->version(), 'A missing index must not skip the version bump.');
     }
+
+    /**
+     * A store that threw earlier in the request is skipped by reads, but the bump must still try
+     * it: if it has recovered and keeps its old version, it serves pre-payment paid/due totals.
+     */
+    public function test_the_version_moves_in_a_store_that_failed_earlier_this_request(): void
+    {
+        $this->store->put(self::VERSION_KEY, 4, 3600);
+
+        $names = new ReflectionMethod($this->controller, 'processMessBillsCacheStoreNames');
+        $names->setAccessible(true);
+        $dead = new \ReflectionProperty($this->controller, 'processMessBillsDeadCacheStores');
+        $dead->setAccessible(true);
+        $dead->setValue($this->controller, $names->invoke($this->controller));
+
+        $this->forgetSummaries();
+
+        $this->assertGreaterThan(4, $this->version(), 'The bump must attempt every store, including one marked dead.');
+    }
 }
