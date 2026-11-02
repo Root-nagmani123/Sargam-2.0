@@ -3,10 +3,10 @@
 /**
  * ज्ञानकोश (ai.lbsnaa.gov.in/knowledge) notice feed.
  *
- * ज्ञानकोश polls Sargam for published notices and stores them on its side:
+ * ज्ञानकोश calls Sargam once a day and unpacks the notices on its side:
  *
- *   GET /api/gyankosh/published-notices                  everything published right now
- *   GET /api/gyankosh/published-notices/{id}/download    the document of one of them
+ *   GET /api/gyankosh/published-notices[?date=YYYY-MM-DD]
+ *       ZIP of the notices created that day (default today) + manifest.json
  *
  * See App\Http\Controllers\Api\KnowledgeFeedController.
  */

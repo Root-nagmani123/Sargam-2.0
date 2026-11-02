@@ -17,8 +17,5 @@ Route::name('api.')->group(function() {
         ->group(function () {
             Route::get('published-notices', [KnowledgeFeedController::class, 'index'])
                 ->name('published-notices');
-            Route::get('published-notices/{notice}/download', [KnowledgeFeedController::class, 'file'])
-                ->whereNumber('notice')
-                ->name('published-notices.download');
         });
 });

@@ -50,24 +50,47 @@ class NoticeKnowledgeFeed
             ->values();
     }
 
-    /** One notice with the columns holdBackReason()/describe() need, or null. */
-    public function findNotice(int $noticePk): ?object
+    /**
+     * Notices created on $date (created_at) that carry a file and may be shared.
+     *
+     * Display/expiry dates are deliberately not checked, so a past date still
+     * returns what was added that day even if it has since expired. Deactivated,
+     * personal and course-scoped notices stay out.
+     *
+     * @return \Illuminate\Support\Collection<int, object>
+     */
+    public function createdOn(string $date)
     {
-        return $this->noticeQuery()->where('n.pk', $noticePk)->first();
+        $day = Carbon::parse($date)->startOfDay();
+
+        // A range rather than DATE(created_at), so an index on created_at can be used.
+        return $this->noticeQuery()
+            ->where('n.created_at', '>=', $day)
+            ->where('n.created_at', '<', $day->copy()->addDay())
+            ->where('n.active_inactive', 1)
+            ->whereNotNull('n.document')
+            ->where('n.document', '<>', '')
+            ->orderBy('n.pk')
+            ->get()
+            ->filter(fn ($notice) => $this->holdBackReason($notice, false) === null)
+            ->values();
     }
 
-    /** Null when the notice belongs in ज्ञानकोश, else why it does not. */
-    public function holdBackReason(object $notice): ?string
+    /**
+     * Null when the notice belongs in ज्ञानकोश, else why it does not.
+     * $checkDates = false skips the display/expiry window (see createdOn()).
+     */
+    public function holdBackReason(object $notice, bool $checkDates = true): ?string
     {
         $today = Carbon::today()->toDateString();
 
         if ((int) $notice->active_inactive !== 1) {
             return 'deactivated on Sargam';
         }
-        if ($notice->display_date !== null && Carbon::parse($notice->display_date)->toDateString() > $today) {
+        if ($checkDates && $notice->display_date !== null && Carbon::parse($notice->display_date)->toDateString() > $today) {
             return 'not yet displayed on Sargam';
         }
-        if ($notice->expiry_date !== null && Carbon::parse($notice->expiry_date)->toDateString() < $today) {
+        if ($checkDates && $notice->expiry_date !== null && Carbon::parse($notice->expiry_date)->toDateString() < $today) {
             return 'expired on Sargam';
         }
         if (in_array((string) $notice->notice_type, config('knowledge.notices.exclude_types', []), true)) {
