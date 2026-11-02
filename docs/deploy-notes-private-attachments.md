@@ -30,7 +30,9 @@ drop). If something other than the application's web server serves `/storage/`,
 the block has to be added there instead.
 
 Do not apply either rule yet: steps 1-3 of "Verify" below must pass first, on
-the same server, while direct access is still open.
+the same server, while direct access is still open. Those steps use a canary
+file created for the check, never a real notice document, and run before this
+release is deployed, so no real notice file is exposed while the rule is off.
 
 Apache (vhost or `httpd.conf`). The path is the site's `DocumentRoot` (the
 release's `public/` directory, written exactly as `DocumentRoot` writes it)
@@ -82,7 +84,7 @@ set -u
 set -f
 BASE=${BASE:-'https://<production host>'}       # the URL users reach, no trailing slash
 APP=${APP:-'/path/to/Sargam-2.0'}               # release root on this server
-DOC=${DOC:-'notice_docs/<file from the query>'}
+DOC=${DOC:-'notice_docs/<canary file from step 1>'}
 NAME=${DOC#notice_docs/}
 FILE="$APP/storage/app/public/$DOC"
 
@@ -134,23 +136,35 @@ after)
 esac
 ```
 
-1. Select a notice file that is on the public disk (read-only). Take the newest
-   row whose file exists under `storage/app/public/`; older notices may be on
-   the `private` disk or have no file at all. Start from:
+1. Create a canary file on the public disk, **before deploying this release**
+   (the previous release keeps notice uploads on the `private` disk, so no real
+   notice file is publicly reachable yet). Run as the user that owns the
+   release's `storage/`, so the web server can read the file:
 
-   ```sql
-   SELECT pk, document FROM notices_notification
-   WHERE document LIKE 'notice_docs/%' ORDER BY pk DESC LIMIT 20;
+   ```sh
+   APP='/path/to/Sargam-2.0'
+   NAME="verify-canary-$(date +%Y%m%d)-$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n').txt"
+   mkdir -p "$APP/storage/app/public/notice_docs"
+   printf 'Sargam notice direct-access canary. Not a notice; no content.\n' \
+     > "$APP/storage/app/public/notice_docs/$NAME"
+   echo "DOC=notice_docs/$NAME"
+   ls -l "$APP/storage/app/public/notice_docs/$NAME"
    ```
 
-   Set `BASE`, `APP` and `DOC` (the `document` value) in the script. The script
-   stops with `FAIL: … is not on the public disk` if the file is not there; move
-   to the next row.
+   The `ls -l` line must list the file with a non-zero size; record it. Set
+   `BASE`, `APP` and `DOC` (the printed value) in the script. The canary is
+   not referenced by any notice row, so the application never serves or deletes
+   it. Leave it in place after verification: later `after` re-runs use it (see
+   below). Do not use a real notice document for this check.
+
+   If this release (or an earlier head of this change) is already deployed,
+   real notice files may already be publicly reachable: still use a canary,
+   and go through steps 2-5 without delay.
 2. Positive control, **before** applying the rule: `sh
    notice-direct-access-check.sh before`. It must print `PASS positive control:
    200 <bytes>`, where the byte count equals the file's size. Any other result
-   exits 1, and the verification cannot proceed: fix `BASE`/`APP`/`DOC` or pick
-   another file. Do not apply the rule until this passes.
+   exits 1, and the verification cannot proceed: fix `BASE`/`APP`/`DOC` or the
+   canary's permissions. Do not apply the rule until this passes.
 3. Record the `before` output. Its variant lines say which variants this server
    actually serves: a variant marked `NOT A TEST here` is rejected even without
    the rule, so its later 403/404 is not evidence. Expect `%2F` to be `NOT A
@@ -177,11 +191,49 @@ Then check that the rule did not over-block, and that the route still works:
 
 Repeat steps 1-5 on every new environment, before it serves users. After a
 web-server, proxy or CDN change on an environment that already has the rule,
-`before` cannot pass, because the rule is in place. Run `after` with the file
-from that environment's recorded positive control (the script still fails if
-the file has left the public disk), and record it with a reference to that
-positive control. An environment with no recorded positive control has not been
-verified.
+`before` cannot pass, because the rule is in place. Run `after` with the
+canary from that environment's recorded positive control (the script still
+fails if the canary has left the public disk), and record it with a reference
+to that positive control. An environment with no recorded positive control has
+not been verified.
+
+### After deployment
+
+Deploy this release only after step 5 and check 2 pass. Then, on the deployed
+release:
+
+- Re-run `sh notice-direct-access-check.sh after` with the same canary. It must
+  again end with `PASS: every direct request refused`. This catches a rule
+  written against a release path that the deploy replaced, or a proxy/CDN layer
+  the deploy changed. Re-run check 2.
+- Run check 3. For it, create a test notice with a non-sensitive attachment and
+  an audience that includes one test login and excludes another. Then run
+  `DOC=<that notice's document value> sh notice-direct-access-check.sh after`;
+  it must also print `PASS: every direct request refused`, which shows the rule
+  covers files the release itself writes. Afterwards, deactivate and delete the
+  test notice (an active notice cannot be deleted; deleting it removes its file).
+- Keep the canary for later `after` re-runs (above).
+
+### Evidence to record
+
+Record the following with the Engineering lead's risk acceptance for public
+notice storage. Paste output verbatim; do not summarise it. An item that was not
+run is recorded as not run, not as passed.
+
+| Item | Value |
+| --- | --- |
+| Environment (host, URL used as `BASE`) | |
+| What serves `/storage/` (web server and version, plus any proxy/CDN in front) | |
+| Rule applied: file path and the exact lines added | |
+| Canary `DOC` value, and `ls -l` output from step 1 | |
+| `before` output (step 2), with date/time and runner | |
+| `after` output before deployment (step 5), with date/time and runner | |
+| Check 2 output | |
+| `after` output on the deployed release (canary and test-notice file), with date/time and runner | |
+| Check 3: audience login result | |
+| Check 3: non-audience login result (expected 404) | |
+| Check 3: logged-out result (expected redirect to login) | |
+| Engineering lead sign-off on this evidence (name, date, channel) | |
 
 Notice files uploaded while notices were kept on the `private` disk stay there
 and are still served by the route. `attachments:migrate-sensitive` does not move

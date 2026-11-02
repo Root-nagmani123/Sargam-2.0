@@ -172,7 +172,7 @@ class NoticeAudienceTest extends TestCase
      * /storage/notice_docs/ URL is web-server config: the test kernel never serves
      * /storage/ files, so a GET here would 404 with or without the block. It is
      * checked on the deployed server instead (deploy-notes-private-attachments.md,
-     * "Reload the server, then verify", check 1).
+     * "Verify", steps 1-5: notice-direct-access-check.sh before|after).
      */
     public function test_an_uploaded_notice_attachment_is_on_the_public_disk_and_served_only_to_its_audience(): void
     {
