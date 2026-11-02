@@ -171,7 +171,11 @@ esac
    TEST` on Apache, which refuses encoded slashes by default (`AllowEncodedSlashes
    Off`), and `/storage/NOTICE_DOCS/…` to be `NOT A TEST` on a case-sensitive
    (Linux) filesystem.
-4. Apply the rule for the server (above) and reload it.
+4. Apply the rule for the server (above). Validate the configuration before
+   reloading (`nginx -t`, or `apachectl configtest` / `httpd -t`; for a proxy or
+   CDN, its own validation or deployment status), then reload. Record the
+   validation and reload output. Do not reload a configuration that fails
+   validation.
 5. Re-run the **same file**: `sh notice-direct-access-check.sh after`. Every
    line must print 403 or 404 and the script must exit 0 with `PASS: every
    direct request refused`. A 200, or any other code, exits 1: direct access is
@@ -187,7 +191,10 @@ Then check that the rule did not over-block, and that the route still works:
   member opening the notice attachment from the dashboard
   (`/admin/notice/<pk>/attachment`) gets the file; a login outside the notice's
   audience gets 404; a logged-out request to that route redirects to login. The
-  route reads the disk directly, so the block does not affect it.
+  route reads the disk directly, so the block does not affect it. Capture the
+  logged-out case as command output: `curl -s -o /dev/null -w '%{http_code}
+  %{redirect_url}\n' "$BASE/admin/notice/<pk>/attachment"` prints `302` and
+  the login URL.
 
 Repeat steps 1-5 on every new environment, before it serves users. After a
 web-server, proxy or CDN change on an environment that already has the rule,
@@ -225,6 +232,7 @@ run is recorded as not run, not as passed.
 | Environment (host, URL used as `BASE`) | |
 | What serves `/storage/` (web server and version, plus any proxy/CDN in front) | |
 | Rule applied: file path and the exact lines added | |
+| Configuration validation and reload output (step 4) | |
 | Canary `DOC` value, and `ls -l` output from step 1 | |
 | `before` output (step 2), with date/time and runner | |
 | `after` output before deployment (step 5), with date/time and runner | |
