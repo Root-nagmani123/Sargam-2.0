@@ -84,15 +84,59 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
         $this->assertStatementMatches($buyer, $row, 1000.0, 300.0, 700.0);
     }
 
+    /**
+     * Same defect for a buyer keyed by client_id: the pool is fetched through the client_id
+     * filter and summed under the cid: group key rather than the name.
+     */
+    public function test_part_paid_multi_month_voucher_for_a_client_id_buyer(): void
+    {
+        $buyer = $this->buyerName('D');
+        $clientId = $this->unusedClientId();
+        $this->svVoucher($buyer, 1200, [['2031-08-15', 1000], ['2031-09-10', 1000]], $clientId);
+
+        $row = $this->modalRow($buyer);
+
+        $this->assertNotNull($row, 'client-id buyer with a September due is missing from the modal');
+        $this->assertSame('200.00', $row['paid_amount']);
+        $this->assertSame('800.00', $row['due_amount']);
+        $this->assertStatementMatches($buyer, $row, 1000.0, 200.0, 800.0);
+    }
+
+    public function test_older_unpaid_kitchen_issue_absorbs_the_payment_for_a_client_id_buyer(): void
+    {
+        $buyer = $this->buyerName('E');
+        $clientId = $this->unusedClientId();
+        $this->kitchenIssue($buyer, '2031-07-20', 500, $clientId);
+        $this->svVoucher($buyer, 800, [['2031-09-10', 1000]], $clientId);
+
+        $row = $this->modalRow($buyer);
+
+        $this->assertNotNull($row, 'client-id buyer with a September due is missing from the modal');
+        $this->assertSame('300.00', $row['paid_amount']);
+        $this->assertSame('700.00', $row['due_amount']);
+        $this->assertStatementMatches($buyer, $row, 1000.0, 300.0, 700.0);
+    }
+
     private function buyerName(string $tag): string
     {
         return 'Modal Paid Test ' . $tag . ' ' . uniqid();
     }
 
+    /** A client_id no real voucher or kitchen issue uses, so the buyer has no other bills. */
+    private function unusedClientId(): int
+    {
+        do {
+            $clientId = random_int(900000000, 999999999);
+        } while (DB::table('sv_date_range_reports')->where('client_id', $clientId)->exists()
+            || DB::table('kitchen_issue_master')->where('client_id', $clientId)->exists());
+
+        return $clientId;
+    }
+
     /**
      * @param  list<array{0: string, 1: float}>  $lines  [issue_date, amount] — qty 1 at rate = amount
      */
-    private function svVoucher(string $buyer, float $paid, array $lines): void
+    private function svVoucher(string $buyer, float $paid, array $lines, ?int $clientId = null): void
     {
         $dates = array_column($lines, 0);
         $total = array_sum(array_column($lines, 1));
@@ -106,6 +150,7 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
             'paid_amount' => $paid,
             'client_type_slug' => self::SLUG,
             'client_type_pk' => self::CLIENT_TYPE_PK,
+            'client_id' => $clientId,
             'client_name' => $buyer,
             'payment_type' => 1,
             'issue_date' => min($dates),
@@ -124,7 +169,7 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
     }
 
     /** Unpaid kitchen issue (no payment details); item issue_date left NULL as the app does. */
-    private function kitchenIssue(string $buyer, string $date, float $amount): void
+    private function kitchenIssue(string $buyer, string $date, float $amount, ?int $clientId = null): void
     {
         $pk = DB::table('kitchen_issue_master')->insertGetId([
             'store_id' => 1,
@@ -132,6 +177,7 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
             'issue_date' => $date,
             'client_type' => self::KITCHEN_CLIENT_TYPE_OTHER,
             'client_type_pk' => self::CLIENT_TYPE_PK,
+            'client_id' => $clientId,
             'payment_type' => 1,
             'client_name' => $buyer,
             'status' => 0,
