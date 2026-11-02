@@ -86,6 +86,15 @@ class MessBuyerClientFilter
     }
 
     /**
+     * Request-scoped memo for {@see resolveClientId}. Unresolvable names are cached as null too:
+     * a miss walks sv -> kitchen -> employee_master -> faculty_master (4 queries), and the mess
+     * bill screens ask for the same buyers repeatedly within one request.
+     *
+     * @var array<string, int|null>
+     */
+    private static array $resolvedClientIdCache = [];
+
+    /**
      * @param  array<int, string>  $clientTypeSlugs
      */
     public static function resolveClientId(string $buyerValue, array $clientTypeSlugs = []): ?int
@@ -99,6 +108,28 @@ class MessBuyerClientFilter
             return (int) $buyerValue;
         }
 
+        $cacheKey = $buyerValue . '|' . implode(',', $clientTypeSlugs);
+        if (array_key_exists($cacheKey, self::$resolvedClientIdCache)) {
+            return self::$resolvedClientIdCache[$cacheKey];
+        }
+
+        return self::$resolvedClientIdCache[$cacheKey] = self::resolveClientIdUncached($buyerValue, $clientTypeSlugs);
+    }
+
+    /**
+     * Clear the memo (long-running workers / tests that mutate buyer rows mid-process).
+     */
+    public static function flushResolvedClientIdCache(): void
+    {
+        self::$resolvedClientIdCache = [];
+        self::$nameVariantsCache = [];
+    }
+
+    /**
+     * @param  array<int, string>  $clientTypeSlugs
+     */
+    private static function resolveClientIdUncached(string $buyerValue, array $clientTypeSlugs = []): ?int
+    {
         $baseName = trim((string) preg_replace('/\s*\([^)]+\)\s*$/', '', $buyerValue));
 
         $fromSv = self::resolveClientIdFromQuery(
@@ -258,6 +289,27 @@ class MessBuyerClientFilter
      * @return list<string>
      */
     public static function nameVariants(string $buyerValue, int $clientId, int $clientTypePk = 0): array
+    {
+        $cacheKey = $buyerValue . '|' . $clientId . '|' . $clientTypePk;
+        if (isset(self::$nameVariantsCache[$cacheKey])) {
+            return self::$nameVariantsCache[$cacheKey];
+        }
+
+        return self::$nameVariantsCache[$cacheKey] = self::nameVariantsUncached($buyerValue, $clientId, $clientTypePk);
+    }
+
+    /**
+     * Request-scoped memo for {@see nameVariants}. It costs 3 queries per call and is invoked
+     * once per bill while building the FIFO buyer OR-clause, so the same buyer repeats heavily.
+     *
+     * @var array<string, list<string>>
+     */
+    private static array $nameVariantsCache = [];
+
+    /**
+     * @return list<string>
+     */
+    private static function nameVariantsUncached(string $buyerValue, int $clientId, int $clientTypePk = 0): array
     {
         $variants = array_values(array_unique(array_filter([
             trim($buyerValue),

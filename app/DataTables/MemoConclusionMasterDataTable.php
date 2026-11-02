@@ -16,8 +16,9 @@ class MemoConclusionMasterDataTable extends DataTable
     return (new EloquentDataTable($query))
         ->addIndexColumn()
 
-        ->editColumn('discussion_name', fn ($row) => $row->discussion_name ?? 'N/A')
-        ->editColumn('pt_discusion', fn ($row) => $row->pt_discusion ?? 'N/A')
+        // Escaped here: both columns stay in rawColumns below.
+        ->editColumn('discussion_name', fn ($row) => e($row->discussion_name ?? 'N/A'))
+        ->editColumn('pt_discusion', fn ($row) => e($row->pt_discusion ?? 'N/A'))
 
         ->filterColumn('discussion_name', function ($query, $keyword) {
             $query->where('discussion_name', 'like', "%{$keyword}%");
@@ -37,63 +38,46 @@ class MemoConclusionMasterDataTable extends DataTable
             }
         }, true)
 
+        // Action: Edit · status switch · Delete (docs/new-design-index-page.md §3b).
+        // .editshowConclusionAlert / .deleteBtn and their data-* are the hooks
+        // the index page's SweetAlert handlers read — keep them.
         ->addColumn('actions', function ($row) {
+            $isActive = (int) $row->active_inactive === 1;
 
-            $deleteUrl = route('master.memo.conclusion.master.delete', $row->pk);
-            $isActive  = ($row->active_inactive == 1);
-
-            /* 🔹 DELETE BUTTON LOGIC */
-            if ($isActive) {
-                $deleteButton = '
-                    <button type="button"
-                        class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
-                        disabled
-                        title="Cannot delete active memo conclusion">
-                        <span class="material-icons material-symbols-rounded" style="font-size:18px;">delete</span>
-                        <span class="d-none d-md-inline">Delete</span>
-                    </button>';
-            } else {
-                $deleteButton = '
-                    <button type="button"
-                        class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 deleteBtn"
-                        data-url="' . $deleteUrl . '"
-                        data-id="' . $row->pk . '">
-                        <span class="material-icons material-symbols-rounded" style="font-size:18px;">delete</span>
-                        <span class="d-none d-md-inline">Delete</span>
-                    </button>';
-            }
-
-            return '
-                <div class="d-inline-flex align-items-center gap-2" role="group">
-
-                    <!-- Edit -->
-                    <a href="javascript:void(0)"
-                        class="editshowConclusionAlert btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
-                        data-pk="' . $row->pk . '"
-                        data-discussion_name="' . e($row->discussion_name) . '"
-                        data-pt_discusion="' . e($row->pt_discusion) . '"
-                        data-active_inactive="' . $row->active_inactive . '">
-                        <span class="material-icons material-symbols-rounded" style="font-size:18px;">edit</span>
-                        <span class="d-none d-md-inline">Edit</span>
-                    </a>
-
-                    <!-- Delete -->
-                    ' . $deleteButton . '
-
-                </div>';
+            return view('admin.master.partials.grid-actions', [
+                'name'   => $row->discussion_name ?? '',
+                'edit'   => [
+                    'class' => 'editshowConclusionAlert',
+                    'attrs' => [
+                        'data-pk'              => $row->pk,
+                        'data-discussion_name' => $row->discussion_name,
+                        'data-pt_discusion'    => $row->pt_discusion,
+                        'data-active_inactive' => $row->active_inactive,
+                    ],
+                ],
+                'toggle' => [
+                    'active' => $isActive,
+                    'table'  => 'memo_conclusion_master',
+                    'column' => 'active_inactive',
+                    'id'     => $row->pk,
+                ],
+                // destroy() refuses an active memo conclusion (403) — mirror it.
+                'delete' => $isActive
+                    ? ['disabled' => true, 'reason' => 'Active memo conclusions cannot be deleted. Deactivate it first.']
+                    : [
+                        'class' => 'deleteBtn',
+                        'attrs' => [
+                            'data-url' => route('master.memo.conclusion.master.delete', $row->pk),
+                            'data-id'  => $row->pk,
+                        ],
+                    ],
+            ])->render();
         })
 
-        ->addColumn('status', function ($row) {
-            return '
-                <div class="form-check form-switch d-inline-block">
-                    <input class="form-check-input status-toggle"
-                        type="checkbox"
-                        data-table="memo_conclusion_master"
-                        data-column="active_inactive"
-                        data-id="' . $row->pk . '"
-                        ' . ($row->active_inactive == 1 ? 'checked' : '') . '>
-                </div>';
-        })
+        // Status: display-only soft badge. The switch lives in the Action stack.
+        ->addColumn('status', fn ($row) => view('admin.master.partials.grid-status', [
+            'active' => (int) $row->active_inactive === 1,
+        ])->render())
 
         ->rawColumns(['discussion_name', 'pt_discusion', 'actions', 'status']);
 }
@@ -124,11 +108,11 @@ class MemoConclusionMasterDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('discussion_name')->title('Conclusion name')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('pt_discusion')->title('PT Discussion')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::computed('status')->title('Status')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::computed('DT_RowIndex')->title('S. No.')->addClass('text-nowrap')->width('5.5rem')->orderable(false)->searchable(false),
+            Column::make('discussion_name')->title('Conclusion Name')->orderable(false)->searchable(true),
+            Column::make('pt_discusion')->title('PT Discussion')->addClass('mst-col-wrap')->orderable(false)->searchable(true),
+            Column::computed('status')->title('Status')->addClass('text-nowrap')->width('8rem')->orderable(false)->searchable(false),
+            Column::computed('actions')->title('Action')->addClass('text-nowrap')->width('13rem')->orderable(false)->searchable(false),
         ];
     }
 

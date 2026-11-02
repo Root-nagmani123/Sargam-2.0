@@ -19,6 +19,7 @@ class CasteCategoryMaster extends Model
     public static function GetSeatName()
     {
         return self::active()->select('pk', 'Seat_name', 'Seat_name_hindi')
+            ->orderBy('Seat_name')
             ->get()
             ->map(function ($item) {
                 $item->seat_name = $item->Seat_name . ($item->Seat_name_hindi ? ' (' . $item->Seat_name_hindi . ')' : '');

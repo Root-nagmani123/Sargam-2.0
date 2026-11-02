@@ -2,114 +2,102 @@
 
 @section('title', ($student->display_name ?? 'Officer Trainee') . '’s Medical Exemption Report')
 
-@section('setup_content')
-<link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
-<link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}?v={{ filemtime(public_path('css/select2-theme.css')) }}">
+@push('styles')
+@include('admin.layouts.partials.select2-assets')
+<link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
 <style>
-/* Medical Exemption Report — OT detail. Tokens from sargam-app.css (--ds-*). */
-
-/* --- Stat cards -------------------------------------------------- */
-.mer-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--ds-space-3); }
-.mer-stat-card {
-    background: #fff; border: 1px solid var(--ds-line); border-radius: var(--ds-radius-2);
-    padding: 0.85rem 1.1rem; box-shadow: var(--ds-shadow-sm);
+/* Medical Exemption Report — OT detail. Page-scoped pieces the mst-* /
+   programme-dt-* layers don't cover (KPI grid, period toggle, range
+   calendar). Tokens only (docs/design.md). */
+.mst-page.mer-page .mer-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+    gap: var(--ds-space-3);
 }
-.mer-stat-label { font-size: 0.8125rem; font-weight: 500; color: var(--ds-ink-muted); margin-bottom: 0.35rem; }
-.mer-stat-value { font-size: 1.5rem; font-weight: 700; color: var(--ds-ink); line-height: 1; }
-@media (max-width: 991.98px) { .mer-stats { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 575.98px) { .mer-stats { grid-template-columns: repeat(2, 1fr); } }
 
-/* --- Toolbar buttons --------------------------------------------- */
-.mer-util-btn {
-    height: 42px; display: inline-flex; align-items: center; gap: var(--ds-space-2);
-    padding: 0 1rem; font-weight: 600; font-size: 0.9rem; color: #004a93;
-    background: #fff; border: 0; border-radius: var(--ds-radius-1);
-    transition: border-color .15s ease, box-shadow .15s ease, color .15s ease;
+.mst-page.mer-page .mer-period-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    width: 100%;
+    text-align: left;
 }
-.mer-util-btn:hover { color: var(--bs-primary); box-shadow: var(--ds-shadow-sm); }
-.mer-util-btn.dropdown-toggle::after { margin-left: 0.35rem; }
-.mer-download-menu { min-width: 11rem; border-radius: var(--ds-radius-1); }
 
-/* --- Filters ----------------------------------------------------- */
-.mer-filterbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ds-space-2); }
-.mer-filters-label { font-weight: 600; font-size: 0.9rem; color: var(--ds-ink); margin-right: var(--ds-space-1); }
-.mer-filter-control {
-    height: 42px; display: inline-flex; align-items: center; gap: var(--ds-space-1);
-    padding: 0 0.85rem; font-size: 0.875rem; font-weight: 500; color: var(--ds-ink);
-    background: #fff; border: 1px solid var(--ds-line); border-radius: var(--ds-radius-1); line-height: 1;
+.mst-page.mer-page .mer-period-toggle > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
-select.mer-filter-control { display: inline-block; min-width: 170px; max-width: 230px; min-height: 42px; padding-right: 2.25rem; text-overflow: ellipsis; }
-.mer-filter-control:hover { border-color: #c4ccd6; }
-.mer-filter-control.dropdown-toggle::after { margin-left: auto; }
-#merResetFilters.mer-filter-control { color: var(--bs-danger); border-color: var(--bs-danger); font-weight: 600; }
-#merResetFilters.mer-filter-control:hover { background: var(--bs-danger); color: #fff; }
-.mer-period-menu { min-width: auto; }
 
-/* --- Calendar ---------------------------------------------------- */
-.mer-cal { padding: var(--ds-space-3); }
-.mer-cal-months { display: flex; gap: var(--ds-space-4); }
-@media (max-width: 575.98px) { .mer-cal-months { flex-direction: column; gap: var(--ds-space-3); } }
-.mer-cal-month { width: 232px; }
-.mer-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--ds-space-2); }
-.mer-cal-title { font-weight: 600; font-size: 0.875rem; color: var(--ds-ink); }
-.mer-cal-nav { border: 0; background: transparent; width: 28px; height: 28px; border-radius: var(--ds-radius-1); color: var(--ds-ink-muted); display: inline-flex; align-items: center; justify-content: center; }
-.mer-cal-nav:hover { background: var(--ds-surface-2); color: var(--ds-ink); }
-.mer-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-.mer-cal-dow { text-align: center; font-size: 0.7rem; font-weight: 600; color: var(--ds-ink-muted); padding: 4px 0; }
-.mer-cal-day { aspect-ratio: 1 / 1; border: 0; background: transparent; border-radius: var(--ds-radius-1); font-size: 0.8125rem; color: var(--ds-ink); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
-.mer-cal-day:hover { background: rgba(var(--bs-primary-rgb, 0 74 147), 0.1); }
-.mer-cal-day.in-range { background: rgba(var(--bs-primary-rgb, 0 74 147), 0.12); border-radius: 0; }
-.mer-cal-day.is-start, .mer-cal-day.is-end { background: var(--bs-primary); color: #fff; }
-.mer-cal-day.is-start { border-radius: var(--ds-radius-1) 0 0 var(--ds-radius-1); }
-.mer-cal-day.is-end { border-radius: 0 var(--ds-radius-1) var(--ds-radius-1) 0; }
-.mer-cal-day.is-start.is-end { border-radius: var(--ds-radius-1); }
-.mer-cal-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-2); margin-top: var(--ds-space-3); padding-top: var(--ds-space-3); border-top: 1px solid var(--ds-line); }
-.mer-cal-range { font-size: 0.8125rem; color: var(--ds-ink-muted); }
+/* The last column of these grids is data (a count / remarks), not an Action
+   stack: undo master-admin.css's right-aligned, nowrap, print-hidden Action
+   column rule for this page. */
+.mst-page.mer-page .programme-dt-panel .programme-dt-table th:last-child,
+.mst-page.mer-page .programme-dt-panel .programme-dt-table td:last-child {
+    text-align: left;
+    white-space: normal;
+}
 
-/* --- Column modal ------------------------------------------------ */
-.mer-col-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--ds-space-3); }
-.mer-col-chip { display: flex; align-items: center; gap: var(--ds-space-2); margin: 0; padding: 0.65rem 0.85rem; border: 1px solid var(--ds-line); border-radius: var(--ds-radius-1); background: #fff; cursor: pointer; font-size: 0.9rem; font-weight: 500; color: var(--ds-ink); user-select: none; transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease; }
-.mer-col-chip:hover { border-color: #c4ccd6; background: var(--ds-surface-2); }
-.mer-col-chip.is-checked { border-color: var(--bs-primary); box-shadow: inset 0 0 0 1px var(--bs-primary); }
-.mer-col-chip .form-check-input { margin: 0; flex-shrink: 0; cursor: pointer; }
-@media (max-width: 479.98px) { .mer-col-grid { grid-template-columns: 1fr; } }
+@media print {
+    .mst-page.mer-page .programme-dt-panel .programme-dt-table th:last-child,
+    .mst-page.mer-page .programme-dt-panel .programme-dt-table td:last-child {
+        display: table-cell !important;
+    }
+}
 
-/* --- Search ------------------------------------------------------ */
-.mer-search-box { position: relative; display: inline-flex; align-items: center; }
-.mer-search-ico { position: absolute; left: 12px; font-size: 18px; color: var(--ds-ink-muted); pointer-events: none; }
-.mer-search-field { height: 42px; width: 220px; padding-left: 38px; border: 1px solid var(--ds-line); border-radius: var(--ds-radius-1); font-size: 0.875rem; }
-.mer-search-field:focus { border-color: #86b7fe; box-shadow: var(--ds-focus-ring); }
-@media (max-width: 575.98px) { .mer-search-field { width: 150px; } }
-
-/* --- Table ------------------------------------------------------- */
-.datatables .mer-scroll { max-height: 65vh; overflow: auto; -webkit-overflow-scrolling: touch; }
-.datatables .table-responsive { overflow: visible; }
-.datatables #merDetailTable { min-width: 100%; width: 100%; margin-bottom: 0; }
-.datatables #merDetailTable thead th { position: sticky; top: 0; z-index: 10; background: var(--ds-surface-2); border-bottom: 1px solid var(--ds-line); font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.02em; white-space: nowrap; padding: 12px 14px; vertical-align: middle; }
-.datatables #merDetailTable td { padding: 12px 14px; vertical-align: middle; font-size: 0.9rem; color: var(--ds-ink); }
-.datatables #merDetailTable td.mer-remarks { white-space: normal; min-width: 200px; max-width: 360px; word-break: break-word; }
-
-/* Bottom bar */
-.datatables .mer-table-footer { margin-top: var(--ds-space-3); }
-.datatables .mer-count { gap: var(--ds-space-2); color: var(--ds-ink-muted); font-size: 0.875rem; }
-.datatables .dataTables_length, .datatables .dataTables_info { margin: 0; padding: 0; color: var(--ds-ink-muted); font-size: 0.875rem; white-space: nowrap; }
-.datatables .dataTables_length label { margin: 0; display: inline-flex; align-items: center; gap: var(--ds-space-2); }
-.datatables .dataTables_length select.form-select { width: auto; min-width: 76px; display: inline-block; border-radius: var(--ds-radius-1); }
-.datatables .dataTables_paginate { margin: 0; }
-.datatables .pagination { margin: 0; gap: var(--ds-space-1); flex-wrap: wrap; }
-.datatables .pagination .page-item .page-link { margin-left: 0; min-width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; padding: 0 0.5rem; border: 1px solid var(--ds-line); border-radius: var(--ds-radius-1); color: var(--ds-ink); font-size: 0.875rem; background: #fff; }
-.datatables .pagination .page-item .page-link:hover { background: var(--ds-surface-2); border-color: #c4ccd6; }
-.datatables .pagination .page-item.active .page-link { background: var(--bs-primary); border-color: var(--bs-primary); color: #fff; }
-.datatables .pagination .page-item.disabled .page-link { color: var(--ds-ink-muted); background: var(--ds-surface-2); opacity: 0.6; }
+/* --- Dual-month range calendar ----------------------------------- */
+.mst-page.mer-page .mer-period-menu { min-width: auto; }
+.mst-page.mer-page .mer-cal { padding: var(--ds-space-3); }
+.mst-page.mer-page .mer-cal-months { display: flex; gap: var(--ds-space-4); }
+@media (max-width: 575.98px) { .mst-page.mer-page .mer-cal-months { flex-direction: column; gap: var(--ds-space-3); } }
+.mst-page.mer-page .mer-cal-month { width: 14.5rem; }
+.mst-page.mer-page .mer-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--ds-space-2); }
+.mst-page.mer-page .mer-cal-title { font-weight: 600; font-size: 0.875rem; color: var(--ds-ink); }
+.mst-page.mer-page .mer-cal-nav {
+    border: 0; background: transparent; width: 1.75rem; height: 1.75rem; border-radius: var(--ds-radius-1);
+    color: var(--ds-ink-muted); display: inline-flex; align-items: center; justify-content: center;
+}
+.mst-page.mer-page .mer-cal-nav:hover { background: var(--ds-surface-2); color: var(--ds-ink); }
+.mst-page.mer-page .mer-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.125rem; }
+.mst-page.mer-page .mer-cal-dow { text-align: center; font-size: 0.7rem; font-weight: 600; color: var(--ds-ink-muted); padding: var(--ds-space-1) 0; }
+.mst-page.mer-page .mer-cal-day {
+    aspect-ratio: 1 / 1; border: 0; background: transparent; border-radius: var(--ds-radius-1);
+    font-size: 0.8125rem; color: var(--ds-ink); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+.mst-page.mer-page .mer-cal-day:hover { background: rgba(var(--bs-primary-rgb), 0.1); }
+.mst-page.mer-page .mer-cal-day.in-range { background: rgba(var(--bs-primary-rgb), 0.12); border-radius: 0; }
+.mst-page.mer-page .mer-cal-day.is-start,
+.mst-page.mer-page .mer-cal-day.is-end { background: var(--ds-primary); color: var(--ds-surface); }
+.mst-page.mer-page .mer-cal-day.is-start { border-radius: var(--ds-radius-1) 0 0 var(--ds-radius-1); }
+.mst-page.mer-page .mer-cal-day.is-end { border-radius: 0 var(--ds-radius-1) var(--ds-radius-1) 0; }
+.mst-page.mer-page .mer-cal-day.is-start.is-end { border-radius: var(--ds-radius-1); }
+.mst-page.mer-page .mer-cal-footer {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-2);
+    margin-top: var(--ds-space-3); padding-top: var(--ds-space-3); border-top: 1px solid var(--ds-line);
+}
+.mst-page.mer-page .mer-cal-range { font-size: 0.8125rem; color: var(--ds-ink-muted); }
 </style>
+@endpush
 
+@section('setup_content')
 @php
     $otName = trim((string) ($student->display_name ?? '')) ?: 'Officer Trainee';
     $detailUrl = route('medical.exemption.report.detail', ['student' => $studentToken, 'course' => $courseToken]);
     $detailExportUrl = route('medical.exemption.report.detail.export', ['student' => $studentToken, 'course' => $courseToken]);
+
+    // Hero: initials, OT code and the course's running / ended state.
+    $otInitials = collect(preg_split('/\s+/', $otName, -1, PREG_SPLIT_NO_EMPTY))
+        ->take(2)
+        ->map(fn ($part) => mb_strtoupper(mb_substr($part, 0, 1)))
+        ->implode('');
+    $otCode = trim((string) ($student->generated_OT_code ?? ''));
+    $courseEnd = filled(optional($course)->end_date) ? \Carbon\Carbon::parse($course->end_date) : null;
+    $courseStart = filled(optional($course)->start_year) ? \Carbon\Carbon::parse($course->start_year) : null;
+    $courseRunning = $courseEnd ? $courseEnd->endOfDay()->isFuture() : null;
 @endphp
 
-<div class="container-fluid">
+<div class="container-fluid mst-page mer-page mer-detail-page">
 
     <x-breadcrum :title="$otName . '’s Medical Exemption Report'" :showBack="true" :items="[
         ['label' => 'Home', 'url' => route('admin.dashboard')],
@@ -118,52 +106,100 @@ select.mer-filter-control { display: inline-block; min-width: 170px; max-width: 
         ['label' => $otName . '’s Medical Exemption Report'],
     ]" />
 
-    {{-- Stat cards --}}
-    <div class="mer-stats mb-3">
+    <x-session_message />
+
+    {{-- 1. Who: the Officer Trainee and the course this report is scoped to. --}}
+    <section class="mst-hero" aria-labelledby="merOtHeading">
+        <div class="mst-hero__avatar" aria-hidden="true">
+            <span class="mst-hero__initials">{{ $otInitials ?: 'OT' }}</span>
+        </div>
+        <div class="mst-hero__main">
+            <h2 class="mst-hero__title" id="merOtHeading">{{ $otName }}</h2>
+            @if ($otCode !== '')
+                <span class="mst-hero__code">OT Code: {{ $otCode }}</span>
+            @endif
+            <div class="mst-facts mst-facts--hero">
+                <div>
+                    <span class="mst-fact__label">Course</span>
+                    <span class="mst-fact__value">{{ optional($course)->course_name ?: '—' }}</span>
+                </div>
+                @if ($courseStart || $courseEnd)
+                    <div>
+                        <span class="mst-fact__label">Course Period</span>
+                        <span class="mst-fact__value">{{ $courseStart ? $courseStart->format('d-m-Y') : '…' }} – {{ $courseEnd ? $courseEnd->format('d-m-Y') : '…' }}</span>
+                    </div>
+                @endif
+                <div>
+                    <span class="mst-fact__label">Exemption Records</span>
+                    <span class="mst-fact__value" id="merHeroTotal">—</span>
+                </div>
+                @if (!is_null($courseRunning))
+                    <div>
+                        <span class="mst-fact__label">Course Status</span>
+                        <span class="mst-fact__value">
+                            @include('admin.master.partials.grid-status', [
+                                'active' => $courseRunning,
+                                'label'  => $courseRunning ? 'Running' : 'Ended',
+                            ])
+                        </span>
+                    </div>
+                @endif
+            </div>
+        </div>
+    </section>
+
+    {{-- 2. Summary: records per medical case (unfiltered totals). --}}
+    <h2 class="h6 fw-semibold mb-2">Records by Medical Case</h2>
+    <div class="mer-stats mb-4">
         @foreach($stats as $stat)
-        <div class="mer-stat-card">
-            <div class="mer-stat-label">{{ $stat['label'] }}</div>
-            <div class="mer-stat-value">{{ str_pad((string) $stat['count'], 2, '0', STR_PAD_LEFT) }}</div>
+        <div class="ds-stat-card">
+            <div>
+                <p class="ds-stat-label">{{ $stat['label'] }}</p>
+                <div class="ds-stat-value">{{ str_pad((string) $stat['count'], 2, '0', STR_PAD_LEFT) }}</div>
+            </div>
         </div>
         @endforeach
     </div>
 
-    {{-- Toolbar --}}
-    <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
-        <button type="button" class="mer-util-btn" onclick="merPrintTable()">
-            <i class="material-icons material-symbols-rounded" style="font-size:20px;" aria-hidden="true">print</i>
-            <span class="d-none d-sm-inline">Print</span>
+    {{-- Print / Download, above the card. --}}
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 mst-secondary-actions">
+        <button type="button" class="btn programme-dt-btn-columns border-0 text-primary"
+                onclick="merPrintTable()" title="Print">
+            <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
         </button>
         <div class="dropdown">
-            <button type="button" class="mer-util-btn dropdown-toggle" id="merDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="material-icons material-symbols-rounded" style="font-size:20px;" aria-hidden="true">download</i>
-                <span class="d-none d-sm-inline">Download</span>
+            <button type="button" id="merDownloadBtn"
+                    class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                    data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
             </button>
-            <ul class="dropdown-menu dropdown-menu-end shadow-sm mer-download-menu py-2" aria-labelledby="merDownloadBtn">
-                <li><button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="merExportPdf">
-                    <i class="material-icons material-symbols-rounded text-danger" style="font-size:18px;" aria-hidden="true">picture_as_pdf</i><span>Download PDF</span>
-                </button></li>
-                <li><button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="merExportCsv">
-                    <i class="material-icons material-symbols-rounded text-success" style="font-size:18px;" aria-hidden="true">table_chart</i><span>Download Excel</span>
-                </button></li>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm py-2" aria-labelledby="merDownloadBtn">
+                <li>
+                    <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="merExportPdf">
+                        <i class="bi bi-file-earmark-pdf text-danger" aria-hidden="true"></i><span>Download PDF</span>
+                    </button>
+                </li>
+                <li>
+                    <button type="button" class="dropdown-item d-flex align-items-center gap-2 py-2" id="merExportCsv">
+                        <i class="bi bi-file-earmark-excel text-success" aria-hidden="true"></i><span>Download Excel</span>
+                    </button>
+                </li>
             </ul>
         </div>
     </div>
 
-    <div class="datatables">
-        <div class="ds-card">
-            <div class="ds-card-body">
-
-                {{-- Filters --}}
-                <div class="mer-filterbar mb-3">
-                    <span class="mer-filters-label">Filters</span>
-
-                    {{-- Time Period --}}
+    {{-- 3. Filters: label over control; every change reloads the records grid. --}}
+    <div class="card rounded-3 mb-3">
+        <div class="card-body p-3 p-md-4">
+            <h2 class="mst-form-section-title h6">Filters</h2>
+            <div class="mst-filter-grid">
+                <div>
+                    <label for="merTimePeriodToggle" class="mst-form-label d-block">Time Period<span class="visually-hidden"> (by exemption from date)</span></label>
                     <div class="dropdown">
-                        <button type="button" class="mer-filter-control dropdown-toggle" id="merTimePeriodToggle"
+                        <button type="button" class="form-select mst-control mer-period-toggle" id="merTimePeriodToggle"
                                 data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">calendar_month</i>
-                            <span id="merTimePeriodLabel">Time Period</span>
+                            <i class="bi bi-calendar3" aria-hidden="true"></i>
+                            <span id="merTimePeriodLabel">All dates</span>
                         </button>
                         <div class="dropdown-menu p-0 mer-period-menu">
                             <div class="mer-cal" id="merCalendar">
@@ -174,8 +210,8 @@ select.mer-filter-control { display: inline-block; min-width: 170px; max-width: 
                                 <div class="mer-cal-footer">
                                     <span class="mer-cal-range" id="merCalRange">Select a date range</span>
                                     <div class="d-flex gap-2">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="merClearPeriod">Clear</button>
-                                        <button type="button" class="btn btn-sm btn-primary" id="merApplyPeriod">Apply</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-1" id="merClearPeriod">Clear</button>
+                                        <button type="button" class="btn btn-sm btn-primary rounded-1" id="merApplyPeriod">Apply</button>
                                     </div>
                                 </div>
                             </div>
@@ -183,69 +219,100 @@ select.mer-filter-control { display: inline-block; min-width: 170px; max-width: 
                             <input type="hidden" id="mer_to_date_filter" value="">
                         </div>
                     </div>
+                </div>
 
-                    {{-- Exemption Category --}}
-                    <select id="mer_category_filter" class="form-select mer-filter-control" aria-label="Exemption Category">
-                        <option value="">Exemption Category</option>
+                <div>
+                    <label for="mer_category_filter" class="mst-form-label d-block">Exemption Category</label>
+                    <select id="mer_category_filter" class="form-select mst-control mst-searchable"
+                            data-placeholder="All categories">
+                        <option value="">All categories</option>
                         @foreach($categories as $cat)
                         <option value="{{ $cat->pk }}">{{ $cat->exemp_category_name }}</option>
                         @endforeach
                     </select>
+                </div>
 
-                    {{-- Medical Case --}}
-                    <select id="mer_case_filter" class="form-select mer-filter-control" aria-label="Medical Case">
-                        <option value="">Medical Case</option>
+                <div>
+                    <label for="mer_case_filter" class="mst-form-label d-block">Medical Case</label>
+                    <select id="mer_case_filter" class="form-select mst-control mst-searchable"
+                            data-placeholder="All medical cases">
+                        <option value="">All medical cases</option>
                         @foreach($medicalCases as $case)
                         <option value="{{ $case }}">{{ $case }}</option>
                         @endforeach
                     </select>
-
-                    <a href="javascript:void(0)" id="merResetFilters" class="mer-filter-control">
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">restart_alt</i>
-                        Reset Filters
-                    </a>
-
-                    <div class="ms-auto d-flex align-items-center gap-2">
-                        <button type="button" class="mer-filter-control" id="merColumnsToggle" data-bs-toggle="modal" data-bs-target="#merColumnsModal">
-                            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">view_column</i>
-                            <span class="d-none d-md-inline">Columns</span>
-                        </button>
-                        <div class="mer-search-box">
-                            <i class="material-icons material-symbols-rounded mer-search-ico" aria-hidden="true">search</i>
-                            <input type="text" id="mer_search" class="form-control mer-search-field" placeholder="Search case, category, remarks..." aria-label="Search">
-                        </div>
-                    </div>
                 </div>
 
-                {{-- Table --}}
-                <div class="table-responsive">
-                    <table class="table align-middle" id="merDetailTable">
-                        <thead>
-                            <tr>
-                                <th class="col">Date</th>
-                                <th class="col">Medical Case</th>
-                                <th class="col">Exemption Category</th>
-                                <th class="col">Remarks</th>
-                            </tr>
-                        </thead>
-                    </table>
+                <div class="mst-filter-actions">
+                    <button type="button" id="merResetFilters" class="btn programme-dt-btn-reset">Reset Filters</button>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Column Visibility modal --}}
-    <div class="modal fade" id="merColumnsModal" tabindex="-1" aria-labelledby="merColumnsModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-semibold" id="merColumnsModalLabel">Column Visibility</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    {{-- 4. Records. --}}
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
+
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <h2 class="h6 fw-semibold mb-0">Exemption Records</h2>
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="merColumnsToggle"
+                            data-bs-toggle="modal" data-bs-target="#merColumnsModal" title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    {{-- Server-side search (custom_search, also sent to the exports):
+                         the page's own input, dressed as the programme-dt search slot. --}}
+                    <div class="programme-dt-search" data-dt-search-for="merDetailTable">
+                        <div class="dataTables_filter">
+                            <label class="mb-0">
+                                <span class="visually-hidden">Search medical case, category or remarks</span>
+                                <input type="search" id="mer_search" class="form-control shadow-none"
+                                       placeholder="Search case, category, remarks..." autocomplete="off">
+                            </label>
+                        </div>
+                    </div>
                 </div>
-                <div class="modal-body"><div class="mer-col-grid" id="merColumnsGrid"></div></div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-primary px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+
+            {{-- Pager and "Showing N of M items" are relocated into the footer
+                 slot by public/js/datatable-global-ui.js. --}}
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" id="merDetailTable">
+                        <caption class="visually-hidden">Medical exemption records of {{ $otName }}</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col" class="text-nowrap">Date</th>
+                                <th scope="col">Medical Case</th>
+                                <th scope="col">Exemption Category</th>
+                                <th scope="col">Remarks</th>
+                            </tr>
+                        </thead>
+                    </table>
                 </div>
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                     data-dt-footer-for="merDetailTable"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Column Visibility --}}
+<div class="modal fade" id="merColumnsModal" tabindex="-1" aria-labelledby="merColumnsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-3 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="merColumnsModalLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3 mst-colvis-grid" id="merColumnsGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -253,25 +320,19 @@ select.mer-filter-control { display: inline-block; min-width: 170px; max-width: 
 @endsection
 
 @push('scripts')
+<script src="{{ asset('js/master-admin.js') }}?v={{ @filemtime(public_path('js/master-admin.js')) ?: time() }}"></script>
 <script>
 $(document).ready(function () {
-
-    if ($.fn.select2) {
-        $('#mer_category_filter, #mer_case_filter').select2({ width: '190px', minimumResultsForSearch: 6, allowClear: false });
-    }
 
     var table = $('#merDetailTable').DataTable({
         processing: true,
         serverSide: true,
+        // The grid is searched by the page's own #mer_search (custom_search),
+        // never by DataTables' global search box.
+        searching: false,
         responsive: false,
         scrollX: false,
         autoWidth: false,
-        dom: "<'mer-scroll't>" +
-             "<'mer-table-footer row align-items-center g-2 mt-3'" +
-                 "<'col-12 col-md-auto me-md-auto order-2 order-md-1'p>" +
-                 "<'col-12 col-md-auto order-1 order-md-2 d-flex justify-content-md-end align-items-center mer-count'li>" +
-             ">" +
-             "<'mer-processing'r>",
         lengthMenu: [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
         pageLength: 10,
         order: [[0, 'desc']],
@@ -300,14 +361,26 @@ $(document).ready(function () {
             { data: 'date', name: 'from_date' },
             { data: 'medical_case', name: 'opd_category' },
             { data: 'category', name: 'category', orderable: false },
-            { data: 'remarks', name: 'Description', orderable: false, className: 'mer-remarks' }
+            { data: 'remarks', name: 'Description', orderable: false, className: 'mer-remarks mst-col-wrap' }
         ]
     });
 
+    // Hero fact: the OT's total records for this course. The filters live in
+    // the base query, so recordsTotal follows them: read it once, from the
+    // first (unfiltered) load only.
+    var merHeroTotalSet = false;
+    table.on('xhr', function (e, settings, json) {
+        if (!merHeroTotalSet && json && json.recordsTotal !== undefined) {
+            merHeroTotalSet = true;
+            $('#merHeroTotal').text(Number(json.recordsTotal).toLocaleString());
+        }
+    });
+
+    // jQuery bindings: the two selects are searchable (Select2 fires a jQuery change).
     $('#mer_category_filter, #mer_case_filter, #mer_from_date_filter, #mer_to_date_filter').on('change', function () { table.ajax.reload(null, false); });
 
     var delayTimer;
-    $('#mer_search').on('keyup', function () {
+    $('#mer_search').on('keyup search', function () {
         clearTimeout(delayTimer);
         delayTimer = setTimeout(function () { table.ajax.reload(null, false); }, 400);
     });
@@ -325,7 +398,7 @@ $(document).ready(function () {
     function updateTimePeriodLabel() {
         var from = $('#mer_from_date_filter').val();
         var to = $('#mer_to_date_filter').val();
-        $('#merTimePeriodLabel').text((from || to) ? ((from || '…') + ' → ' + (to || '…')) : 'Time Period');
+        $('#merTimePeriodLabel').text((from || to) ? ((from || '…') + ' → ' + (to || '…')) : 'All dates');
     }
 
     // ===== Dual-month range calendar =====
@@ -402,17 +475,20 @@ $(document).ready(function () {
     table.columns().every(function (idx) {
         var title = $.trim($(this.header()).text()) || ('Column ' + (idx + 1));
         var visible = this.visible();
+        var $cb = $('<input class="form-check-input m-0 mer-col-toggle" type="checkbox">')
+            .attr({ id: 'merColToggle' + idx, 'data-column': idx })
+            .prop('checked', visible);
         $columnsGrid.append(
-            '<label class="mer-col-chip' + (visible ? ' is-checked' : '') + '" for="merColToggle' + idx + '">' +
-                '<input class="form-check-input mer-col-toggle" type="checkbox" ' + (visible ? 'checked ' : '') +
-                       'id="merColToggle' + idx + '" data-column="' + idx + '">' +
-                '<span>' + title + '</span>' +
-            '</label>'
+            $('<div class="col-12 col-sm-6 col-md-4"></div>').append(
+                $('<label class="colvis-item mer-col-chip d-flex align-items-center gap-2 border rounded-1 px-3 py-2 mb-0 w-100"></label>')
+                    .attr('for', 'merColToggle' + idx)
+                    .append($cb)
+                    .append($('<span></span>').text(title))
+            )
         );
     });
     $columnsGrid.on('change', '.mer-col-toggle', function () {
         table.column($(this).data('column')).visible(this.checked);
-        $(this).closest('.mer-col-chip').toggleClass('is-checked', this.checked);
     });
 
     // ===== Export =====
@@ -446,7 +522,12 @@ function merPrintTable() {
     var printWindow = window.open('', '_blank');
     if (!printWindow) { alert('Please allow pop-ups for this site to print the report.'); return; }
 
-    var tableHTML = table.cloneNode(true).outerHTML;
+    // The screen-reader caption is hidden by Bootstrap on screen; the print
+    // window has no Bootstrap, so drop it rather than print it as a stray line.
+    var tableClone = table.cloneNode(true);
+    var tableCaption = tableClone.querySelector('caption');
+    if (tableCaption) { tableCaption.parentNode.removeChild(tableCaption); }
+    var tableHTML = tableClone.outerHTML;
     var dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
     var logoLeft  = @json(asset('admin_assets/images/logos/logo_new.png'));
     var logoRight = @json(file_exists(public_path('admin_assets/images/logos/constitution-75.png'))

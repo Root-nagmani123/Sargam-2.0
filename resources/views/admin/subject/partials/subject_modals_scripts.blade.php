@@ -7,6 +7,14 @@
         var subjectEditData = @json($smSubjectEditData ?? []);
         var updateUrlTemplate = @json(route('subject.update', ['subject' => '__PK__']));
 
+        // The Status selects are Select2 (.mst-searchable): after setting a
+        // value in JS, repaint the widget or it keeps showing the old one.
+        function refreshSelect2(el) {
+            if (el && window.jQuery) {
+                window.jQuery(el).trigger('change.select2');
+            }
+        }
+
         function appendModalToBody(modalEl) {
             if (modalEl && modalEl.parentElement !== document.body) {
                 document.body.appendChild(modalEl);
@@ -32,6 +40,7 @@
                 var statusSelect = document.getElementById('sm_add_status');
                 if (statusSelect) {
                     statusSelect.value = '1';
+                    refreshSelect2(statusSelect);
                 }
             });
 
@@ -68,7 +77,9 @@
                 document.getElementById('sm_edit_subject_pk_hidden').value = pk;
                 document.getElementById('sm_edit_major_subject_name').value = data.major_subject_name || '';
                 document.getElementById('sm_edit_short_name').value = data.short_name || '';
-                document.getElementById('sm_edit_status').value = String(data.status ?? '1');
+                var editStatus = document.getElementById('sm_edit_status');
+                editStatus.value = String(data.status ?? '1');
+                refreshSelect2(editStatus);
             }
 
             function openEditModal(pk, dataOverride) {

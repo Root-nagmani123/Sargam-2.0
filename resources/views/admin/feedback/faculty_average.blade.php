@@ -3,7 +3,7 @@
 @endphp
 @extends('admin.layouts.master')
 
-@section('title', 'Faculty Feedback Average - Sargam | Lal Bahadur')
+@section('title', 'Faculty Feedback Average')
 
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">

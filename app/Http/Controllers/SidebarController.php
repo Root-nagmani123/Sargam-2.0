@@ -134,6 +134,15 @@ class SidebarController extends Controller
             }
 
             $hasChild = $children->count() > 0;
+
+            // A container has no destination of its own — it exists to hold the
+            // sub-menus rendered below. With none of them visible to this user
+            // there is nothing to open, and rendering it anyway produced a link
+            // straight to the navigation-error page ("Centcom Links" did exactly
+            // that for any role without its children). Drop the empty shell.
+            if (!$hasChild && $menu->is_container && blank($menu->route) && blank($menu->attachment)) {
+                continue;
+            }
             $collapseId = 'menu_' . $menu->id;
             $childActive = false;
 
@@ -165,10 +174,11 @@ class SidebarController extends Controller
 
                 foreach ($children as $submenu) {
                     $activeClass = $this->isWinningLink($submenu->route, $currentPath, $currentRouteName, $bestScore) ? ' active' : '';
-                    $href = $this->routeMatcher->resolveHref($submenu->route, $submenu->id);
+                    $href = $this->routeMatcher->resolveHref($submenu->route, $submenu->id, $submenu->attachment ?? null);
+                    $target = $this->linkTarget($submenu);
                     $html .= '
                 <li class="sidebar-item">
-                    <a class="sidebar-link'.$activeClass.'" href="'.e($href).'" target="'.($submenu->target == 1 ? '_blank' : '_self').'">
+                    <a class="sidebar-link'.$activeClass.'" href="'.e($href).'" target="'.$target.'"'.($target === '_blank' ? ' rel="noopener"' : '').'>
                         <span class="hide-menu">'.e($submenu->name).'</span>
                     </a>
                 </li>';
@@ -178,10 +188,11 @@ class SidebarController extends Controller
             } else {
                 if ($hasMenuPermission) {
                     $activeClass = $this->isWinningLink($menu->route, $currentPath, $currentRouteName, $bestScore) ? ' active' : '';
-                    $href = $this->routeMatcher->resolveHref($menu->route, $menu->id);
+                    $href = $this->routeMatcher->resolveHref($menu->route, $menu->id, $menu->attachment ?? null);
+                    $target = $this->linkTarget($menu);
                     $html .= '
                 <li class="sidebar-item">
-                    <a class="sidebar-link'.$activeClass.'" href="'.e($href).'" target="'.($menu->target == 1 ? '_blank' : '_self').'">
+                    <a class="sidebar-link'.$activeClass.'" href="'.e($href).'" target="'.$target.'"'.($target === '_blank' ? ' rel="noopener"' : '').'>
                         <i class="material-icons material-symbols-rounded">'.e($this->menuIcon($menu)).'</i>
                         <span class="hide-menu">'.e($menu->name).'</span>
                     </a>
@@ -308,6 +319,21 @@ class SidebarController extends Controller
             'groups' => [],
             'message' => 'No groups found',
         ]);
+    }
+
+    /**
+     * Where a menu's link opens.
+     *
+     * Honours the menu's own "Opens in" setting, except that an attachment always
+     * opens in a new tab: it is a document, and letting a PDF replace the admin
+     * shell means the user loses their place and has to navigate back in. Matches
+     * Useful Links, which also defaults its file links to a new tab.
+     */
+    protected function linkTarget($menu): string
+    {
+        $isAttachmentOnly = blank($menu->route ?? null) && filled($menu->attachment ?? null);
+
+        return ($isAttachmentOnly || ($menu->target ?? null) == 1) ? '_blank' : '_self';
     }
 
     /**

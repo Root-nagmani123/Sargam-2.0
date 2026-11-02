@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Front Page - Sargam | Lal Bahadur')
+@section('title', 'Front Page')
 
 @push('styles')
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />

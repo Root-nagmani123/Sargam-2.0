@@ -1,24 +1,27 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Member - Sargam | Lal Bahadur')
+@section('title', 'Member')
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/member-admin.css') }}?v={{ @filemtime(public_path('css/member-admin.css')) ?: time() }}">
+@endpush
 
 @section('setup_content')
 
-    <div class="container-fluid">
+    <div class="container-fluid member-admin-page member-form-page">
 
-        <x-breadcrum title="Member" />
+        <x-breadcrum title="Edit Member" />
         <x-session_message />
 
         <!-- start Vertical Steps Example -->
-        <div class="card" >
-            <div class="card-body">
-                <h4 class="card-title mb-0">Edit Member</h4>
-                <h6 class="card-subtitle mb-3"></h6>
-                <hr>
+        <div>
+            <div>
                 <input type="hidden" name="emp_id" id="emp_id" value="{{ ($member->pk) ?? '' }}">
                 <form id="member-form" enctype="multipart/form-data">
                     @csrf
-                    <div id="wizard" class="wizard clearfix vertical">
+                    <div id="wizard" class="wizard clearfix vertical"
+                        data-finish-label="Update Employee"
+                        data-cancel-url="{{ route('member.index') }}">
                         <h3>Member Information</h3>
                         <section id="step-1" class="step-section">
                             <!-- Content will be loaded via AJAX -->
@@ -48,6 +51,11 @@
                         <section id="step-5" class="step-section">
                             <!-- Content will be loaded via AJAX -->
                         </section>
+
+                        <h3>Employee Grade Pay</h3>
+                        <section id="step-6" class="step-section">
+                            <!-- Content will be loaded via AJAX -->
+                        </section>
                     </div>
                 </form>
 
@@ -57,6 +65,7 @@
     </div>
 
     @push('scripts')
+        <script src="{{ asset('js/member-wizard.js') }}?v={{ @filemtime(public_path('js/member-wizard.js')) ?: time() }}"></script>
         <script>
             // Seeded server-side — the only source of the PK for this edit session.
             // Per-step validation no longer returns a pk (nothing is saved until Finish),
@@ -68,6 +77,11 @@
                 const loadedSteps = {};
                 let formIsDirty = false;
 
+                // Set right before a validated step programmatically re-triggers "next" —
+                // lets onStepChanging skip re-validating on that second, synthetic call.
+                let skipNextValidation = false;
+                let stepValidationInFlight = false;
+
                 const wizard = $("#wizard").steps({
                     headerTag: "h3",
                     bodyTag: "section",
@@ -78,24 +92,38 @@
 
                     onStepChanging: function (event, currentIndex, newIndex) {
                         if (newIndex < currentIndex) return true;
-                        event.preventDefault();
+                        if (skipNextValidation) {
+                            skipNextValidation = false;
+                            return true;
+                        }
+                        if (stepValidationInFlight) return false;
 
-                        const currentStep = $(`#wizard-p-${currentIndex}`);
+                        const validatingIndex = currentIndex;
+                        const currentStep = $(`#wizard-p-${validatingIndex}`);
                         let stepData = currentStep.find(':input').serialize();
                         stepData += `&emp_id=${employeePK}`;
 
-                        let canProceed = false;
+                        stepValidationInFlight = true;
 
                         // Validates this step's fields only — nothing is written to the
                         // database yet. The record is updated in one shot from onFinished().
+                        // Runs async so the UI doesn't lock up while waiting on the server;
+                        // on success we re-issue "next" ourselves once validation passes.
                         $.ajax({
-                            url: `/member/update-validate-step/${currentIndex + 1}/${employeePK}`,
+                            url: `/member/update-validate-step/${validatingIndex + 1}/${employeePK}`,
                             method: "POST",
                             data: stepData + '&_token={{ csrf_token() }}',
-                            async: false,
                             success: function (success) {
                                 clearErrors(currentStep);
-                                canProceed = true;
+                                // If the user has since navigated away from the step that
+                                // was just validated (e.g. clicked Previous while this
+                                // request was in flight), don't pull them back forward
+                                // from wherever they are now.
+                                if (wizard.steps("getCurrentIndex") !== validatingIndex) {
+                                    return;
+                                }
+                                skipNextValidation = true;
+                                wizard.steps("next");
                             },
                             error: function (xhr) {
                                 const status = xhr.status;
@@ -106,12 +134,13 @@
                                 } else {
                                     toastr.error(xhr.responseJSON?.message || `Unexpected error (${status}) occurred.`);
                                 }
-
-                                canProceed = false;
+                            },
+                            complete: function () {
+                                stepValidationInFlight = false;
                             }
                         });
 
-                        return canProceed;
+                        return false;
                     },
 
                     onStepChanged: function (event, currentIndex, priorIndex) {
@@ -120,11 +149,19 @@
                     },
 
                     onFinishing: function () {
+                        // PR #319 re-review F-066: Step 6 arrives over AJAX. Submitting
+                        // before it has loaded (or after its load failed) posts no payroll
+                        // fields at all, so refuse until it is on the page.
+                        if (!loadedSteps[6]) {
+                            toastr.warning('Employee Grade Pay is still loading. Please wait a moment and try again.');
+                            loadStepContent(6);
+                            return false;
+                        }
                         return true;
                     },
 
                     onFinished: function () {
-                        // All 5 steps' inputs are still in the DOM (jQuery Steps never
+                        // All 6 steps' inputs are still in the DOM (jQuery Steps never
                         // removes them), so this FormData already carries every field from
                         // every step — this is the single point where the record is saved.
                         const formData = new FormData(form[0]);
@@ -136,9 +173,30 @@
                             data: formData,
                             contentType: false,
                             processData: false,
-                            success: function () {
+                            // PR #319 review round 3 (R-001). This handler took no argument
+                            // and showed a hardcoded success string, so the `warning` the
+                            // server returns when it refuses PART of the save — RBAC for an
+                            // employee with more than one login (207 of them on live data),
+                            // or Step 6 when its schema is missing — never reached anyone.
+                            // The administrator saw "Member updated successfully!" while no
+                            // role had been changed. A warning that exists only in the
+                            // response body is not a fix, so it is rendered here and the
+                            // redirect waits until it has been read.
+                            success: function (res) {
                                 formIsDirty = false;
-                                alert("Member updated successfully!");
+
+                                const warning = res && res.warning;
+
+                                if (!warning) {
+                                    alert("Member updated successfully!");
+                                    window.location.href = "/member";
+                                    return;
+                                }
+
+                                // Deliberately alert() rather than a toast: the toast
+                                // disappears on its own and this says a role was NOT
+                                // granted, which the administrator has to acknowledge.
+                                alert("Member updated, but not everything was saved:\n\n" + warning);
                                 window.location.href = "/member";
                             },
                             error: function (xhr) {
@@ -155,6 +213,10 @@
                         });
                     }
                 });
+
+                // Rail numbering + the Cancel / Update Employee pair. Presentation
+                // only — the wizard above still owns validation and submit.
+                window.MemberWizardUI.attach('#wizard');
 
                 // --- Unsaved changes protection ---
                 // Any edit inside the wizard (including fields loaded later via AJAX,
@@ -220,13 +282,128 @@
                 }
 
                 function showErrors(stepElement, errors) {
-                    clearErrors(stepElement);
+                    // The server validates the UNION of all five steps (MemberController::
+                    // combinedMemberRules), so a final-submit 422 can name a field that is not
+                    // on the step we were handed.
+                    //
+                    // jQuery Steps keeps every step body in the DOM but HIDES all but the
+                    // current one - jquery.steps.min.js K() calls _showAria(currentIndex === d),
+                    // and _showAria(false) is this.hide()._aria("hidden","true"), i.e. inline
+                    // display:none PLUS aria-hidden="true". So widening the search is not
+                    // enough on its own: a message rendered into another step is invisible on
+                    // screen and withheld from assistive technology as well.
+                    //
+                    // Three things therefore have to happen, and the last two are what make
+                    // the message actually reach the user:
+                    //   1. render each message next to its own field, wherever that field is;
+                    //   2. walk the wizard back to the earliest step carrying an error, so
+                    //      those messages become visible;
+                    //   3. summarise anything still off-screen in a toast, so a failure can
+                    //      never be silent even if navigation is refused mid-transition.
+                    var wizard = $("#wizard");
+                    var scope = wizard.length ? wizard : stepElement;
+                    var unseen = [];
+                    var firstErrorIndex = null;
+
+                    clearErrors(scope);
+
                     $.each(errors, function (field, messages) {
-                        const input = stepElement.find(`[name="${field}"]`);
-                        const message = messages[0];
-                        const errorDiv = $('<div class="text-danger mt-1"></div>').text(message);
-                        input.addClass("is-invalid").after(errorDiv);
+                        var message = messages[0];
+                        // The "[]" form catches array inputs such as userrole[] on step 3,
+                        // whose error key arrives as "userrole" or "userrole.0".
+                        var base = String(field).split(".")[0];
+                        var input = stepElement.find('[name="' + field + '"]');
+                        if (!input.length) input = scope.find('[name="' + field + '"]');
+                        if (!input.length) input = scope.find('[name="' + base + '"]');
+                        if (!input.length) input = scope.find('[name="' + base + '[]"]');
+                        if (!input.length) {
+                            // No field on the page owns this message - a toast is the only
+                            // place it can go.
+                            unseen.push(message);
+                            return;
+                        }
+
+                        var target = input.first();
+                        target.addClass("is-invalid")
+                              .after($('<div class="text-danger mt-1"></div>').text(message));
+
+                        if (!target.is(":visible")) {
+                            var idx = stepIndexOf(target);
+                            if (idx !== null && (firstErrorIndex === null || idx < firstErrorIndex)) {
+                                firstErrorIndex = idx;
+                            }
+                            var title = stepTitleAt(idx);
+                            unseen.push(title ? title + " - " + message : message);
+                        }
                     });
+
+                    // Bring the earliest offending step into view. The messages are already
+                    // rendered there, so this turns them from present-but-hidden into visible.
+                    if (firstErrorIndex !== null && wizard.length) {
+                        goToStep(wizard, firstErrorIndex);
+                    }
+
+                    if (unseen.length && window.toastr) {
+                        // escapeHtml is off in this toastr build (escapeHtml: !1), so the
+                        // message would otherwise be inserted as HTML. Force escaping and keep
+                        // the separator plain text rather than <br>.
+                        toastr.error(unseen.join(" \u00b7 "), "Please correct the highlighted fields",
+                            { escapeHtml: true });
+                    }
+                }
+
+                /**
+                 * Index of the wizard step that owns an element, or null.
+                 * jQuery Steps re-ids each step body as #wizard-p-{n} while leaving the
+                 * original <section> element (and its step-section class) in place.
+                 */
+                function stepIndexOf($el) {
+                    var id = $el.closest("section").attr("id") || "";
+                    var m = /wizard-p-(\d+)/.exec(id);
+                    return m ? parseInt(m[1], 10) : null;
+                }
+
+                /** Human label for a step, read from the rail the plugin builds. */
+                function stepTitleAt(index) {
+                    if (index === null) return "";
+                    var a = $("#wizard").children(".steps").find("> ul > li").eq(index).find("a").first();
+                    if (!a.length) return "";
+                    var clone = a.clone();
+                    clone.find(".number, .current-info").remove();
+                    return $.trim(clone.text());
+                }
+
+                /**
+                 * Step the wizard back to targetIndex.
+                 *
+                 * steps("setStep") is NOT usable - this build defines it as
+                 * throw new Error("Not yet implemented!") - so move one step at a time with
+                 * previous(). onStepChanging returns true immediately when newIndex <
+                 * currentIndex, so going backwards never re-validates.
+                 *
+                 * If a call is refused (a slide transition still in flight) the index does not
+                 * change; stop rather than spin. The toast has already been prepared, so the
+                 * user is told either way.
+                 */
+                function goToStep($wizard, targetIndex) {
+                    for (var guard = 0; guard < 20; guard++) {
+                        var current;
+                        try {
+                            current = $wizard.steps("getCurrentIndex");
+                        } catch (e) {
+                            // Fall back to the rail's own state if the plugin isn't ready.
+                            current = $wizard.children(".steps").find("> ul > li").index($wizard.find("li.current"));
+                        }
+                        if (current === null || current <= targetIndex) return;
+                        $wizard.steps("previous");
+                        var moved;
+                        try {
+                            moved = $wizard.steps("getCurrentIndex");
+                        } catch (e) {
+                            return;
+                        }
+                        if (moved === current) return;
+                    }
                 }
 
                 function clearErrors(stepElement) {

@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\Support\FeedbackReportGrouping;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Services\DataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
@@ -124,16 +125,9 @@ class FeedbackDatabaseDataTable extends DataTable
                   ->orWhereRaw("(tf.presentation IS NOT NULL AND tf.presentation <> '')")
                   ->orWhereRaw("(tf.remark IS NOT NULL AND TRIM(tf.remark) <> '')");
             })
-            ->groupBy(
-                'f.pk',
-                'f.full_name',
-                'f.email_id',
-                'f.Permanent_Address',
-                'c.course_name',
-                't.subject_topic',
-                't.START_DATE',
-                't.pk'
-            );
+            // Group on the two primary keys only — every other selected column is functionally
+            // dependent on them. See App\Support\FeedbackReportGrouping for the reasoning.
+            ->groupBy(FeedbackReportGrouping::DATABASE_GRID);
 
         // Conditional HAVING filter
         $request = request();
@@ -159,7 +153,11 @@ class FeedbackDatabaseDataTable extends DataTable
                     TIME_TO_SEC(STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' - ', 1)), '%h:%i %p')),
                     86400
                 ) ASC
-            ");
+            ")
+            // Deterministic tie-break so DataTables paging cannot repeat or skip a row —
+            // date + session start time are shared by every faculty in the same slot.
+            ->orderBy('t.pk', 'ASC')
+            ->orderBy('f.pk', 'ASC');
 
         return $query;
     }

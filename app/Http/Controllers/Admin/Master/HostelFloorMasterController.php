@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers\Admin\Master;
 
+use App\Http\Controllers\Concerns\ExportsMasterGrid;
 use App\Http\Controllers\Controller;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use App\DataTables\Master\HostelFloorMasterDataTable;
 // use App\Models\HostelFloorMaster;
 use App\Models\FloorMaster;
-use App\Exports\FloorMasterExport;
-use Maatwebsite\Excel\Facades\Excel;
 
 class HostelFloorMasterController extends Controller
 {
+    use ExportsMasterGrid;
+
     public function index(HostelFloorMasterDataTable $dataTable)
     {
         return $dataTable->render('admin.master.hostel_floor.index');
@@ -70,11 +72,69 @@ class HostelFloorMasterController extends Controller
         return redirect()->route('master.hostel.floor.index')->with('success', 'Floor deleted successfully.');
     }
 
-    public function export() {
-        try {
-            return Excel::download(new FloorMasterExport, 'floor_master.xlsx');
-        } catch (\Exception $th) {
-            return redirect()->route('master.hostel.floor.index')->with('error', 'Error exporting data: ' . $th->getMessage());
+    /*
+     * Export - CSV | Excel | PDF | Print   (rendering lives in ExportsMasterGrid)
+     *
+     * Keys are what the index page sends as ?cols= (HF_EXPORT_COLUMN_KEYS there);
+     * only the columns the grid is showing are exported.
+     */
+    private function exportColumnDefs(): array
+    {
+        return [
+            'sno' => [
+                'heading' => 'S. No.',
+                'width'   => '12%',
+                'align'   => 'center',
+                'value'   => fn ($row, int $index) => $index + 1,
+            ],
+            'floor_name' => [
+                'heading' => 'Floor Name',
+                'width'   => '68%',
+                'align'   => 'left',
+                'value'   => fn ($row) => $row->floor_name ?? '-',
+            ],
+            'status' => [
+                'heading' => 'Status',
+                'width'   => '20%',
+                'align'   => 'center',
+                'value'   => fn ($row) => ((int) $row->active_inactive === 1) ? 'Active' : 'Inactive',
+            ],
+        ];
+    }
+
+    /**
+     * The grid's own query, minus paging: HostelFloorMasterDataTable::query()
+     * ordering plus the search the grid is showing. Yajra searches only
+     * floor_name, word by word (multi_term) — every word must match.
+     */
+    private function exportQuery(string $search): Builder
+    {
+        $query = FloorMaster::query();
+
+        foreach (preg_split('/\s+/', $search, -1, PREG_SPLIT_NO_EMPTY) as $term) {
+            $query->where('floor_name', 'like', '%' . $term . '%');
         }
+
+        return $query->latest('pk');
+    }
+
+    public function export(Request $request, string $format = 'excel')
+    {
+        $format = strtolower($format);
+        abort_unless(in_array($format, self::$exportFormats, true), 404);
+
+        $q = $request->query('q', '');
+        $search = is_string($q) ? trim($q) : '';
+        $rows = $this->exportQuery($search)->get();
+
+        return $this->renderMasterExport(
+            $format,
+            $rows,
+            $this->resolveExportColumns($request, $this->exportColumnDefs()),
+            'Floor Master',
+            'FloorMaster',
+            $search !== '' ? 'Search: ' . $search : null,
+            'No floors to export'
+        );
     }
 }

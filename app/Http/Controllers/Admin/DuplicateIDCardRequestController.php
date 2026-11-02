@@ -795,31 +795,31 @@ class DuplicateIDCardRequestController extends Controller
                 $updates['id_photo_path'] = $request->file('photo')->store('idcard/photos', 'public');
             }
             if ($request->hasFile('aadhar_doc')) {
-                $ext = $request->file('aadhar_doc')->getClientOriginalExtension();
+                $ext = safe_upload_extension($request->file('aadhar_doc'));
                 $file = $id . '_IDPROOF_' . time() . '.' . $ext;
                 $request->file('aadhar_doc')->storeAs('idcard/dup_docs', $file, 'public');
                 $updates['service_ext'] = $file;
             }
             if ($request->hasFile('damage_doc')) {
-                $ext = $request->file('damage_doc')->getClientOriginalExtension();
+                $ext = safe_upload_extension($request->file('damage_doc'));
                 $file = $id . '_DAMAGE_PROOF_' . time() . '.' . $ext;
                 $request->file('damage_doc')->storeAs('idcard/dup_docs', $file, 'public');
                 $updates['fir_doc'] = $file;
             }
             if ($request->hasFile('fir_doc')) {
-                $ext = $request->file('fir_doc')->getClientOriginalExtension();
+                $ext = safe_upload_extension($request->file('fir_doc'));
                 $file = $id . '_FIR_' . time() . '.' . $ext;
                 $request->file('fir_doc')->storeAs('idcard/dup_docs', $file, 'public');
                 $updates['fir_doc'] = $file;
             }
             if ($request->hasFile('service_ext')) {
-                $ext = $request->file('service_ext')->getClientOriginalExtension();
+                $ext = safe_upload_extension($request->file('service_ext'));
                 $file = $id . '_SERVICE_EXT_' . time() . '.' . $ext;
                 $request->file('service_ext')->storeAs('idcard/dup_docs', $file, 'public');
                 $updates['service_ext'] = $file;
             }
             if ($request->hasFile('payment_receipt')) {
-                $ext = $request->file('payment_receipt')->getClientOriginalExtension();
+                $ext = safe_upload_extension($request->file('payment_receipt'));
                 $file = $id . '_PAY_' . time() . '.' . $ext;
                 $request->file('payment_receipt')->storeAs('idcard/dup_docs', $file, 'public');
                 $updates['payment_receipt'] = $file;
@@ -827,14 +827,14 @@ class DuplicateIDCardRequestController extends Controller
             if ($cardReason === 'Change in Name' && $request->filled('new_employee_name')) {
                 $updates['employee_name'] = $request->new_employee_name;
                 if ($request->hasFile('name_proof')) {
-                    $ext = $request->file('name_proof')->getClientOriginalExtension();
+                    $ext = safe_upload_extension($request->file('name_proof'));
                     $file = $id . '_NAME_PROOF_' . time() . '.' . $ext;
                     $request->file('name_proof')->storeAs('idcard/dup_docs', $file, 'public');
                     $updates['payment_receipt'] = $file;
                 }
             }
             if ($cardReason === 'Designation Change' && $request->hasFile('designation_order')) {
-                $ext = $request->file('designation_order')->getClientOriginalExtension();
+                $ext = safe_upload_extension($request->file('designation_order'));
                 $file = $id . '_DESIG_ORDER_' . time() . '.' . $ext;
                 $request->file('designation_order')->storeAs('idcard/dup_docs', $file, 'public');
                 $updates['payment_receipt'] = $file;
@@ -858,31 +858,31 @@ class DuplicateIDCardRequestController extends Controller
                 $updates['id_proof'] = (int) $request->id_proof;
             }
             if ($request->hasFile('aadhar_doc')) {
-                $ext = $request->file('aadhar_doc')->getClientOriginalExtension();
+                $ext = safe_upload_extension($request->file('aadhar_doc'));
                 $file = $id . '_IDPROOF_' . time() . '.' . $ext;
                 $request->file('aadhar_doc')->storeAs('idcard/dup_docs', $file, 'public');
                 $updates['aadhar_doc'] = $file;
             }
             if ($request->hasFile('damage_doc')) {
-                $ext = $request->file('damage_doc')->getClientOriginalExtension();
+                $ext = safe_upload_extension($request->file('damage_doc'));
                 $file = $id . '_DAMAGE_PROOF_' . time() . '.' . $ext;
                 $request->file('damage_doc')->storeAs('idcard/dup_docs', $file, 'public');
                 $updates['fir_doc'] = $file;
             }
             if ($request->hasFile('fir_doc')) {
-                $ext = $request->file('fir_doc')->getClientOriginalExtension();
+                $ext = safe_upload_extension($request->file('fir_doc'));
                 $file = $id . '_FIR_' . time() . '.' . $ext;
                 $request->file('fir_doc')->storeAs('idcard/dup_docs', $file, 'public');
                 $updates['fir_doc'] = $file;
             }
             if ($request->hasFile('service_ext')) {
-                $ext = $request->file('service_ext')->getClientOriginalExtension();
+                $ext = safe_upload_extension($request->file('service_ext'));
                 $file = $id . '_SERVICE_EXT_' . time() . '.' . $ext;
                 $request->file('service_ext')->storeAs('idcard/dup_docs', $file, 'public');
                 $updates['service_ext'] = $file;
             }
             if ($request->hasFile('payment_receipt')) {
-                $ext = $request->file('payment_receipt')->getClientOriginalExtension();
+                $ext = safe_upload_extension($request->file('payment_receipt'));
                 $file = $id . '_PAY_' . time() . '.' . $ext;
                 $request->file('payment_receipt')->storeAs('idcard/dup_docs', $file, 'public');
                 $updates['payment_receipt'] = $file;
@@ -890,14 +890,14 @@ class DuplicateIDCardRequestController extends Controller
             if ($cardReason === 'Change in Name' && $request->filled('new_employee_name')) {
                 $updates['employee_name'] = $request->new_employee_name;
                 if ($request->hasFile('name_proof')) {
-                    $ext = $request->file('name_proof')->getClientOriginalExtension();
+                    $ext = safe_upload_extension($request->file('name_proof'));
                     $file = $id . '_NAME_PROOF_' . time() . '.' . $ext;
                     $request->file('name_proof')->storeAs('idcard/dup_docs', $file, 'public');
                     $updates['payment_receipt'] = $file;
                 }
             }
             if ($cardReason === 'Designation Change' && $request->hasFile('designation_order')) {
-                $ext = $request->file('designation_order')->getClientOriginalExtension();
+                $ext = safe_upload_extension($request->file('designation_order'));
                 $file = $id . '_DESIG_ORDER_' . time() . '.' . $ext;
                 $request->file('designation_order')->storeAs('idcard/dup_docs', $file, 'public');
                 $updates['payment_receipt'] = $file;
@@ -1056,7 +1056,7 @@ class DuplicateIDCardRequestController extends Controller
 
                 $aadharFile = null;
                 if ($request->hasFile('aadhar_doc')) {
-                    $ext = $request->file('aadhar_doc')->getClientOriginalExtension();
+                    $ext = safe_upload_extension($request->file('aadhar_doc'));
                     $file = $applyId . '_IDPROOF_' . time() . '.' . $ext;
                     $request->file('aadhar_doc')->storeAs('idcard/dup_docs', $file, 'public');
                     $aadharFile = $file;
@@ -1111,7 +1111,7 @@ class DuplicateIDCardRequestController extends Controller
 
                 $aadharFile = null;
                 if ($request->hasFile('aadhar_doc')) {
-                    $ext = $request->file('aadhar_doc')->getClientOriginalExtension();
+                    $ext = safe_upload_extension($request->file('aadhar_doc'));
                     $file = $applyId . '_IDPROOF_' . time() . '.' . $ext;
                     $request->file('aadhar_doc')->storeAs('idcard/dup_docs', $file, 'public');
                     $aadharFile = $file;
@@ -1185,25 +1185,25 @@ class DuplicateIDCardRequestController extends Controller
         $data = [];
 
         if ($cardReason === 'Damage Card' && $request->hasFile('damage_doc')) {
-            $ext = $request->file('damage_doc')->getClientOriginalExtension();
+            $ext = safe_upload_extension($request->file('damage_doc'));
             $file = $applyId . '_DAMAGE_PROOF_' . time() . '.' . $ext;
             $request->file('damage_doc')->storeAs('idcard/dup_docs', $file, 'public');
             $data['fir_doc'] = $file; // Reusing fir_doc column for damage proof
         } elseif ($cardReason === 'Card Lost') {
             if ($request->hasFile('fir_doc')) {
-                $ext = $request->file('fir_doc')->getClientOriginalExtension();
+                $ext = safe_upload_extension($request->file('fir_doc'));
                 $file = $applyId . '_FIR_' . time() . '.' . $ext;
                 $request->file('fir_doc')->storeAs('idcard/dup_docs', $file, 'public');
                 $data['fir_doc'] = $file;
             }
             if ($request->hasFile('payment_receipt')) {
-                $ext = $request->file('payment_receipt')->getClientOriginalExtension();
+                $ext = safe_upload_extension($request->file('payment_receipt'));
                 $file = $applyId . '_PAY_' . time() . '.' . $ext;
                 $request->file('payment_receipt')->storeAs('idcard/dup_docs', $file, 'public');
                 $data['payment_receipt'] = $file;
             }
         } elseif ($cardReason === 'Service Extended' && $request->hasFile('service_ext')) {
-            $ext = $request->file('service_ext')->getClientOriginalExtension();
+            $ext = safe_upload_extension($request->file('service_ext'));
             $file = $applyId . '_SERVICE_EXT_' . time() . '.' . $ext;
             $request->file('service_ext')->storeAs('idcard/dup_docs', $file, 'public');
             $data['service_ext'] = $file;
@@ -1212,13 +1212,13 @@ class DuplicateIDCardRequestController extends Controller
                 $data['new_name'] = $request->get('new_employee_name');
             }
             if ($request->hasFile('name_proof')) {
-                $ext = $request->file('name_proof')->getClientOriginalExtension();
+                $ext = safe_upload_extension($request->file('name_proof'));
                 $file = $applyId . '_NAME_PROOF_' . time() . '.' . $ext;
                 $request->file('name_proof')->storeAs('idcard/dup_docs', $file, 'public');
                 $data['payment_receipt'] = $file; // Reusing payment_receipt column for name proof
             }
         } elseif ($cardReason === 'Designation Change' && $request->hasFile('designation_order')) {
-            $ext = $request->file('designation_order')->getClientOriginalExtension();
+            $ext = safe_upload_extension($request->file('designation_order'));
             $file = $applyId . '_DESIG_ORDER_' . time() . '.' . $ext;
             $request->file('designation_order')->storeAs('idcard/dup_docs', $file, 'public');
             $data['payment_receipt'] = $file; // Reusing payment_receipt column for designation order

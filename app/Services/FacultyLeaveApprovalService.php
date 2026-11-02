@@ -134,6 +134,24 @@ class FacultyLeaveApprovalService
 
     public function canUserAccessLeave(LeaveApplication $application): bool
     {
+        if ($application->leave_type === LeaveApplication::TYPE_PT_EXEMPTION) {
+            if (isTrainingOrEstateAuthority()) {
+                return true;
+            }
+
+            if (! is_faculty_portal_user()) {
+                return false;
+            }
+
+            $facultyPk = $this->resolveFacultyPk();
+
+            return $facultyPk !== null
+                && app(StudentDetailAccessService::class)->canFacultyViewStudent(
+                    $facultyPk,
+                    (int) $application->student_master_pk
+                );
+        }
+
         if ($application->leave_type !== LeaveApplication::TYPE_STATIONED_LEAVE) {
             return false;
         }

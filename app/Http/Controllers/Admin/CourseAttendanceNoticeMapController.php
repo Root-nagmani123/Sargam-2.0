@@ -14,10 +14,12 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
 use App\Models\MemoNoticeTemplate;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\Attendance\OtExemptionResolver;
 use App\Services\NotificationService;
 use App\Services\NotificationReceiverService;
 use App\Exports\MemoNoticeExport;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Support\PdfPageNumbers;
  
 class CourseAttendanceNoticeMapController extends Controller
 {
@@ -434,7 +436,7 @@ $noticeCount = $memos->groupBy(function($item) {
             ]);
 
         $fileName = 'send-memo-notice-' . now()->format('Y-m-d_His') . '.pdf';
-        return $pdf->download($fileName);
+        return PdfPageNumbers::stamp($pdf, 18, 20, [0.4, 0.4, 0.4])->download($fileName);
     }
 
     /**
@@ -1340,10 +1342,28 @@ public function getStudentAttendanceBytopic(Request $request)
                     's.pk as pk',
                     's.display_name as display_name',
                     's.generated_OT_code as generated_OT_code',
-                    'a.status as attendance_status'
+                    'a.status as attendance_status',
+                    'a.course_master_pk as course_master_pk'
                 )
                 ->distinct()
                 ->get();
+
+        // An OT on MDO/Escort/Other duty or medically exempt for this session counts
+        // as Present, so they are not a defaulter and must never be offered a notice
+        // — even when the saved row still holds the Late/Absent it was marked with
+        // before the duty was assigned. AttendanceController::save applies the same
+        // rule on write; this keeps the list honest for rows that predate the duty.
+        $covered = OtExemptionResolver::coveredSessions(
+            $attendance->map(fn ($s) => [
+                'student' => (int) $s->pk,
+                'course' => (int) $s->course_master_pk,
+                'timetable' => (int) $topicId,
+            ])->all()
+        );
+
+        $attendance = $attendance->reject(fn ($s) => isset($covered[
+            OtExemptionResolver::sessionKey((int) $s->pk, (int) $s->course_master_pk, (int) $topicId)
+        ]))->values();
 
 
         // If no students found, return empty array instead of error

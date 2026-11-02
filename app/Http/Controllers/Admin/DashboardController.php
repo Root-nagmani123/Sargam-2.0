@@ -3,8 +3,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\LbsnaaTableExport;
 use App\Http\Controllers\Controller;
+use App\Support\DataTableSearchHelper;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -37,61 +41,112 @@ function incoming_course(Request $request)
 
 function guest_faculty()
 {
-   $guest_faculty = $this->getFacultyWithMetrics(2);
+   $guest_faculty = $this->getFacultyContactList(2);
     return view('admin.dashboard.guest_faculty', compact('guest_faculty'));
-    
+
 }
 function inhouse_faculty(){
-   $inhouse_faculty  = $this->getFacultyWithMetrics(1);
+   $inhouse_faculty  = $this->getFacultyContactList(1);
     return view('admin.dashboard.inhouse_faculty', compact('inhouse_faculty'));
-    
+
 }
 
-private function getFacultyWithMetrics(int $facultyType)
+/**
+ * Active faculty of one type, as the Guest / In-House cards list them.
+ *
+ * Contact details only. These pages used to carry Session Count and Feedback
+ * Average too, which cost a per-faculty session query plus a feedback rollup;
+ * with those columns gone that work fed nothing, so it went with them.
+ */
+/**
+ * @param  string  $search  the listing's search box, applied the way DataTables
+ *                          applies it: every word must appear in one of the
+ *                          columns shown (name, email, mobile). '' = everyone.
+ */
+private function getFacultyContactList(int $facultyType, string $search = '')
 {
-    $faculties = DB::table('faculty_master')
+    $query = DB::table('faculty_master')
         ->where('faculty_type', $facultyType)
-        ->where('active_inactive', 1)
-        ->get();
+        ->where('active_inactive', 1);
 
-    $feedbackSummaryByFaculty = DB::table('topic_feedback as tf')
-        ->select(
-            'tf.faculty_pk',
-            DB::raw('COUNT(*) as total_feedback'),
-            DB::raw('ROUND(AVG(CAST(tf.content AS DECIMAL(10,2))) * 20, 2) as avg_content'),
-            DB::raw('ROUND(AVG(CAST(tf.presentation AS DECIMAL(10,2))) * 20, 2) as avg_presentation')
-        )
-        ->where('tf.is_submitted', 1)
-        ->groupBy('tf.faculty_pk')
-        ->get()
-        ->keyBy('faculty_pk');
+    foreach (DataTableSearchHelper::tokens($search) as $token) {
+        $like = DataTableSearchHelper::likePattern($token);
+        $query->where(function ($q) use ($like) {
+            $q->where('full_name', 'like', $like)
+                ->orWhere('email_id', 'like', $like)
+                ->orWhere('mobile_no', 'like', $like);
+        });
+    }
 
-    return $faculties->map(function ($faculty) use ($feedbackSummaryByFaculty) {
-        $facultyPk = (int) ($faculty->pk ?? 0);
-        $summary = $feedbackSummaryByFaculty->get($facultyPk);
-
-        $faculty->session_count = $facultyPk > 0 ? $this->getSessionCountForFaculty($facultyPk) : 0;
-        $faculty->feedback_summary = [
-            'avg_content' => $summary ? (float) $summary->avg_content : 0,
-            'avg_presentation' => $summary ? (float) $summary->avg_presentation : 0,
-            'total_feedback' => $summary ? (int) $summary->total_feedback : 0,
-        ];
-
-        return $faculty;
-    });
+    return $query->orderBy('full_name')->get(['pk', 'full_name', 'email_id', 'mobile_no']);
 }
 
-private function getSessionCountForFaculty(int $facultyPk): int
+/**
+ * Branded Excel / PDF of a faculty listing.
+ *
+ * Server-side on purpose. These two pages used to export through the client-side
+ * DataTables buttons, which scrape the rendered table and emit an unstyled sheet
+ * — no letterhead, no column band, no borders. Routing it through
+ * LbsnaaTableExport and admin/exports/table_pdf gives both formats the same
+ * layout the Feedback Database export uses, which is the house standard.
+ */
+public function guest_faculty_export(Request $request)
 {
-    return CalendarEvent::query()
-        ->where('active_inactive', 1)
-        ->where(function ($query) use ($facultyPk) {
-            $query->whereRaw('JSON_CONTAINS(faculty_master, ?)', ['"' . $facultyPk . '"'])
-                ->orWhereRaw('FIND_IN_SET(?, faculty_master)', [$facultyPk]);
-        })
-        ->count();
+    return $this->exportFacultyList(2, 'Guest Faculty', $request);
 }
 
+public function inhouse_faculty_export(Request $request)
+{
+    return $this->exportFacultyList(1, 'In-House Faculty', $request);
+}
+
+private function exportFacultyList(int $facultyType, string $reportTitle, Request $request)
+{
+    // A bulk list of every faculty email and mobile is for staff, not trainees (PR #334
+    // F-057). Super Admin first, as in canUseStaffMenu() (F-059).
+    abort_if(isTraineeLogin() && ! isSidebarPrivilegedUser(), 403, 'This download is for staff.');
+
+    // The page posts its on-screen search with the export, so the download holds
+    // what the user was looking at, as the old client-side export did (PR #334 F-053).
+    $search = $request->query('search');
+    $search = is_scalar($search) ? (string) $search : '';
+
+    $faculties = $this->getFacultyContactList($facultyType, $search);
+
+    // The four columns the listing shows, in the same order.
+    $headings = ['S. No.', 'Faculty Name', 'Email', 'Mobile Number'];
+    $centreColumns = [0, 3];
+
+    // Serial from the row index: an arrow fn captures a counter BY VALUE, so a
+    // `$serial++` inside one numbered every row 1.
+    $rows = $faculties->values()->map(fn ($faculty, $index) => [
+        $index + 1,
+        $faculty->full_name ?: '-',
+        $faculty->email_id ?: 'N/A',
+        $faculty->mobile_no ?: 'N/A',
+    ]);
+
+    $baseName = str_replace([' ', '-'], '_', $reportTitle) . '_' . now()->format('Ymd_His');
+
+    if (is_string($request->get('format')) && strtolower($request->get('format')) === 'pdf') {
+        @ini_set('memory_limit', '256M');
+        @set_time_limit(120);
+
+        // Four narrow columns read better on portrait than stretched landscape.
+        return Pdf::loadView('admin.exports.table_pdf', [
+            'headings' => $headings,
+            'rows' => $rows,
+            'reportTitle' => $reportTitle,
+            'centreColumns' => $centreColumns,
+            'orientation' => 'portrait',
+        ])->setPaper('a4', 'portrait')->download($baseName . '.pdf');
+    }
+
+    return Excel::download(
+        new LbsnaaTableExport($rows, $headings, $reportTitle, '', $centreColumns),
+        $baseName . '.xlsx'
+    );
+}
 function sessions(Request $request)
 {
     $userId = Auth::user()->user_id;

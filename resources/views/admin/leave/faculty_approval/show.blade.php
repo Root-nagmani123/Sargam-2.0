@@ -238,12 +238,33 @@
                         </div>
                         <div class="fla-tile">
                             <div class="fla-tile-label"><span class="material-icons material-symbols-rounded">calendar_month</span>From Date</div>
-                            <div class="fla-tile-value">{{ $application->from_date?->format('d M Y') ?? '-' }}</div>
+                            <div class="fla-tile-value">
+                                {{ $application->from_date?->format('d M Y') ?? '-' }}
+                                @if($application->leave_type === \App\Models\LeaveApplication::TYPE_STATIONED_LEAVE && $application->from_date)
+                                    <span class="text-muted">{{ $application->from_date->format('h:i A') }}</span>
+                                @endif
+                            </div>
                         </div>
                         <div class="fla-tile">
                             <div class="fla-tile-label"><span class="material-icons material-symbols-rounded">calendar_month</span>To Date</div>
-                            <div class="fla-tile-value">{{ $application->to_date?->format('d M Y') ?? '-' }}</div>
+                            <div class="fla-tile-value">
+                                {{ $application->to_date?->format('d M Y') ?? '-' }}
+                                @if($application->leave_type === \App\Models\LeaveApplication::TYPE_STATIONED_LEAVE && $application->to_date)
+                                    <span class="text-muted">{{ $application->to_date->format('h:i A') }}</span>
+                                @endif
+                            </div>
                         </div>
+                        {{-- Stationed leave only; PT exemption carries no time. --}}
+                        @if($application->time_from || $application->time_to)
+                        <div class="fla-tile">
+                            <div class="fla-tile-label"><span class="material-icons material-symbols-rounded">schedule</span>Time From</div>
+                            <div class="fla-tile-value">{{ $application->time_from_display }}</div>
+                        </div>
+                        <div class="fla-tile">
+                            <div class="fla-tile-label"><span class="material-icons material-symbols-rounded">schedule</span>Time To</div>
+                            <div class="fla-tile-value">{{ $application->time_to_display }}</div>
+                        </div>
+                        @endif
                         <div class="fla-tile">
                             <div class="fla-tile-label"><span class="material-icons material-symbols-rounded">call</span>Contact</div>
                             <div class="fla-tile-value">{{ $application->contact_number ?: '-' }}</div>
@@ -260,7 +281,7 @@
                         <div class="fla-block-label">Attachments ({{ $application->attachments->count() }})</div>
                         <div class="fla-attach-grid">
                             @foreach($application->attachments as $attachment)
-                                <a href="{{ asset('storage/' . $attachment->file_path) }}" target="_blank" rel="noopener" class="fla-attach">
+                                <a href="{{ route('leave.attachments.show', [$application->pk, $attachment->pk]) }}" target="_blank" rel="noopener" class="fla-attach">
                                     <span class="fla-attach-ic"><span class="material-icons material-symbols-rounded">description</span></span>
                                     <span class="fla-attach-meta">
                                         <span class="fla-attach-name">{{ $attachment->attachment_title ?: ($attachment->original_file_name ?? 'Attachment') }}</span>

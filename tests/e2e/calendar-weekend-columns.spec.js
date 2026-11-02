@@ -45,6 +45,11 @@ const METHODS = [
   "eventWeekday",
   "isAllDayEvent",
   "eventStartDateTime",
+  // Called by the week-view renderers since PR #331: break rows and cards, and the
+  // active-day highlight renderWeekCards() applies (both are no-ops on an empty page).
+  "isBreakEvent",
+  "setTimetableActiveDay",
+  "applyTimetableActiveDay",
   "weekendDisplayForEvents",
   "weekendPresenceForEvents",
   "weekendDisplayForRendering",
@@ -406,39 +411,35 @@ test.describe("admin calendar - weekend columns", () => {
         r.weekendDisplay = { showSat: true, showSun: true };
         r.renderWeekCards(feed, new Date(2026, 8, 14));
 
-        // Read back what was actually drawn: card label -> the titles inside that card.
-        return Array.from(document.querySelectorAll("#weekCards .week-day-card")).map((card) => ({
-          label: card.querySelector(".fw-bold").textContent.trim(),
-          badge: card.querySelector(".badge").textContent.trim(),
-          titles: Array.from(card.querySelectorAll(".mini-event")).map((el) =>
-            el.getAttribute("aria-label")
-          ),
+        // Read back what was actually drawn. Since PR #331 a day is a chip carrying its
+        // date and a session count rather than a card listing the sessions, so a row's day
+        // is read from the counts: day key -> spoken label and count.
+        return Array.from(document.querySelectorAll("#weekCards .tt-day")).map((chip) => ({
+          day: chip.dataset.day,
+          label: chip.getAttribute("aria-label"),
+          count: parseInt(chip.querySelector(".tt-day-count").textContent, 10),
         }));
       }, WEEK_FEED);
 
-      const dayOf = (title) =>
-        placed.find((c) => c.titles.some((t) => t && t.startsWith(title)));
+      const byDay = Object.fromEntries(placed.map((c) => [c.day, c]));
+      const fullName = { Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday",
+        Fri: "Friday", Sat: "Saturday", Sun: "Sunday" };
 
-      // Each row must appear on ITS OWN day. Reading the bare date as UTC midnight shifts
-      // all-day rows one card to the left, and drops the Monday one out of the week entirely.
-      expect(dayOf("Mon all-day"), "Mon all-day row is on no card at all").toBeTruthy();
-      expect(dayOf("Mon all-day").label).toContain("Monday");
-      expect(dayOf("Wed timed").label).toContain("Wednesday");
-      expect(dayOf("Sat all-day").label).toContain("Saturday");
-      expect(dayOf("Sun all-day").label).toContain("Sunday");
+      // Each row must be counted on ITS OWN day. Reading the bare date as UTC midnight shifts
+      // all-day rows one day to the left, and drops the Monday one out of the week entirely.
+      expect(Object.keys(byDay), "every weekend column is open in this test").toEqual(
+        ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+      );
+      const expected = { Mon: 1, Tue: 0, Wed: 1, Thu: 0, Fri: 0, Sat: 1, Sun: 1 };
+      for (const [day, count] of Object.entries(expected)) {
+        expect(byDay[day].count, `sessions counted on ${day}`).toBe(count);
+        // The chip announces its own weekday, so a count cannot sit under the wrong name.
+        expect(byDay[day].label).toContain(fullName[day]);
+      }
 
       // Nothing may be silently dropped by the week-boundary test.
-      const rendered = placed.flatMap((c) => c.titles).join(" | ");
-      for (const row of WEEK_FEED) {
-        expect(rendered, `row lost by renderWeekCards: ${row.title}`).toContain(row.title);
-      }
-
-      // The badge count must agree with the card's own contents.
-      for (const card of placed) {
-        expect(card.badge, `badge vs contents for ${card.label}`).toBe(
-          `${card.titles.length} event${card.titles.length !== 1 ? "s" : ""}`
-        );
-      }
+      const total = placed.reduce((n, c) => n + c.count, 0);
+      expect(total, "rows lost by renderWeekCards").toBe(WEEK_FEED.length);
     });
 
     // The Officer-Trainee calendar keeps its OWN copy of this logic, so a test that reads
@@ -678,8 +679,14 @@ test.describe("admin calendar - weekend columns", () => {
           r.weekendDisplay = { showSat: true, showSun: true };
           const feed = [{ title: "Gandhi Jayanti", start: "2026-09-19", type: "holiday", allDay: true }];
           r.renderWeekCards(feed, new Date(2026, 8, 14));
-          const chip = document.querySelector("#weekCards .mini-event");
-          const time = chip && chip.querySelector(".mini-time");
+          // OT still lists the row as a chip with a time slot. Since PR #331 the admin
+          // week shows one chip per day (date and session count), so the day carrying the
+          // all-day row - Saturday - is the element whose text and aria-label must not
+          // announce a clock time.
+          const chip = isOt
+            ? document.querySelector("#weekCards .mini-event")
+            : document.querySelector('#weekCards .tt-day[data-day="Sat"]');
+          const time = chip && (isOt ? chip.querySelector(".mini-time") : chip);
           return {
             slotLabel: Object.keys(r.groupEventsByTime(feed))[0],
             chipTime: time ? time.textContent.trim() : "",
@@ -687,6 +694,8 @@ test.describe("admin calendar - weekend columns", () => {
           };
         }, which === "OT");
 
+        // The element exists, so the checks below cannot pass by finding nothing.
+        expect(card.aria, "no chip was drawn for the all-day row's day").not.toBeNull();
         // The label the slot already gets right, for comparison.
         expect(card.slotLabel).toBe("All Day");
         // The chip must not contradict it with a fabricated time.

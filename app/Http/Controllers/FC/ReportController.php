@@ -2090,7 +2090,7 @@ class ReportController extends Controller
                 ->setOptions([
                     'defaultFont' => 'sans-serif',
                     'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled' => true,
+                    'isRemoteEnabled' => false,
                     'dpi' => 96,
                 ]);
             return $pdf->download('health_risk_' . date('Y-m-d_His') . '.pdf');
@@ -2785,7 +2785,7 @@ class ReportController extends Controller
         $this->fcEnsureDompdfFontCacheDir();
 
         return Pdf::loadHTML($build('dompdf'))
-            ->setOption('isRemoteEnabled', true)
+            ->setOption('isRemoteEnabled', false)
             ->setOption('isFontSubsettingEnabled', false)
             ->setPaper('a4', 'portrait')
             ->addInfo(['Title' => $titleInfo])

@@ -668,11 +668,12 @@ class GenericFormController extends Controller
 
     /**
      * Travel Plan is not an admin-configurable step, but it closes the flow for any
-     * form that has a Bank Details step — the same rule the dashboard card uses.
+     * form with an anchor step (FcRegistrationFlowService::travelAnchorStep) — the same
+     * rule the dashboard card uses.
      */
     private function travelPlanPending(FcForm $form, $userId): bool
     {
-        if (! $form->activeSteps->firstWhere('tracker_column', 'bank_done')) {
+        if (! app(FcRegistrationFlowService::class)->travelAnchorStep($form, $form->activeSteps)) {
             return false;
         }
 

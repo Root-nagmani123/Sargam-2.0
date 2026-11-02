@@ -47,6 +47,8 @@ class MDOEscrotExemptionController extends Controller
         $years = DB::table('mdo_escot_duty_map')
             ->select(DB::raw('DISTINCT YEAR(mdo_date) as year'))
             ->whereNotNull('mdo_date')
+            // Skip mistyped dates (e.g. year 0025 saved for 2025).
+            ->whereYear('mdo_date', '>=', 2000)
             ->orderBy('year', 'desc')
             ->pluck('year', 'year')
             ->toArray();
@@ -466,6 +468,14 @@ class MDOEscrotExemptionController extends Controller
     }
 
     function update(Request $request) {
+        // Outside the try: the catch below would turn the 422 into a generic 500.
+        $request->validate([
+            'mdo_date' => 'required|date|after_or_equal:2000-01-01|before:2100-01-01',
+        ], [
+            'mdo_date.after_or_equal' => 'Please enter a valid MDO date (check the year).',
+            'mdo_date.before' => 'Please enter a valid MDO date (check the year).',
+        ]);
+
         try{
             
             $mdoDutyType = MDOEscotDutyMap::findOrFail(decrypt($request->pk));

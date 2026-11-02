@@ -221,6 +221,65 @@
         width: 100%;
     }
 }
+
+/* ── Adaptive toolbar: with room, every filter and the search box sit on one
+   line; without it (.is-compact) the inline filters move into the "+N Filters"
+   popover and search collapses to an icon. Decided by measuring, see the
+   toolbar script at the bottom. ── */
+.attendance-page .attendance-toolbar.is-measuring,
+.attendance-page .attendance-toolbar.is-measuring > *,
+.attendance-page .attendance-toolbar.is-measuring .attendance-filter-group {
+    flex-wrap: nowrap !important;
+}
+
+.attendance-page .attendance-toolbar.is-measuring > *,
+.attendance-page .attendance-toolbar.is-measuring .attendance-filter-group > * {
+    flex-shrink: 0 !important;
+}
+
+/* The popover label only shows once a filter has moved into the popover. */
+.attendance-page .attendance-filter-group > .attendance-inline-filter .attendance-filter-label-text {
+    display: none;
+}
+
+.attendance-page .attendance-search-toggle {
+    display: none;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+.attendance-page .attendance-toolbar.is-compact .attendance-search-toggle { display: inline-flex; }
+.attendance-page .attendance-toolbar.is-compact .programme-dt-search { display: none; }
+.attendance-page .attendance-toolbar.is-compact.is-search-open .attendance-search-toggle { display: none; }
+.attendance-page .attendance-toolbar.is-compact.is-search-open .programme-dt-search { display: block; width: 260px; }
+
+/* Inline filters moved into the popover: full width, same floating-label box
+   as Topic / Venue (!important beats .programme-dt-filter-select's 40px box). */
+.attendance-page .attendance-more-menu .attendance-inline-filter {
+    position: relative;
+    width: 100%;
+    margin-bottom: 0.75rem;
+}
+
+.attendance-page .attendance-more-menu .attendance-inline-filter .choices__inner.form-select {
+    min-height: 52px !important;
+    padding: 1.35rem 2.25rem 0.35rem 0.875rem !important;
+}
+
+.attendance-page .attendance-more-menu .attendance-daterange-input {
+    width: 100%;
+    min-height: 52px;
+}
+
+@media (max-width: 575.98px) {
+    .attendance-page .attendance-more-menu {
+        min-width: 0;
+        width: min(320px, calc(100vw - 2rem));
+    }
+}
 </style>
 
 
@@ -249,12 +308,14 @@
         <div class="card-body p-4">
 
             {{-- Filter toolbar (programme-dt design system) --}}
-            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar attendance-choices-bootstrap">
-                <div class="d-flex flex-wrap align-items-center gap-3">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 programme-dt-toolbar attendance-choices-bootstrap attendance-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-3 attendance-filter-group">
                     <span class="programme-dt-filters-label">Filters</span>
 
-                    {{-- Course --}}
-                    <div class="programme-dt-filter-select">
+                    {{-- Course. .attendance-inline-filter = moves into the "+N Filters"
+                         popover when the toolbar runs out of room. --}}
+                    <div class="programme-dt-filter-select attendance-inline-filter">
+                        <span class="attendance-filter-label-text">Course</span>
                         <select name="course_master_pk" id="programme" class="form-select js-attendance-choice" required>
                             <option value="">Course Name</option>
                             @foreach($courseMasters as $course)
@@ -273,7 +334,8 @@
                     </div>
 
                     {{-- Attendance Type --}}
-                    <div class="programme-dt-filter-select">
+                    <div class="programme-dt-filter-select attendance-inline-filter">
+                        <span class="attendance-filter-label-text">Attendance Type</span>
                         <select id="attendance_type" class="form-select js-attendance-choice" aria-label="Attendance Type">
                             <option value="" selected>All Types</option>
                             <option value="full_day">Full Day</option>
@@ -283,14 +345,15 @@
                     </div>
 
                     {{-- Time Period (date-range picker) --}}
-                    <div class="attendance-daterange-wrap">
+                    <div class="attendance-daterange-wrap attendance-inline-filter">
                         <i class="bi bi-calendar3 attendance-daterange-icon" aria-hidden="true"></i>
                         <input type="text" id="time_period" class="form-control attendance-daterange-input"
                             placeholder="Time Period" autocomplete="off" readonly aria-label="Filter by date range">
                     </div>
 
                     {{-- Normal Session (conditional) --}}
-                    <div class="programme-dt-filter-select" id="normal_session_container" style="display:none;">
+                    <div class="programme-dt-filter-select attendance-inline-filter" id="normal_session_container" style="display:none;">
+                        <span class="attendance-filter-label-text">Session</span>
                         <select name="session" id="session" class="form-select js-attendance-choice" aria-label="Normal Session">
                             <option value="">Select Session</option>
                             @foreach($sessions as $session)
@@ -300,7 +363,8 @@
                     </div>
 
                     {{-- Manual Session (conditional) --}}
-                    <div class="programme-dt-filter-select" id="manual_session_container" style="display:none;">
+                    <div class="programme-dt-filter-select attendance-inline-filter" id="manual_session_container" style="display:none;">
+                        <span class="attendance-filter-label-text">Session</span>
                         <select name="manual_session" id="manual_session" class="form-select js-attendance-choice" aria-label="Manual Session">
                             <option value="">Select Session</option>
                             @foreach($maunalSessions as $maunalSession)
@@ -321,6 +385,7 @@
                         <div class="dropdown-menu attendance-more-menu p-3 shadow-sm border rounded-3"
                             aria-labelledby="attendanceMoreFilters">
                             <div class="attendance-more-menu-header">Filters</div>
+                            <div id="attendanceMoreMoved"></div>
                             <div class="attendance-filter-item">
                                 <span class="attendance-filter-label-text">Topic</span>
                                 <select id="filter_topic" class="form-select js-attendance-choice" aria-label="Filter by topic">
@@ -353,12 +418,16 @@
                     </button>
                 </div>
 
-                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-auto attendance-toolbar-actions">
                     <button type="button" class="btn programme-dt-btn-columns" id="btnAttendanceColumns"
                         data-bs-toggle="modal" data-bs-target="#attendanceColumnVisibilityModal"
                         title="Show / hide columns">
                         <span>Columns</span>
                         <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="btn programme-dt-btn-columns attendance-search-toggle" id="attendanceSearchToggle"
+                        aria-label="Search" aria-controls="attendanceDtSearch" aria-expanded="false" title="Search">
+                        <i class="bi bi-search" aria-hidden="true"></i>
                     </button>
                     <div id="attendanceDtSearch" class="programme-dt-search" data-dt-search-for="attendanceTable"></div>
                 </div>
@@ -704,6 +773,95 @@ $(function () {
             setupAttendanceColumns(new $.fn.dataTable.Api(settings));
         }
     });
+});
+</script>
+
+{{-- Adaptive filter toolbar: everything inline when it fits on one line,
+     otherwise the inline filters move into "+N Filters" and search becomes an icon. --}}
+<script>
+$(function () {
+    var toolbar = document.querySelector('.attendance-page .attendance-toolbar');
+    if (!toolbar) return;
+    var group = toolbar.querySelector('.attendance-filter-group');
+    var moreWrap = document.getElementById('attendanceMoreFiltersWrap');
+    var moreToggle = document.getElementById('attendanceMoreFilters');
+    var moved = document.getElementById('attendanceMoreMoved');
+    var search = document.getElementById('attendanceDtSearch');
+    var searchToggle = document.getElementById('attendanceSearchToggle');
+    var inline = Array.prototype.slice.call(group.querySelectorAll('.attendance-inline-filter'));
+    var popoverOwn = moreWrap.querySelectorAll('.attendance-filter-item').length;
+    var lastWidth = -1;
+
+    function searchInput() { return search.querySelector('input'); }
+
+    function setSearchOpen(open) {
+        toolbar.classList.toggle('is-search-open', open);
+        searchToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    function fit() {
+        // Measure from the full layout every time, so the result never depends on the last one.
+        inline.forEach(function (el) { group.insertBefore(el, moreWrap); });
+        toolbar.classList.remove('is-compact');
+        toolbar.classList.add('is-measuring');
+        var compact = toolbar.scrollWidth > toolbar.clientWidth + 1;
+        toolbar.classList.remove('is-measuring');
+
+        if (compact) {
+            inline.forEach(function (el) { moved.appendChild(el); });
+            toolbar.classList.add('is-compact');
+            var input = searchInput();
+            // A search already typed stays visible rather than hiding behind the icon.
+            if (input && input.value !== '') setSearchOpen(true);
+        } else {
+            setSearchOpen(false);
+        }
+        var count = popoverOwn + (compact ? inline.filter(function (el) { return el.style.display !== 'none'; }).length : 0);
+        moreToggle.textContent = '+' + count + ' Filters';
+    }
+
+    searchToggle.addEventListener('click', function () {
+        setSearchOpen(true);
+        var input = searchInput();
+        if (input) input.focus();
+    });
+    search.addEventListener('focusout', function (e) {
+        var input = searchInput();
+        if (!toolbar.classList.contains('is-compact') || search.contains(e.relatedTarget)) return;
+        if (!input || input.value === '') setSearchOpen(false);
+    });
+    search.addEventListener('keydown', function (e) {
+        var input = searchInput();
+        if (e.key === 'Escape' && toolbar.classList.contains('is-compact') && input && input.value === '') {
+            setSearchOpen(false);
+            searchToggle.focus();
+            // Handled here: the document-level sidebar Escape handler would move focus away.
+            e.stopPropagation();
+        }
+    });
+
+    // The date picker renders on <body>, so a click in it counts as "outside" the
+    // popover — keep the popover open while a moved Time Period is being picked.
+    $(moreWrap).on('hide.bs.dropdown', function (e) {
+        var t = e.clickEvent && e.clickEvent.target;
+        if (t && $(t).closest('.daterangepicker').length) e.preventDefault();
+    });
+
+    // Width changes (window, sidebar toggle) and the Session filter appearing
+    // (custom.js shows/hides it) both change whether the row fits.
+    new ResizeObserver(function (entries) {
+        var w = Math.round(entries[0].contentRect.width);
+        if (w === lastWidth) return;
+        lastWidth = w;
+        fit();
+    }).observe(toolbar);
+    var sessionObserver = new MutationObserver(fit);
+    ['normal_session_container', 'manual_session_container'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) sessionObserver.observe(el, { attributes: true, attributeFilter: ['style'] });
+    });
+    $(window).on('load', fit);
+    fit();
 });
 </script>
 

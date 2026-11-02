@@ -23,7 +23,8 @@ class MDODutyTypeMasterDataTable extends DataTable
         return (new EloquentDataTable($query))
             ->addIndexColumn()
             ->setRowId('pk')
-            ->editColumn('mdo_duty_type_name', fn($row) => '<label class="text-dark">' . $row->mdo_duty_type_name . '</label>')
+            // Escaped here: the column stays in rawColumns below.
+            ->editColumn('mdo_duty_type_name', fn($row) => e($row->mdo_duty_type_name ?? ''))
             ->filterColumn('mdo_duty_type_name', function ($query, $keyword) {
                 $query->where('mdo_duty_type_name', 'like', "%{$keyword}%");
             })
@@ -36,52 +37,44 @@ class MDODutyTypeMasterDataTable extends DataTable
                     });
                 }
             }, true)
-            ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return '<div class="form-check form-switch d-inline-block">
-                    <input class="form-check-input plain-status-toggle" type="checkbox" role="switch"
-                        data-table="course_group_type_master"
-                        data-column="active_inactive"
-                        data-id="' . $row->pk . '"
-                        ' . $checked . '>
-                </div>';
-            })
+            // Status: display-only soft badge. The switch lives in the Action stack.
+            ->addColumn('status', fn ($row) => view('admin.master.partials.grid-status', [
+                'active' => (int) $row->active_inactive === 1,
+            ])->render())
 
-
+            // Action: Edit · status switch · Delete (docs/new-design-index-page.md §3b).
+            // .edit-btn / .plain-status-toggle / .delete-btn and their data-* are
+            // the hooks the index page's own handlers read — keep them.
             ->addColumn('actions', function ($row) {
-                $disabled = $row->active_inactive == 1 ? 'disabled' : '';
+                $isActive = (int) $row->active_inactive === 1;
 
-                return '
-                    <div class="d-inline-flex align-items-center gap-2"
-                        role="group"
-                        aria-label="Row actions">
+                $html = view('admin.master.partials.grid-actions', [
+                    'name'   => $row->mdo_duty_type_name ?? '',
+                    'edit'   => [
+                        'class' => 'edit-btn',
+                        'attrs' => [
+                            'data-id'                 => $row->pk,
+                            'data-mdo_duty_type_name' => $row->mdo_duty_type_name,
+                            'data-active_inactive'    => $row->active_inactive,
+                        ],
+                    ],
+                    'toggle' => [
+                        'active' => $isActive,
+                        'table'  => 'mdo_duty_type_master',
+                        'column' => 'active_inactive',
+                        'id'     => $row->pk,
+                        'class'  => 'plain-status-toggle',
+                        // Own route via the page's .plain-status-toggle handler — no
+                        // global .status-toggle, or custom.js fires a second request.
+                        'global' => false,
+                    ],
+                    // The grid never offered Delete on an active row — keep that rule.
+                    'delete' => $isActive
+                        ? ['disabled' => true, 'reason' => 'Active duty types cannot be deleted. Deactivate it first.']
+                        : ['class' => 'delete-btn', 'attrs' => ['data-id' => $row->pk]],
+                ])->render();
 
-                        <!-- Edit Action -->
-                        <a href="javascript:void(0)"
-                        data-id="' . $row->pk . '"
-                        data-mdo_duty_type_name="' . $row->mdo_duty_type_name . '"
-                         data-id="' . $row->pk . '"
-                        data-active_inactive="' . $row->active_inactive . '"
-                        class="btn btn-sm edit-btn btn-outline-primary d-inline-flex align-items-center gap-1"
-                        aria-label="Edit course group type">
-
-                            <i class="material-icons material-symbols-rounded"
-                            style="font-size:18px;">edit</i>
-
-                            <span class="d-none d-md-inline">Edit</span>
-                        </a>
-
-                        <!-- Delete Action -->
-                        <a href="javascript:void(0)"
-                        data-id="' . $row->pk . '"
-                        class="btn btn-sm btn-outline-danger delete-btn d-inline-flex align-items-center gap-1 ' . $disabled . '"
-                        aria-disabled="' . ($row->active_inactive == 1 ? 'true' : 'false') . '">
-                            <i class="material-icons material-symbols-rounded"
-                            style="font-size:18px;">delete</i>
-                            <span class="d-none d-md-inline">Delete</span>
-                        </a>
-                    </div>
-                ';
+                return $html;
             })
             ->rawColumns(['mdo_duty_type_name', 'status', 'actions']);
     }
@@ -155,10 +148,10 @@ class MDODutyTypeMasterDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('mdo_duty_type_name')->title('Duty Type Name')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::computed('status')->title('Status')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::computed('DT_RowIndex')->title('S. No.')->addClass('text-nowrap')->width('5.5rem')->orderable(false)->searchable(false),
+            Column::make('mdo_duty_type_name')->title('Duty Type Name')->orderable(false)->searchable(true),
+            Column::computed('status')->title('Status')->addClass('text-nowrap')->width('8rem')->orderable(false)->searchable(false),
+            Column::computed('actions')->title('Action')->addClass('text-nowrap')->width('13rem')->orderable(false)->searchable(false),
         ];
     }
 

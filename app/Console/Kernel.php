@@ -17,6 +17,10 @@ class Kernel extends ConsoleKernel
     {
         // Runs twice daily; system cron should call `php artisan schedule:run` every minute.
         $schedule->command('send:stock_alert')->twiceDaily(12, 17);
+
+        // File-cache entries retired by a FeedbackReportCache generation bump are never read
+        // again, so FileStore never deletes them. Removes only already-expired files.
+        $schedule->command('cache:prune-expired-files')->hourly()->withoutOverlapping();
     }
 
     /**

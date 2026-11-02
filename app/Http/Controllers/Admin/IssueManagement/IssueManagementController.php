@@ -30,6 +30,7 @@ use Illuminate\Support\Facades\{DB, Auth, Storage, Schema, Log};
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Support\PdfPageNumbers;
 
 class IssueManagementController extends Controller
 {
@@ -724,14 +725,20 @@ class IssueManagementController extends Controller
         }
 
         if ($format === 'pdf') {
-            return Pdf::loadView('admin.issue_management.export_pdf', $payload)
+            $pdf = Pdf::loadView('admin.issue_management.export_pdf', $payload)
                 ->setPaper('a4', 'landscape')
                 ->setOptions([
                     'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    'isPhpEnabled' => true,
-                ])
-                ->download($stem . '_' . $stamp . '.pdf');
+                    // Never true: isPhpEnabled makes the renderer a PHP
+                    // execution context for the whole view, so any raw
+                    // block that later appears in an export blade would
+                    // execute. Page numbers are stamped on the canvas
+                    // after render instead - see PdfPageNumbers.
+                    'isPhpEnabled' => false,
+                ]);
+
+            return PdfPageNumbers::stamp($pdf)->download($stem . '_' . $stamp . '.pdf');
         }
 
         // Same band the .xlsx and the print/PDF headers carry, so the CSV names
@@ -1198,6 +1205,12 @@ class IssueManagementController extends Controller
                             'complaint_img_url' => ['One or more file uploads failed. Please try again or use a different file.'],
                         ]);
                     }
+                    // Client-supplied extension is fine to read HERE: this is only a
+                    // friendlier early error. The real gate is the
+                    // 'complaint_img_url.*' => 'file|image|mimes:jpeg,jpg,png' rule
+                    // below, which checks content, and the file is saved with store(),
+                    // which names it from content too - so a mismatched name cannot
+                    // reach disk. Do not treat this line as the security control.
                     $ext = strtolower($file->getClientOriginalExtension());
                     if (!in_array($ext, $allowedExtensions)) {
                         throw ValidationException::withMessages([

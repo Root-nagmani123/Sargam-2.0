@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'OT Notice / Memo View - Sargam | Lal Bahadur')
+@section('title', 'OT Notice / Memo View')
 
 @section('setup_content')
 
