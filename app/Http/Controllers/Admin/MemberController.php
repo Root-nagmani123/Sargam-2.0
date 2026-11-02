@@ -611,9 +611,7 @@ class MemberController extends Controller
         // An option can be dropped for two reasons: it was deactivated, or it is active
         // but not offered here because it names no role on Role & Permission > Roles.
         // Calling the second kind "no longer active" was false (PR #343 review, F-003).
-        [$notManaged, $inactive] = UserRoleMaster::whereIn('pk', $dropped)
-            ->get(['user_role_display_name', 'active_inactive'])
-            ->partition(fn ($row) => $row->active_inactive === null || (int) $row->active_inactive === 1);
+        [$notManaged, $inactive] = $this->partitionUnofferedOptions($dropped);
 
         $outcome = fn (bool $one) => $isUpdate
             ? ($one ? 'was not changed.' : 'were not changed.')
@@ -668,7 +666,29 @@ class MemberController extends Controller
             }
         }
 
-        $validator->errors()->add('userrole', 'The selected role is no longer active. Please choose an active role.');
+        // Same split as withoutInactiveRoles(): an active option that is only not offered
+        // here must not be called "no longer active" (PR #343 review, F-002).
+        [$notManaged, $inactive] = $this->partitionUnofferedOptions(array_map('intval', $roles));
+
+        // A pk with no row at all keeps the old message; the 'exists' rule also rejects it.
+        if ($inactive->isNotEmpty() || $notManaged->isEmpty()) {
+            $validator->errors()->add('userrole', 'The selected role is no longer active. Please choose an active role.');
+        }
+
+        if ($notManaged->isNotEmpty()) {
+            $validator->errors()->add('userrole', 'This role option is active but is not managed from the Member wizard.');
+        }
+    }
+
+    /**
+     * Split options Step 3 does not offer into [active but not managed here, inactive].
+     * NULL status counts as active, as in getUserRoleList().
+     */
+    private function partitionUnofferedOptions(array $pks): \Illuminate\Support\Collection
+    {
+        return UserRoleMaster::whereIn('pk', $pks)
+            ->get(['user_role_display_name', 'active_inactive'])
+            ->partition(fn ($row) => $row->active_inactive === null || (int) $row->active_inactive === 1);
     }
 
     /**

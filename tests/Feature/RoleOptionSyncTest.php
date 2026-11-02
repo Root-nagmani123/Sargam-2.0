@@ -160,6 +160,29 @@ class RoleOptionSyncTest extends TestCase
         $this->assertFalse(UserRoleMaster::getUserRoleList()->has($option->pk));
     }
 
+    /**
+     * PR #343 review F-003 (round 6): duplicate spellings of one role offer one checkbox,
+     * the oldest active option; deactivating it hands the slot to the next active one.
+     * A unique name, not the seeded "Doctor", so no pre-existing older row wins.
+     */
+    public function test_duplicate_spellings_offer_only_the_oldest_active_option(): void
+    {
+        $name = 'Opt Test Dup ' . uniqid();
+        Role::create(['name' => $name]);
+        $older = $this->makeOption($name);
+        $newer = $this->makeOption(strtoupper($name));
+        $this->assertLessThan($newer->pk, $older->pk, 'Fixture assumption: pk grows with insert order.');
+
+        $offeredFor = fn () => UserRoleMaster::getUserRoleList()
+            ->filter(fn ($label) => strcasecmp((string) $label, $name) === 0);
+
+        $this->assertSame([$older->pk => $name], $offeredFor()->all());
+
+        $older->forceFill(['active_inactive' => 0])->save();
+
+        $this->assertSame([$newer->pk => strtoupper($name)], $offeredFor()->all());
+    }
+
     /** F-003: an active option that is simply not offered must not be called inactive. */
     public function test_warning_does_not_call_an_active_unoffered_option_inactive(): void
     {

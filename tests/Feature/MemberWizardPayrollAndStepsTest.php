@@ -294,9 +294,48 @@ class MemberWizardPayrollAndStepsTest extends TestCase
         $payload = $this->basicMemberPayload('OnlyInactive');
         $payload['userrole'] = [$inactiveRolePk];
 
-        $this->actingAs($actor)->postJson(route('member.store'), $payload)
+        $errors = $this->actingAs($actor)->postJson(route('member.store'), $payload)
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['userrole'], 'errors');
+            ->assertJsonValidationErrors(['userrole'], 'errors')
+            ->json('errors.userrole');
+
+        $this->assertContains('The selected role is no longer active. Please choose an active role.', $errors);
+
+        $this->assertNull(
+            DB::table('employee_master')->where('emp_id', $payload['id'])->value('pk'),
+            'A refused save must not create the member.'
+        );
+    }
+
+    /**
+     * PR #343 review F-002: an option that is still active but names no role (so Step 3
+     * does not offer it, e.g. "Staff" from a form opened before deploy) is refused with a
+     * message that says so, not "no longer active".
+     */
+    public function test_creating_a_member_with_only_an_active_unoffered_option_says_it_is_not_managed_here(): void
+    {
+        $actor = $this->makeActor('only_unoffered');
+        $actor->assignRole('Super Admin');
+
+        $tagPk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'HR Tag ' . uniqid(),
+            'user_role_display_name' => 'HR Tag ' . uniqid(),
+            'active_inactive'        => 1,
+        ]);
+        $this->assertFalse(UserRoleMaster::getUserRoleList()->has($tagPk), 'Fixture assumption: the option names no role.');
+
+        $payload = $this->basicMemberPayload('OnlyUnoffered');
+        $payload['userrole'] = [$tagPk];
+
+        $errors = $this->actingAs($actor)->postJson(route('member.store'), $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['userrole'], 'errors')
+            ->json('errors.userrole');
+
+        $this->assertContains('This role option is active but is not managed from the Member wizard.', $errors);
+        foreach ($errors as $error) {
+            $this->assertStringNotContainsString('no longer active', $error);
+        }
 
         $this->assertNull(
             DB::table('employee_master')->where('emp_id', $payload['id'])->value('pk'),
