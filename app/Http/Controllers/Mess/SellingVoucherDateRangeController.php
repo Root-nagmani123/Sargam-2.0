@@ -362,10 +362,7 @@ class SellingVoucherDateRangeController extends Controller
     {
         $draw = (int) $request->input('draw', 1);
         $start = max(0, (int) $request->input('start', 0));
-        $length = (int) $request->input('length', 10);
-        if ($length < 1 || $length > 100) {
-            $length = 10;
-        }
+        $length = DataTableSearchHelper::pageLength($request);
 
         $searchRaw = '';
         $searchPayload = $request->input('search');
@@ -388,8 +385,7 @@ class SellingVoucherDateRangeController extends Controller
         $this->applySellingVoucherDateRangeDatatableOrder($ordered, $request);
 
         $rows = $ordered
-            ->offset($start)
-            ->limit($length)
+            ->when($length !== -1, fn ($q) => $q->offset($start)->limit($length))
             ->get();
 
         $canDeleteSellingVoucherDateRange = hasRole('Admin') || hasRole('Mess-Admin');

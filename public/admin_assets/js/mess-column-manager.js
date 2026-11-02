@@ -647,20 +647,21 @@
             // A server-side table holds only the visible page: fetch every filtered row, and never
             // fall back to the page silently, or the file looks complete while missing rows.
             if (!options.rowsData && this._isServerSideDataTable(dt)) {
-                var params = this._buildPrintAjaxParams(dt);
-                params.length = Math.max(dt.page.info().recordsDisplay || 0, 1); // no 500-row print cap
                 $.ajax({
                     url: self._resolveDataTableAjaxUrl(tableId),
                     type: 'GET',
-                    data: params,
+                    data: this._buildPrintAjaxParams(dt),
                     dataType: 'json',
                     cache: false,
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 }).done(function (json) {
-                    if (json && Array.isArray(json.data)) {
+                    var shortfall = self._shortfallNote(json);
+                    if (!json || !Array.isArray(json.data)) {
+                        if (window.alert) window.alert('Download failed. Please try again.');
+                    } else if (shortfall) {
+                        if (window.alert) window.alert('Download stopped: ' + shortfall + ' The file would be incomplete, so it was not saved.');
+                    } else {
                         self.exportCsv(tableId, $.extend({}, options, { rowsData: json.data }));
-                    } else if (window.alert) {
-                        window.alert('Download failed. Please try again.');
                     }
                 }).fail(function () {
                     if (window.alert) window.alert('Download failed. Please try again.');
@@ -725,10 +726,8 @@
             }
             params.draw = params.draw || ((settings && settings.iDraw) ? settings.iDraw + 1 : 1);
             params.start = 0;
-            var printMaxRows = 500;
-            var filtered = info.recordsFiltered || info.recordsDisplay || 0;
-            params.length = Math.min(Math.max(filtered, 1), printMaxRows);
-            params.for_print = 1;
+            params.length = Math.max(info.recordsFiltered || info.recordsDisplay || 0, 1);
+            params.for_print = 1; // server returns every filtered row (DataTableSearchHelper::pageLength)
             if (!params.search) {
                 params.search = { value: dt.search(), regex: false };
             }
@@ -789,10 +788,22 @@
                 cache: false,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             }).done(function (json) {
-                done(json && Array.isArray(json.data) ? json.data : []);
+                if (!json || !Array.isArray(json.data)) {
+                    if (window.alert) window.alert('Print failed. Please try again.');
+                    return;
+                }
+                done(json.data, self._shortfallNote(json));
             }).fail(function () {
-                done(dt.rows({ search: 'applied' }).data().toArray());
+                // Never fall back to the visible page: it would print as if complete.
+                if (window.alert) window.alert('Print failed. Please try again.');
             });
+        },
+
+        /** "Showing first N of M rows." when the server sent fewer rows than it filtered; '' otherwise. */
+        _shortfallNote: function (json) {
+            var total = parseInt(json && json.recordsFiltered, 10);
+            var got = json && Array.isArray(json.data) ? json.data.length : 0;
+            return total > got ? 'Showing first ' + got.toLocaleString() + ' of ' + total.toLocaleString() + ' rows.' : '';
         },
 
         _fetchServerSidePrintRows: function (dt, done) {
@@ -865,6 +876,7 @@
                 '<div class="d-flex flex-wrap justify-content-between align-items-center report-meta">' +
                 '<span><strong>' + title + '</strong></span>' +
                 (periodText ? '<span>' + periodText + '</span>' : '') +
+                (options.shortfallNote ? '<span class="text-danger"><strong>' + options.shortfallNote + '</strong></span>' : '') +
                 '<span><strong>Printed on:</strong> ' + printedOn + '</span>' +
                 '</div></th></tr>' +
                 htmlParts.headerHtml +
@@ -924,7 +936,13 @@
                 dt = $('#' + tableId).DataTable();
             }
 
-            function finish(rowsData) {
+            function finish(rowsData, shortfall) {
+                if (shortfall) {
+                    options = $.extend({}, options, {
+                        shortfallNote: shortfall,
+                        metaHtml: (options.metaHtml || '') + ' <strong class="text-danger">' + shortfall + '</strong>'
+                    });
+                }
                 var parts = self._buildDataTablePrintHtml(tableId, rowsData, options);
                 if (options.template === 'simple') {
                     self.printTable(tableId, $.extend({}, options, { rowsData: rowsData }));

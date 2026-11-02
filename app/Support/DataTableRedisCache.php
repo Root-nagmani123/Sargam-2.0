@@ -31,6 +31,11 @@ final class DataTableRedisCache
         array $extraFingerprint = [],
         ?int $ttlSeconds = null
     ): JsonResponse {
+        // Download/Print fetches every filtered row: never answer from a cached page, never cache the full set.
+        if ($request->boolean('for_print')) {
+            return $parentAjax();
+        }
+
         $draw = (int) $request->input('draw', 0);
         $fingerprint = self::requestFingerprint($request, self::readListEpoch($listEpochKey));
         if ($extraFingerprint !== []) {

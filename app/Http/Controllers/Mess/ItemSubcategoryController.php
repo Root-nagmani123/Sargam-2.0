@@ -75,10 +75,7 @@ class ItemSubcategoryController extends Controller
 
         $draw = (int) $request->input('draw', 0);
         $start = max((int) $request->input('start', 0), 0);
-        $length = (int) $request->input('length', 10);
-        if ($length < 1 || $length > 100) {
-            $length = 10;
-        }
+        $length = DataTableSearchHelper::pageLength($request);
 
         $searchTokens = DataTableSearchHelper::tokens((string) $request->input('search.value', ''));
 

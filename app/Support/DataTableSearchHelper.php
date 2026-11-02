@@ -108,6 +108,21 @@ class DataTableSearchHelper
         return mb_strtolower(trim($haystack));
     }
 
+    /**
+     * Page length for a server-side DataTables request: -1 (every filtered row) when the
+     * Download/Print fetch sends `for_print`, otherwise the requested length (10 when outside 1..100).
+     */
+    public static function pageLength(Request $request): int
+    {
+        if ($request->boolean('for_print')) {
+            return -1;
+        }
+
+        $length = (int) $request->input('length', 10);
+
+        return ($length < 1 || $length > 100) ? 10 : $length;
+    }
+
     public static function orderColumnIndex(Request $request, int $default = 0): int
     {
         return max(0, (int) $request->input('order.0.column', $default));
