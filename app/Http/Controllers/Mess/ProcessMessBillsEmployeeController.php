@@ -966,11 +966,17 @@ class ProcessMessBillsEmployeeController extends Controller
 
     /**
      * Paid pool and pre-range net per buyer group key: sale-status SV vouchers with items up to
-     * date_to and mess-selling kitchen issues issued up to date_to, matched on the exact client
-     * ids and trimmed client names of the period's bills. resolveBuyerBillsForPaymentAllocation
-     * matches more loosely (client id or name variants via MessBuyerClientFilter), so bills under
-     * another spelling of a buyer's name without a client id are not pooled here.
-     * MessGenerateInvoiceModalPaidTest pins the two against each other.
+     * date_to and mess-selling kitchen issues issued up to date_to, fetched where client_id is one
+     * of the period's client ids or TRIM(client_name) equals one of the names on the period's bills
+     * without a client id, and pooled under each row's own group key.
+     *
+     * resolveBuyerBillsForPaymentAllocation (MessBuyerClientFilter) matches more widely; these
+     * bills reach the statement's allocation but not this pool:
+     * - client-id buyer: rows without a client id named with one of the buyer's name variants
+     *   (the name, the name without a "(...)" suffix, the employee display name, names on the
+     *   buyer's SV vouchers), unless a bill in the group's period carries that exact name;
+     * - any buyer: rows named "<name> (...)" (the filter's LIKE 'name (%' match).
+     * MessGenerateInvoiceModalPaidTest covers only name-only buyers on the uncached modal path.
      *
      * @param  array<int, int>  $clientIds
      * @param  array<int, string>  $names
