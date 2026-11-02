@@ -3,12 +3,13 @@
 Branch `role-permission-feedback-october`, PR #343. Commits on top of `main` (merge-base
 `84ecdc9d1`): `a028ef89c`, `658b3776e`, `dce26e3ea`, `1d1adbc4c`, plus the review fixes
 `d27b57def` (round 1), `4ca5f02eb` (round 2), `91f317d12` and `ad4ec3a84` (these deploy
-notes), `1e100bdab` (round 4: F-009, F-010), `558a94883` (F-011, F-012), and the F-013 fix
-(the commit that adds this line).
+notes), `1e100bdab` (round 4: F-009, F-010), `558a94883` (F-011, F-012), `61d63b2b6` (F-013),
+`4852fc843` (F-002 refusal wording, F-003 test), and the F-004 fix (the commit that adds
+this line).
 
 One data migration (insert-only) and code changes. Test on preprod before production.
 
-Last updated: 28 Oct 2026 (after PR #343 review rounds 1–7).
+Last updated: 2 Nov 2026 (after PR #343 review round 8).
 
 ---
 
@@ -56,6 +57,13 @@ Problems this fixes:
   `varchar(100)`.
 - The save message now says an active hidden option *"is not managed from the Member wizard"*
   instead of calling it *"no longer an active role"*.
+- **Step 3 refuses a selection in which no ticked option is offered.** Step 3 never lists a
+  hidden option, so this only happens from a stale form (its role was deleted after the page
+  loaded) or a hand-made request. If every ticked option is active but hidden, the refusal
+  reads *"This role option is active but is not managed from the Member wizard."* A
+  deactivated option still gets *"The selected role is no longer active. Please choose an active role."* Nothing
+  is saved in either case. Active hidden options are managed from no screen yet (see
+  PR343-DECISION-1).
 
 ## 2. Files in this change
 
@@ -183,3 +191,4 @@ backfill should have covered (rerun it).
 | 26 Oct 2026 | PR #343 review round 4 fixes. F-009: a member who holds a hidden option can be saved without ticking, so granting, a role. F-010: decision marked pending; `optimize:clear` replaced with targeted cache clears; commit list updated. |
 | 27 Oct 2026 | PR #343 review round 6 fixes (`558a94883`): F-011 credential lookup ordered like `update()`; F-012 test docblock moved back. |
 | 28 Oct 2026 | PR #343 review round 7 fix, F-013: step 3 posts a hidden `userrole_step_shown` marker; the F-009 "no tick required" rule applies only when it is present, so a save without step 3 is refused instead of removing the member's roles. |
+| 2 Nov 2026 | PR #343 review round 8: `4852fc843` gives an active-but-unoffered option its own Step 3 refusal message (F-002) and adds the duplicate-spelling test (F-003). F-004: validator docblocks corrected and `rejectOnlyInactiveRoles()` renamed `rejectOnlyUnofferedRoles()`; no behaviour change. |

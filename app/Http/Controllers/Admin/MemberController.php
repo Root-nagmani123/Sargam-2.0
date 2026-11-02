@@ -571,7 +571,8 @@ class MemberController extends Controller
     }
 
     /**
-     * Drop ticked role options that are no longer active, and say which ones.
+     * Drop ticked role options not offered by Step 3 (inactive, or active but naming no
+     * role), and say which ones.
      *
      * Validation only rejects pks that do not exist; an option deactivated while the
      * form was open reaches here and is skipped rather than failing the whole save
@@ -580,8 +581,8 @@ class MemberController extends Controller
      * On an update the member may already hold a role that has since been deactivated;
      * update() only rewrites mappings for ACTIVE roles, so that mapping is left in place
      * and the message says the role was not changed rather than "not assigned" (F-075).
-     * A selection where every role is inactive never reaches here: the validator refuses
-     * it first (see rejectOnlyInactiveRoles()).
+     * A selection in which no ticked option is offered by Step 3 never reaches here: the
+     * validator refuses it first (see rejectOnlyUnofferedRoles()).
      *
      * @return array{0: array, 1: ?string} [roles to assign, warning or null]
      */
@@ -641,13 +642,14 @@ class MemberController extends Controller
     }
 
     /**
-     * Validator hook: refuse a role selection in which EVERY ticked role is inactive.
+     * Validator hook: refuse a role selection in which NO ticked option is offered by
+     * Step 3 (inactive, or active but naming no role).
      *
      * withoutInactiveRoles() would drop them all and leave the member with no role,
      * which 'userrole' => required exists to prevent (PR #319 re-review F-075). Runs as
      * part of validation, so the refusal happens before any upload or database write.
      */
-    private function rejectOnlyInactiveRoles(\Illuminate\Validation\Validator $validator, Request $request): void
+    private function rejectOnlyUnofferedRoles(\Illuminate\Validation\Validator $validator, Request $request): void
     {
         $roles = array_filter(
             (array) $request->input('userrole', []),
@@ -1074,7 +1076,7 @@ class MemberController extends Controller
         [$rules, $messages] = $this->combinedMemberRules();
 
         $validator = Validator::make($request->all(), $rules, $messages);
-        $validator->after(fn ($validator) => $this->rejectOnlyInactiveRoles($validator, $request));
+        $validator->after(fn ($validator) => $this->rejectOnlyUnofferedRoles($validator, $request));
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
@@ -1257,7 +1259,7 @@ class MemberController extends Controller
         // Only for an actor whose role selection is actually saved; a non-admin's
         // 'userrole' is ignored by update() (F-001), so it must not block their save.
         if ($this->actingUserCanManageRbacRoles()) {
-            $validator->after(fn ($validator) => $this->rejectOnlyInactiveRoles($validator, $request));
+            $validator->after(fn ($validator) => $this->rejectOnlyUnofferedRoles($validator, $request));
         }
 
         if ($validator->fails()) {

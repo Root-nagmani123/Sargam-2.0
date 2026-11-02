@@ -436,6 +436,66 @@ class MemberWizardPayrollAndStepsTest extends TestCase
     }
 
     /**
+     * PR #343 review F-002/F-004, edit path with a mixed selection: one inactive option and
+     * one active option Step 3 does not offer. Each gets its own message, nothing is written,
+     * and the unoffered option grants no mapping or Spatie role.
+     */
+    public function test_an_admin_update_with_inactive_and_unoffered_options_gives_both_messages_and_changes_nothing(): void
+    {
+        $actor = $this->makeActor('update_mixed_unoffered');
+        $actor->assignRole('Super Admin');
+
+        $rolePk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'Soon Retired Mixed ' . uniqid(),
+            'user_role_display_name' => 'Soon Retired Mixed',
+            'active_inactive'        => 1,
+        ]);
+        Role::create(['name' => 'Soon Retired Mixed']);
+
+        $tagPk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'HR Tag ' . uniqid(),
+            'user_role_display_name' => 'HR Tag ' . uniqid(),
+            'active_inactive'        => 1,
+        ]);
+        $this->assertFalse(UserRoleMaster::getUserRoleList()->has($tagPk), 'Fixture assumption: the option names no role.');
+
+        $createPayload = $this->basicMemberPayload('UpdateMixed');
+        $createPayload['userrole'] = [$rolePk];
+        $this->actingAs($actor)->post(route('member.store'), $createPayload)->assertOk();
+
+        $employeePk = DB::table('employee_master')->where('emp_id', $createPayload['id'])->value('pk');
+        $credentialPk = DB::table('user_credentials')->where('user_name', $createPayload['userid'])->value('pk');
+        $this->assertNotNull($employeePk);
+        $rolesBefore = User::find($credentialPk)->getRoleNames()->sort()->values()->all();
+
+        DB::table('user_role_master')->where('pk', $rolePk)->update(['active_inactive' => 0]);
+
+        $updatePayload = $this->basicMemberPayload('UpdateMixed', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['first_name'] = 'Changed';
+        $updatePayload['userrole'] = [$rolePk, $tagPk];
+
+        $errors = $this->actingAs($actor)->postJson(route('member.update'), $updatePayload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['userrole'], 'errors')
+            ->json('errors.userrole');
+
+        $this->assertContains('The selected role is no longer active. Please choose an active role.', $errors);
+        $this->assertContains('This role option is active but is not managed from the Member wizard.', $errors);
+
+        $this->assertSame('Wizard', DB::table('employee_master')->where('pk', $employeePk)->value('first_name'), 'A refused update must write nothing.');
+        $this->assertTrue(
+            DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->where('user_role_master_pk', $rolePk)->exists(),
+            'The member keeps the mapping they already had.'
+        );
+        $this->assertFalse(
+            DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->where('user_role_master_pk', $tagPk)->exists(),
+            'The unoffered option must not be mapped.'
+        );
+        $this->assertSame($rolesBefore, User::find($credentialPk)->getRoleNames()->sort()->values()->all(), 'No Spatie role may change.');
+    }
+
+    /**
      * F-077, the other branch: the refusal applies only to an actor whose role selection is
      * saved. A non-admin editing their own record has 'userrole' ignored, so an inactive pk
      * in it must not block their save — and must not be written either.
