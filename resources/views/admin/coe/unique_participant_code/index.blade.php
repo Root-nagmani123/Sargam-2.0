@@ -116,7 +116,7 @@
                         <tbody>
                             @foreach ($rows as $row)
                                 <tr data-coe-id="{{ $row['id'] }}"
-                                    data-upc-course="{{ $row['course_name'] }}"
+                                    data-upc-course="{{ $row['course_name'] }} — {{ $row['batch'] }}"
                                     data-upc-ot="{{ $row['ot_name'] }}"
                                     data-upc-dt="{{ $row['dt_name'] }}"
                                     data-upc-code="{{ $row['unique_code'] }}"
@@ -138,20 +138,25 @@
                                         </span>
                                     </td>
                                     <td class="upc-cell-actions">
-                                        <div class="coe-act-group" role="group" aria-label="Row actions">
-                                            <button type="button" class="coe-act coe-act--edit">
-                                                <span class="coe-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
-                                                <span class="coe-act__label">Edit</span>
-                                            </button>
-                                            <button type="button" class="coe-act coe-act--freeze">
-                                                <span class="coe-act__icon"><i class="bi bi-lock" aria-hidden="true"></i></span>
-                                                <span class="coe-act__label">Freeze</span>
-                                            </button>
-                                            <button type="button" class="coe-act coe-act--del">
-                                                <span class="coe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
-                                                <span class="coe-act__label">Delete</span>
-                                            </button>
-                                        </div>
+                                        {{-- A frozen code has nothing left to do: the server refuses edit and delete. --}}
+                                        @if ($row['status'] === 'Frozen')
+                                            <span class="text-body-secondary">—</span>
+                                        @else
+                                            <div class="coe-act-group" role="group" aria-label="Row actions">
+                                                <button type="button" class="coe-act coe-act--edit">
+                                                    <span class="coe-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
+                                                    <span class="coe-act__label">Edit</span>
+                                                </button>
+                                                <button type="button" class="coe-act coe-act--freeze">
+                                                    <span class="coe-act__icon"><i class="bi bi-lock" aria-hidden="true"></i></span>
+                                                    <span class="coe-act__label">Freeze</span>
+                                                </button>
+                                                <button type="button" class="coe-act coe-act--del">
+                                                    <span class="coe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+                                                    <span class="coe-act__label">Delete</span>
+                                                </button>
+                                            </div>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforeach
@@ -167,7 +172,7 @@
     </div>
 </div>
 
-{{-- ── Generate Unique Code modal (Create) ────────────────────────────────── --}}
+{{-- ── Generate Unique Code modal ─────────────────────────────────────────── --}}
 <div class="modal fade" id="upcGenerateModal" tabindex="-1" aria-labelledby="upcGenerateModalLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content coe-modal border-0 shadow">
@@ -180,32 +185,38 @@
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="coe-form-label" for="upcGenCourse">Course<span class="coe-req">*</span></label>
-                            <select id="upcGenCourse" name="course" class="form-select coe-control" required>
+                            <select id="upcGenCourse" name="course_batch" class="form-select coe-control" required>
                                 <option value="">Select Course</option>
-                                @foreach ($courses as $course)
-                                    <option value="{{ $course }}">{{ $course }}</option>
+                                @foreach ($cohorts as $cohort)
+                                    <option value="{{ $cohort['key'] }}" data-count="{{ $cohort['count'] }}">{{ $cohort['label'] }}</option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="col-12">
                             <label class="coe-form-label" for="upcGenOtCount">Number of OTs</label>
-                            <input type="text" id="upcGenOtCount" class="form-control coe-control" value="234" readonly>
+                            <input type="text" id="upcGenOtCount" class="form-control coe-control" value="" readonly>
                         </div>
                         <div class="col-sm-6">
                             <label class="coe-form-label" for="upcGenPrefix">Unique Code Prefix<span class="coe-req">*</span></label>
                             <input type="text" id="upcGenPrefix" name="prefix" class="form-control coe-control"
-                                   placeholder="eg. UC-01" maxlength="20" required autocomplete="off">
+                                   placeholder="eg. UC-" maxlength="20" required autocomplete="off">
                         </div>
                         <div class="col-sm-6">
+                            {{-- Text, not number: leading zeros set the width (0324 → UC-0324). --}}
                             <label class="coe-form-label" for="upcGenStart">Count Start from<span class="coe-req">*</span></label>
-                            <input type="number" id="upcGenStart" name="count_start" class="form-control coe-control"
-                                   placeholder="eg. 324" min="1" step="1" inputmode="numeric" required>
+                            <input type="text" id="upcGenStart" name="count_start" class="form-control coe-control"
+                                   placeholder="eg. 324" maxlength="9" inputmode="numeric" pattern="\d*" required autocomplete="off">
+                        </div>
+                        <div class="col-12">
+                            <div class="form-text" id="upcGenPreview">
+                                Codes are given in name order. Generating again replaces the course's pending codes.
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer coe-modal-footer">
                     <button type="button" class="btn coe-btn coe-btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn coe-btn coe-btn-primary coe-btn--narrow">Generate</button>
+                    <button type="submit" class="btn coe-btn coe-btn-primary coe-btn--narrow" id="upcGenSubmit">Generate</button>
                 </div>
             </form>
         </div>
@@ -223,42 +234,29 @@
                 </div>
                 <div class="modal-body coe-modal-body">
                     <div class="row g-3">
+                        {{-- Course, OT and DT name come from the masters; only the code is edited here. --}}
                         <div class="col-12">
-                            <label class="coe-form-label" for="upcEditCourse">Course Name<span class="coe-req">*</span></label>
-                            <select id="upcEditCourse" name="course_name" class="form-select coe-control" required>
-                                <option value="">Select Course</option>
-                                @foreach ($courses as $course)
-                                    <option value="{{ $course }}">{{ $course }}</option>
-                                @endforeach
-                            </select>
+                            <label class="coe-form-label" for="upcEditCourse">Course Name</label>
+                            <input type="text" id="upcEditCourse" class="form-control coe-control" disabled>
                         </div>
                         <div class="col-12">
-                            <label class="coe-form-label" for="upcEditOt">OT Name<span class="coe-req">*</span></label>
-                            <input type="text" id="upcEditOt" name="ot_name" class="form-control coe-control"
-                                   placeholder="eg. Dana Arnold" maxlength="100" required autocomplete="off">
+                            <label class="coe-form-label" for="upcEditOt">OT Name</label>
+                            <input type="text" id="upcEditOt" class="form-control coe-control" disabled>
                         </div>
                         <div class="col-12">
-                            <label class="coe-form-label" for="upcEditDt">DT Name<span class="coe-req">*</span></label>
-                            <input type="text" id="upcEditDt" name="dt_name" class="form-control coe-control"
-                                   placeholder="eg. danaarnold" maxlength="100" required autocomplete="off">
+                            <label class="coe-form-label" for="upcEditDt">DT Name</label>
+                            <input type="text" id="upcEditDt" class="form-control coe-control" disabled>
                         </div>
                         <div class="col-12">
                             <label class="coe-form-label" for="upcEditCode">Unique Code<span class="coe-req">*</span></label>
                             <input type="text" id="upcEditCode" name="unique_code" class="form-control coe-control"
                                    placeholder="eg. UC-234" maxlength="50" required autocomplete="off">
                         </div>
-                        <div class="col-12">
-                            <label class="coe-form-label" for="upcEditStatus">Status<span class="coe-req">*</span></label>
-                            <select id="upcEditStatus" name="status" class="form-select coe-control" required>
-                                <option value="Pending">Pending</option>
-                                <option value="Frozen">Frozen</option>
-                            </select>
-                        </div>
                     </div>
                 </div>
                 <div class="modal-footer coe-modal-footer">
                     <button type="button" class="btn coe-btn coe-btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn coe-btn coe-btn-primary coe-btn--narrow">Update</button>
+                    <button type="submit" class="btn coe-btn coe-btn-primary coe-btn--narrow" id="upcEditSubmit">Update</button>
                 </div>
             </form>
         </div>
@@ -293,22 +291,17 @@
 $(function () {
     'use strict';
 
+    var ROUTES = {
+        generate: @json(route('admin.coe.unique-participant-code.generate')),
+        freeze: @json(route('admin.coe.unique-participant-code.freeze')),
+        destroy: @json(route('admin.coe.unique-participant-code.bulk-destroy')),
+        update: @json(route('admin.coe.unique-participant-code.update', ['code' => '__ID__']))
+    };
+
     /* Column indexes — keep in step with the <thead>. */
     var COL = { check: 0, sno: 1, course: 2, ot: 3, dt: 4, code: 5, status: 6, action: 7 };
 
     var $table = $('#upcTable');
-
-    var ACTION_HTML =
-        '<div class="coe-act-group" role="group" aria-label="Row actions">' +
-        '<button type="button" class="coe-act coe-act--edit">' +
-        '<span class="coe-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>' +
-        '<span class="coe-act__label">Edit</span></button>' +
-        '<button type="button" class="coe-act coe-act--freeze">' +
-        '<span class="coe-act__icon"><i class="bi bi-lock" aria-hidden="true"></i></span>' +
-        '<span class="coe-act__label">Freeze</span></button>' +
-        '<button type="button" class="coe-act coe-act--del">' +
-        '<span class="coe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>' +
-        '<span class="coe-act__label">Delete</span></button></div>';
 
     var dt = CoeGrid.init({
         table: '#upcTable',
@@ -329,6 +322,35 @@ $(function () {
                  text: 'Generate unique codes to get started.' }
     });
 
+    /* ── AJAX helpers ─────────────────────────────────────────────────── */
+    function csrf() { return $('meta[name="csrf-token"]').attr('content') || ''; }
+
+    function send(url, data, type) {
+        return $.ajax({
+            url: url,
+            type: type || 'POST',
+            data: data,
+            dataType: 'json',
+            headers: { 'X-CSRF-TOKEN': csrf(), 'Accept': 'application/json' }
+        });
+    }
+
+    function errorText(xhr) {
+        if (xhr.status === 419) { return 'Your session has expired. Reload the page and try again.'; }
+        var j = xhr.responseJSON || {};
+        if (j.errors) {
+            var first = Object.keys(j.errors)[0];
+            if (first && j.errors[first][0]) { return j.errors[first][0]; }
+        }
+        return j.message || 'The request failed. Please try again.';
+    }
+
+    function showError(xhr) {
+        Swal.fire({ icon: 'error', title: 'Could not complete', text: errorText(xhr) });
+    }
+
+    function idOf($row) { return parseInt($row.attr('data-coe-id'), 10); }
+
     /* ── Row selection ──────────────────────────────────────────────────── */
     function selectedRows() {
         return dt.rows({ search: 'applied' }).nodes().to$().filter(function () {
@@ -345,6 +367,11 @@ $(function () {
             .prop('indeterminate', n > 0 && n < all);
     }
 
+    function clearSelection() {
+        $table.find('.upc-row-check').prop('checked', false);
+        syncBulkButtons();
+    }
+
     $('#upcCheckAll').on('change', function () {
         dt.rows({ search: 'applied' }).nodes().to$().find('.upc-row-check').prop('checked', this.checked);
         syncBulkButtons();
@@ -352,16 +379,30 @@ $(function () {
     $table.on('change', '.upc-row-check', syncBulkButtons);
     dt.on('search.dt', function () { setTimeout(syncBulkButtons, 0); });
 
-    /* ── Status badge helper ───────────────────────────────────────────── */
-    function paintStatus($row, status) {
-        var isFrozen = status === 'Frozen';
+    /* ── Frozen: badge, and the row loses its actions ──────────────────── */
+    function paintFrozen($row) {
         $row.find('.upc-cell-status')
-            .attr('data-order', isFrozen ? 1 : 0)
-            .attr('data-search', status)
-            .html('<span class="coe-state coe-state--' + (isFrozen ? 'active' : 'pending') + '">' + status + '</span>');
-        $row.attr('data-upc-status', status);
-        dt.row($row).invalidate('dom').draw(false);
+            .attr('data-order', 1)
+            .attr('data-search', 'Frozen')
+            .html('<span class="coe-state coe-state--active">Frozen</span>');
+        $row.find('.upc-cell-actions').html('<span class="text-body-secondary">—</span>');
+        $row.attr('data-upc-status', 'Frozen');
+        dt.row($row).invalidate('dom');
     }
+
+    function freeze($rows) {
+        var ids = $rows.map(function () { return idOf($(this)); }).get();
+        return send(ROUTES.freeze, { ids: ids }).done(function (res) {
+            $rows.filter(function () { return res.frozen_ids.indexOf(idOf($(this))) !== -1; })
+                 .each(function () { paintFrozen($(this)); });
+            dt.draw(false);
+            clearSelection();
+            Swal.fire({ icon: 'success', title: 'Frozen', text: res.message });
+        }).fail(showError);
+    }
+
+    $table.on('click', '.coe-act--freeze', function () { freeze($(this).closest('tr')); });
+    $('#upcFreezeAllBtn').on('click', function () { freeze(selectedRows()); });
 
     /* ── Delete ─────────────────────────────────────────────────────────── */
     CoeGrid.confirmDelete({
@@ -371,43 +412,24 @@ $(function () {
         bulkTrigger: '#upcDeleteAllBtn',
         onConfirm: function ($row) {
             var $targets = $row ? $row : selectedRows();
-            var n = $targets.length;
-            dt.rows($targets).remove().draw(false);
-            syncBulkButtons();
-            Swal.fire({ icon: 'success', title: 'Deleted',
-                text: n === 1 ? 'Record deleted.' : n + ' records deleted.' });
+            var ids = $targets.map(function () { return idOf($(this)); }).get();
+
+            return send(ROUTES.destroy, { ids: ids }).done(function (res) {
+                dt.rows($targets.filter(function () {
+                    return res.deleted_ids.indexOf(idOf($(this))) !== -1;
+                })).remove().draw(false);
+                clearSelection();
+                Swal.fire({ icon: 'success', title: 'Deleted', text: res.message });
+            }).fail(showError);
         }
     });
 
-    /* ── Freeze single row ────────────────────────────────────────────── */
-    $table.on('click', '.coe-act--freeze', function () {
-        var $row = $(this).closest('tr');
-        paintStatus($row, 'Frozen');
-        Swal.fire({ icon: 'success', title: 'Frozen', text: 'Participant code has been frozen.' });
-    });
+    /* ── Edit: only the code ───────────────────────────────────────────── */
+    var $editModal  = $('#upcEditModal');
+    var $editCode   = $('#upcEditCode');
+    var $editingRow = null;
 
-    /* ── Freeze All ────────────────────────────────────────────────────── */
-    $('#upcFreezeAllBtn').on('click', function () {
-        selectedRows().each(function () { paintStatus($(this), 'Frozen'); });
-        $table.find('.upc-row-check').prop('checked', false);
-        $('#upcCheckAll').prop('checked', false).prop('indeterminate', false);
-        syncBulkButtons();
-        Swal.fire({ icon: 'success', title: 'Frozen', text: 'Selected codes have been frozen.' });
-    });
-
-    /* ── Edit modal ────────────────────────────────────────────────────── */
-    var $editModal   = $('#upcEditModal');
-    var $editCourse  = $('#upcEditCourse');
-    var $editOt      = $('#upcEditOt');
-    var $editDt      = $('#upcEditDt');
-    var $editCode    = $('#upcEditCode');
-    var $editStatus  = $('#upcEditStatus');
-    var $editingRow  = null;
-
-    $editCourse.select2({ width: '100%', dropdownParent: $editModal });
-    $editStatus.select2({ width: '100%', dropdownParent: $editModal });
-
-    function editFieldError($el, msg) {
+    function fieldError($el, msg) {
         var $wrap = $el.closest('[class*="col-"]');
         $wrap.find('.coe-field-error').remove();
         $el.toggleClass('is-invalid', !!msg);
@@ -416,67 +438,48 @@ $(function () {
         return !msg;
     }
 
-    function clearEditErrors() {
-        [$editCourse, $editOt, $editDt, $editCode].forEach(function ($el) {
-            editFieldError($el, '');
-        });
-    }
-
     $table.on('click', '.coe-act--edit', function () {
         $editingRow = $(this).closest('tr');
-        $editCourse.val($editingRow.attr('data-upc-course') || '').trigger('change.select2');
-        $editOt.val($editingRow.attr('data-upc-ot') || '');
-        $editDt.val($editingRow.attr('data-upc-dt') || '');
+        $('#upcEditCourse').val($editingRow.attr('data-upc-course') || '');
+        $('#upcEditOt').val($editingRow.attr('data-upc-ot') || '');
+        $('#upcEditDt').val($editingRow.attr('data-upc-dt') || '');
         $editCode.val($editingRow.attr('data-upc-code') || '');
-        $editStatus.val($editingRow.attr('data-upc-status') || 'Pending').trigger('change.select2');
-        clearEditErrors();
+        fieldError($editCode, '');
         bootstrap.Modal.getOrCreateInstance($editModal[0]).show();
     });
 
     $editModal.on('hidden.bs.modal', function () {
         $editingRow = null;
-        clearEditErrors();
+        fieldError($editCode, '');
     });
 
-    [$editCourse, $editOt, $editDt, $editCode].forEach(function ($el) {
-        $el.on('input change', function () {
-            if ($.trim(this.value || '') !== '') { editFieldError($el, ''); }
-        });
-    });
+    $editCode.on('input', function () { if ($.trim(this.value) !== '') { fieldError($editCode, ''); } });
 
     $('#upcEditForm').on('submit', function (e) {
         e.preventDefault();
-        var ok = true;
-        ok = editFieldError($editCourse, $editCourse.val() ? '' : 'Select a course.') && ok;
-        ok = editFieldError($editOt, $.trim($editOt.val()) ? '' : 'Enter the OT name.') && ok;
-        ok = editFieldError($editDt, $.trim($editDt.val()) ? '' : 'Enter the DT name.') && ok;
-        ok = editFieldError($editCode, $.trim($editCode.val()) ? '' : 'Enter the unique code.') && ok;
-        if (!ok || !$editingRow) { return; }
+        var code = $.trim($editCode.val());
+        if (!fieldError($editCode, code ? '' : 'Enter the unique code.') || !$editingRow) { return; }
 
-        var course = $editCourse.val();
-        var ot     = $.trim($editOt.val());
-        var dt_    = $.trim($editDt.val());
-        var code   = $.trim($editCode.val());
-        var status = $editStatus.val();
+        var $row = $editingRow;
+        var $btn = $('#upcEditSubmit').prop('disabled', true);
 
-        $editingRow.attr('data-upc-course', course)
-                   .attr('data-upc-ot', ot)
-                   .attr('data-upc-dt', dt_)
-                   .attr('data-upc-code', code);
-
-        $editingRow.find('.upc-cell-course').text(course);
-        $editingRow.find('.upc-cell-ot').text(ot);
-        $editingRow.find('.upc-cell-dt').text(dt_);
-        $editingRow.find('.upc-cell-code').text(code);
-        paintStatus($editingRow, status);
-
-        bootstrap.Modal.getOrCreateInstance($editModal[0]).hide();
-        Swal.fire({ icon: 'success', title: 'Updated', text: 'Participant code updated.' });
+        send(ROUTES.update.replace('__ID__', idOf($row)), { unique_code: code }, 'PUT')
+            .done(function (res) {
+                $row.attr('data-upc-code', res.unique_code);
+                $row.find('.upc-cell-code').text(res.unique_code);
+                dt.row($row).invalidate('dom').draw(false);
+                bootstrap.Modal.getOrCreateInstance($editModal[0]).hide();
+                Swal.fire({ icon: 'success', title: 'Updated', text: res.message });
+            })
+            .fail(function (xhr) { fieldError($editCode, errorText(xhr)); })
+            .always(function () { $btn.prop('disabled', false); });
     });
 
-    /* ── Generate modal (Create) ────────────────────────────────────────── */
-    var $genModal   = $('#upcGenerateModal');
-    var $genCourse  = $('#upcGenCourse');
+    /* ── Generate ───────────────────────────────────────────────────────── */
+    var $genModal  = $('#upcGenerateModal');
+    var $genCourse = $('#upcGenCourse');
+    var $genPrefix = $('#upcGenPrefix');
+    var $genStart  = $('#upcGenStart');
 
     $genCourse.select2({ width: '100%', dropdownParent: $genModal });
 
@@ -487,70 +490,38 @@ $(function () {
     $genModal.on('hidden.bs.modal', function () {
         document.getElementById('upcGenerateForm').reset();
         $genCourse.val('').trigger('change.select2');
+        $('#upcGenOtCount').val('');
         $genModal.find('.coe-field-error').remove();
         $genModal.find('.is-invalid').removeClass('is-invalid');
     });
 
-    function genFieldError($el, msg) {
-        var $wrap = $el.closest('[class*="col-"]');
-        $wrap.find('.coe-field-error').remove();
-        $el.toggleClass('is-invalid', !!msg);
-        $wrap.find('.select2-selection').toggleClass('is-invalid', !!msg);
-        if (msg) { $('<div class="coe-field-error"></div>').text(msg).appendTo($wrap); }
-        return !msg;
-    }
-
-    $genCourse.on('change', function () { if (this.value) { genFieldError($genCourse, ''); } });
+    $genCourse.on('change', function () {
+        $('#upcGenOtCount').val($genCourse.find(':selected').data('count') || '');
+        if (this.value) { fieldError($genCourse, ''); }
+    });
+    $genPrefix.on('input', function () { if ($.trim(this.value)) { fieldError($genPrefix, ''); } });
+    $genStart.on('input', function () { if ($.trim(this.value)) { fieldError($genStart, ''); } });
 
     $('#upcGenerateForm').on('submit', function (e) {
         e.preventDefault();
+        var prefix = $.trim($genPrefix.val());
+        var start  = $.trim($genStart.val());
         var ok = true;
-        ok = genFieldError($genCourse, $genCourse.val() ? '' : 'Select a course.') && ok;
-        ok = genFieldError($('#upcGenPrefix'), $.trim($('#upcGenPrefix').val()) ? '' : 'Enter a prefix.') && ok;
-        ok = genFieldError($('#upcGenStart'), $.trim($('#upcGenStart').val()) ? '' : 'Enter a start number.') && ok;
+        ok = fieldError($genCourse, $genCourse.val() ? '' : 'Select a course.') && ok;
+        ok = fieldError($genPrefix, prefix ? '' : 'Enter a prefix.') && ok;
+        ok = fieldError($genStart, /^\d{1,9}$/.test(start) ? '' : 'Enter the start number in digits.') && ok;
         if (!ok) { return; }
 
-        var course = $genCourse.val();
-        var prefix = $.trim($('#upcGenPrefix').val());
-        var start  = parseInt($('#upcGenStart').val(), 10);
-        var code   = prefix + start;
-        var esc    = function (t) { return $('<div>').text(t).html(); };
-        var newId  = 1 + Math.max(0, Math.max.apply(null,
-            dt.rows().nodes().to$().map(function () {
-                return parseInt(this.getAttribute('data-coe-id'), 10) || 0;
-            }).get()
-        ));
+        var $btn = $('#upcGenSubmit').prop('disabled', true);
 
-        var $newRow = $(dt.row.add([
-            '<input type="checkbox" class="form-check-input m-0 upc-row-check" aria-label="Select">',
-            '',
-            esc(course),
-            'Generated OT',
-            'generatedot',
-            esc(code),
-            '<span class="coe-state coe-state--pending">Pending</span>',
-            ACTION_HTML
-        ]).draw(false).node());
-
-        $newRow.attr({
-            'data-coe-id': newId,
-            'data-upc-course': course,
-            'data-upc-ot': 'Generated OT',
-            'data-upc-dt': 'generatedot',
-            'data-upc-code': code,
-            'data-upc-status': 'Pending'
-        });
-        $newRow.children('td').eq(COL.check).addClass('coe-col-check');
-        $newRow.children('td').eq(COL.course).addClass('coe-strong upc-cell-course');
-        $newRow.children('td').eq(COL.ot).addClass('upc-cell-ot');
-        $newRow.children('td').eq(COL.dt).addClass('upc-cell-dt');
-        $newRow.children('td').eq(COL.code).addClass('upc-cell-code');
-        $newRow.children('td').eq(COL.status).addClass('coe-col-center upc-cell-status')
-               .attr({'data-order': 0, 'data-search': 'Pending'});
-        $newRow.children('td').eq(COL.action).addClass('upc-cell-actions');
-
-        bootstrap.Modal.getOrCreateInstance($genModal[0]).hide();
-        Swal.fire({ icon: 'success', title: 'Generated', text: 'Unique codes generated successfully.' });
+        send(ROUTES.generate, { course_batch: $genCourse.val(), prefix: prefix, count_start: start })
+            .done(function (res) {
+                bootstrap.Modal.getOrCreateInstance($genModal[0]).hide();
+                Swal.fire({ icon: 'success', title: 'Generated', text: res.message })
+                    .then(function () { window.location.reload(); });
+            })
+            .fail(showError)
+            .always(function () { $btn.prop('disabled', false); });
     });
 });
 </script>

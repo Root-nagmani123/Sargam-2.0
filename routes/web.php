@@ -2122,6 +2122,14 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('grade-master.index');
     Route::get('unique-participant-code', [\App\Http\Controllers\Admin\COE\UniqueParticipantCodeController::class, 'index'])
         ->name('unique-participant-code.index');
+    Route::post('unique-participant-code/generate', [\App\Http\Controllers\Admin\COE\UniqueParticipantCodeController::class, 'generate'])
+        ->name('unique-participant-code.generate');
+    Route::post('unique-participant-code/freeze', [\App\Http\Controllers\Admin\COE\UniqueParticipantCodeController::class, 'freeze'])
+        ->name('unique-participant-code.freeze');
+    Route::post('unique-participant-code/bulk-delete', [\App\Http\Controllers\Admin\COE\UniqueParticipantCodeController::class, 'bulkDestroy'])
+        ->name('unique-participant-code.bulk-destroy');
+    Route::put('unique-participant-code/{code}', [\App\Http\Controllers\Admin\COE\UniqueParticipantCodeController::class, 'update'])
+        ->whereNumber('code')->name('unique-participant-code.update');
     Route::get('laptop-scriber-seats', [\App\Http\Controllers\Admin\COE\LaptopScriberSeatsController::class, 'index'])
         ->name('laptop-scriber-seats.index');
     Route::post('laptop-scriber-seats', [\App\Http\Controllers\Admin\COE\LaptopScriberSeatsController::class, 'store'])
