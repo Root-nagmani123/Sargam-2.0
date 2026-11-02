@@ -816,7 +816,7 @@ class ProcessMessBillsEmployeeController extends Controller
         array $clientTypePks,
         array $buyerNames
     ): string {
-        return 'process_mess_bills_modal_summary_v4:'
+        return 'process_mess_bills_modal_summary_v5:'
             . $this->processMessBillsCombinedCacheVersion()
             . ':'
             . md5(json_encode([
