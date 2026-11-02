@@ -1022,7 +1022,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 'k.client_id',
                 'k.client_name',
                 'k.client_type',
-                DB::raw("SUM(CASE WHEN COALESCE(i.issue_date, k.issue_date) < ? THEN {$lineExpr} ELSE 0 END) as net_before")
+                DB::raw("SUM(CASE WHEN k.issue_date < ? THEN {$lineExpr} ELSE 0 END) as net_before")
             )
             ->addBinding($dateFrom, 'select')
             ->whereIn('k.kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
