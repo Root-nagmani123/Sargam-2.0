@@ -2231,4 +2231,40 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('laptop-declaration.index');
     Route::post('laptop-declaration', [\App\Http\Controllers\Admin\COE\LaptopDeclarationController::class, 'store'])
         ->middleware('throttle:10,1')->name('laptop-declaration.store');
+
+    // COE -> Result Management
+    Route::middleware('menu.permission:coe_result_compilation')->group(function () {
+        Route::get('result-compilation', [\App\Http\Controllers\Admin\COE\ResultCompilationController::class, 'index'])
+            ->name('result-compilation.index');
+        Route::get('result-compilation/participants', [\App\Http\Controllers\Admin\COE\ResultCompilationController::class, 'participants'])
+            ->name('result-compilation.participants');
+    });
+    Route::get('merit-ranking', [\App\Http\Controllers\Admin\COE\MeritRankingController::class, 'index'])
+        ->middleware('menu.permission:coe_merit_ranking')->name('merit-ranking.index');
+
+    // COE -> Document Management
+    Route::middleware('menu.permission:coe_signature_master')->group(function () {
+        Route::get('signature-master', [\App\Http\Controllers\Admin\COE\SignatureMasterController::class, 'index'])
+            ->name('signature-master.index');
+        Route::post('signature-master', [\App\Http\Controllers\Admin\COE\SignatureMasterController::class, 'store'])
+            ->name('signature-master.store');
+        Route::patch('signature-master/{signature}/toggle-status', [\App\Http\Controllers\Admin\COE\SignatureMasterController::class, 'toggleStatus'])
+            ->whereNumber('signature')->name('signature-master.toggle-status');
+        Route::delete('signature-master/{signature}', [\App\Http\Controllers\Admin\COE\SignatureMasterController::class, 'destroy'])
+            ->whereNumber('signature')->name('signature-master.destroy');
+    });
+    // The marksheet prints the signatures, so its screens may fetch the image too.
+    Route::get('signature-master/{signature}/file', [\App\Http\Controllers\Admin\COE\SignatureMasterController::class, 'file'])
+        ->middleware('menu.permission:coe_signature_master,coe_marksheet_generation,coe_verified_marksheet')
+        ->whereNumber('signature')->name('signature-master.file');
+    Route::middleware('menu.permission:coe_marksheet_generation')->group(function () {
+        Route::get('marksheet-generation', [\App\Http\Controllers\Admin\COE\MarksheetController::class, 'generation'])
+            ->name('marksheet-generation.index');
+        Route::get('marksheet-generation/verify', [\App\Http\Controllers\Admin\COE\MarksheetController::class, 'verify'])
+            ->name('marksheet-generation.verify');
+    });
+    Route::get('verified-marksheet', [\App\Http\Controllers\Admin\COE\MarksheetController::class, 'verified'])
+        ->middleware('menu.permission:coe_verified_marksheet')->name('verified-marksheet.index');
+    Route::get('marksheet-generation/view/{course}/{ot}', [\App\Http\Controllers\Admin\COE\MarksheetController::class, 'show'])
+        ->middleware('menu.permission:coe_marksheet_generation,coe_verified_marksheet')->name('marksheet.show');
 });
