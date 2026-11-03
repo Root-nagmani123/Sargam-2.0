@@ -5,7 +5,7 @@
 
 @section('content')
 @include('protocol::partials.style')
-  <div class="container-fluid profile-page">
+  <div class="container-fluid protocol-page">
     <x-breadcrum
         title="{{ $protocolRequest->request_number . ' — ' . $protocolRequest->typeLabel() }}"
         :items="[
@@ -15,21 +15,18 @@
         ]"
     />
 
-
-    <div class="d-flex justify-content-between align-items-start mb-3">
-      <div>
-        <div class="text-muted small">Raised by</div>
-        <div class="fw-bold">{{ $protocolRequest->employee->first_name . ' ' .$protocolRequest->employee->middle_name . ' ' .$protocolRequest->employee->last_name ?? '—' }}</div>
-        <div class="text-muted small">{{ $protocolRequest->employeeDepartment->department_name ?? '—' }} &middot; {{ $protocolRequest->created_at->format('d M Y') }}</div>
-      </div>
-      <x-protocol::status-badge :status="$protocolRequest->status" />
-    </div>
+    @include('protocol::partials.request-hero', [
+        'raisedBy' => trim(preg_replace('/\s+/', ' ', ($protocolRequest->employee->first_name ?? '') . ' ' . ($protocolRequest->employee->middle_name ?? '') . ' ' . ($protocolRequest->employee->last_name ?? ''))),
+        'department' => $protocolRequest->employeeDepartment->department_name ?? null,
+    ])
 
     @include('protocol::partials.request-detail')
 
-    <div class="card-clean p-3">
-      <div class="fw-bold small text-uppercase text-muted mb-2" style="letter-spacing:.05em;">Approval Log</div>
-      <x-protocol::timeline :logs="$protocolRequest->logs" />
+    <div class="pr-card">
+      <div class="pr-card__body">
+        <h3 class="pr-card__title">Approval Log</h3>
+        <x-protocol::timeline :logs="$protocolRequest->logs" />
+      </div>
     </div>
   </div>
 @endsection

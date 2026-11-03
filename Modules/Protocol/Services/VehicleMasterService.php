@@ -62,10 +62,10 @@ class VehicleMasterService
     $editUrl = route('protocol.vehicle-master.edit', $data->id);
 
     $buttons = '
-        <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Menu actions">
-            <a href="'.$editUrl.'" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" aria-label="Edit vehicle">
-                <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">edit</i>
-                <span class="d-none d-md-inline">Edit</span>
+        <div class="pr-act-group" role="group" aria-label="Row actions">
+            <a href="'.$editUrl.'" class="pr-act pr-act--edit">
+                <span class="pr-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
+                <span class="pr-act__label">Edit</span>
             </a>';
 
     // Show Delete button only when status is not 1
@@ -73,15 +73,21 @@ class VehicleMasterService
         $deleteUrl = route('protocol.vehicle-master.destroy', $data->id);
 
         $buttons .= '
-            <form action="'.$deleteUrl.'" method="POST" class="d-inline"
+            <form action="'.$deleteUrl.'" method="POST" class="pr-delete-form"
                 onsubmit="return confirm(\'Are you sure you want to delete this record?\');">
                 '.csrf_field().'
                 '.method_field('DELETE').'
-                <button type="submit" class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1" aria-label="Delete vehicle">
-                    <span class="material-symbols-rounded fs-6" aria-hidden="true">delete</span>
-                    <span class="d-none d-md-inline">Delete</span>
+                <button type="submit" class="pr-act pr-act--del">
+                    <span class="pr-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
+                    <span class="pr-act__label">Delete</span>
                 </button>
             </form>';
+    } else {
+        $buttons .= '
+            <span class="pr-act pr-act--del is-disabled" title="Active vehicles cannot be deleted">
+                <span class="pr-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
+                <span class="pr-act__label">Delete</span>
+            </span>';
     }
 
     $buttons .= '</div>';

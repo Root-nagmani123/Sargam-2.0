@@ -5,7 +5,8 @@
 @section('page_subtitle', 'Manage permissions data')
 
 @section('setup_content')
-<div class="container-fluid profile-page">
+@include('protocol::partials.style')
+<div class="container-fluid protocol-page">
     <x-breadcrum
         title="Permissions"
         :items="[
@@ -19,12 +20,12 @@
     <style>
         .perm-page .card-panel {
             border: 1px solid #eef0f3;
-            border-radius: 14px;
+            border-radius: var(--ds-radius-card);
             box-shadow: 0 1px 3px rgba(16, 24, 40, 0.04);
         }
 
         .perm-page .search-bar .form-control {
-            border-radius: 10px 0 0 10px;
+            border-radius: var(--ds-radius-card) 0 0 var(--ds-radius-card);
             border-right: 0;
         }
         .perm-page .search-bar {
@@ -37,12 +38,12 @@
             background: #fff;
             border: 1px solid #dee1e6;
             border-right: 0;
-            border-radius: 10px 0 0 10px;
+            border-radius: var(--ds-radius-card) 0 0 var(--ds-radius-card);
             color: #9aa1ab;
         }
         .perm-page .search-bar .form-control {
             border-left: 0;
-            border-radius: 0 10px 10px 0;
+            border-radius: 0 var(--ds-radius-card) var(--ds-radius-card) 0;
         }
         .perm-page .search-bar .form-control:focus {
             box-shadow: none;
@@ -62,13 +63,13 @@
         }
         .perm-page .btn-brand {
             border-radius: 10px;
-            background: #16406b;
-            border-color: #16406b;
+            background: #004384;
+            border-color: #004384;
             font-weight: 600;
         }
         .perm-page .btn-brand:hover {
-            background: #0f2f50;
-            border-color: #0f2f50;
+            background: #00356a;
+            border-color: #00356a;
         }
 
         .perm-page .user-list-header {
@@ -91,10 +92,10 @@
         }
         .perm-page .user-list-item.active {
             background: #eef4fb;
-            border-left-color: #16406b;
+            border-left-color: #004384;
             color: inherit;
         }
-        .perm-page .user-list-item.active .fw-semibold { color: #16406b; }
+        .perm-page .user-list-item.active .fw-semibold { color: #004384; }
 
         .perm-page .avatar-circle {
             width: 38px; height: 38px; border-radius: 50%;
@@ -102,14 +103,14 @@
             font-size: 13px; font-weight: 700; color: #fff;
             flex-shrink: 0;
         }
-        .perm-page .avatar-circle.a1 { background: linear-gradient(135deg,#16406b,#2a6bab); }
+        .perm-page .avatar-circle.a1 { background: linear-gradient(135deg,#004384,#2a6bab); }
         .perm-page .avatar-circle.a2 { background: linear-gradient(135deg,#7a7f89,#9aa1ab); }
         .perm-page .avatar-circle.a3 { background: linear-gradient(135deg,#c97a3a,#e0a05c); }
         .perm-page .avatar-circle.lg { width: 48px; height: 48px; font-size: 15px; }
 
         .perm-page .role-chip {
             display: inline-flex; align-items: center; gap: 8px;
-            background: #eef4fb; color: #16406b;
+            background: #eef4fb; color: #004384;
             font-size: 0.8rem; font-weight: 600;
             padding: 6px 12px; border-radius: 20px;
             border: 1px solid #d7e6f5;
@@ -121,7 +122,7 @@
         .perm-page .role-chip .btn-close:hover { opacity: 0.9; }
 
         .perm-page .module-title {
-            font-size: 0.85rem; font-weight: 700; color: #16406b;
+            font-size: 0.85rem; font-weight: 700; color: #004384;
             margin-bottom: 10px;
             display: flex; align-items: center; gap: 8px;
         }
@@ -136,8 +137,8 @@
         }
 
         .perm-page .form-check-input:checked {
-            background-color: #16406b;
-            border-color: #16406b;
+            background-color: #004384;
+            border-color: #004384;
         }
         .perm-page .form-check-input:disabled {
             background-color: #c7d3e0;
@@ -183,7 +184,7 @@
 
    <div class="perm-page">
  
-        <h4 class="mb-3 fw-bold">Permission assignment</h4>
+        
         <div class="row g-3">
             <!-- Left: user list -->
             <div class="col-md-4">
@@ -264,8 +265,8 @@
                     </div>
  
                     <div class="d-flex justify-content-end gap-2 pt-2 border-top">
-                        <button type="button" class="btn btn-outline-brand px-3 mt-3" onclick="location.reload()">Cancel</button>
-                        <button type="button" class="btn btn-brand text-white px-3 mt-3" onclick="savePermissions()">Save changes</button>
+                        <button type="button" class="btn pr-btn-cancel mt-3" onclick="location.reload()">Cancel</button>
+                        <button type="button" class="btn pr-btn-submit mt-3" onclick="savePermissions()">Save changes</button>
                     </div>
  
                 </div>

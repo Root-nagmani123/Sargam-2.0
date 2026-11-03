@@ -156,17 +156,18 @@ class RequestService
     private function actionButtons($data)
     {
         $editUrl = route('protocol.requests.show', $data->id);
-        $btn = '<a href="' . $editUrl . '" class="btn btn-sm btn-primary">
-                        View <i class="bi bi-chevron-right"></i>
-                    </a>';
-        
+        $btn = '<div class="pr-act-group" role="group" aria-label="Row actions">'
+            . '<a href="' . $editUrl . '" class="pr-act pr-act--view">'
+            . '<span class="pr-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span>'
+            . '<span class="pr-act__label">View</span></a>';
+
         if($data->status == 'pending') {
-            $btn .= '<a href="' . route('protocol.requests.edit', $data->id) . '" class="btn btn-sm btn-warning mx-2">
-                        Edit <i class="bi bi-chevron-right"></i>
-                    </a>';
+            $btn .= '<a href="' . route('protocol.requests.edit', $data->id) . '" class="pr-act pr-act--edit">'
+                . '<span class="pr-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>'
+                . '<span class="pr-act__label">Edit</span></a>';
         }
-        
-        return $btn;
+
+        return $btn . '</div>';
     }
 
     public function getAll()

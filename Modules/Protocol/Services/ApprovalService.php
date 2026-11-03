@@ -247,7 +247,10 @@ class ApprovalService
         $editUrl = $data->status === ProtocolRequest::STATUS_RECOMMENDED && (int) $data->recommended_to_id === (int) Auth::id()
             ? route('protocol.manager.review', $data->id)
             : route('protocol.approval.review', $data->id);
-        return '<a href="' . $editUrl . '" class="btn btn-sm btn-outline-saffron">Review <i class="bi bi-chevron-right"></i></a>';
+        return '<div class="pr-act-group" role="group" aria-label="Row actions">'
+            . '<a href="' . $editUrl . '" class="pr-act pr-act--review">'
+            . '<span class="pr-act__icon"><i class="bi bi-clipboard-check" aria-hidden="true"></i></span>'
+            . '<span class="pr-act__label">Review</span></a></div>';
     }
 
     public function getAll()

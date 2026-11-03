@@ -42,6 +42,16 @@ class ApprovalController extends Controller
     }
 
     /**
+     * All Requests locked to status=recommended, for holders of protocol.recommended_booking.
+     */
+    public function recommendedRequests(Request $request)
+    {
+        $request->merge(['status' => ProtocolRequest::STATUS_RECOMMENDED]);
+
+        return $this->allRequests($request);
+    }
+
+    /**
      * Queue of requests awaiting Protocol Staff review.
      */
     public function queue()

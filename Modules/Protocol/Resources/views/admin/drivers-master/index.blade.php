@@ -6,7 +6,7 @@
 
 @section('setup_content')
   @include('protocol::partials.style')
-  <div class="container-fluid profile-page">
+  <div class="container-fluid protocol-page">
     <x-breadcrum
         title="Drivers Master"
         :items="[
@@ -19,89 +19,28 @@
         buttonIcon="add"
     />
 
-    <div class="card-clean p-3">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-          <div class="section-title">Drivers Master</div>
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
           <div class="section-sub">Manage driver master data</div>
+          <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+            <div class="programme-dt-search" data-dt-search-for="driver_master_table"></div>
+          </div>
         </div>
-      </div>
 
-      <div class="datatables">
-        <div class="card" >
-            <div class="card-body">
-                <div class="table-responsive">
-                    <x-data-table.table 
-                        :columns="$pageData['columns']"
-                        :filters="[]" 
-                        ajax-route="{{route('protocol.driver-master.index')}}" 
-                        id="driver_master_table" 
-                    />
-                </div>
-            </div>
+        <div class="programme-dt-panel">
+          <div class="table-responsive">
+            <x-data-table.table
+                :columns="$pageData['columns']"
+                :filters="[]"
+                ajax-route="{{ route('protocol.driver-master.index') }}"
+                id="driver_master_table"
+            />
+          </div>
         </div>
+
+        <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="driver_master_table"></div>
       </div>
     </div>
   </div>
 @endsection
-
-@push('styles')
-  <style>
-    .protocol-tabs{
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: #f4f5f7;
-      border-radius: 10px;
-      padding: 6px;
-      border: 1px solid #e5e7eb;
-  }
-
-  .protocol-tabs .nav-item{
-      margin: 0;
-  }
-
-  .protocol-tabs .nav-link{
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: #6b7280;
-      font-size: 14px;
-      font-weight: 600;
-      border: 0;
-      border-radius: 8px;
-      padding: 6px 15px;
-      background: transparent;
-      transition: .2s ease;
-  }
-
-  .protocol-tabs .nav-link:hover{
-      color: #0d6efd;
-      background: rgba(13,110,253,.08);
-  }
-
-  .protocol-tabs .nav-link.active{
-      background: #0d4f9c;
-      color: #fff;
-      box-shadow: 0 2px 6px rgba(0,0,0,.12);
-  }
-
-  .protocol-tabs .count{
-      background: rgba(255,255,255,.2);
-      color: inherit;
-      border-radius: 999px;
-      padding: 2px 7px;
-      font-size: 12px;
-      font-weight: 700;
-  }
-
-  .protocol-tabs .nav-link:not(.active) .count{
-      background: #e5e7eb;
-      color: #6b7280;
-  }
-  </style>
-@endpush
-
-
-@push('scripts')
-@endpush
