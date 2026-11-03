@@ -1749,8 +1749,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::get('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'index'])->name('issue-escalation-matrix.index');
     Route::get('issue-escalation-matrix/data', [IssueEscalationMatrixController::class, 'data'])->name('issue-escalation-matrix.data');
     Route::get('issue-escalation-matrix/export/{format?}', [IssueEscalationMatrixController::class, 'export'])->name('issue-escalation-matrix.export');
-    Route::post('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'store'])->name('issue-escalation-matrix.store');
-    Route::put('issue-escalation-matrix/{categoryId}', [IssueEscalationMatrixController::class, 'update'])->name('issue-escalation-matrix.update');
+    // The matrix decides every complaint's nodal officer; only the Super Admin
+    // who sees its sidebar link (setup_issue_management) may change it.
+    Route::middleware(['issue.reports.admin'])->group(function () {
+        Route::post('issue-escalation-matrix', [IssueEscalationMatrixController::class, 'store'])->name('issue-escalation-matrix.store');
+        Route::put('issue-escalation-matrix/{categoryId}', [IssueEscalationMatrixController::class, 'update'])->name('issue-escalation-matrix.update');
+    });
 });
 // Mess Management (auth required — layout assumes logged-in user)
 Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(function () {

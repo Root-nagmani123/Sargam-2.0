@@ -167,16 +167,22 @@ class IssueManagementController extends Controller
 
         $applyUserScope = function ($builder) {
             if (! hasRole('Admin') && ! hasRole('SuperAdmin')) {
-                $ids = getEmployeeIdsForUser(Auth::user()->user_id);
-                if (empty($ids)) {
-                    $ids = [Auth::user()->user_id];
-                }
-                // Index page: only show issues raised by the employee themselves.
-                // Issues where they are assigned_to are handled by the CENTCOM page.
+                // Empty (whereIn [] matches nothing) for a login that is nobody.
+                $ids = $this->signedInEmployeeIds();
+                // Everything the employee is party to: raised by them, logged by
+                // them, nodal officer on it, or handed to them. assigned_to is a
+                // VARCHAR carrying the employee pk as a string (or a free-text
+                // name for the "Other" flow), so the ids compare as strings.
+                //
+                // The CENTCOM tab remains the dedicated assigned queue, but the
+                // ticket has to surface here too: this is the page the sidebar
+                // lands on, and an assignee who never opens that tab would
+                // otherwise never see the ticket at all.
                 $builder->where(function ($q) use ($ids) {
                     $q->whereIn('employee_master_pk', $ids)
                         ->orWhereIn('issue_logger', $ids)
-                        ->orWhereIn('created_by', $ids);
+                        ->orWhereIn('created_by', $ids)
+                        ->orWhereIn('assigned_to', $ids);
                 });
             }
         };
@@ -184,8 +190,7 @@ class IssueManagementController extends Controller
         // Raised by: "all" = raised by himself or other employee, "self" = raised by himself only
         $applyRaisedBy = function ($builder) use ($request) {
             if ($request->get('raised_by') === 'self') {
-                $ids = getEmployeeIdsForUser(Auth::user()->user_id);
-                $builder->whereIn('created_by', empty($ids) ? [Auth::user()->user_id] : $ids);
+                $builder->whereIn('created_by', $this->signedInEmployeeIds());
             }
         };
 
@@ -214,12 +219,12 @@ class IssueManagementController extends Controller
             }
 
             // Filter by category
-            if ($request->has('category') && ! empty($request->category)) {
+            if ($request->filled('category')) {
                 $builder->where('issue_category_master_pk', $request->category);
             }
 
             // Filter by priority
-            if ($request->has('priority') && ! empty($request->priority)) {
+            if ($request->filled('priority')) {
                 $builder->where('issue_priority_master_pk', $request->priority);
             }
 
@@ -248,7 +253,7 @@ class IssueManagementController extends Controller
         }
 
         // Single list: all complaints. Status filter only when user selects from dropdown.
-        if ($request->filled('status') && $request->status !== '') {
+        if ($request->filled('status')) {
             $query->where('issue_status', (int) $request->status);
         }
 
@@ -295,7 +300,7 @@ class IssueManagementController extends Controller
             || $request->filled('priority')
             || $request->filled('date_from')
             || $request->filled('date_to')
-            || ($request->has('status') && $request->get('status') !== '');
+            || $request->filled('status');
 
         return view('admin.issue_management.index', compact(
             'categories',
@@ -426,9 +431,10 @@ class IssueManagementController extends Controller
      * The two grids differ only in the action column — All Requests offers
      * View + Edit (to the raiser/logger), Centcom offers Update Status + View.
      *
+     * @param  array<int, string>  $ids  signedInEmployeeIds(), the set edit() checks
      * @return array<string, string>
      */
-    private function issueGridRow(IssueLogManagement $issue, $userId, string $variant = 'index'): array
+    private function issueGridRow(IssueLogManagement $issue, array $ids, string $variant = 'index'): array
     {
         $status = (int) $issue->issue_status;
 
@@ -452,7 +458,7 @@ class IssueManagementController extends Controller
             $actions = $view;
             // Edit stays available to the raiser/logger while the issue is open —
             // the old grid offered it and dropping it would lose the feature.
-            if (($issue->issue_logger == $userId || $issue->created_by == $userId) && $status !== 2) {
+            if ((in_array((string) $issue->issue_logger, $ids) || in_array((string) $issue->created_by, $ids)) && $status !== 2) {
                 $actions .= $link(route('admin.issue-management.edit', $issue->pk), 'edit', 'bi-pencil', 'Edit');
             }
             $group = 'ic-act-group';
@@ -504,9 +510,9 @@ class IssueManagementController extends Controller
      */
     private function dataTablesResponse(Request $request, array $snapshot, string $variant = 'index')
     {
-        $userId = Auth::user()->user_id;
+        $ids = $this->signedInEmployeeIds();
         $data = $this->issueManagementHydrateCentcomRows($snapshot['ids'])
-            ->map(fn (IssueLogManagement $issue) => $this->issueGridRow($issue, $userId, $variant))
+            ->map(fn (IssueLogManagement $issue) => $this->issueGridRow($issue, $ids, $variant))
             ->values();
 
         return response()->json([
@@ -535,11 +541,19 @@ class IssueManagementController extends Controller
         // keystroke in a typing run — cache it against the scope + toolbar
         // filters rather than counting 65k rows again on each draw.
         $userId = Auth::user()->user_id;
-        $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_management_records_total:v1:' . md5(json_encode([
+        // Each grid reads the same epoch as its own snapshot cache, so the count
+        // and the rows always expire together. (bumpIndexListCacheEpoch()
+        // currently bumps both epochs at once.)
+        $epoch = DataTableRedisCache::readListEpoch(
+            $variant === 'centcom' ? self::CENTCOM_LISTING_CACHE_EPOCH_KEY : self::LISTING_CACHE_EPOCH_KEY
+        );
+        // v4 + scoped_ids: logins sharing a user_id across categories no
+        // longer share an identity (F-006), so they must not share a count.
+        $cacheKey = 'admin_issue_management_records_total:v4:' . md5(json_encode([
             'epoch' => $epoch,
             'variant' => $variant,
             'user_id' => $userId,
+            'scoped_ids' => $this->signedInEmployeeIds(),
             'is_admin' => hasRole('Admin') || hasRole('SuperAdmin'),
             'raised_by' => $request->get('raised_by'),
             'status' => $request->get('status'),
@@ -584,16 +598,12 @@ class IssueManagementController extends Controller
         $userId = Auth::user()->user_id;
         $scopedIds = null;
         if (! $isAdmin) {
-            $scopedIds = getEmployeeIdsForUser($userId);
-            if (empty($scopedIds)) {
-                $scopedIds = [$userId];
-            }
-            $scopedIds = array_map('strval', $scopedIds);
+            $scopedIds = $this->signedInEmployeeIds();
             sort($scopedIds);
         }
 
         $epoch = DataTableRedisCache::readListEpoch(self::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_management_index:v3:' . md5(json_encode([
+        $cacheKey = 'admin_issue_management_index:v4:' . md5(json_encode([
             'epoch' => $epoch,
             'is_admin' => $isAdmin,
             'user_id' => $userId,
@@ -871,10 +881,7 @@ class IssueManagementController extends Controller
         // Centcom listing: show only issues where the logged-in employee
         // is either the configured nodal officer (employee_master_pk)
         // or currently assigned handler (assigned_to).
-        $ids = getEmployeeIdsForUser(Auth::user()->user_id);
-        if (empty($ids)) {
-            $ids = [Auth::user()->user_id];
-        }
+        $ids = $this->signedInEmployeeIds();
 
         $query->where(function ($q) use ($ids) {
             $q->whereIn('employee_master_pk', $ids)
@@ -915,18 +922,22 @@ class IssueManagementController extends Controller
             });
         }
 
-        // Status (use has + !== '' so "0" works)
-        if ($request->has('status') && $request->status !== '') {
+        // filled(), not has() + !== '': the grid always sends these keys, and an
+        // unset dropdown arrives as "" which ConvertEmptyStringsToNull rewrites to
+        // null before the controller sees it. null !== '' is true, so the old
+        // guard ran `where issue_status = (int) null` — every draw was silently
+        // pinned to status 0 and an assigned complaint in any other state
+        // vanished from this grid while still showing on All Requests.
+        // filled() drops null and "" and keeps "0", which is what "Reported" needs.
+        if ($request->filled('status')) {
             $query->where('issue_status', (int) $request->status);
         }
 
-        // Category
-        if ($request->has('category') && $request->category !== '') {
+        if ($request->filled('category')) {
             $query->where('issue_category_master_pk', (int) $request->category);
         }
 
-        // Priority
-        if ($request->has('priority') && $request->priority !== '') {
+        if ($request->filled('priority')) {
             $query->where('issue_priority_master_pk', (int) $request->priority);
         }
 
@@ -998,15 +1009,15 @@ class IssueManagementController extends Controller
     private function issueManagementCentcomCachedSnapshot(Request $request, int $page, int $perPage): array
     {
         $userId = Auth::user()->user_id;
-        $scopedIds = getEmployeeIdsForUser($userId);
-        if (empty($scopedIds)) {
-            $scopedIds = [$userId];
-        }
-        $scopedIds = array_map('strval', $scopedIds);
+        $scopedIds = $this->signedInEmployeeIds();
         sort($scopedIds);
 
         $epoch = DataTableRedisCache::readListEpoch(self::CENTCOM_LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'admin_issue_management_centcom:v2:' . md5(json_encode([
+        // v3: this grid's filter guards changed, so every snapshot stored under
+        // v2 was computed with a status = 0 filter that should never have been
+        // applied. Those entries live for the full TTL, so the key has to retire
+        // with the behaviour rather than wait them out.
+        $cacheKey = 'admin_issue_management_centcom:v3:' . md5(json_encode([
             'epoch' => $epoch,
             'user_id' => $userId,
             'scoped_ids' => $scopedIds,
@@ -1059,7 +1070,7 @@ class IssueManagementController extends Controller
             || $request->filled('priority')
             || $request->filled('date_from')
             || $request->filled('date_to')
-            || ($request->has('status') && $request->get('status') !== '');
+            || $request->filled('status');
 
         return view('admin.issue_management.centcom', compact(
             'categories',
@@ -1107,7 +1118,8 @@ class IssueManagementController extends Controller
             $employees = collect([]);
         }
 
-        $currentUserEmployeeId = Auth::user()->user_id ?? null;
+        // Preselects the complainant; a login that is no employee preselects nobody.
+        $currentUserEmployeeId = $this->signedInEmployeeIds()[0] ?? null;
 
         return view('admin.issue_management.create', compact(
             'categories',
@@ -1121,54 +1133,73 @@ class IssueManagementController extends Controller
     }
 
     /**
-     * Get nodal employees for a category (Level 1 only - selectable).
-     * Level 2 & 3 returned for display only.
+     * Nodal officers the Create / Edit form may offer for a category.
+     *
+     * Only officers resolveNodalOfficer() would accept are listed, and the
+     * preselected one is the officer it would choose: a Level 1 officer who
+     * cannot sign in, or who is the complainant / logger, used to be offered
+     * and preselected, then silently replaced by the server.
+     *
+     * The signed-in user is always excluded. The optional `complainant` and
+     * `logger` query parameters name the other people store() / update()
+     * exclude. They only narrow what is displayed; the server re-checks.
+     *
+     * With no eligible Level 1 officer, `level1` holds the single Level 2 or 3
+     * officer the complaint will go to, and `assigned_level` says which level.
+     * Level 2 & 3 are otherwise returned for display only.
      */
-    public function getNodalEmployees($categoryId)
+    public function getNodalEmployees(Request $request, $categoryId)
     {
         try {
-            $all = DB::table('issue_category_employee_map as b')
-                ->join('employee_master as d', function ($join) {
-                    $join->on('b.employee_master_pk', '=', 'd.pk');
-                    if (Schema::hasColumn('employee_master', 'pk_old')) {
-                        $join->orOn('b.employee_master_pk', '=', 'd.pk_old');
-                    }
-                })
-                ->where('b.issue_category_master_pk', $categoryId)
-                ->select(
-                    'b.priority',
-                    'b.days_notify',
-                    'd.pk as employee_pk',
-                    'd.first_name',
-                    'd.middle_name',
-                    'd.last_name',
-                    DB::raw("TRIM(CONCAT(COALESCE(d.first_name, ''), ' ', COALESCE(d.middle_name, ''), ' ', COALESCE(d.last_name, ''))) as employee_name")
-                )
-                ->orderBy('b.priority', 'asc')
-                ->get();
+            $all = $this->escalationMatrixRows($categoryId);
 
-            $level1 = $all->where('priority', 1)->values();
             $level2 = $all->where('priority', 2)->first();
             $level3 = $all->where('priority', 3)->first();
 
-            if ($level1->isEmpty()) {
+            $excludedIds = $this->employeeIdsFor(
+                $this->employeeIdQuery($request, 'complainant'),
+                $this->employeeIdQuery($request, 'logger'),
+                ...$this->signedInEmployeeIds()
+            );
+
+            $default = $this->resolveNodalOfficer($categoryId, null, $excludedIds);
+            if ($default === null) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No Level 1 nodal employees found for this category',
+                    'message' => $all->isEmpty()
+                        ? 'No Level 1 nodal employees found for this category'
+                        : $this->noNodalOfficerError($categoryId, 'no complaint can be assigned in it')->errors()['nodal_employee_id'][0],
                     'data' => [],
                     'level1' => [],
                     'level1_auto_select' => null,
+                    'assigned_level' => null,
                     'level2' => null,
                     'level3' => null,
                 ], 200);
             }
 
+            $eligibleLevelOne = $this->eligibleNodalOfficers($all, 1, $excludedIds);
+            if ($eligibleLevelOne->isNotEmpty()) {
+                $assignedLevel = 1;
+                $offered = $all->where('priority', 1)
+                    ->filter(fn ($row) => $eligibleLevelOne->contains((string) $row->employee_pk));
+            } else {
+                // resolveNodalOfficer() walked past Level 1; offer only its choice.
+                $assignedLevel = (int) $all->first(fn ($row) => (string) $row->employee_pk === $default)->priority;
+                $offered = $all->where('priority', $assignedLevel)
+                    ->filter(fn ($row) => (string) $row->employee_pk === $default);
+            }
+            $offered = $offered->unique('employee_pk')->values();
+
             return response()->json([
                 'success' => true,
-                'message' => 'Nodal employees fetched successfully',
-                'data' => $level1->toArray(),
-                'level1' => $level1->toArray(),
-                'level1_auto_select' => $level1->first()->employee_pk,
+                'message' => $assignedLevel === 1
+                    ? 'Nodal employees fetched successfully'
+                    : 'No Level 1 officer of this category can take this complaint, so it will go to the Level ' . $assignedLevel . ' officer.',
+                'data' => $offered->toArray(),
+                'level1' => $offered->toArray(),
+                'level1_auto_select' => $default,
+                'assigned_level' => $assignedLevel,
                 'level2' => $level2 ? ['employee_name' => $level2->employee_name, 'days_notify' => $level2->days_notify] : null,
                 'level3' => $level3 ? ['employee_name' => $level3->employee_name, 'days_notify' => $level3->days_notify] : null,
             ], 200);
@@ -1179,6 +1210,205 @@ class IssueManagementController extends Controller
                 'data' => []
             ], 500);
         }
+    }
+
+    /** Escalation matrix rows for a category, Level 1 first. */
+    private function escalationMatrixRows($categoryId): \Illuminate\Support\Collection
+    {
+        return DB::table('issue_category_employee_map as b')
+            ->join('employee_master as d', function ($join) {
+                $join->on('b.employee_master_pk', '=', 'd.pk');
+                if (Schema::hasColumn('employee_master', 'pk_old')) {
+                    $join->orOn('b.employee_master_pk', '=', 'd.pk_old');
+                }
+            })
+            ->where('b.issue_category_master_pk', $categoryId)
+            ->select(
+                'b.priority',
+                'b.days_notify',
+                'd.pk as employee_pk',
+                'd.first_name',
+                'd.middle_name',
+                'd.last_name',
+                DB::raw("TRIM(CONCAT(COALESCE(d.first_name, ''), ' ', COALESCE(d.middle_name, ''), ' ', COALESCE(d.last_name, ''))) as employee_name")
+            )
+            ->orderBy('b.priority', 'asc')
+            // A level's "first" officer is the one offered and saved; keep it stable between requests.
+            ->orderBy('b.pk', 'asc')
+            ->get();
+    }
+
+    /**
+     * The nodal officer a complaint in this category gets, decided here and
+     * not by the form: the nodal officer can set any status, so a nodal_employee_id
+     * taken from the request let a complainant or logger make themselves nodal
+     * and step around the status lock in status_update().
+     *
+     * Levels are walked in order (Level 1, then 2, then 3) and resolution
+     * stops at the first level with at least one eligible officer: listed at
+     * that level, not one of $excludedIds (the complainant / logger), and able
+     * to sign in (see eligibleNodalOfficers()). Level 2 is used only when no
+     * Level 1 officer is eligible, Level 3 only when neither 1 nor 2 has one.
+     *
+     * The requested officer is honoured only when getNodalEmployees() offers
+     * them: any eligible officer at Level 1, but at Level 2 / 3 only that
+     * level's first eligible officer, the one this method chooses. Any other
+     * request (another level, an ineligible officer, or a Level 2 / 3 officer
+     * the form never offered) is ignored and that choice is used. Null when
+     * no level has an eligible officer; the
+     * caller must then refuse the complaint, because status_update() admits
+     * nobody to a complaint without a nodal officer or assignee. An excluded
+     * person is never returned: falling back to them would hand the
+     * complainant / logger the nodal officer's status rights.
+     *
+     * @param  array<int, string>  $excludedIds
+     */
+    private function resolveNodalOfficer($categoryId, $requested, array $excludedIds): ?string
+    {
+        $rows = $this->escalationMatrixRows($categoryId);
+
+        $requested = ($requested === null || $requested === '') ? null : (string) $requested;
+
+        foreach ([1, 2, 3] as $level) {
+            $eligible = $this->eligibleNodalOfficers($rows, $level, $excludedIds);
+            if ($eligible->isEmpty()) {
+                continue;
+            }
+            // Honour only what getNodalEmployees() offers: every eligible
+            // Level 1 officer, or at Level 2 / 3 just the first.
+            if ($requested !== null && $level === 1 && $eligible->contains($requested)) {
+                return $requested;
+            }
+            return $eligible->first();
+        }
+
+        return null;
+    }
+
+    /**
+     * Officers the matrix lists at $level, minus $excludedIds and minus anyone
+     * who cannot sign in. A nodal officer who never reaches the login screen
+     * leaves the complaint with nobody to act on it — the same reason
+     * status_update() refuses such an employee as a new assignee, and the
+     * same rule (User::employeeCanSignIn()).
+     *
+     * @param  array<int, string>  $excludedIds
+     * @return \Illuminate\Support\Collection<int, string>
+     */
+    private function eligibleNodalOfficers(\Illuminate\Support\Collection $rows, int $level, array $excludedIds): \Illuminate\Support\Collection
+    {
+        return $rows->where('priority', $level)
+            ->pluck('employee_pk')
+            ->map(fn ($pk) => (string) $pk)
+            ->unique()
+            ->reject(fn ($pk) => in_array($pk, $excludedIds, true))
+            ->filter(fn ($pk) => User::employeeCanSignIn($pk))
+            ->values();
+    }
+
+    /**
+     * The sentence store() / update() append to their success message when
+     * the officer saved is not the one the form sent, so a stale or tampered
+     * pick is never replaced silently. Empty when they match. $kept: update()
+     * kept the stored officer rather than resolving a new one.
+     */
+    private function nodalOverrideNote($requested, $savedPk, bool $kept = false): string
+    {
+        if ($requested === null || $requested === ''
+            || in_array((string) $savedPk, $this->employeeIdsFor($requested), true)) {
+            return '';
+        }
+
+        $officer = EmployeeMaster::findByIdOrPkOld($savedPk);
+        $name = $officer
+            ? trim(preg_replace('/\s+/', ' ', ($officer->first_name ?? '') . ' ' . ($officer->middle_name ?? '') . ' ' . ($officer->last_name ?? '')))
+            : '';
+
+        // No cause is named: the pick may be ineligible, or eligible at a level the matrix does not use yet.
+        if ($kept) {
+            return ' The nodal officer you picked is not on offer for this complaint, so '
+                . ($name !== '' ? $name . ' was kept as its nodal officer.' : 'its nodal officer was kept unchanged.');
+        }
+
+        return ' The nodal officer you picked is not on offer for this complaint, so it was assigned to '
+            . ($name !== '' ? $name : 'the next eligible officer in the escalation matrix') . ' instead.';
+    }
+
+    /** The error for a category in which no level has an eligible nodal officer. */
+    private function noNodalOfficerError($categoryId, string $refusal): ValidationException
+    {
+        $configured = $this->escalationMatrixRows($categoryId)->isNotEmpty();
+
+        return ValidationException::withMessages([
+            'nodal_employee_id' => [$configured
+                ? 'The escalation matrix of this category has no Level 1, 2 or 3 officer who can sign in, other than the complainant or issue logger, so ' . $refusal . '. Please contact the administrator.'
+                : 'No nodal officer is configured in the escalation matrix of this category, so ' . $refusal . '. Please contact the administrator.'],
+        ]);
+    }
+
+    /**
+     * Every employee id (pk and pk_old) the given employees go by.
+     *
+     * @return array<int, string>
+     */
+    private function employeeIdsFor(...$employeeIds): array
+    {
+        $ids = [];
+        foreach ($employeeIds as $employeeId) {
+            if ($employeeId === null || $employeeId === '') {
+                continue;
+            }
+            $ids = array_merge($ids, getEmployeeIdsForUser($employeeId) ?: [(string) $employeeId]);
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * Every employee id (pk and pk_old) the signed-in user goes by, for the
+     * list / Centcom scopes and the in_array() ownership checks in show(),
+     * edit(), update() and status_update().
+     *
+     * The login is an employee only as User::complaintEmployeePkForLogin()
+     * says, i.e. by its category (F-006): a student, or a NULL-category login
+     * whose user_id merely equals an employee's pk, is nobody's employee even
+     * though the numbers match. getEmployeeIdsForUser() ignored the category.
+     *
+     * A non-student login that is no employee keeps its own user_id, which
+     * then matches only what it logged — unless that number is some
+     * employee's pk or pk_old, when it would match that employee's complaints.
+     *
+     * Empty for a login whose user_id is NULL or empty: [""] would match every
+     * complaint with a NULL identity field, since NULL casts to "" too.
+     *
+     * @return array<int, string>
+     */
+    private function signedInEmployeeIds(): array
+    {
+        $user = Auth::user();
+        $userId = $user->user_id ?? null;
+        if ($userId === null || $userId === '' || $user->user_category === 'S') {
+            return [];
+        }
+
+        $employeePk = User::complaintEmployeePkForLogin($user->pk);
+        if ($employeePk !== null) {
+            $row = DB::table('employee_master')->where('pk', $employeePk)->first(['pk', 'pk_old']);
+
+            return array_values(array_filter(array_map('strval', [$row->pk, $row->pk_old]), fn ($id) => $id !== ''));
+        }
+
+        $isEmployeeKey = DB::table('employee_master')->where('pk', $userId)->orWhere('pk_old', $userId)->exists();
+
+        return $isEmployeeKey ? [] : [(string) $userId];
+    }
+
+    /** An employee id from the query string, or null unless it is all digits. */
+    private function employeeIdQuery(Request $request, string $key): ?string
+    {
+        $value = $request->query($key);
+
+        return is_string($value) && ctype_digit($value) ? $value : null;
     }
 
     /**
@@ -1255,14 +1485,39 @@ class IssueManagementController extends Controller
                 'complaint_img_url.*.max' => 'Each attachment must not exceed 5MB.',
             ]);
 
+            // created_by may name someone else (logging on their behalf);
+            // issue_logger is the signed-in user as signedInEmployeeIds() names
+            // them. Neither may be the nodal officer by their own choice — see
+            // resolveNodalOfficer(). Nor may anyone who cannot sign in.
+            // With no eligible officer at any level the complaint is refused:
+            // stored without one, nobody could ever change its status.
+            // Not the raw user_id: a student or NULL-category login sharing an
+            // employee's pk would hand that employee the logger's rights (L-69).
+            // A login that is nobody is logged as NULL ("NA" on the detail page),
+            // never as the complainant (F-010).
+            $loggerIds = $this->signedInEmployeeIds();
+            $nodalEmployeePk = $this->resolveNodalOfficer(
+                $request->issue_category_id,
+                $request->nodal_employee_id,
+                $this->employeeIdsFor($request->created_by, ...$loggerIds)
+            );
+            if ($nodalEmployeePk === null) {
+                throw $this->noNodalOfficerError($request->issue_category_id, 'the complaint cannot be logged');
+            }
+
+            // The form lists only officers the resolver accepts, but it can be
+            // stale (e.g. the complainant changed after it loaded). Say so
+            // rather than file the complaint under someone else silently.
+            $successMessage = 'Complaint submitted successfully!' . $this->nodalOverrideNote($request->nodal_employee_id, $nodalEmployeePk);
+
             $data = array(
                 'issue_category_master_pk' => $request->issue_category_id,
                 'issue_priority_master_pk' => $request->issue_priority_id,
                 'location' => $request->location,
                 'description' => $request->description,
                 'created_by' => $request->created_by,
-                'employee_master_pk' => $request->nodal_employee_id,
-                'issue_logger' => Auth::user()->user_id ?? $request->created_by,
+                'employee_master_pk' => $nodalEmployeePk,
+                'issue_logger' => $loggerIds[0] ?? null,
                 'issue_status' => 0,
                 'created_date' => now()->setTimezone('Asia/Kolkata')->format('Y-m-d H:i:s'),
             );
@@ -1338,7 +1593,7 @@ class IssueManagementController extends Controller
             static::bumpIndexListCacheEpoch();
 
             return redirect()->route('admin.issue-management.show', $id)
-                ->with('success', 'Complaint submitted successfully!');
+                ->with('success', $successMessage);
             
         } catch (ValidationException $e) {
             return back()->withInput()->withErrors($e->validator);
@@ -1368,12 +1623,11 @@ class IssueManagementController extends Controller
             'logger'
         ])->findOrFail($id);
 
+        // Also handed to the view, so the controls it shows follow the same ids.
+        $viewerIds = $this->signedInEmployeeIds();
+
         if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
-            $userId = Auth::user()->user_id;
-            $ids = getEmployeeIdsForUser($userId);
-            if (empty($ids)) {
-                $ids = [(string) $userId];
-            }
+            $ids = $viewerIds;
             $canView = in_array((string) $issue->created_by, $ids) || in_array((string) $issue->issue_logger, $ids)
                 || in_array((string) $issue->employee_master_pk, $ids) || in_array((string) $issue->assigned_to, $ids);
             if (!$canView) {
@@ -1408,6 +1662,9 @@ class IssueManagementController extends Controller
                     )
                     ->first();
                 if ($assigned) {
+                    // Same shape as getEmployeesAndFacultyForComplaint() — the
+                    // dropdown reads can_login on every row it renders.
+                    $assigned->can_login = User::employeeCanSignIn($assigned->employee_pk) ? 1 : 0;
                     $employees = $employees->prepend($assigned);
                 }
             }
@@ -1457,7 +1714,7 @@ class IssueManagementController extends Controller
             }
         }
 
-        return view('admin.issue_management.show', compact('issue', 'employees', 'locationFallback'));
+        return view('admin.issue_management.show', compact('issue', 'employees', 'locationFallback', 'viewerIds'));
     }
 
     /**
@@ -1474,16 +1731,17 @@ class IssueManagementController extends Controller
         ])->findOrFail($id);
         
         // Allow complainant (created_by) OR logger (issue_logger) to edit
-        $editIds = getEmployeeIdsForUser(Auth::user()->user_id);
-        if (empty($editIds)) {
-            $editIds = [(string) Auth::user()->user_id];
-        }
+        $editIds = $this->signedInEmployeeIds();
         $canEdit = in_array((string) $issue->issue_logger, $editIds) || in_array((string) $issue->created_by, $editIds);
         if (!$canEdit) {
             return redirect()->route('admin.issue-management.show', $issue->pk)
                 ->with('error', 'You can only edit issues you created or logged on behalf.');
         }
-        
+        if ((int) $issue->issue_status === IssueLogManagement::STATUS_COMPLETED) {
+            return redirect()->route('admin.issue-management.show', $issue->pk)
+                ->with('error', 'A completed complaint cannot be edited. Reopen it first.');
+        }
+
         // print_r($issue->toArray()); exit;
 
         $categories = IssueCategoryMaster::active()->get();
@@ -1492,7 +1750,14 @@ class IssueManagementController extends Controller
         
         // Complaint section: employees + faculty only (user_credentials.user_category != 'S')
         $employees = User::getEmployeesAndFacultyForComplaint();
-        
+
+        // The nodal-employees endpoint offers officers by employee_master.pk,
+        // but older tickets store the officer's pk_old. Prefill with the pk so
+        // the form selects the officer's own option rather than adding a
+        // second "not on offer" entry for the same person.
+        $currentNodalPk = User::resolveEmployeePk($issue->employee_master_pk)
+            ?? (string) ($issue->employee_master_pk ?? '');
+
         // Determine current building, floor, and room
         $currentBuilding = null;
         $currentFloor = null;
@@ -1540,6 +1805,7 @@ class IssueManagementController extends Controller
             'buildings',
             'hostels',
             'employees',
+            'currentNodalPk',
             'currentBuilding',
             'currentFloor',
             'currentRoom'
@@ -1555,25 +1821,24 @@ class IssueManagementController extends Controller
       
         
         // Allow complainant (created_by) OR logger (issue_logger) to update
-        $editIds = getEmployeeIdsForUser(Auth::user()->user_id);
-        if (empty($editIds)) {
-            $editIds = [(string) Auth::user()->user_id];
-        }
+        $editIds = $this->signedInEmployeeIds();
         $canEdit = in_array((string) $issue->issue_logger, $editIds) || in_array((string) $issue->created_by, $editIds);
         if (!$canEdit) {
             return redirect()->route('admin.issue-management.show', $issue->pk)
                 ->with('error', 'You can only edit issues you created or logged on behalf.');
         }
+        // The page hides Edit on a completed complaint; that is only markup.
+        if ((int) $issue->issue_status === IssueLogManagement::STATUS_COMPLETED) {
+            return redirect()->route('admin.issue-management.show', $issue->pk)
+                ->with('error', 'A completed complaint cannot be edited. Reopen it first.');
+        }
 
+        // created_by is not validated or read here: the complainant is fixed
+        // once the complaint is raised.
         $request->validate([
             'issue_category_id' => 'required|integer|exists:issue_category_master,pk',
             'issue_sub_category_id' => 'required|integer|exists:issue_sub_category_master,pk',
             'issue_priority_id' => 'required|integer|exists:issue_priority_master,pk',
-            'created_by' => ['required', 'integer', function ($attr, $v, $fail) {
-                if (!EmployeeMaster::findByIdOrPkOld($v)) {
-                    $fail('The selected complainant is invalid.');
-                }
-            }],
             'mobile_number' => 'nullable|string',
             'nodal_employee_id' => ['required', 'integer', function ($attr, $v, $fail) {
                 if (!EmployeeMaster::findByIdOrPkOld($v)) {
@@ -1589,16 +1854,43 @@ class IssueManagementController extends Controller
             'description' => 'required|string|max:1000',
         ]);
 
+        // The nodal officer is decided server-side (resolveNodalOfficer()),
+        // the same resolution getNodalEmployees() used to offer it, so a
+        // fallback (Level 2/3) selection is honoured instead of silently
+        // discarded. Same category: a different officer the form offers may be
+        // picked, but never the complainant / logger. New category, or a
+        // complaint with no officer to keep (F-009): the matrix decides, as in
+        // store().
+        $excludedIds = $this->employeeIdsFor($issue->created_by, $issue->issue_logger, ...$this->signedInEmployeeIds());
+        $keptStored = false;
+        $sameCategory = (int) $request->issue_category_id === (int) $issue->issue_category_master_pk;
+        if ($sameCategory && (string) ($issue->employee_master_pk ?? '') !== '') {
+            $requested = (string) $request->nodal_employee_id;
+            if ($requested !== '' && $requested === User::resolveEmployeePk($issue->employee_master_pk)) {
+                // The form offers the current officer under their pk (edit());
+                // picking them again keeps the stored key, pk_old or not.
+                $nodalEmployeePk = $issue->employee_master_pk;
+            } else {
+                $resolved = $this->resolveNodalOfficer($request->issue_category_id, $request->nodal_employee_id, $excludedIds);
+                $keptStored = ! ($resolved !== null && $resolved === $requested);
+                $nodalEmployeePk = $keptStored ? $issue->employee_master_pk : $resolved;
+            }
+        } else {
+            $nodalEmployeePk = $this->resolveNodalOfficer($request->issue_category_id, $request->nodal_employee_id, $excludedIds);
+            if ($nodalEmployeePk === null) {
+                throw $this->noNodalOfficerError($request->issue_category_id, $sameCategory ? 'the complaint cannot be saved without one' : 'the complaint cannot be moved there');
+            }
+        }
+
         DB::beginTransaction();
         try {
-            // Update main issue record
+            // Update main issue record. created_by is deliberately absent.
             $issue->update([
                 'issue_category_master_pk' => $request->issue_category_id,
                 'issue_priority_master_pk' => $request->issue_priority_id,
-                'created_by' => $request->created_by,
                 'location' => $request->location,
                 'description' => $request->description,
-                'employee_master_pk' => $request->nodal_employee_id,
+                'employee_master_pk' => $nodalEmployeePk,
                 'updated_by' => Auth::id(),
                 'updated_date' => now(),
             ]);
@@ -1648,11 +1940,12 @@ class IssueManagementController extends Controller
             static::bumpIndexListCacheEpoch();
 
             $showUrl = route('admin.issue-management.show', $issue->pk);
+            $successMessage = 'Issue updated successfully.' . $this->nodalOverrideNote($request->nodal_employee_id, $nodalEmployeePk, $keptStored);
             if ($request->filled('from_modal')) {
-                session()->flash('success', 'Issue updated successfully.');
+                session()->flash('success', $successMessage);
                 return response()->view('admin.issue_management.close_modal_redirect', ['url' => $showUrl]);
             }
-            return redirect()->to($showUrl)->with('success', 'Issue updated successfully.');
+            return redirect()->to($showUrl)->with('success', $successMessage);
         // \Throwable, not \Exception: a PHP Error (TypeError and friends) would
         // otherwise skip this handler and leave the transaction open, holding
         // locks for the rest of the request.
@@ -1972,11 +2265,7 @@ class IssueManagementController extends Controller
     public function status_update(Request $request, $id)
     {
         $issue = IssueLogManagement::findOrFail($id);
-        $userId = Auth::user()->user_id ?? null;
-        $ids = getEmployeeIdsForUser($userId);
-        if (empty($ids)) {
-            $ids = [(string) $userId];
-        }
+        $ids = $this->signedInEmployeeIds();
 
         $isNodalOrAssigned = in_array((string) $issue->employee_master_pk, $ids) || in_array((string) $issue->assigned_to, $ids);
         $isComplainant = in_array((string) $issue->created_by, $ids);
@@ -2006,6 +2295,30 @@ class IssueManagementController extends Controller
             $rules['assign_to_type'] = 'required';
         }
         $request->validate($rules);
+
+        // Reopening is the complainant's / logger's action on a Completed
+        // complaint (the branch above), or the nodal officer's. Anyone else
+        // moving to Reopened would restart the cycle below and so reset the
+        // lock they are held to. Keeping Reopened as the current status (e.g.
+        // to add a remark) stays allowed.
+        if (! $isNodalOfficer
+            && $requestedStatus === IssueLogManagement::STATUS_REOPENED
+            && $requestedStatus !== (int) $issue->issue_status
+            && ! (($isComplainant || $isLogger) && $isReopenOnly)) {
+            return redirect()->route('admin.issue-management.show', $issue->pk)
+                ->with('error', 'Only the complainant, the issue logger or the nodal officer can reopen this complaint.');
+        }
+
+        // The modal disables statuses already used since the last Reopen for
+        // everyone but the nodal officer. Disabled options are only markup, so
+        // refuse them here too; keeping the current status (e.g. to add a
+        // remark) stays allowed, as it is on the page.
+        if (! $isNodalOfficer
+            && $requestedStatus !== (int) $issue->issue_status
+            && in_array($requestedStatus, $issue->statusesUsedThisCycle(), true)) {
+            return redirect()->route('admin.issue-management.show', $issue->pk)
+                ->with('error', 'That status has already been used since this complaint was last reopened, so it cannot be set again.');
+        }
 
         DB::beginTransaction();
         try {
@@ -2049,6 +2362,19 @@ class IssueManagementController extends Controller
                 } else {
                     $assignedTo = $request->assigned_to ? (string) $request->assigned_to : null;
                     $assignedToContact = $request->assigned_to_contact;
+
+                    // The dropdown disables accounts that cannot sign in, but
+                    // that is only markup — a handler who never reaches the
+                    // login screen would silently swallow the complaint, which
+                    // is the failure this whole path exists to prevent.
+                    $isNewAssignee = $assignedTo !== null
+                        && (string) $assignedTo !== (string) $issue->assigned_to;
+                    // Same rule as the dropdown's can_login, which follows LoginController.
+                    if ($isNewAssignee && is_numeric($assignedTo) && ! User::employeeCanSignIn($assignedTo)) {
+                        DB::rollBack();
+
+                        return back()->with('error', 'That employee’s account is inactive — they cannot sign in, so the complaint would never reach them. Pick an active employee, or use "Other Employee" to record a name and contact number.');
+                    }
                 }
             } else {
                 $assignedTo = $issue->assigned_to;
