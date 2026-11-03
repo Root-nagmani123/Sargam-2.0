@@ -36,5 +36,11 @@ tools/phpstan/vendor/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+# Debug captures (rendered-page snapshots, test videos/screenshots) hold real
+# personal data; they must never land in the repo or the public web root.
+/public/__*.html
+*.webm
+/tests/e2e/**/*-snapshots/
+/tests/e2e/**/screenshots/
 bootstrap/
 tools/phpstan/

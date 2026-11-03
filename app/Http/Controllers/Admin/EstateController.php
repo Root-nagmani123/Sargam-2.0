@@ -398,7 +398,7 @@ class EstateController extends Controller
      */
     private function requestForOthersExportPayload(Request $request): array
     {
-        $search = trim((string) $request->input('search', ''));
+        $search = trim($this->exportSearchTerm($request));
         $billYear = trim((string) $request->input('bill_year_filter', ''));
         $billDate = trim((string) $request->input('bill_date_filter', ''));
 
@@ -513,7 +513,7 @@ class EstateController extends Controller
         $rows = EstateRequestForEstateDataTable::listingQuery()
             ->tap(fn ($query) => EstateRequestForEstateDataTable::applySearch(
                 $query,
-                (string) $request->input('search', '')
+                $this->exportSearchTerm($request)
             ))
             ->get();
 
@@ -526,8 +526,8 @@ class EstateController extends Controller
         };
 
         $filters = ['Request Status: ' . $statusLabel];
-        if (trim((string) $request->input('search', '')) !== '') {
-            $filters[] = 'Search: "' . trim((string) $request->input('search')) . '"';
+        if (trim($this->exportSearchTerm($request)) !== '') {
+            $filters[] = 'Search: "' . trim($this->exportSearchTerm($request)) . '"';
         }
 
         return [
@@ -587,12 +587,13 @@ class EstateController extends Controller
      */
     public function exportPutInHac(Request $request)
     {
-        $format = strtolower((string) $request->query('format', 'excel'));
+        $format = $request->query('format', 'excel');
+        $format = is_string($format) ? strtolower($format) : 'excel';
         if (! in_array($format, ['csv', 'excel', 'pdf', 'print'], true)) {
             $format = 'excel';
         }
 
-        $search = trim((string) $request->query('search', ''));
+        $search = trim($this->exportSearchTerm($request));
         $query = app(EstateRequestPutInHacDataTable::class)->query(new EstateHomeRequestDetails);
         EstateRequestPutInHacDataTable::applySearch($query, $search);
         $rows = $query->get();
@@ -1944,7 +1945,7 @@ class EstateController extends Controller
         $rows = EstateHacApprovedDataTable::listingQuery()
             ->tap(fn ($query) => EstateHacApprovedDataTable::applyFilters(
                 $query,
-                (string) $request->input('search', ''),
+                $this->exportSearchTerm($request),
                 (string) $request->input('type_filter', '')
             ))
             ->get();
@@ -1957,8 +1958,8 @@ class EstateController extends Controller
         };
 
         $filters = ['Request Type: ' . $typeLabel];
-        if (trim((string) $request->input('search', '')) !== '') {
-            $filters[] = 'Search: "' . trim((string) $request->input('search')) . '"';
+        if (trim($this->exportSearchTerm($request)) !== '') {
+            $filters[] = 'Search: "' . trim($this->exportSearchTerm($request)) . '"';
         }
 
         return [
@@ -2628,7 +2629,7 @@ class EstateController extends Controller
      */
     private function requestForHouseExportPayload(Request $request): array
     {
-        $search = trim((string) $request->input('search', ''));
+        $search = trim($this->exportSearchTerm($request));
         $rows = $this->requestForHouseRows()->map(fn ($row) => (object) $row)->values();
 
         // Toolbar filters — exact matches on the values the grid shows.
@@ -3322,8 +3323,19 @@ class EstateController extends Controller
             abort(403, 'You do not have permission to approve estate change requests.');
         }
 
+        // One transaction for the whole decision: a failed write leaves nothing half-allotted.
+        return DB::transaction(fn () => $this->approveLockedChangeRequest($request, $id));
+    }
+
+    /**
+     * Body of approveChangeRequest(); must run inside its transaction. The row lock makes a
+     * concurrent approval of the same request wait, then see it decided and be refused.
+     */
+    private function approveLockedChangeRequest(Request $request, $id)
+    {
         $record = EstateChangeHomeReqDetails::with('estateHomeRequestDetails')
             ->where('estate_change_hac_status', 1)
+            ->lockForUpdate()
             ->findOrFail($id);
 
         // A decided request is final: the greyed Approve icon is not a guard on its own,
@@ -3495,14 +3507,22 @@ class EstateController extends Controller
             'disapprove_reason' => 'required|string|max:500',
         ]);
 
-        $record = EstateChangeHomeReqDetails::where('estate_change_hac_status', 1)->findOrFail($id);
-        if ($refusal = $this->refuseDecidedChangeRequest($request, $record)) {
+        // Same row lock as approval, so an approve and a reject cannot both pass the decided check.
+        $refusal = DB::transaction(function () use ($request, $id) {
+            $record = EstateChangeHomeReqDetails::where('estate_change_hac_status', 1)->lockForUpdate()->findOrFail($id);
+            if ($refusal = $this->refuseDecidedChangeRequest($request, $record)) {
+                return $refusal;
+            }
+            $record->change_ap_dis_status = 2;
+            $record->f_status = 0; // Decision made — no longer "pending approval"
+            $record->remarks = $request->disapprove_reason;
+            $record->save();
+
+            return null;
+        });
+        if ($refusal) {
             return $refusal;
         }
-        $record->change_ap_dis_status = 2;
-        $record->f_status = 0; // Decision made — no longer "pending approval"
-        $record->remarks = $request->disapprove_reason;
-        $record->save();
 
         if ($request->wantsJson()) {
             return response()->json(['success' => true, 'message' => 'Change request disapproved. Remark saved.']);
@@ -5221,7 +5241,7 @@ class EstateController extends Controller
      */
     private function defineHouseExportPayload(Request $request): array
     {
-        $search = trim((string) $request->input('search', ''));
+        $search = trim($this->exportSearchTerm($request));
 
         // The grid's builder reads DataTables' own request shape, so hand it one
         // rather than duplicating the query with a second set of rules.
@@ -5876,7 +5896,7 @@ class EstateController extends Controller
         $rows = EstatePossessionDetailsDataTable::listingQuery()
             ->tap(fn ($query) => EstatePossessionDetailsDataTable::applyFilters(
                 $query,
-                (string) $request->input('search', ''),
+                $this->exportSearchTerm($request),
                 (string) $request->input('estate_filter', ''),
                 (string) $request->input('allotment_date_filter', '')
             ))
@@ -5891,8 +5911,8 @@ class EstateController extends Controller
         if (trim((string) $request->input('allotment_date_filter', '')) !== '') {
             $filters[] = 'Allotment date: ' . trim((string) $request->input('allotment_date_filter'));
         }
-        if (trim((string) $request->input('search', '')) !== '') {
-            $filters[] = 'Search: "' . trim((string) $request->input('search')) . '"';
+        if (trim($this->exportSearchTerm($request)) !== '') {
+            $filters[] = 'Search: "' . trim($this->exportSearchTerm($request)) . '"';
         }
 
         return [
@@ -6373,7 +6393,7 @@ class EstateController extends Controller
      */
     private function possessionForOthersExportPayload(Request $request): array
     {
-        $search = trim((string) $request->input('search', ''));
+        $search = trim($this->exportSearchTerm($request));
         $billYear = trim((string) $request->input('bill_year_filter', ''));
         $billDate = trim((string) $request->input('bill_date_filter', ''));
 
@@ -6649,7 +6669,7 @@ class EstateController extends Controller
      */
     private function returnHouseExportPayload(Request $request): array
     {
-        $search = trim((string) $request->input('search', ''));
+        $search = trim($this->exportSearchTerm($request));
 
         $rows = app(EstateReturnHouseDataTable::class)->query()->get();
 
@@ -8548,6 +8568,12 @@ class EstateController extends Controller
         // Naya bill turant bill lists me dikhe — cached payload chhod do.
         $this->bumpEstateCacheVersion();
 
+        $successMsg = 'Meter readings updated successfully.';
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => $successMsg]);
+        }
+
         return redirect()
             ->route('admin.estate.update-meter-no', $meterNoQuery)
             ->with('success', $successMsg);
@@ -8599,7 +8625,7 @@ class EstateController extends Controller
                 'length' => -1,
                 'bill_year' => $request->input('bill_year'),
                 'bill_month' => $request->input('bill_month'),
-                'search' => ['value' => (string) $request->input('search', '')],
+                'search' => ['value' => $this->exportSearchTerm($request)],
             ], fn ($v) => $v !== null && $v !== '')
         );
         $listRequest->setUserResolver($request->getUserResolver());
@@ -8613,8 +8639,8 @@ class EstateController extends Controller
         $filters[] = 'Bill Month: ' . ($monthNum >= 1 && $monthNum <= 12
             ? date('F', mktime(0, 0, 0, $monthNum, 1))
             : 'All');
-        if (trim((string) $request->input('search', '')) !== '') {
-            $filters[] = 'Search: "' . trim((string) $request->input('search')) . '"';
+        if (trim($this->exportSearchTerm($request)) !== '') {
+            $filters[] = 'Search: "' . trim($this->exportSearchTerm($request)) . '"';
         }
 
         return [
@@ -12319,7 +12345,7 @@ class EstateController extends Controller
         $billMonth = trim((string) $request->input('bill_month', date('Y-m')));
         $blockId = $request->input('block_id', 'all');
         $employeeType = trim((string) $request->input('employee_type', 'LBSNAA'));
-        $search = trim((string) $request->input('search', ''));
+        $search = trim($this->exportSearchTerm($request));
 
         $parts = explode('-', $billMonth);
         $billYearStr = (isset($parts[0]) && is_numeric($parts[0])) ? (string) ((int) $parts[0]) : (string) date('Y');
@@ -13557,7 +13583,7 @@ class EstateController extends Controller
     private function generateBillForOtherExportPayload(Request $request): array
     {
         $billMonth = trim((string) $request->input('bill_month', date('Y-m')));
-        $search = trim((string) $request->input('search', ''));
+        $search = trim($this->exportSearchTerm($request));
 
         $parts = explode('-', $billMonth);
         $billYearStr = (isset($parts[0]) && is_numeric($parts[0])) ? (string) ((int) $parts[0]) : (string) date('Y');

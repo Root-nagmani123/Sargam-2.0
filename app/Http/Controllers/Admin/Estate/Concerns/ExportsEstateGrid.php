@@ -29,6 +29,14 @@ trait ExportsEstateGrid
 {
     use ExportsMasterGrid;
 
+    /** The grid's ?search= as text; search[]=x means no search, not a 500. */
+    protected function exportSearchTerm(Request $request): string
+    {
+        $search = $request->input('search', '');
+
+        return is_string($search) ? $search : '';
+    }
+
     /**
      * @param  class-string  $exportClass  an Estate*Export with static columnDefs()
      * @param  array{rows: Collection|iterable, cols?: string[]|null, filterLine?: string|null}  $payload
@@ -41,7 +49,8 @@ trait ExportsEstateGrid
         string $slug,
         string $orientation = 'landscape'
     ): ?Response {
-        $format = strtolower(trim((string) $request->query('format', '')));
+        $format = $request->query('format', '');
+        $format = is_string($format) ? strtolower(trim($format)) : '';
         if (! in_array($format, ['csv', 'pdf'], true)) {
             return null;
         }

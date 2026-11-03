@@ -2,14 +2,17 @@
 
 namespace App\Exports;
 
+use App\Support\Concerns\BindsExportCellsAsText;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithCustomStartCell;
+use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
+use Maatwebsite\Excel\DefaultValueBinder;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -26,15 +29,19 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
  * row and the same column set — including whatever the user hid in the on-screen
  * "Columns" modal, which arrives as ?cols=.
  */
-class EstateDefineHouseExport implements
+class EstateDefineHouseExport extends DefaultValueBinder implements
     FromArray,
     WithHeadings,
     ShouldAutoSize,
     WithStyles,
     WithEvents,
     WithTitle,
-    WithCustomStartCell
+    WithCustomStartCell,
+    WithCustomValueBinder
 {
+    // User text is bound as a TEXT cell on .xlsx, so "=1+1" can never become a live formula.
+    use BindsExportCellsAsText;
+
     /** Rows used by the LBSNAA banner before the table's heading row. */
     protected int $headerRows = 5;
 
@@ -116,10 +123,10 @@ class EstateDefineHouseExport implements
      *
      * @return string[]
      */
-    public static function resolveCols(?string $raw): array
+    public static function resolveCols(mixed $raw): array
     {
         $all = array_keys(static::columnDefs());
-        $requested = array_filter(array_map('trim', explode(',', (string) $raw)));
+        $requested = array_filter(array_map('trim', explode(',', is_string($raw) ? $raw : '')));
         if (! $requested) {
             return $all;
         }
