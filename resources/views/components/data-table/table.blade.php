@@ -5,8 +5,8 @@
     'id' => 'data-table',
     'buttons' => [],
     'tabs' => [],
-    'tableClass' => 'table table-bordered',
-    'theadClass' => 'table-default-primary',
+    'tableClass' => 'table table-hover align-middle mb-0 w-100 programme-dt-table',
+    'theadClass' => '',
     'tableCaption' => null,
     'datatableLanguage' => null,
     // When false, disables DataTables Responsive (no +/- control column); use scroll instead.
@@ -19,9 +19,9 @@
 {{-- DataTables Bootstrap 5 CSS is loaded in admin pre_header; avoid bootstrap4 here (breaks layout with BS5). --}}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
 
+{{-- Filters --}}
+@if(!empty($filters))
 <div class="mb-3">
-    {{-- Filters --}}
-    @if(!empty($filters))
         <form id="{{ $id }}-filters" class="row g-2">
             <input type="hidden" name="lead_type" id="{{ $id }}-lead-type">
             <input type="hidden" name="sub_type"  id="{{ $id }}-sub-type">
@@ -40,8 +40,8 @@
                 <button type="button" class="btn btn-secondary" id="{{ $id }}-reset-btn">Reset</button>
             </div>
         </form>
-    @endif
 </div>
+@endif
 
 {{-- Buttons --}}
 @if(!empty($buttons))
@@ -52,21 +52,7 @@
     </div>
 @endif
 
-{{-- Tabs --}}
-@if(!empty($tabs))
-    <ul class="nav protocol-tabs" id="tabs">
-        @foreach($tabs as $tab)
-            <li class="nav-item">
-                <a href="javascript:void(0)"
-                    class="nav-link {{ $tab['active'] ? 'active' : '' }}"
-                    data-type="{{ $tab['type'] }}">
-                    {{ $tab['label'] }}
-                    <span class="count">{{ $tab['count'] }}</span>
-                </a>
-            </li>
-        @endforeach
-    </ul>
-@endif
+{{-- Tabs: render them yourself with id="tabs" (see protocol::partials.type-tabs); the script below reads #tabs --}}
 {{-- 
 
 <div class="row my-2">
@@ -193,9 +179,6 @@
             serverSide: true,
             autoWidth: false,
             responsive: @json($dtUseResponsive),
-            dom: "<'row mb-3'<'col-md-6'l><'col-md-6'f>>" +
-                 "<'row'<'col-12'tr>>" +
-                 "<'row mt-3'<'col-md-5'i><'col-md-7'p>>",
             initComplete: function () {
                 try {
                     $(this.api().table().container()).addClass('dt-length-style-pill');

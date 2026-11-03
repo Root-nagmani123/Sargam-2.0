@@ -6,7 +6,7 @@
 
 @section('content')
 @include('protocol::partials.style')
-  <div class="container-fluid profile-page">
+  <div class="container-fluid protocol-page">
     <x-breadcrum
         title="Recommended to Me"
         :items="[
@@ -16,37 +16,46 @@
         ]"
     />
 
-  <div class="card-clean p-3">
-    <div class="section-title">Recommended to Me</div>
-    <div class="section-sub mb-2">Requests that Protocol Staff has recommended to you for final approval</div>
+    <div class="card">
+      <div class="card-body">
+        <div class="programme-dt-toolbar mb-4">
+          <div class="section-sub">Requests that Protocol Staff has recommended to you for final approval</div>
+        </div>
 
-    <div class="table-responsive">
-      <table class="table mb-0">
-        <thead>
-          <tr><th>Request ID</th><th>Type</th><th>Employee</th><th>Recommended By</th><th>Recommended On</th><th>Status</th><th>Action</th></tr>
-        </thead>
-        <tbody>
-          @forelse ($requests as $r)
-            <tr>
-              <td class="fw-semibold">{{ $r->request_number }}</td>
-              <td><x-protocol::type-pill :type="$r->request_type" /></td>
-              <td>{{ $r->employee->name ?? '—' }}</td>
-              <td>{{ $r->protocolStaff->name ?? '—' }}</td>
-              <td>{{ $r->recommended_at?->format('d M Y, h:i A') }}</td>
-              <td><x-protocol::status-badge :status="$r->status" /></td>
-              <td>
-                <a href="{{ route('protocol.manager.review', $r) }}" class="btn btn-sm btn-green">Review &amp; Decide</a>
-              </td>
-            </tr>
-          @empty
-            <tr><td colspan="7"><div class="empty-state"><i class="bi bi-check2-circle"></i>Nothing recommended to you right now.</div></td></tr>
-          @endforelse
-        </tbody>
-      </table>
+        <div class="programme-dt-panel">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 w-100 programme-dt-table">
+              <thead>
+                <tr><th>Request ID</th><th>Type</th><th>Employee</th><th>Recommended By</th><th>Recommended On</th><th>Status</th><th>Action</th></tr>
+              </thead>
+              <tbody>
+                @forelse ($requests as $r)
+                  <tr>
+                    <td class="pr-col-id">{{ $r->request_number }}</td>
+                    <td><x-protocol::type-pill :type="$r->request_type" /></td>
+                    <td>{{ $r->employee->name ?? '—' }}</td>
+                    <td>{{ $r->protocolStaff->name ?? '—' }}</td>
+                    <td>{{ $r->recommended_at?->format('d M Y, h:i A') }}</td>
+                    <td><x-protocol::status-badge :status="$r->status" /></td>
+                    <td>
+                      <div class="pr-act-group" role="group" aria-label="Row actions">
+                        <a href="{{ route('protocol.manager.review', $r) }}" class="pr-act pr-act--review">
+                          <span class="pr-act__icon"><i class="bi bi-check2-square" aria-hidden="true"></i></span>
+                          <span class="pr-act__label">Review &amp; Decide</span>
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+                @empty
+                  <tr><td colspan="7"><div class="empty-state"><i class="bi bi-check2-circle"></i>Nothing recommended to you right now.</div></td></tr>
+                @endforelse
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        @include('protocol::partials.paginator-footer', ['paginator' => $requests])
+      </div>
     </div>
-
-    <div class="mt-3">{{ $requests->links() }}</div>
   </div>
-  </div>
-
 @endsection

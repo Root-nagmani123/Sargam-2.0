@@ -2,13 +2,12 @@
 @section('title', 'All Requests')
 @section('page_title', 'All Requests')
 @section('page_subtitle', 'Complete list of protocol requests across the institute')
-@section('page_style')
-  
+
 @section('content')
 @include('protocol::partials.style')
-  <div class="container-fluid profile-page">
+  <div class="container-fluid protocol-page">
     <x-breadcrum
-        title="All Requests"
+        title="{{ request('status') === 'recommended' ? 'Recommended Requests' : 'All Requests' }}"
         :items="[
             'Home',
             ['label' => 'Protocol', 'url' => route('protocol.dashboard')],
@@ -16,27 +15,39 @@
         ]"
     />
 
-    <div class="card-clean p-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+      @include('protocol::partials.type-tabs', ['tabs' => $pageData['tabs']])
       @if (request('status') === 'recommended')
-        <div class="section-title">Recommended Requests</div>
-        <div class="section-sub mb-2">Requests recommended for a final decision. <a href="{{ route('protocol.requests.all') }}">View all requests</a></div>
-      @else
-        <div class="section-title">All Requests</div>
-        <div class="section-sub mb-2">Complete list of protocol requests across the institute</div>
+        <a href="{{ route('protocol.requests.all') }}" class="btn programme-dt-btn-columns border-0 text-primary">
+          <i class="bi bi-collection" aria-hidden="true"></i><span>View all requests</span>
+        </a>
       @endif
+    </div>
 
-      
-       {{-- Table --}}
-      <div class="datatables">
-        <div class="table-responsive">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+          <div class="section-sub">
+            {{ request('status') === 'recommended' ? 'Requests recommended for a final decision' : 'Complete list of protocol requests across the institute' }}
+          </div>
+          <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+            <div class="programme-dt-search" data-dt-search-for="all-requests-table"></div>
+          </div>
+        </div>
+
+        {{-- Fetches from the route that rendered the page: recommended-booking holders cannot reach requests.all --}}
+        <div class="programme-dt-panel">
+          <div class="table-responsive">
             <x-data-table.table
                 :columns="$pageData['columns']"
                 :filters="[]"
-                ajax-route="{{ route('protocol.requests.all', array_filter(['status' => request('status')])) }}"
+                ajax-route="{{ route(request()->routeIs('protocol.recommended-booking') ? 'protocol.recommended-booking' : 'protocol.requests.all', array_filter(['status' => request('status')])) }}"
                 id="all-requests-table"
-                :tabs="$pageData['tabs']"
             />
+          </div>
         </div>
+
+        <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="all-requests-table"></div>
       </div>
     </div>
   </div>

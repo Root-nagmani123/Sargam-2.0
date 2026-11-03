@@ -8,11 +8,7 @@
 
     @include('protocol::partials.style')
 
-    @push('styles')
-        <link rel="stylesheet" href="{{ asset('modules/protocol/css/driver_master.css') }}">
-    @endpush
-
-    <div class="container-fluid profile-page">
+    <div class="container-fluid protocol-page">
 
         <x-breadcrum
             title="Edit Driver"
@@ -33,7 +29,7 @@
 
                 <div class="form-header">
                     <h2>
-                        <i class="fas fa-user-edit"></i>
+                        <i class="bi bi-person-gear"></i>
                         Edit Driver Details
                     </h2>
 
@@ -57,10 +53,10 @@
                     {{-- DRIVER PERSONAL DETAILS --}}
                     {{-- ========================================================= --}}
 
-                    <div class="form-section border rounded p-3">
+                    <div class="form-section">
 
                         <div class="form-section-header">
-                            <i class="fas fa-id-card"></i>
+                            <i class="bi bi-person-vcard"></i>
                             Personal Details
                         </div>
 
@@ -383,10 +379,10 @@
                     {{-- CONTACT / ADDRESS DETAILS --}}
                     {{-- ========================================================= --}}
 
-                    <div class="form-section border rounded p-3 mt-3">
+                    <div class="form-section">
 
                         <div class="form-section-header">
-                            <i class="fas fa-address-card"></i>
+                            <i class="bi bi-person-vcard"></i>
                             Contact & Address Information
                         </div>
 

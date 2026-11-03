@@ -184,20 +184,20 @@ class DriverMasterService
         $editUrl = route('protocol.driver-master.edit', $data->id);
       // dd($editUrl);
         $buttons = '
-        <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Menu actions">
-            <!-- Edit -->
-            <a href="'.$editUrl.'" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" aria-label="Edit menu">
-                <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">edit</i> <span class="d-none d-md-inline">Edit</span>
+        <div class="pr-act-group" role="group" aria-label="Row actions">
+            <a href="'.$editUrl.'" class="pr-act pr-act--edit">
+                <span class="pr-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
+                <span class="pr-act__label">Edit</span>
             </a>
-            <form action="'.$deleteUrl.'" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this record?\');">
+            <form action="'.$deleteUrl.'" method="POST" class="pr-delete-form" onsubmit="return confirm(\'Are you sure you want to delete this record?\');">
                 '.csrf_field().'
                 '.method_field('DELETE').'
-                <button type="submit" class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1" aria-label="Delete category">
-                    <span class="material-symbols-rounded fs-6" aria-hidden="true">delete</span>
-                    <span class="d-none d-md-inline">Delete</span>
+                <button type="submit" class="pr-act pr-act--del">
+                    <span class="pr-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
+                    <span class="pr-act__label">Delete</span>
                 </button>
             </form>
-            </div>';
+        </div>';
         return $buttons;
     }
 }

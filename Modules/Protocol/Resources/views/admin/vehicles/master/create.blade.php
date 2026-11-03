@@ -10,54 +10,6 @@
 
     @push('styles')
         <style>
-            .form-section {
-                background: #fff;
-                padding: 20px;
-                border: 1px solid #e5e7eb;
-                border-radius: 8px;
-                margin-bottom: 20px;
-            }
-
-            .form-section .section-title {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                background: #f5f7fa;
-                color: #0d4f9c;
-                padding: 11px 15px;
-                border-left: 4px solid #0d4f9c;
-                border-radius: 5px;
-                margin-bottom: 20px;
-                font-size: 16px;
-                font-weight: 600;
-            }
-
-            .form-label {
-                color: #374151;
-                font-size: 14px;
-                font-weight: 500;
-                margin-bottom: 6px;
-            }
-
-            .form-label.required::after {
-                content: ' *';
-                color: #dc3545;
-            }
-
-            .form-control,
-            .form-select {
-                min-height: 40px;
-                border: 1px solid #d1d5db;
-                border-radius: 5px;
-                font-size: 14px;
-            }
-
-            .form-control:focus,
-            .form-select:focus {
-                border-color: #0d4f9c;
-                box-shadow: 0 0 0 .15rem rgba(13, 79, 156, .12);
-            }
-
             .radio-group {
                 display: flex;
                 align-items: center;
@@ -65,25 +17,25 @@
                 min-height: 40px;
             }
 
-            .error {
+            .protocol-page .error {
                 color: #dc3545;
                 font-size: 12px;
                 margin-top: 4px;
             }
 
-            .form-control.error,
-            .form-select.error {
+            .protocol-page .form-control.error,
+            .protocol-page .form-select.error {
                 border-color: #dc3545;
             }
 
-            .form-control.valid,
-            .form-select.valid {
+            .protocol-page .form-control.valid,
+            .protocol-page .form-select.valid {
                 border-color: #198754;
             }
         </style>
     @endpush
 
-    <div class="container-fluid profile-page">
+    <div class="container-fluid protocol-page">
 
         <x-breadcrum title="Add Vehicle" :items="[
             'Home',
@@ -97,7 +49,7 @@
 
             <div class="form-header">
                 <div>
-                    <h2><i class="fas fa-car"></i> Define Vehicle Information</h2>
+                    <h2><i class="bi bi-car-front"></i> Define Vehicle Information</h2>
                     <p>Please add the vehicle details in the form below</p>
                 </div>
             </div>
@@ -107,7 +59,7 @@
 
                 {{-- VEHICLE INFORMATION --}}
                 <div class="form-section">
-                    <div class="section-title"><i class="fas fa-car"></i> Vehicle Information</div>
+                    <div class="section-title"><i class="bi bi-car-front"></i> Vehicle Information</div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -306,7 +258,7 @@
 
                 {{-- FINANCIAL INFORMATION --}}
                 <div class="form-section">
-                    <div class="section-title"><i class="fas fa-credit-card"></i> Vehicle Financial Information</div>
+                    <div class="section-title"><i class="bi bi-credit-card"></i> Vehicle Financial Information</div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -444,7 +396,7 @@
                         <div class="d-flex align-items-center gap-2">
                             <input type="checkbox" name="has_insurance" value="1" id="insuranceCheckbox"
                                 class="form-check-input m-0" @checked(old('has_insurance'))>
-                            <label for="insuranceCheckbox" class="mb-0"><i class="fas fa-shield-alt"></i> Vehicle Insurance
+                            <label for="insuranceCheckbox" class="mb-0"><i class="bi bi-shield-check"></i> Vehicle Insurance
                                 Information</label>
                         </div>
                     </div>
@@ -498,9 +450,9 @@
                 </div>
 
                 <div class="button-group">
-                    <button type="submit" class="btn btn-save"><i class="fas fa-save"></i> Save</button>
+                    <button type="submit" class="btn btn-save"><i class="bi bi-floppy"></i> Save</button>
                     <a href="{{ route('protocol.vehicle-master.index') }}" class="btn btn-cancel"><i
-                            class="fas fa-times"></i> Cancel</a>
+                            class="bi bi-x-lg"></i> Cancel</a>
                 </div>
             </form>
         </div>

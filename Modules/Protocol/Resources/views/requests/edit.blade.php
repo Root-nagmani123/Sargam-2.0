@@ -82,7 +82,7 @@
 
 @section('content')
 @include('protocol::partials.style')
-<div class="container-fluid profile-page">
+<div class="container-fluid protocol-page">
   <x-breadcrum
       title="Edit Request"
       :items="[
@@ -110,7 +110,7 @@
           <label class="type-check-card" for="type_guesthouse">
             <input type="checkbox" name="types[]" value="guesthouse" id="type_guesthouse" class="type-check-input"
                    onchange="toggleSection('guesthouse')" @checked(in_array('guesthouse', $selectedTypes)) disabled>
-            <div class="icon-circle" style="background:#EFEBFF;color:#5B3FD9;"><i class="bi bi-building"></i></div>
+            <div class="icon-circle pr-tint-guesthouse"><i class="bi bi-building"></i></div>
             <div class="fw-bold text-dark">Guest House</div>
             <div class="text-muted small mt-1">Book accommodation for self or visiting guest</div>
           </label>
@@ -119,7 +119,7 @@
           <label class="type-check-card" for="type_vehicle">
             <input type="checkbox" name="types[]" value="vehicle" id="type_vehicle" class="type-check-input"
                    onchange="toggleSection('vehicle')" @checked(in_array('vehicle', $selectedTypes)) disabled>
-            <div class="icon-circle" style="background:#FFF0E0;color:#E6802A;"><i class="bi bi-truck-front"></i></div>
+            <div class="icon-circle pr-tint-vehicle"><i class="bi bi-truck-front"></i></div>
             <div class="fw-bold text-dark">Vehicle Pass</div>
             <div class="text-muted small mt-1">Request an official vehicle for local/outstation travel</div>
           </label>
@@ -128,7 +128,7 @@
           <label class="type-check-card" for="type_ticket">
             <input type="checkbox" name="types[]" value="ticket" id="type_ticket" class="type-check-input"
                    onchange="toggleSection('ticket')" @checked(in_array('ticket', $selectedTypes)) disabled>
-            <div class="icon-circle" style="background:#E0F5F0;color:#0E8F73;"><i class="bi bi-ticket-perforated"></i></div>
+            <div class="icon-circle pr-tint-ticket"><i class="bi bi-ticket-perforated"></i></div>
             <div class="fw-bold text-dark">Ticket</div>
             <div class="text-muted small mt-1">Request rail / air / bus ticket booking</div>
           </label>
@@ -326,9 +326,9 @@
         <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addTicketJourney()"><i class="bi bi-plus-lg"></i> Add Journey</button>
       </div>
 
-      <div class="d-flex justify-content-end gap-2 mt-4">
-        <a href="{{ route('protocol.requests.my') }}" class="btn btn-light">Cancel</a>
-        <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+      <div class="pr-form-footer">
+        <a href="{{ route('protocol.requests.my') }}" class="btn pr-btn-cancel">Cancel</a>
+        <button type="submit" class="btn pr-btn-submit" id="submitBtn" disabled>
           <i class="bi bi-send-check me-1"></i> <span id="submitBtnLabel">Update Request</span>
         </button>
       </div>
@@ -339,21 +339,6 @@
 
 @push('styles')
 <style>
-  .type-check-card{
-    display:block; position:relative; border:1.5px solid var(--border); border-radius:14px;
-    padding:22px; text-align:center; cursor:pointer; transition:.15s; height:100%;
-  }
-  .type-check-card:hover{border-color:var(--saffron); box-shadow:0 4px 16px rgba(255,153,51,.12);}
-  .type-check-input{position:absolute; top:14px; right:14px; width:18px; height:18px; cursor:pointer;}
-  .type-check-card:has(.type-check-input:checked){
-    border-color:var(--saffron); background:#FFF9F0; box-shadow:0 4px 16px rgba(255,153,51,.15);
-  }
-  .form-section{
-    border:1.5px solid var(--border); border-radius:12px; padding:20px; margin-bottom:20px; background:#FAFAF8;
-  }
-  .form-section-header{
-    font-weight:700; font-size:14.5px; margin-bottom:16px; display:flex; align-items:center; gap:8px; color:var(--navy);
-  }
   #guestsTable th, #vehicleLegsTable th{font-size:10.5px; text-transform:uppercase; letter-spacing:.03em;}
   #guestsTable td, #vehicleLegsTable td{padding:6px;}
   #guestsTable input, #guestsTable select, #vehicleLegsTable input, #vehicleLegsTable select{font-size:12.5px; padding:4px 6px;}

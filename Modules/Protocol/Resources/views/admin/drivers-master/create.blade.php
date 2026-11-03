@@ -8,11 +8,7 @@
 
     @include('protocol::partials.style')
 
-    @push('styles')
-        <link rel="stylesheet" href="{{ asset('modules/protocol/css/driver_master.css') }}">
-    @endpush
-
-    <div class="container-fluid profile-page">
+    <div class="container-fluid protocol-page">
 
         <x-breadcrum title="Add Driver" :items="[
             'Home',
@@ -26,7 +22,7 @@
 
                 <div class="form-header">
                     <h2>
-                        <i class="fas fa-user"></i>
+                        <i class="bi bi-person"></i>
                         Driver Personal Details
                     </h2>
 
@@ -43,10 +39,10 @@
                     {{-- DRIVER PERSONAL DETAILS --}}
                     {{-- ========================================================= --}}
 
-                    <div class="form-section border rounded p-3">
+                    <div class="form-section">
 
                         <div class="form-section-header">
-                            <i class="fas fa-id-card"></i>
+                            <i class="bi bi-person-vcard"></i>
                             Personal Details
                         </div>
 
@@ -305,10 +301,10 @@
                     {{-- CONTACT / ADDRESS DETAILS --}}
                     {{-- ========================================================= --}}
 
-                    <div class="form-section border rounded p-3 mt-3">
+                    <div class="form-section">
 
                         <div class="form-section-header">
-                            <i class="fas fa-address-card"></i>
+                            <i class="bi bi-person-vcard"></i>
                             Contact & Address Information
                         </div>
 
@@ -504,12 +500,12 @@
                     <div class="button-group">
 
                         <button type="submit" class="btn btn-save">
-                            <i class="fas fa-save"></i>
+                            <i class="bi bi-floppy"></i>
                             Save
                         </button>
 
                         <a href="{{ route('protocol.driver-master.index') }}" class="btn btn-cancel">
-                            <i class="fas fa-times"></i>
+                            <i class="bi bi-x-lg"></i>
                             Cancel
                         </a>
 
