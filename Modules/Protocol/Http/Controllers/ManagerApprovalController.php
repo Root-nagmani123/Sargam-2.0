@@ -54,11 +54,15 @@ class ManagerApprovalController extends Controller
 
         $data = $request->validated();
 
+        // Actor ids on the log and decided_by_id are employee_master pks (user_credentials.user_id),
+        // the same domain Protocol Staff and the employee are recorded in
+        $managerEmployeeId = (int) Auth::user()->user_id;
+
         if ($data['decision'] === 'approve') {
-            $protocolRequest->approveByManager(Auth::id(), $data['remarks'] ?? null);
+            $protocolRequest->approveByManager($managerEmployeeId, $data['remarks'] ?? null);
             $message = "Request {$protocolRequest->request_number} approved.";
         } else {
-            $protocolRequest->rejectByManager(Auth::id(), $data['remarks'] ?? null);
+            $protocolRequest->rejectByManager($managerEmployeeId, $data['remarks'] ?? null);
             $message = "Request {$protocolRequest->request_number} rejected.";
         }
 

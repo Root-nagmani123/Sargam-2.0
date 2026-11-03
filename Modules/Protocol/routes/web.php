@@ -1,40 +1,14 @@
 <?php
 
-######################################
-// DEVELOPER INFO 
-// => MANJEET CHNAD (शैतान 💀)
-// => manjeetchand01@gmail.com
-// => +91999729452
-// => 23 July 2026
-// => Everthing comes with a Cost 😉
-######################################
-
-use Faker\Provider\Lorem; 
 use Illuminate\Support\Facades\Route;
 use Modules\Protocol\Http\Controllers\ApprovalController;
-use Modules\Protocol\Http\Controllers\HistoryLogController;
 use Modules\Protocol\Http\Controllers\ManagerApprovalController;
 use Modules\Protocol\Http\Controllers\ProtocolRequestController;
 use Modules\Protocol\Http\Controllers\Admin\{PermissionController,VehicleMasterController,DriverMasterController,VehicleTypesController,VehicleCategoryController};
 use Modules\Protocol\Http\Controllers\CommonController;
-use Spatie\Permission\Models\Permission;
 
 
 Route::group(['middleware' => ['web', 'auth'], 'prefix' => 'protocol', 'as' => 'protocol.'], function () {
-
-    // @assigned_permissions
-    Route::get('assign-permission',function(){
-        $permissions = [
-            "protocol.recommended_booking",
-        ];
-        foreach($permissions as $permission){
-            Permission::firstOrCreate([
-                'name' => $permission,
-                'guard_name' => 'web'
-            ]);
-        }
-    });
-   
 
     /*
     |--------------------------------------------------------------------------
@@ -69,7 +43,7 @@ Route::group(['middleware' => ['web', 'auth'], 'prefix' => 'protocol', 'as' => '
 
     // Driver Master routes
     Route::middleware('can:protocol.driver_master')->group(function () {
-        Route::resource('/driver-master', DriverMasterController::class)->names('driver-master');
+        Route::resource('/driver-master', DriverMasterController::class)->except('show')->names('driver-master');
     });
 
     Route::middleware('can:protocol.recommended_booking')->group(function () {
@@ -81,9 +55,12 @@ Route::group(['middleware' => ['web', 'auth'], 'prefix' => 'protocol', 'as' => '
         Route::get('vehicle-master/{id}/edit', [VehicleMasterController::class, 'edit'])->name('vehicle-master.edit');
         Route::put('vehicle-master/{id}', [VehicleMasterController::class, 'update'])->name('vehicle-master.update');
         Route::delete('vehicle-master/{id}', [VehicleMasterController::class, 'destroy'])->name('vehicle-master.destroy');
-        Route::resource('vehicle-master', VehicleMasterController::class)->names('vehicle-master');
-        Route::resource('vehicle-categories', VehicleCategoryController::class)->names('vehicle-category');
-        Route::resource('vehicle-types', VehicleTypesController::class)->names('vehicle-types');
+        // edit/update/destroy are the explicit routes above
+        Route::resource('vehicle-master', VehicleMasterController::class)->only(['index', 'create', 'store'])->names('vehicle-master');
+        // Hidden until the DBA creates vehicle_categories / vehicle_types (neither exists on staging or local; the screens 500).
+        // Re-enable these two lines once the tables are in place.
+        // Route::resource('vehicle-categories', VehicleCategoryController::class)->only(['index', 'store', 'update', 'destroy'])->names('vehicle-category');
+        // Route::resource('vehicle-types', VehicleTypesController::class)->only(['index', 'store', 'update', 'destroy'])->names('vehicle-types');
     });
 
     // Permission routes

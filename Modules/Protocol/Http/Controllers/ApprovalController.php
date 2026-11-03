@@ -1,25 +1,17 @@
 <?php
 
-######################################
-// DEVELOPER INFO 
-// => MANJEET CHNAD (शैतान 💀)
-// => manjeetchand01@gmail.com
-// => +919997294527
-// => 14 September 2026
-// => veragyam param sukham : 👹
-######################################
-
 namespace Modules\Protocol\Http\Controllers;
 
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Modules\Protocol\Entities\ProtocolRequest;
 use Modules\Protocol\Http\Requests\ReviewProtocolRequest;
 use App\Models\HostelBuildingMaster;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Http\Request;
 use App\Models\User;
-use Modules\Protocol\Services\ApprovalService;
+use Modules\Protocol\Services\{ApprovalService,ProtocolDirectory};
 
 class ApprovalController extends Controller
 {
@@ -61,10 +53,6 @@ class ApprovalController extends Controller
     public function review(ProtocolRequest $protocolRequest)
     {
 
-        // dd($protocolRequest->status);
-        // abort_if($protocolRequest->status !== ProtocolRequest::STATUS_PENDING, 403,
-        //     'This request is no longer awaiting Protocol Staff review.');
-
         if ($protocolRequest->request_type === 'guesthouse') {
             $protocolRequest->load([
                 'requestable.assignedGuestHouse',
@@ -72,10 +60,6 @@ class ApprovalController extends Controller
         } elseif ($protocolRequest->request_type === 'vehicle') {
             $protocolRequest->load([
                 'requestable.vehicle',
-            ]);
-        } elseif ($protocolRequest->request_type === 'travel') {
-            $protocolRequest->load([
-                'requestable.journeys',
             ]);
         }
 
@@ -87,14 +71,8 @@ class ApprovalController extends Controller
         $GuestHouse = HostelBuildingMaster::orderBy('building_name', 'asc')->pluck('building_name', 'pk');
        
 
-        // Supply the list of managers/staff that can be recommended to.
-        // Swap this for your own role-based user query.
-        $approverIds = User::whereHas('roles', function ($query) {
-                    $query->where('name', 'Protocol Approver');
-                })->pluck('user_id');
-             
-        $managers = User::getEmployeesAndFacultyForComplaint();
-        $managers = $managers->whereIn('employee_pk', $approverIds);
+        // The list of Protocol Approvers that can be recommended to
+        $managers = app(ProtocolDirectory::class)->approvers();
 
         return view('protocol::approval.review', compact('protocolRequest', 'managers','GuestHouse'));
     }
@@ -109,22 +87,27 @@ class ApprovalController extends Controller
             'This request is no longer awaiting Protocol Staff review.');
 
         $data = $request->validated();
-        // If Protocol Staff assigned a physical guest house, persist it
-        // on the type-specific row (employee never sets this themselves).
-        if ($protocolRequest->request_type === 'guesthouse' && ! empty($data['assigned_guest_house'])) {
-            $protocolRequest->requestable?->update([
-                'assigned_guest_house' => $data['assigned_guest_house'],
-            ]);
-        }
 
-        $employee = User::select('user_id')->find(Auth::id());
-        if ($data['decision'] === 'approve') {  
-            $protocolRequest->approveDirectly($employee->user_id, $data['remarks'] ?? null);
-            $message = "Request {$protocolRequest->request_number} approved.";
-        } else {
+        // One transaction, so the guest house assignment rolls back if another
+        // staff member decided the request first (the model re-checks under a lock)
+        $message = DB::transaction(function () use ($data, $protocolRequest) {
+            // If Protocol Staff assigned a physical guest house, persist it
+            // on the type-specific row (employee never sets this themselves).
+            if ($protocolRequest->request_type === 'guesthouse' && ! empty($data['assigned_guest_house'])) {
+                $protocolRequest->requestable?->update([
+                    'assigned_guest_house' => $data['assigned_guest_house'],
+                ]);
+            }
+
+            $employee = User::select('user_id')->find(Auth::id());
+            if ($data['decision'] === 'approve') {
+                $protocolRequest->approveDirectly($employee->user_id, $data['remarks'] ?? null);
+                return "Request {$protocolRequest->request_number} approved.";
+            }
+
             $protocolRequest->recommendTo($employee->user_id, (int) $data['recommended_to_id'], $data['remarks'] ?? null);
-            $message = "Request {$protocolRequest->request_number} recommended for further approval.";
-        }
+            return "Request {$protocolRequest->request_number} recommended for further approval.";
+        });
 
         return redirect()
             ->route('protocol.requests.all')

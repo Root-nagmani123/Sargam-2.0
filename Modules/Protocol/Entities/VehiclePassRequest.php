@@ -33,8 +33,9 @@ class VehiclePassRequest extends Model
         return $this->hasMany(VehicleLeg::class, 'vehicle_pass_id')->orderBy('sort_order');
     }
 
+    /** vehicle_type holds the protocol_vehicle_masters id the employee picked on the form */
     public function vehicle(): BelongsTo
     {
-        return $this->belongsTo(Vehicle::class, 'vehicle_pass_id',);
+        return $this->belongsTo(Vehicle::class, 'vehicle_type');
     }
 }

@@ -1,12 +1,4 @@
 <?php
-######################################
-// DEVELOPER INFO 
-// => MANJEET CHNAD (शैतान 💀)
-// => manjeetchand01@gmail.com
-// => +919997294527
-// => 14 September 2026
-// => veragyam param sukham : 👹
-######################################
 namespace Modules\Protocol\Services;
 
 use Yajra\DataTables\Facades\DataTables;
@@ -148,7 +140,7 @@ class RequestService
             ->addColumn('action', function ($row) {
                 return $this->actionButtons($row);
             })
-            ->rawColumns(['request_type', 'details', 'status', 'action'])
+            ->rawColumns(['request_type', 'status', 'action'])
             ->addIndexColumn()
             ->make(true);
     }

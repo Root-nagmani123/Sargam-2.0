@@ -10,6 +10,7 @@ class ProtocolDatabaseSeeder extends Seeder
     {
         $this->call([
             ProtocolRolesSeeder::class,
+            ProtocolPermissionsSeeder::class,
         ]);
     }
 }

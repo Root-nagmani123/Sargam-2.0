@@ -1,12 +1,4 @@
 <?php
-######################################
-// DEVELOPER INFO 
-// => MANJEET CHNAD (शैतान 💀)
-// => manjeetchand01@gmail.com
-// => +919997294527
-// => 23 July 2026
-// => veragyam param sukham : 👹
-######################################
 namespace Modules\Protocol\Services;
 
 use Yajra\DataTables\Facades\DataTables;

@@ -1,14 +1,5 @@
 <?php
 
-######################################
-// DEVELOPER INFO 
-// => MANJEET CHNAD (शैतान 💀)
-// => manjeetchand01@gmail.com
-// => +919997294527
-// => 14 September 2026
-// => veragyam param sukham : 👹
-######################################
-
 namespace Modules\Protocol\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -24,8 +15,9 @@ use Modules\Protocol\Entities\VehicleLeg;
 use Modules\Protocol\Entities\Vehicle;
 use Modules\Protocol\Entities\VehiclePassRequest;
 use Modules\Protocol\Http\Requests\{StoreCombinedRequest,UpdateCombinedRequest};
+use Modules\Protocol\Authorization\ProtocolRequestAccess;
 use App\Models\CourseMaster;
-use Modules\Protocol\Services\{RequestService,ApprovalService};
+use Modules\Protocol\Services\{RequestService,ApprovalService,ProtocolDirectory};
 
 class ProtocolRequestController extends Controller
 {
@@ -110,6 +102,8 @@ class ProtocolRequestController extends Controller
      */
     public function show(ProtocolRequest $protocolRequest)
     {
+        abort_unless(ProtocolRequestAccess::canView(Auth::user(), $protocolRequest), 403);
+
         $protocolRequest->loadFullRequestable();
         $protocolRequest->load('batch.guests', 'logs.actionBy');
         return view('protocol::requests.show', compact('protocolRequest'));
@@ -117,6 +111,8 @@ class ProtocolRequestController extends Controller
 
     public function edit(Request $request, ProtocolRequest $protocolRequest)
     {
+        abort_unless(ProtocolRequestAccess::canEdit(Auth::user(), $protocolRequest), 403);
+
         $protocolRequest->loadFullRequestable();
         $protocolRequest->load('batch.guests', 'logs.actionBy');
         // Running courses only, but keep the one already saved even if it has since ended
@@ -138,13 +134,23 @@ class ProtocolRequestController extends Controller
      * Vehicle / Ticket), each with its own request number, status, and
      * approval timeline, all pointing back at the same batch.
      */
-    public function storeCombined(StoreCombinedRequest $request)
+    public function storeCombined(StoreCombinedRequest $request, ProtocolDirectory $directory)
     {
         $data = $request->validated();
         $types = $data['types'] ?? [];
-        $employeeID = Auth::user()->employeeDetail()->pk;
-        $employeeDept = Auth::user()->employeeDetail()->department_master_pk;
+        // user_id may be the employee's pk or pk_old; resolved by the codebase's rule
+        $employee = $directory->employeeFor(Auth::user());
+        if (! $employee) {
+            $message = 'Your login is not linked to a single employee record, so the request cannot be raised. Please contact IT support.';
 
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['message' => $message], 422);
+            }
+
+            return redirect()->back()->withInput()->with('error', $message);
+        }
+        $employeeID = $employee->pk;
+        $employeeDept = $employee->department_master_pk;
 
         try {
             $created = DB::transaction(function () use ($data, $types, $employeeID, $employeeDept) {
@@ -195,8 +201,7 @@ class ProtocolRequestController extends Controller
         } catch (\Throwable $e) {
             report($e);
 
-            // $message = 'Something went wrong while submitting your request. Please try again, or contact IT support if the problem continues.';
-            $message = $e->getMessage();
+            $message = 'Something went wrong while submitting your request. Please try again, or contact IT support if the problem continues.';
 
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([
@@ -332,7 +337,9 @@ class ProtocolRequestController extends Controller
      *   with its own status/approval timeline, so editing never creates or
      *   removes sibling requests.
      * - Shared batch fields and guest rows are updated on the batch, so they
-     *   also change for the sibling requests raised in the same submission.
+     *   also change for the sibling requests raised in the same submission —
+     *   unless a sibling has already been decided, in which case this request
+     *   first moves to its own copy of the batch (see moveToOwnBatch()).
      * - Child rows (guests / legs / journeys) are synced by id:
      *   existing id => update, no id => create, missing from payload => delete.
      *
@@ -340,22 +347,36 @@ class ProtocolRequestController extends Controller
      */
     public function update(UpdateCombinedRequest $request, ProtocolRequest $protocolRequest)
     {
+        abort_unless(ProtocolRequestAccess::canEdit(Auth::user(), $protocolRequest), 403);
+
         // Only editable while still pending (adjust if "returned" requests should be editable too)
         if ($protocolRequest->status !== ProtocolRequest::STATUS_PENDING) {
-            $message = 'Only pending requests can be edited.';
-
-            if ($request->expectsJson() || $request->ajax()) {
-                return response()->json(['message' => $message], 403);
-            }
-
-            return redirect()->route('protocol.requests.my')->with('error', $message);
+            return $this->notPendingResponse($request);
         }
 
         $data = $request->validated();
 
         try {
-            DB::transaction(function () use ($data, $protocolRequest) {
+            $stillPending = DB::transaction(function () use ($data, $protocolRequest) {
+                // Re-read under a row lock: Protocol Staff may have decided it since the check above
+                $status = ProtocolRequest::whereKey($protocolRequest->getKey())->lockForUpdate()->value('status');
+                if ($status !== ProtocolRequest::STATUS_PENDING) {
+                    return false;
+                }
+
                 $batch = $protocolRequest->batch;
+
+                // Batch fields and guests are shared with the sibling requests of the same
+                // submission. Once any sibling has been decided they must not change under it,
+                // so this request moves to its own copy of the batch and the edit applies there.
+                $siblingStatuses = ProtocolRequest::where('batch_id', $batch->id)
+                    ->whereKeyNot($protocolRequest->getKey())
+                    ->lockForUpdate()
+                    ->pluck('status', 'request_number');
+                $decidedSiblings = $siblingStatuses->reject(fn ($s) => $s === ProtocolRequest::STATUS_PENDING)->keys();
+                if ($decidedSiblings->isNotEmpty()) {
+                    $batch = $this->moveToOwnBatch($protocolRequest, $batch);
+                }
 
                 // 1. Shared batch fields
                 $batch->update([
@@ -394,9 +415,13 @@ class ProtocolRequestController extends Controller
                         break;
                 }
 
-                // 4. Touch the master row and log the edit (add your own log helper if you have one)
+                // 4. Touch the master row and log the edit
                 $protocolRequest->touch();
-                // $protocolRequest->logUpdated();
+                $protocolRequest->logUpdated($decidedSiblings->isNotEmpty()
+                    ? 'Guest and purpose details separated from ' . $decidedSiblings->implode(', ') . ', already processed.'
+                    : null);
+
+                return true;
             });
         } catch (\Throwable $e) {
             report($e);
@@ -410,6 +435,10 @@ class ProtocolRequestController extends Controller
             return redirect()->back()->withInput()->with('error', $message);
         }
 
+        if (! $stillPending) {
+            return $this->notPendingResponse($request);
+        }
+
         $successMessage = "Request {$protocolRequest->request_number} updated successfully.";
 
         if ($request->expectsJson() || $request->ajax()) {
@@ -420,6 +449,33 @@ class ProtocolRequestController extends Controller
         }
 
         return redirect()->route('protocol.requests.my')->with('success', $successMessage);
+    }
+
+    /**
+     * Give this request its own copy of the batch's shared fields. Guests are not
+     * copied: the edit's sync creates them on the new batch from the submitted rows.
+     */
+    protected function moveToOwnBatch(ProtocolRequest $protocolRequest, ProtocolRequestBatch $batch): ProtocolRequestBatch
+    {
+        $own = $batch->replicate();
+        $own->created_at = $batch->created_at;
+        $own->save();
+
+        $protocolRequest->update(['batch_id' => $own->id]);
+        $protocolRequest->setRelation('batch', $own);
+
+        return $own;
+    }
+
+    protected function notPendingResponse(Request $request)
+    {
+        $message = 'Only pending requests can be edited.';
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json(['message' => $message], 403);
+        }
+
+        return redirect()->route('protocol.requests.my')->with('error', $message);
     }
 
     protected function updateGuestHouseRequest($requestable, array $data): void

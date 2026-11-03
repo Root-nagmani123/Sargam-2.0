@@ -4,8 +4,6 @@ namespace Modules\Protocol\Providers;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Gate;
-use Modules\Protocol\Authorization\ProtocolGate;
 
 class ProtocolServiceProvider extends ServiceProvider
 {
@@ -31,14 +29,8 @@ class ProtocolServiceProvider extends ServiceProvider
         $this->registerConfig();
         $this->registerViews();
         $this->registerTranslations();
-        $this->loadMigrationsFrom($this->modulePath('Database/Migrations'));
+        // No migrations: the DBA creates and maintains the Protocol tables (PR #348 F-001)
         $this->registerRoutes();
-        $this->registerGates();
-    }
-
-    protected function registerGates(): void
-    {
-        Gate::define('protocol.view-requests', [ProtocolGate::class, 'viewRequests']);
     }
 
     /**

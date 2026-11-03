@@ -94,9 +94,10 @@ class ProtocolRequest extends Model
         return $this->belongsTo(User::class, 'recommended_to_id');
     }
 
+    /** decided_by_id is an employee_master pk, like protocol_staff_id and the log's action_by_id */
     public function decidedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'decided_by_id');
+        return $this->belongsTo(EmployeeMaster::class, 'decided_by_id');
     }
 
     /*
@@ -157,6 +158,8 @@ class ProtocolRequest extends Model
     public function approveDirectly(int $protocolStaffId, ?string $remarks = null): void
     {
         DB::transaction(function () use ($protocolStaffId, $remarks) {
+            $this->lockStatus(self::STATUS_PENDING, 'This request is no longer awaiting Protocol Staff review.');
+
             $this->update([
                 'status' => self::STATUS_APPROVED,
                 'current_stage' => 'Completed',
@@ -181,6 +184,8 @@ class ProtocolRequest extends Model
     public function recommendTo(int $protocolStaffId, int $recommendedToId, ?string $remarks = null): void
     {
         DB::transaction(function () use ($protocolStaffId, $recommendedToId, $remarks) {
+            $this->lockStatus(self::STATUS_PENDING, 'This request is no longer awaiting Protocol Staff review.');
+
             $recommendedToName = self::userDisplayName(User::find($recommendedToId)) ?? "User #{$recommendedToId}";
             $this->update([
                 'status' => self::STATUS_RECOMMENDED,
@@ -207,6 +212,8 @@ class ProtocolRequest extends Model
     public function approveByManager(int $managerId, ?string $remarks = null): void
     {
         DB::transaction(function () use ($managerId, $remarks) {
+            $this->lockStatus(self::STATUS_RECOMMENDED, 'This request is not awaiting your decision.');
+
             $this->update([
                 'status' => self::STATUS_APPROVED,
                 'current_stage' => 'Completed',
@@ -230,6 +237,8 @@ class ProtocolRequest extends Model
     public function rejectByManager(int $managerId, ?string $remarks = null): void
     {
         DB::transaction(function () use ($managerId, $remarks) {
+            $this->lockStatus(self::STATUS_RECOMMENDED, 'This request is not awaiting your decision.');
+
             $this->update([
                 'status' => self::STATUS_REJECTED,
                 'current_stage' => 'Completed',
@@ -248,6 +257,17 @@ class ProtocolRequest extends Model
     }
 
     /**
+     * Re-read the status under a row lock inside the caller's transaction, so two
+     * people deciding the same request cannot both pass the controller's check.
+     */
+    protected function lockStatus(string $expected, string $message): void
+    {
+        $status = static::whereKey($this->getKey())->lockForUpdate()->value('status');
+
+        abort_if($status !== $expected, 403, $message);
+    }
+
+    /**
      * Called once, right after creation, to record the "Raised" log entry.
      */
     public function logRaised(): void
@@ -258,6 +278,20 @@ class ProtocolRequest extends Model
             'action_by_role' => 'Employee',
             'remarks' => null,
             'action_at' => $this->created_at ?? now(),
+        ]);
+    }
+
+    /**
+     * Records an employee edit on the timeline.
+     */
+    public function logUpdated(?string $remarks = null): void
+    {
+        $this->logs()->create([
+            'action' => 'updated',
+            'action_by_id' => $this->employee_id,
+            'action_by_role' => 'Employee',
+            'remarks' => $remarks,
+            'action_at' => now(),
         ]);
     }
 
@@ -272,9 +306,10 @@ class ProtocolRequest extends Model
         return config("protocol.request_types.{$this->request_type}.label", $this->request_type);
     }
 
+    /** Called inside the store transaction; the lock holds concurrent submissions until it commits */
     public static function generateRequestNumber(): string
     {
-        $last = static::withTrashed()->orderByDesc('id')->first();
+        $last = static::withTrashed()->orderByDesc('id')->lockForUpdate()->first();
         $next = $last ? $last->id + 1 : 1001;
 
         return 'PR-' . $next;

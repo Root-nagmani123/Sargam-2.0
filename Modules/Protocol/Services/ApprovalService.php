@@ -1,12 +1,4 @@
 <?php
-######################################
-// DEVELOPER INFO 
-// => MANJEET CHNAD (शैतान 💀)
-// => manjeetchand01@gmail.com
-// => +919997294527
-// => 14 September 2026
-// => veragyam param sukham : 👹
-######################################
 namespace Modules\Protocol\Services;
 
 use Yajra\DataTables\Facades\DataTables;
@@ -236,7 +228,7 @@ class ApprovalService
             ->addColumn('current_stage', fn($e) => $e->current_stage)
             ->addColumn('status', fn($e) => view('protocol::components.status-badge', ['status' => $e->status])->render())
             ->addColumn('action', fn($e) => $this->actionButtons($e))
-            ->rawColumns(['request_type', 'current_stage', 'status', 'action'])
+            ->rawColumns(['request_type', 'status', 'action'])
             ->addIndexColumn()
             ->make(true);
     }

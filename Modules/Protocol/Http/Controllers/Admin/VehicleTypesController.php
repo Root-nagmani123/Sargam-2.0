@@ -2,6 +2,7 @@
 
 namespace Modules\Protocol\Http\Controllers\Admin;
 
+use Modules\Protocol\Http\Controllers\Concerns\SafeErrorMessage;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
@@ -9,6 +10,8 @@ use Modules\Protocol\Entities\VehicleType;
 
 class VehicleTypesController extends Controller
 {
+    use SafeErrorMessage;
+
 
     public function index(Request $request)
     {
@@ -32,7 +35,7 @@ class VehicleTypesController extends Controller
                 return redirect()->back()->with('error', 'Failed to create Vehicle Type');
             }
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
+            return redirect()->back()->with('error', $this->safeErrorMessage($e));
         }
     }
 
@@ -52,7 +55,7 @@ class VehicleTypesController extends Controller
                 return redirect()->back()->with('error', 'Failed to update Vehicle Type');
             }
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
+            return redirect()->back()->with('error', $this->safeErrorMessage($e));
         }
     }
 
@@ -66,7 +69,7 @@ class VehicleTypesController extends Controller
                 return redirect()->back()->with('error', 'Failed to delete Vehicle Type');
             }
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
+            return redirect()->back()->with('error', $this->safeErrorMessage($e));
         }
     }
 }

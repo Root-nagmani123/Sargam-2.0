@@ -2,6 +2,7 @@
 
 namespace Modules\Protocol\Http\Controllers\Admin;
 
+use Modules\Protocol\Http\Controllers\Concerns\SafeErrorMessage;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Modules\Protocol\Entities\ProtocolRequest;
@@ -13,6 +14,8 @@ use Modules\Protocol\Entities\ProtocolDriverMaster;
 
 class DriverMasterController extends Controller
 {
+    use SafeErrorMessage;
+
 
     protected $service;
     public function __construct(DriverMasterService $service)
@@ -146,7 +149,7 @@ class DriverMasterController extends Controller
                 return redirect()->back()->with('error', 'Failed to save driver info.');
             }
         } catch (\Throwable $th) {
-            return redirect()->back()->with('error', $th->getMessage());
+            return redirect()->back()->with('error', $this->safeErrorMessage($th));
         }
     }
 
@@ -158,7 +161,7 @@ class DriverMasterController extends Controller
         $data = ProtocolDriverMaster::with('country', 'state', 'city')->findOrFail($id);
         return view('protocol::admin.drivers-master.edit',compact('data'));
        } catch (\Throwable $th) {
-         return redirect()->back()->with('error', $th->getMessage());
+         return redirect()->back()->with('error', $this->safeErrorMessage($th));
        }
     }
 
@@ -272,7 +275,7 @@ class DriverMasterController extends Controller
                 return redirect()->back()->with('error', 'Failed to update driver info.');
             }
         } catch (\Throwable $th) {
-            return redirect()->back()->with('error', $th->getMessage());
+            return redirect()->back()->with('error', $this->safeErrorMessage($th));
         }
     }
 
@@ -285,7 +288,7 @@ class DriverMasterController extends Controller
         }
          return redirect()->back()->with('error', 'Failed to delete driver info.');
     } catch (\Throwable $th) {
-        return redirect()->back()->with('error', $th->getMessage());
+        return redirect()->back()->with('error', $this->safeErrorMessage($th));
     }
 
     return redirect()

@@ -68,52 +68,44 @@ Copy `Modules/Protocol/Resources/assets/sass/protocol.css` to
 your existing Sass/Vite build — it's plain CSS with a handful of
 custom properties at the top, no preprocessing required).
 
-## 5. Run the migrations
+## 5. Database tables
 
-```bash
-php artisan migrate
-```
+The module ships no migrations. The DBA creates and maintains the Protocol
+tables on every environment (production gets them before the release tag is
+deployed). The code expects these 11 tables:
 
-This creates:
+- `protocol_request_batches`, `protocol_request_guests` — one combined-form submission and its guests
 - `protocol_requests` — the master table (polymorphic link to the type table, status, current handler)
-- `protocol_guest_houses`, `protocol_vehicle_passes`, `protocol_tickets` — type-specific fields
+- `protocol_guest_houses`, `protocol_vehicle_passes`, `protocol_vehicle_legs`, `protocol_tickets`, `protocol_ticket_journeys` — type-specific fields
 - `protocol_approval_logs` — the audit trail (action, actor, role, remarks, timestamp)
+- `protocol_driver_masters`, `protocol_vehicle_masters` — admin masters
 
-## 6. Roles
+## 6. Roles and access
 
-The routes are gated with `role:employee`, `role:protocol-staff`, and
-`role:protocol-manager` — this uses the `role:` middleware from
-**Spatie's `laravel-permission` package**. Check first whether that
-package is already in your `composer.json`:
+Access is role-based. Roles carry Spatie permissions (assigned at `/protocol/permissions`
+or the app's role screen), and every route group in `routes/web.php` is gated with
+`can:<permission>`:
 
-```bash
-composer show spatie/laravel-permission
-```
+| Permission | Gives |
+| --- | --- |
+| `protocol.my_requests` | Raise requests; view and edit **own** requests only (`ProtocolRequestAccess`) |
+| `protocol.protocol_requests` | All Requests list, the staff queue, review and decide |
+| `protocol.guest_house_booking` / `vehicle_booking` / `ticket_booking` | Which request types appear in the All Requests list |
+| `protocol.all_booking` | Every request type in the All Requests list |
+| `protocol.recommended_booking` | Recommended Bookings list (created by `ProtocolPermissionsSeeder`) |
+| `Protocol Approver` role | Appears in the "Recommend to" list; decides requests recommended to them |
+| `protocol.driver_master` / `vehicle_master` / `permissions` | The master and permission screens |
 
-- **If it's installed already** (likely, if your other Sargam modules
-  do role-based access), just run the seeder below to add the three
-  new role rows.
-- **If it's NOT installed**, either install it (`composer require spatie/laravel-permission`
-  — test on a branch first, since your project already hit one PHP
-  8.3 / dependency conflict with `openspout`), or swap the `role:...`
-  middleware in `Modules/Protocol/routes/web.php` for whatever access
-  control your app already uses (a custom middleware, a gate, or a
-  simple role check inside each controller method). The workflow logic
-  itself doesn't care how access is gated — only the route file
-  references `role:`.
+**Decision scope (PR #348 F-002, decided by the operator, 2026-11-02):** whoever holds
+`protocol.protocol_requests` may review and decide any pending request from the staff
+queue, of any booking type, including one they raised themselves. The booking-type
+permissions narrow the All Requests list only; they are not a limit on deciding.
+Who may decide is controlled by which roles carry `protocol.protocol_requests`. Narrowing
+this (per-type deciding, or blocking self-approval) is a policy change to make in code
+deliberately, not a bug fix.
 
-Run the seeder to create the three role rows if they don't already exist:
-
-```bash
-php artisan db:seed --class="Modules\Protocol\Database\Seeders\ProtocolDatabaseSeeder"
-```
-
-Then assign these roles to the relevant users the way you already do
-elsewhere (via your existing user/role management screen, or `php artisan tinker`).
-
-If your app uses different role names, just edit
-`Modules/Protocol/Config/config.php` → `roles` array — nothing else needs
-to change, the whole module reads role names from that config.
+`ProtocolRolesSeeder` and `config('protocol.roles')` still exist for the sidebar partial's
+`@role(...)` checks; the routes themselves do not use `role:` middleware.
 
 ## 7. Integrating into your existing UI (important)
 
@@ -138,8 +130,8 @@ to your existing app's master layout, e.g.:
 Then delete `Resources/views/partials/sidebar.blade.php`'s markup and
 instead add the module's nav links (Dashboard, New Request, Approval
 Queue, etc.) into your existing sidebar/menu partial, guarded by the
-same `@role(...)` checks used here. The controllers, models, routes,
-and migrations do not need any changes for either option — only the
+same `@role(...)` checks used here. The controllers, models and routes
+do not need any changes for either option — only the
 Blade views' `@extends` line and the nav menu.
 
 ## 8. Employee model relation
