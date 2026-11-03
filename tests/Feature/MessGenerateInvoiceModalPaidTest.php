@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\Mess\ProcessMessBillsEmployeeController;
+use App\Support\MessBuyerClientFilter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use ReflectionMethod;
@@ -33,6 +34,14 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
     private const KITCHEN_CLIENT_TYPE_OTHER = 4;
 
     private const CLIENT_TYPE_PK = 6;
+
+    /** Client ids occur only on employee (and OT) buyers, so client-id cases use an employee. */
+    private const EMPLOYEE_SLUG = 'employee';
+
+    private const KITCHEN_CLIENT_TYPE_EMPLOYEE = 1;
+
+    /** mess_client_types "Academy Staff", the most common type on employee vouchers. */
+    private const EMPLOYEE_CLIENT_TYPE_PK = 2;
 
     private const FROM = '2031-09-01';
 
@@ -85,36 +94,35 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
     }
 
     /**
-     * Same defect for a buyer keyed by client_id: the pool is fetched through the client_id
-     * filter and summed under the cid: group key rather than the name.
+     * Same defect for an employee buyer keyed by client_id: the pool is fetched through the
+     * client_id filter and summed under the cid: group key, and the statement resolves the
+     * buyer through employee_master.
      */
-    public function test_part_paid_multi_month_voucher_for_a_client_id_buyer(): void
+    public function test_part_paid_multi_month_voucher_for_an_employee_buyer(): void
     {
-        $buyer = $this->buyerName('D');
-        $clientId = $this->unusedClientId();
-        $this->svVoucher($buyer, 1200, [['2031-08-15', 1000], ['2031-09-10', 1000]], $clientId);
+        [$buyer, $employeePk] = $this->employee('D');
+        $this->svVoucher($buyer, 1200, [['2031-08-15', 1000], ['2031-09-10', 1000]], $employeePk);
 
         $row = $this->modalRow($buyer);
 
-        $this->assertNotNull($row, 'client-id buyer with a September due is missing from the modal');
+        $this->assertNotNull($row, 'employee buyer with a September due is missing from the modal');
         $this->assertSame('200.00', $row['paid_amount']);
         $this->assertSame('800.00', $row['due_amount']);
-        $this->assertStatementMatches($buyer, $row, 1000.0, 200.0, 800.0);
+        $this->assertStatementMatches($buyer, $row, 1000.0, 200.0, 800.0, self::EMPLOYEE_SLUG);
     }
 
-    public function test_older_unpaid_kitchen_issue_absorbs_the_payment_for_a_client_id_buyer(): void
+    public function test_older_unpaid_kitchen_issue_absorbs_the_payment_for_an_employee_buyer(): void
     {
-        $buyer = $this->buyerName('E');
-        $clientId = $this->unusedClientId();
-        $this->kitchenIssue($buyer, '2031-07-20', 500, $clientId);
-        $this->svVoucher($buyer, 800, [['2031-09-10', 1000]], $clientId);
+        [$buyer, $employeePk] = $this->employee('E');
+        $this->kitchenIssue($buyer, '2031-07-20', 500, $employeePk);
+        $this->svVoucher($buyer, 800, [['2031-09-10', 1000]], $employeePk);
 
         $row = $this->modalRow($buyer);
 
-        $this->assertNotNull($row, 'client-id buyer with a September due is missing from the modal');
+        $this->assertNotNull($row, 'employee buyer with a September due is missing from the modal');
         $this->assertSame('300.00', $row['paid_amount']);
         $this->assertSame('700.00', $row['due_amount']);
-        $this->assertStatementMatches($buyer, $row, 1000.0, 300.0, 700.0);
+        $this->assertStatementMatches($buyer, $row, 1000.0, 300.0, 700.0, self::EMPLOYEE_SLUG);
     }
 
     private function buyerName(string $tag): string
@@ -122,21 +130,42 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
         return 'Modal Paid Test ' . $tag . ' ' . uniqid();
     }
 
-    /** A client_id no real voucher or kitchen issue uses, so the buyer has no other bills. */
-    private function unusedClientId(): int
+    /**
+     * A new employee_master row and its display name ("first middle last", no department so no
+     * suffix; each part fits the varchar(20) columns). Its pk is new, so no real voucher or
+     * kitchen issue carries it as client_id.
+     *
+     * @return array{0: string, 1: int}  [buyer name, employee pk]
+     */
+    private function employee(string $tag): array
     {
-        do {
-            $clientId = random_int(900000000, 999999999);
-        } while (DB::table('sv_date_range_reports')->where('client_id', $clientId)->exists()
-            || DB::table('kitchen_issue_master')->where('client_id', $clientId)->exists());
+        $last = $tag . uniqid();
+        $buyer = 'Modal Paid ' . $last;
+        $pk = DB::table('employee_master')->insertGetId([
+            'first_name' => 'Modal',
+            'middle_name' => 'Paid',
+            'last_name' => $last,
+        ]);
 
-        return $clientId;
+        $this->assertFalse(
+            DB::table('sv_date_range_reports')->where('client_id', $pk)->exists()
+                || DB::table('kitchen_issue_master')->where('client_id', $pk)->exists(),
+            'new employee pk already has bills'
+        );
+        $this->assertSame(
+            $buyer,
+            MessBuyerClientFilter::resolveDisplayNameForClient($pk, self::EMPLOYEE_CLIENT_TYPE_PK),
+            'statement-side employee lookup does not resolve the test employee'
+        );
+
+        return [$buyer, $pk];
     }
 
     /**
      * @param  list<array{0: string, 1: float}>  $lines  [issue_date, amount] — qty 1 at rate = amount
+     * @param  int|null  $employeePk  set for an employee buyer keyed by client_id
      */
-    private function svVoucher(string $buyer, float $paid, array $lines, ?int $clientId = null): void
+    private function svVoucher(string $buyer, float $paid, array $lines, ?int $employeePk = null): void
     {
         $dates = array_column($lines, 0);
         $total = array_sum(array_column($lines, 1));
@@ -148,9 +177,9 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
             'status' => 1,
             'total_amount' => $total,
             'paid_amount' => $paid,
-            'client_type_slug' => self::SLUG,
-            'client_type_pk' => self::CLIENT_TYPE_PK,
-            'client_id' => $clientId,
+            'client_type_slug' => $employeePk ? self::EMPLOYEE_SLUG : self::SLUG,
+            'client_type_pk' => $employeePk ? self::EMPLOYEE_CLIENT_TYPE_PK : self::CLIENT_TYPE_PK,
+            'client_id' => $employeePk,
             'client_name' => $buyer,
             'payment_type' => 1,
             'issue_date' => min($dates),
@@ -169,15 +198,15 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
     }
 
     /** Unpaid kitchen issue (no payment details); item issue_date left NULL as the app does. */
-    private function kitchenIssue(string $buyer, string $date, float $amount, ?int $clientId = null): void
+    private function kitchenIssue(string $buyer, string $date, float $amount, ?int $employeePk = null): void
     {
         $pk = DB::table('kitchen_issue_master')->insertGetId([
             'store_id' => 1,
             'kitchen_issue_type' => 1,
             'issue_date' => $date,
-            'client_type' => self::KITCHEN_CLIENT_TYPE_OTHER,
-            'client_type_pk' => self::CLIENT_TYPE_PK,
-            'client_id' => $clientId,
+            'client_type' => $employeePk ? self::KITCHEN_CLIENT_TYPE_EMPLOYEE : self::KITCHEN_CLIENT_TYPE_OTHER,
+            'client_type_pk' => $employeePk ? self::EMPLOYEE_CLIENT_TYPE_PK : self::CLIENT_TYPE_PK,
+            'client_id' => $employeePk,
             'payment_type' => 1,
             'client_name' => $buyer,
             'status' => 0,
@@ -223,17 +252,23 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
     }
 
     /** @return array{total: float, paid: float, due: float} */
-    private function statement(string $buyer): array
+    private function statement(string $buyer, string $slug = self::SLUG): array
     {
         $method = new ReflectionMethod(ProcessMessBillsEmployeeController::class, 'computeCombinedBillFinancials');
         $method->setAccessible(true);
 
-        return $method->invoke($this->controller(), $buyer, self::SLUG, self::FROM, self::TO);
+        return $method->invoke($this->controller(), $buyer, $slug, self::FROM, self::TO);
     }
 
-    private function assertStatementMatches(string $buyer, array $row, float $total, float $paid, float $due): void
-    {
-        $statement = $this->statement($buyer);
+    private function assertStatementMatches(
+        string $buyer,
+        array $row,
+        float $total,
+        float $paid,
+        float $due,
+        string $slug = self::SLUG
+    ): void {
+        $statement = $this->statement($buyer, $slug);
 
         $this->assertEqualsWithDelta($total, $statement['total'], 0.001, 'statement total');
         $this->assertEqualsWithDelta($paid, $statement['paid'], 0.001, 'statement paid');
