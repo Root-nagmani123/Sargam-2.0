@@ -15,6 +15,9 @@ use Tests\TestCase;
  * PR #348 F-005: two Protocol Staff deciding the same request at once. Needs two real
  * database sessions, so the rows are committed (a second session cannot see another
  * session's open transaction) and removed again in tearDown.
+ *
+ * Because it commits, it only runs against a disposable database whose name ends in
+ * _test (e.g. DB_DATABASE=sargam_protocol_test); anywhere else it skips (PR #348 F-025).
  */
 class ProtocolConcurrentDecisionTest extends TestCase
 {
@@ -25,6 +28,12 @@ class ProtocolConcurrentDecisionTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        $database = (string) config('database.connections.' . config('database.default') . '.database');
+        if (! str_ends_with($database, '_test')) {
+            $this->markTestSkipped("commits rows, so it runs only against a disposable database whose name ends in _test; this one is '{$database}'");
+        }
+
         $this->skipUnlessProtocolDatabase();
 
         config(['database.connections.protocol_second_session' => config('database.connections.' . config('database.default'))]);
