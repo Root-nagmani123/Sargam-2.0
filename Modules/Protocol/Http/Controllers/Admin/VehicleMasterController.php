@@ -181,6 +181,16 @@ class VehicleMasterController extends Controller
     public function destroy($id)
     {
         $vehicle = ProtocolVehicleMaster::findOrFail($id);
+
+        // Same rule as the list, which offers Delete only for inactive vehicles
+        if ($vehicle->status == 1) {
+            $message = 'An active vehicle cannot be deleted. Mark it inactive first.';
+
+            return request()->ajax()
+                ? response()->json(['success' => false, 'message' => $message], 422)
+                : redirect()->route('protocol.vehicle-master.index')->with('error', $message);
+        }
+
         $vehicle->delete();
 
         if (request()->ajax()) {

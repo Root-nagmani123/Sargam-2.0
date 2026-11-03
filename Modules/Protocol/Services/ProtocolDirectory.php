@@ -57,10 +57,13 @@ class ProtocolDirectory
      */
     public function approvers(): Collection
     {
+        // Keyed by the employee each login resolves to (pk, else a unique pk_old), so a
+        // pk_old-keyed approver is listed under their own name; unresolvable logins are left out
         $approverPkByEmployee = User::whereHas('roles', fn ($q) => $q->where('name', self::APPROVER_ROLE))
             ->orderBy('pk')
             ->get(['pk', 'user_id'])
-            ->groupBy('user_id')
+            ->groupBy(fn (User $login) => (string) User::resolveEmployeePk($login->user_id))
+            ->forget('')
             ->map(fn ($logins) => $logins->first()->pk);
 
         return $this->employees()
@@ -84,10 +87,21 @@ class ProtocolDirectory
      */
     public function employeeFor(User $user): ?EmployeeMaster
     {
-        $employeePk = User::resolveEmployeePk($user->user_id);
+        $employeePk = $this->employeePkFor($user);
 
         return $employeePk === null
             ? null
             : EmployeeMaster::select('pk', 'department_master_pk')->find($employeePk);
+    }
+
+    /**
+     * The employee_master pk a login acts as on the approval trail (staff, manager,
+     * requester): the same pk / unique pk_old rule. Null when it names nobody or is ambiguous.
+     */
+    public function employeePkFor(User $user): ?int
+    {
+        $employeePk = User::resolveEmployeePk($user->user_id);
+
+        return $employeePk === null ? null : (int) $employeePk;
     }
 }

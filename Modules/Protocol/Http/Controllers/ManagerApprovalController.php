@@ -6,6 +6,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Modules\Protocol\Entities\ProtocolRequest;
 use Modules\Protocol\Http\Requests\ManagerDecisionRequest;
+use Modules\Protocol\Services\ProtocolDirectory;
 
 class ManagerApprovalController extends Controller
 {
@@ -54,9 +55,10 @@ class ManagerApprovalController extends Controller
 
         $data = $request->validated();
 
-        // Actor ids on the log and decided_by_id are employee_master pks (user_credentials.user_id),
-        // the same domain Protocol Staff and the employee are recorded in
-        $managerEmployeeId = (int) Auth::user()->user_id;
+        // Actor ids on the log and decided_by_id are employee_master pks, resolved by the same
+        // pk / pk_old rule as Protocol Staff and the employee
+        $managerEmployeeId = app(ProtocolDirectory::class)->employeePkFor(Auth::user());
+        abort_if($managerEmployeeId === null, 403, 'Your login is not linked to a single employee record. Please contact the administrator.');
 
         if ($data['decision'] === 'approve') {
             $protocolRequest->approveByManager($managerEmployeeId, $data['remarks'] ?? null);

@@ -10,7 +10,6 @@ use Modules\Protocol\Http\Requests\ReviewProtocolRequest;
 use App\Models\HostelBuildingMaster;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Http\Request;
-use App\Models\User;
 use Modules\Protocol\Services\{ApprovalService,ProtocolDirectory};
 
 class ApprovalController extends Controller
@@ -98,9 +97,13 @@ class ApprovalController extends Controller
 
         $data = $request->validated();
 
+        // Recorded as the employee the login resolves to (pk, else a unique pk_old)
+        $staffEmployeeId = app(ProtocolDirectory::class)->employeePkFor(Auth::user());
+        abort_if($staffEmployeeId === null, 403, 'Your login is not linked to a single employee record. Please contact the administrator.');
+
         // One transaction, so the guest house assignment rolls back if another
         // staff member decided the request first (the model re-checks under a lock)
-        $message = DB::transaction(function () use ($data, $protocolRequest) {
+        $message = DB::transaction(function () use ($data, $protocolRequest, $staffEmployeeId) {
             // If Protocol Staff assigned a physical guest house, persist it
             // on the type-specific row (employee never sets this themselves).
             if ($protocolRequest->request_type === 'guesthouse' && ! empty($data['assigned_guest_house'])) {
@@ -109,13 +112,12 @@ class ApprovalController extends Controller
                 ]);
             }
 
-            $employee = User::select('user_id')->find(Auth::id());
             if ($data['decision'] === 'approve') {
-                $protocolRequest->approveDirectly($employee->user_id, $data['remarks'] ?? null);
+                $protocolRequest->approveDirectly($staffEmployeeId, $data['remarks'] ?? null);
                 return "Request {$protocolRequest->request_number} approved.";
             }
 
-            $protocolRequest->recommendTo($employee->user_id, (int) $data['recommended_to_id'], $data['remarks'] ?? null);
+            $protocolRequest->recommendTo($staffEmployeeId, (int) $data['recommended_to_id'], $data['remarks'] ?? null);
             return "Request {$protocolRequest->request_number} recommended for further approval.";
         });
 

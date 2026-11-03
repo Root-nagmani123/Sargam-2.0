@@ -80,6 +80,16 @@ deployed). The code expects these 11 tables:
 - `protocol_approval_logs` — the audit trail (action, actor, role, remarks, timestamp)
 - `protocol_driver_masters`, `protocol_vehicle_masters` — admin masters
 
+Permission rows are not tables: every route is gated with `can:protocol.*`, and a
+missing row denies everyone. Run this once on each environment as a deploy step
+(it creates rows only, grants nothing, and is safe to re-run):
+
+```bash
+php artisan db:seed --class="Modules\Protocol\Database\Seeders\ProtocolPermissionsSeeder"
+```
+
+Sidebar menus are added from `/sidebar/menus`.
+
 ## 6. Roles and access
 
 Access is role-based. Roles carry Spatie permissions (assigned at `/protocol/permissions`
@@ -92,11 +102,11 @@ or the app's role screen), and every route group in `routes/web.php` is gated wi
 | `protocol.protocol_requests` | All Requests list, the staff queue, review and decide |
 | `protocol.guest_house_booking` / `vehicle_booking` / `ticket_booking` | Which request types appear in the All Requests list |
 | `protocol.all_booking` | Every request type in the All Requests list |
-| `protocol.recommended_booking` | Recommended Bookings list (created by `ProtocolPermissionsSeeder`) |
+| `protocol.recommended_booking` | Recommended Bookings list |
 | `Protocol Approver` role | Appears in the "Recommend to" list; decides requests recommended to them |
 | `protocol.driver_master` / `vehicle_master` / `permissions` | The master and permission screens |
 
-**Decision scope (PR #348 F-002, decided by the operator, 2026-11-02):** whoever holds
+**Decision scope (PR #348 F-002):** whoever holds
 `protocol.protocol_requests` may review and decide any pending request from the staff
 queue, of any booking type, including one they raised themselves. The booking-type
 permissions narrow the All Requests list only; they are not a limit on deciding.

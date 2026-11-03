@@ -4,21 +4,37 @@ namespace Modules\Protocol\Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 
 class ProtocolPermissionsSeeder extends Seeder
 {
     /**
-     * Permission rows the module needs that are not created elsewhere.
-     * Replaces the old GET /protocol/assign-permission route. Safe to run multiple times (firstOrCreate).
+     * Every permission the module checks. Routes are gated with can:<name> and Spatie
+     * denies everyone when the row is missing, so the deploy runs this once per
+     * environment. Creates rows only, grants nothing; safe to run again (firstOrCreate).
+     * Sidebar menus are added at /sidebar/menus, not here.
      */
+    const PERMISSIONS = [
+        // Route gates (routes/web.php)
+        'protocol.my_requests',
+        'protocol.protocol_requests',
+        'protocol.recommended_booking',
+        'protocol.driver_master',
+        'protocol.vehicle_master',
+        'protocol.permissions',
+        // Request-type scope (ApprovalService)
+        'protocol.all_booking',
+        'protocol.guest_house_booking',
+        'protocol.vehicle_booking',
+        'protocol.ticket_booking',
+    ];
+
     public function run(): void
     {
-        $permissions = [
-            'protocol.recommended_booking',
-        ];
-
-        foreach ($permissions as $permission) {
+        foreach (self::PERMISSIONS as $permission) {
             Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
         }
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 }
