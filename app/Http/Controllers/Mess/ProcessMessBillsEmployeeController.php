@@ -976,6 +976,8 @@ class ProcessMessBillsEmployeeController extends Controller
      *   (the name, the name without a "(...)" suffix, the employee display name, names on the
      *   buyer's SV vouchers and kitchen selling issues); if fetched at all they are pooled under
      *   a separate name: key, never the buyer's cid: key;
+     * - name-only buyer: rows carrying the client id the filter resolves from the buyer's name
+     *   (MessBuyerClientFilter::resolveClientId);
      * - any buyer: rows named "<name> (...)" (the filter's LIKE 'name (%' match).
      * MessGenerateInvoiceModalPaidTest covers name-only and client-id buyers on the uncached modal path.
      *

@@ -95,8 +95,8 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
 
     /**
      * Same defect for an employee buyer keyed by client_id: the pool is fetched through the
-     * client_id filter and summed under the cid: group key, and the statement resolves the
-     * buyer through employee_master.
+     * client_id filter and summed under the cid: group key. The statement resolves the client
+     * id from the buyer's own voucher and builds its name variants from employee_master.
      */
     public function test_part_paid_multi_month_voucher_for_an_employee_buyer(): void
     {
