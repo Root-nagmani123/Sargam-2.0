@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserRoleMaster;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /**
@@ -293,9 +294,48 @@ class MemberWizardPayrollAndStepsTest extends TestCase
         $payload = $this->basicMemberPayload('OnlyInactive');
         $payload['userrole'] = [$inactiveRolePk];
 
-        $this->actingAs($actor)->postJson(route('member.store'), $payload)
+        $errors = $this->actingAs($actor)->postJson(route('member.store'), $payload)
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['userrole'], 'errors');
+            ->assertJsonValidationErrors(['userrole'], 'errors')
+            ->json('errors.userrole');
+
+        $this->assertContains('The selected role is no longer active. Please choose an active role.', $errors);
+
+        $this->assertNull(
+            DB::table('employee_master')->where('emp_id', $payload['id'])->value('pk'),
+            'A refused save must not create the member.'
+        );
+    }
+
+    /**
+     * PR #343 review F-002: an option that is still active but names no role (so Step 3
+     * does not offer it, e.g. "Staff" from a form opened before deploy) is refused with a
+     * message that says so, not "no longer active".
+     */
+    public function test_creating_a_member_with_only_an_active_unoffered_option_says_it_is_not_managed_here(): void
+    {
+        $actor = $this->makeActor('only_unoffered');
+        $actor->assignRole('Super Admin');
+
+        $tagPk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'HR Tag ' . uniqid(),
+            'user_role_display_name' => 'HR Tag ' . uniqid(),
+            'active_inactive'        => 1,
+        ]);
+        $this->assertFalse(UserRoleMaster::getUserRoleList()->has($tagPk), 'Fixture assumption: the option names no role.');
+
+        $payload = $this->basicMemberPayload('OnlyUnoffered');
+        $payload['userrole'] = [$tagPk];
+
+        $errors = $this->actingAs($actor)->postJson(route('member.store'), $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['userrole'], 'errors')
+            ->json('errors.userrole');
+
+        $this->assertContains('This role option is active but is not managed from the Member wizard.', $errors);
+        foreach ($errors as $error) {
+            $this->assertStringNotContainsString('no longer active', $error);
+        }
 
         $this->assertNull(
             DB::table('employee_master')->where('emp_id', $payload['id'])->value('pk'),
@@ -318,6 +358,8 @@ class MemberWizardPayrollAndStepsTest extends TestCase
             'user_role_display_name' => 'Held Then Retired',
             'active_inactive'        => 1,
         ]);
+        // The wizard only offers options that name a role on Role & Permission > Roles (PR #343).
+        Role::create(['name' => 'Held Then Retired']);
 
         $createPayload = $this->basicMemberPayload('HeldInactive');
         $createPayload['userrole'][] = $heldRolePk;
@@ -364,6 +406,8 @@ class MemberWizardPayrollAndStepsTest extends TestCase
             'user_role_display_name' => 'Soon Retired',
             'active_inactive'        => 1,
         ]);
+        // The wizard only offers options that name a role on Role & Permission > Roles (PR #343).
+        Role::create(['name' => 'Soon Retired']);
 
         $createPayload = $this->basicMemberPayload('UpdateOnlyInactive');
         $createPayload['userrole'] = [$rolePk];
@@ -389,6 +433,66 @@ class MemberWizardPayrollAndStepsTest extends TestCase
             DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->where('user_role_master_pk', $rolePk)->exists(),
             'The member keeps the mapping they already had.'
         );
+    }
+
+    /**
+     * PR #343 review F-002/F-004, edit path with a mixed selection: one inactive option and
+     * one active option Step 3 does not offer. Each gets its own message, nothing is written,
+     * and the unoffered option grants no mapping or Spatie role.
+     */
+    public function test_an_admin_update_with_inactive_and_unoffered_options_gives_both_messages_and_changes_nothing(): void
+    {
+        $actor = $this->makeActor('update_mixed_unoffered');
+        $actor->assignRole('Super Admin');
+
+        $rolePk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'Soon Retired Mixed ' . uniqid(),
+            'user_role_display_name' => 'Soon Retired Mixed',
+            'active_inactive'        => 1,
+        ]);
+        Role::create(['name' => 'Soon Retired Mixed']);
+
+        $tagPk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'HR Tag ' . uniqid(),
+            'user_role_display_name' => 'HR Tag ' . uniqid(),
+            'active_inactive'        => 1,
+        ]);
+        $this->assertFalse(UserRoleMaster::getUserRoleList()->has($tagPk), 'Fixture assumption: the option names no role.');
+
+        $createPayload = $this->basicMemberPayload('UpdateMixed');
+        $createPayload['userrole'] = [$rolePk];
+        $this->actingAs($actor)->post(route('member.store'), $createPayload)->assertOk();
+
+        $employeePk = DB::table('employee_master')->where('emp_id', $createPayload['id'])->value('pk');
+        $credentialPk = DB::table('user_credentials')->where('user_name', $createPayload['userid'])->value('pk');
+        $this->assertNotNull($employeePk);
+        $rolesBefore = User::find($credentialPk)->getRoleNames()->sort()->values()->all();
+
+        DB::table('user_role_master')->where('pk', $rolePk)->update(['active_inactive' => 0]);
+
+        $updatePayload = $this->basicMemberPayload('UpdateMixed', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['first_name'] = 'Changed';
+        $updatePayload['userrole'] = [$rolePk, $tagPk];
+
+        $errors = $this->actingAs($actor)->postJson(route('member.update'), $updatePayload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['userrole'], 'errors')
+            ->json('errors.userrole');
+
+        $this->assertContains('The selected role is no longer active. Please choose an active role.', $errors);
+        $this->assertContains('This role option is active but is not managed from the Member wizard.', $errors);
+
+        $this->assertSame('Wizard', DB::table('employee_master')->where('pk', $employeePk)->value('first_name'), 'A refused update must write nothing.');
+        $this->assertTrue(
+            DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->where('user_role_master_pk', $rolePk)->exists(),
+            'The member keeps the mapping they already had.'
+        );
+        $this->assertFalse(
+            DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->where('user_role_master_pk', $tagPk)->exists(),
+            'The unoffered option must not be mapped.'
+        );
+        $this->assertSame($rolesBefore, User::find($credentialPk)->getRoleNames()->sort()->values()->all(), 'No Spatie role may change.');
     }
 
     /**
@@ -490,6 +594,236 @@ class MemberWizardPayrollAndStepsTest extends TestCase
         $row = DB::table('employee_master')->where('pk', $employeePk)->first(['profile_picture', 'additional_doc_upload']);
         $this->assertSame('members/existing-photo.jpg', $row->profile_picture, 'A save without a new picture must keep the stored one.');
         $this->assertSame('members/existing-doc.pdf', $row->additional_doc_upload, 'A save without a new document must keep the stored one.');
+    }
+
+    /**
+     * PR #343 review, F-009: Step 3 only offers options that are real roles. A member whose
+     * only mapping is a hidden HR option (e.g. "Staff") shows nothing ticked, and must still
+     * be savable by an administrator without ticking — and so granting — a role.
+     */
+    public function test_an_admin_can_save_a_member_holding_only_a_hidden_option_without_granting_a_role(): void
+    {
+        $actor = $this->makeActor('hidden_only');
+        $actor->assignRole('Super Admin');
+
+        $createPayload = $this->basicMemberPayload('HiddenOnly');
+        $this->actingAs($actor)->post(route('member.store'), $createPayload)->assertOk();
+
+        $employeePk = DB::table('employee_master')->where('emp_id', $createPayload['id'])->value('pk');
+        $credentialPk = DB::table('user_credentials')->where('user_name', $createPayload['userid'])->value('pk');
+        $this->assertNotNull($employeePk);
+        $this->assertNotNull($credentialPk);
+
+        // Leave the member holding only an option that names no role, so Step 3 offers it no checkbox.
+        $hiddenPk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'Hidden Tag ' . uniqid(),
+            'user_role_display_name' => 'Hidden Tag ' . uniqid(),
+            'active_inactive'        => 1,
+        ]);
+        DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->delete();
+        DB::table('employee_role_mapping')->insert(['user_credentials_pk' => $credentialPk, 'user_role_master_pk' => $hiddenPk]);
+        $rolesBefore = User::find($credentialPk)->getRoleNames()->sort()->values()->all();
+
+        $updatePayload = $this->basicMemberPayload('HiddenOnly', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['first_name'] = 'Changed';
+        unset($updatePayload['userrole']);
+        // Step 3 was rendered with nothing ticked: only its marker is posted.
+        $updatePayload['userrole_step_shown'] = '1';
+
+        $stepUrl = str_replace('edit-step', 'update-validate-step', route('member.edit-step', ['step' => 3, 'id' => $employeePk]));
+        $this->actingAs($actor)->postJson($stepUrl, ['userrole_step_shown' => '1'])->assertOk();
+
+        $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
+
+        $this->assertSame('Changed', DB::table('employee_master')->where('pk', $employeePk)->value('first_name'));
+        $this->assertSame(
+            [$hiddenPk],
+            DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->pluck('user_role_master_pk')->map(fn ($pk) => (int) $pk)->all(),
+            'The hidden option must be kept, and nothing else mapped.'
+        );
+        $this->assertSame($rolesBefore, User::find($credentialPk)->getRoleNames()->sort()->values()->all(), 'No role may be granted or removed.');
+    }
+
+    /**
+     * PR #343 review, F-013: with Step 3 absent from the post (no userrole, no marker), a save
+     * for a member holding a hidden option and a wizard-granted role is refused, so the role and
+     * its mapping are not removed by an empty selection.
+     */
+    public function test_an_admin_save_without_step3_is_refused_and_keeps_the_members_roles(): void
+    {
+        $actor = $this->makeActor('absent_step3');
+        $actor->assignRole('Super Admin');
+
+        // Created with the payload's offered role (Doctor), granted through the wizard.
+        $createPayload = $this->basicMemberPayload('AbsentStepThree');
+        $this->actingAs($actor)->post(route('member.store'), $createPayload)->assertOk();
+
+        $employeePk = DB::table('employee_master')->where('emp_id', $createPayload['id'])->value('pk');
+        $credentialPk = DB::table('user_credentials')->where('user_name', $createPayload['userid'])->value('pk');
+        $this->assertNotNull($employeePk);
+        $this->assertNotNull($credentialPk);
+
+        $hiddenPk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'Hidden Tag ' . uniqid(),
+            'user_role_display_name' => 'Hidden Tag ' . uniqid(),
+            'active_inactive'        => 1,
+        ]);
+        DB::table('employee_role_mapping')->insert(['user_credentials_pk' => $credentialPk, 'user_role_master_pk' => $hiddenPk]);
+
+        $mappingsBefore = DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)
+            ->orderBy('user_role_master_pk')->pluck('user_role_master_pk')->map(fn ($pk) => (int) $pk)->all();
+        $rolesBefore = User::find($credentialPk)->getRoleNames()->sort()->values()->all();
+        $this->assertCount(2, $mappingsBefore, 'Fixture: the offered role and the hidden option.');
+
+        $updatePayload = $this->basicMemberPayload('AbsentStepThree', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['first_name'] = 'Changed';
+        unset($updatePayload['userrole']);
+
+        $stepUrl = str_replace('edit-step', 'update-validate-step', route('member.edit-step', ['step' => 3, 'id' => $employeePk]));
+        $this->actingAs($actor)->postJson($stepUrl, [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['userrole'], 'errors');
+
+        $this->actingAs($actor)->postJson(route('member.update'), $updatePayload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['userrole'], 'errors');
+
+        $this->assertNotSame('Changed', DB::table('employee_master')->where('pk', $employeePk)->value('first_name'));
+        $this->assertSame(
+            $mappingsBefore,
+            DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)
+                ->orderBy('user_role_master_pk')->pluck('user_role_master_pk')->map(fn ($pk) => (int) $pk)->all(),
+            'No mapping may be removed.'
+        );
+        $this->assertSame($rolesBefore, User::find($credentialPk)->getRoleNames()->sort()->values()->all(), 'No role may be revoked.');
+    }
+
+    /** F-009 counterpart: a member with no hidden option still has to pick a role. */
+    public function test_step3_still_requires_a_role_when_the_member_holds_no_hidden_option(): void
+    {
+        $actor = $this->makeActor('no_hidden');
+        $actor->assignRole('Super Admin');
+
+        $createPayload = $this->basicMemberPayload('NoHidden');
+        $this->actingAs($actor)->post(route('member.store'), $createPayload)->assertOk();
+        $employeePk = DB::table('employee_master')->where('emp_id', $createPayload['id'])->value('pk');
+
+        $stepUrl = str_replace('edit-step', 'update-validate-step', route('member.edit-step', ['step' => 3, 'id' => $employeePk]));
+        $this->actingAs($actor)->postJson($stepUrl, [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['userrole'], 'errors');
+    }
+
+    /**
+     * PR #343 review, F-001: a member holding a hidden option and an offered role has the
+     * offered role changed. Only the offered mapping is replaced; the hidden one is kept,
+     * a hidden pk posted back is neither mapped again nor granted, and no Spatie role is
+     * granted beyond the newly ticked one.
+     */
+    public function test_changing_the_offered_role_of_a_member_with_a_hidden_option_keeps_the_hidden_option(): void
+    {
+        $actor = $this->makeActor('hidden_and_offered');
+        $actor->assignRole('Super Admin');
+
+        // Created with the payload's offered role (Doctor), granted through the wizard.
+        $createPayload = $this->basicMemberPayload('HiddenAndOffered');
+        $this->actingAs($actor)->post(route('member.store'), $createPayload)->assertOk();
+
+        $employeePk = DB::table('employee_master')->where('emp_id', $createPayload['id'])->value('pk');
+        $credentialPk = DB::table('user_credentials')->where('user_name', $createPayload['userid'])->value('pk');
+        $this->assertNotNull($employeePk);
+        $this->assertNotNull($credentialPk);
+        $this->assertContains('Doctor', User::find($credentialPk)->getRoleNames()->all(), 'Fixture: Doctor granted through the wizard.');
+
+        $hiddenName = 'Hidden Tag ' . uniqid();
+        $hiddenPk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => $hiddenName,
+            'user_role_display_name' => $hiddenName,
+            'active_inactive'        => 1,
+        ]);
+        DB::table('employee_role_mapping')->insert(['user_credentials_pk' => $credentialPk, 'user_role_master_pk' => $hiddenPk]);
+
+        $newRole = Role::create(['name' => 'Wizard Test Role ' . uniqid(), 'guard_name' => 'web']);
+        $newOptionPk = UserRoleMaster::ensureOptionForRole($newRole->name)->pk;
+        $offered = UserRoleMaster::getUserRoleList();
+        $this->assertTrue($offered->has($newOptionPk), 'Fixture: the new role is offered by Step 3.');
+        $this->assertFalse($offered->has($hiddenPk), 'Fixture: the hidden option is not offered by Step 3.');
+
+        $updatePayload = $this->basicMemberPayload('HiddenAndOffered', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        // Doctor unticked, the new role ticked, and the hidden pk posted back as a tampered post would.
+        $updatePayload['userrole'] = [$newOptionPk, $hiddenPk];
+        $updatePayload['userrole_step_shown'] = '1';
+
+        $response = $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
+        $this->assertStringContainsString($hiddenName . ' is not managed from the Member wizard', (string) $response->json('warning'));
+
+        $this->assertEqualsCanonicalizing(
+            [$hiddenPk, $newOptionPk],
+            DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->pluck('user_role_master_pk')->map(fn ($pk) => (int) $pk)->all(),
+            'Doctor replaced by the new role; the hidden option kept exactly once.'
+        );
+        $this->assertSame(
+            [$newRole->name],
+            User::find($credentialPk)->getRoleNames()->values()->all(),
+            'Only the newly ticked role may be held: Doctor revoked, nothing granted for the hidden option.'
+        );
+    }
+
+    /**
+     * PR #343 review, F-005: a member holding a hidden option and a wizard-granted role has
+     * every offered role unticked with Step 3 shown. The save is accepted (no tick is required
+     * while a hidden option is kept), the offered mapping is removed, the wizard-granted role is
+     * revoked, and the hidden option is kept exactly once.
+     */
+    public function test_unticking_every_offered_role_of_a_member_with_a_hidden_option_revokes_only_wizard_roles(): void
+    {
+        $actor = $this->makeActor('untick_all_hidden');
+        $actor->assignRole('Super Admin');
+
+        // Created with the payload's offered role (Doctor), granted through the wizard.
+        $createPayload = $this->basicMemberPayload('UntickAllHidden');
+        $this->actingAs($actor)->post(route('member.store'), $createPayload)->assertOk();
+
+        $employeePk = DB::table('employee_master')->where('emp_id', $createPayload['id'])->value('pk');
+        $credentialPk = DB::table('user_credentials')->where('user_name', $createPayload['userid'])->value('pk');
+        $this->assertNotNull($employeePk);
+        $this->assertNotNull($credentialPk);
+        $this->assertSame(['Doctor'], User::find($credentialPk)->getRoleNames()->values()->all(), 'Fixture: only Doctor, granted through the wizard.');
+
+        $hiddenPk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'Hidden Tag ' . uniqid(),
+            'user_role_display_name' => 'Hidden Tag ' . uniqid(),
+            'active_inactive'        => 1,
+        ]);
+        DB::table('employee_role_mapping')->insert(['user_credentials_pk' => $credentialPk, 'user_role_master_pk' => $hiddenPk]);
+        $this->assertFalse(UserRoleMaster::getUserRoleList()->has($hiddenPk), 'Fixture: the hidden option is not offered by Step 3.');
+
+        $updatePayload = $this->basicMemberPayload('UntickAllHidden', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['first_name'] = 'Changed';
+        // Step 3 was rendered and every box unticked: only its marker is posted.
+        unset($updatePayload['userrole']);
+        $updatePayload['userrole_step_shown'] = '1';
+
+        $stepUrl = str_replace('edit-step', 'update-validate-step', route('member.edit-step', ['step' => 3, 'id' => $employeePk]));
+        $this->actingAs($actor)->postJson($stepUrl, ['userrole_step_shown' => '1'])->assertOk();
+
+        $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
+
+        $this->assertSame('Changed', DB::table('employee_master')->where('pk', $employeePk)->value('first_name'));
+        $this->assertSame(
+            [$hiddenPk],
+            DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->pluck('user_role_master_pk')->map(fn ($pk) => (int) $pk)->all(),
+            'The offered mapping is removed; the hidden option is kept exactly once.'
+        );
+        $this->assertSame(
+            [],
+            User::find($credentialPk)->getRoleNames()->values()->all(),
+            'Doctor, granted through the wizard, is revoked; nothing is granted for the hidden option.'
+        );
     }
 
     /**
