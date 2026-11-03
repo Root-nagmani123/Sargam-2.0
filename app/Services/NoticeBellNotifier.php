@@ -7,6 +7,7 @@ use App\Models\NoticeNotification as Notice;
 use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Bell notifications for the notice module (Admin > Notice).
@@ -35,7 +36,8 @@ class NoticeBellNotifier
     /**
      * Replace the notice's bell entries with fresh ones for its current audience.
      * A notice that is inactive or already expired is withdrawn and not re-sent,
-     * since the feed shows neither.
+     * since the feed shows neither. One whose display date is still ahead is
+     * withdrawn and left for notices:send-due-bells to announce on that date.
      *
      * @return int Number of bell entries created
      */
@@ -44,12 +46,18 @@ class NoticeBellNotifier
         $this->withdraw($noticePk);
 
         $notice = Notice::find($noticePk);
+        $today = date('Y-m-d');
 
         if (! $notice
             || (int) ($notice->active_inactive ?? 1) !== 1
-            || ($notice->expiry_date && $notice->expiry_date < date('Y-m-d'))) {
+            || ($notice->expiry_date && $notice->expiry_date < $today)
+            || ($notice->display_date && $notice->display_date > $today)) {
             return 0;
         }
+
+        // Marked before sending: should the inserts fail part-way, the scheduler
+        // does not keep re-announcing to the recipients already rung.
+        $this->markSent($noticePk, now());
 
         $sender = $senderCredentialPk
             ? DB::table('user_credentials')->where('pk', $senderCredentialPk)->value('user_id')
@@ -74,13 +82,30 @@ class NoticeBellNotifier
         return $created;
     }
 
-    /** Remove every bell entry this notice has rung. */
+    /** Remove every bell entry this notice has rung, and mark it unannounced. */
     public function withdraw(int $noticePk): int
     {
+        $this->markSent($noticePk, null);
+
         return Notification::where('type', self::TYPE)
             ->where('module_name', self::MODULE)
             ->where('reference_pk', $noticePk)
             ->delete();
+    }
+
+    /**
+     * Record when the notice was announced (null: not yet). Skipped until the
+     * bell_sent_at migration has run, so a deploy that ships the code first
+     * does not turn every notice save, toggle or delete into an error.
+     */
+    private function markSent(int $noticePk, $at): void
+    {
+        static $hasColumn = null;
+        $hasColumn ??= Schema::hasColumn('notices_notification', 'bell_sent_at');
+
+        if ($hasColumn) {
+            DB::table('notices_notification')->where('pk', $noticePk)->update(['bell_sent_at' => $at]);
+        }
     }
 
     /**

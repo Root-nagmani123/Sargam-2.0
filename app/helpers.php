@@ -1926,6 +1926,13 @@ if (!function_exists('notice_feed_base_query')) {
                 'notice_author_dept.department_name as author_department'
             )
             ->where('notices_notification.active_inactive', 1)
+            // Not before its display date, in any scope: a notice scheduled ahead
+            // reaches its audience on that date, along with its bell notification
+            // (notices:send-due-bells). Authors still see it on the notice list.
+            ->where(function ($q) use ($today) {
+                $q->whereNull('notices_notification.display_date')
+                    ->orWhere('notices_notification.display_date', '<=', $today);
+            })
             ->when($scope === 'live', function ($q) use ($today) {
                 $q->where('notices_notification.expiry_date', '>=', $today);
             })
