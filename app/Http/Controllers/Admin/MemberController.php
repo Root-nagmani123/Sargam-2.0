@@ -571,7 +571,8 @@ class MemberController extends Controller
     }
 
     /**
-     * Drop ticked role options that are no longer active, and say which ones.
+     * Drop ticked role options not offered by Step 3 (inactive, or active but naming no
+     * role), and say which ones.
      *
      * Validation only rejects pks that do not exist; an option deactivated while the
      * form was open reaches here and is skipped rather than failing the whole save
@@ -580,8 +581,8 @@ class MemberController extends Controller
      * On an update the member may already hold a role that has since been deactivated;
      * update() only rewrites mappings for ACTIVE roles, so that mapping is left in place
      * and the message says the role was not changed rather than "not assigned" (F-075).
-     * A selection where every role is inactive never reaches here: the validator refuses
-     * it first (see rejectOnlyInactiveRoles()).
+     * A selection in which no ticked option is offered by Step 3 never reaches here: the
+     * validator refuses it first (see rejectOnlyUnofferedRoles()).
      *
      * @return array{0: array, 1: ?string} [roles to assign, warning or null]
      */
@@ -608,23 +609,47 @@ class MemberController extends Controller
             return [$kept, null];
         }
 
-        $names = UserRoleMaster::whereIn('pk', $dropped)->pluck('user_role_display_name')->all();
-        $one = count($names) === 1;
+        // An option can be dropped for two reasons: it was deactivated, or it is active
+        // but not offered here because it names no role on Role & Permission > Roles.
+        // Calling the second kind "no longer active" was false (PR #343 review, F-003).
+        [$notManaged, $inactive] = $this->partitionUnofferedOptions($dropped);
 
-        return [$kept, implode(', ', $names)
-            . ($one ? ' is no longer an active role and ' : ' are no longer active roles and ')
-            . ($isUpdate ? ($one ? 'was not changed.' : 'were not changed.') : ($one ? 'was not assigned.' : 'were not assigned.'))
-            . ' The rest of the record was saved.'];
+        $outcome = fn (bool $one) => $isUpdate
+            ? ($one ? 'was not changed.' : 'were not changed.')
+            : ($one ? 'was not assigned.' : 'were not assigned.');
+
+        $parts = [];
+
+        if ($inactive->isNotEmpty()) {
+            $one = $inactive->count() === 1;
+            $parts[] = $inactive->pluck('user_role_display_name')->implode(', ')
+                . ($one ? ' is no longer an active role and ' : ' are no longer active roles and ')
+                . $outcome($one);
+        }
+
+        if ($notManaged->isNotEmpty()) {
+            $one = $notManaged->count() === 1;
+            $parts[] = $notManaged->pluck('user_role_display_name')->implode(', ')
+                . ($one ? ' is not managed from the Member wizard and ' : ' are not managed from the Member wizard and ')
+                . $outcome($one);
+        }
+
+        if ($parts === []) {
+            return [$kept, null];
+        }
+
+        return [$kept, implode(' ', $parts) . ' The rest of the record was saved.'];
     }
 
     /**
-     * Validator hook: refuse a role selection in which EVERY ticked role is inactive.
+     * Validator hook: refuse a role selection in which NO ticked option is offered by
+     * Step 3 (inactive, or active but naming no role).
      *
      * withoutInactiveRoles() would drop them all and leave the member with no role,
      * which 'userrole' => required exists to prevent (PR #319 re-review F-075). Runs as
      * part of validation, so the refusal happens before any upload or database write.
      */
-    private function rejectOnlyInactiveRoles(\Illuminate\Validation\Validator $validator, Request $request): void
+    private function rejectOnlyUnofferedRoles(\Illuminate\Validation\Validator $validator, Request $request): void
     {
         $roles = array_filter(
             (array) $request->input('userrole', []),
@@ -643,7 +668,53 @@ class MemberController extends Controller
             }
         }
 
-        $validator->errors()->add('userrole', 'The selected role is no longer active. Please choose an active role.');
+        // Same split as withoutInactiveRoles(): an active option that is only not offered
+        // here must not be called "no longer active" (PR #343 review, F-002).
+        [$notManaged, $inactive] = $this->partitionUnofferedOptions(array_map('intval', $roles));
+
+        // A pk with no row at all keeps the old message; the 'exists' rule also rejects it.
+        if ($inactive->isNotEmpty() || $notManaged->isEmpty()) {
+            $validator->errors()->add('userrole', 'The selected role is no longer active. Please choose an active role.');
+        }
+
+        if ($notManaged->isNotEmpty()) {
+            $validator->errors()->add('userrole', 'This role option is active but is not managed from the Member wizard.');
+        }
+    }
+
+    /**
+     * Split options Step 3 does not offer into [active but not managed here, inactive].
+     * NULL status counts as active, as in getUserRoleList().
+     */
+    private function partitionUnofferedOptions(array $pks): \Illuminate\Support\Collection
+    {
+        return UserRoleMaster::whereIn('pk', $pks)
+            ->get(['user_role_display_name', 'active_inactive'])
+            ->partition(fn ($row) => $row->active_inactive === null || (int) $row->active_inactive === 1);
+    }
+
+    /**
+     * Whether this member holds a Role Assignment option that Step 3 does not offer.
+     *
+     * Step 3 only offers options that are real roles (getUserRoleList()), so a member
+     * whose mappings are all hidden HR options (e.g. "Staff") shows nothing ticked.
+     * Requiring a tick there forced an administrator to grant a real role just to save
+     * an unrelated change (PR #343 review, F-009). update() keeps hidden mappings, so a
+     * member who holds one is never left with no role and the tick need not be required.
+     */
+    private function memberHoldsHiddenRoleOption($employeePk): bool
+    {
+        // Ordered as update() resolves the credential it writes (orderBy('pk')->first()), so
+        // both decisions use the same row when user_id has duplicates (PR #343 review, F-011).
+        $credentialPk = UserCredential::where('user_id', $employeePk)->orderBy('pk')->value('pk');
+
+        if ($credentialPk === null) {
+            return false;
+        }
+
+        return EmployeeRoleMapping::where('user_credentials_pk', $credentialPk)
+            ->whereNotIn('user_role_master_pk', UserRoleMaster::getUserRoleList()->keys()->all())
+            ->exists();
     }
 
     /**
@@ -1005,7 +1076,7 @@ class MemberController extends Controller
         [$rules, $messages] = $this->combinedMemberRules();
 
         $validator = Validator::make($request->all(), $rules, $messages);
-        $validator->after(fn ($validator) => $this->rejectOnlyInactiveRoles($validator, $request));
+        $validator->after(fn ($validator) => $this->rejectOnlyUnofferedRoles($validator, $request));
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
@@ -1175,14 +1246,20 @@ class MemberController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        [$rules, $messages] = $this->combinedMemberRules($this->actingUserCanManageRbacRoles());
+        // F-009: no tick required when the member keeps a hidden option (see memberHoldsHiddenRoleOption()),
+        // but only when Step 3 was actually posted (its userrole_step_shown marker). Without Step 3,
+        // an empty selection would revoke the member's offered roles, so it is refused as before (F-013).
+        [$rules, $messages] = $this->combinedMemberRules(
+            $this->actingUserCanManageRbacRoles()
+                && ! ($request->filled('userrole_step_shown') && $this->memberHoldsHiddenRoleOption($request->emp_id))
+        );
 
         $validator = Validator::make($request->all(), $rules, $messages);
 
         // Only for an actor whose role selection is actually saved; a non-admin's
         // 'userrole' is ignored by update() (F-001), so it must not block their save.
         if ($this->actingUserCanManageRbacRoles()) {
-            $validator->after(fn ($validator) => $this->rejectOnlyInactiveRoles($validator, $request));
+            $validator->after(fn ($validator) => $this->rejectOnlyUnofferedRoles($validator, $request));
         }
 
         if ($validator->fails()) {
@@ -1699,10 +1776,18 @@ class MemberController extends Controller
             return response()->json(['error' => 'Unauthorized'], $e->getStatusCode());
         }
 
+        $rules = $formRequest->rules();
+
+        // F-009 / F-013: same rule as update() — no tick required when Step 3 was posted and
+        // the member keeps a hidden option.
+        if ((int) $step === 3 && $request->filled('userrole_step_shown') && $this->memberHoldsHiddenRoleOption($id)) {
+            $rules['userrole'] = ['nullable', 'array'];
+        }
+
         // Run validation with rules & messages from FormRequest
         $validator = Validator::make(
             $formRequest->all(),
-            $formRequest->rules(),
+            $rules,
             $formRequest->messages(),
             $formRequest->attributes()
         );
