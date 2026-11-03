@@ -10,6 +10,7 @@ use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Models\SidebarMenu\SidebarCategory;
 use App\Models\DashboardCard;
+use App\Models\UserRoleMaster;
 use App\Exports\BrandedGridExport;
 use App\Support\ExportCsvHeader;
 use App\Support\PdfPageNumbers;
@@ -217,12 +218,25 @@ class RoleController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:roles,name',
+            'name' => [
+                // 100, not 255: the Role Assignment option is stored in
+                // user_role_master, whose name columns are varchar(100).
+                'required', 'string', 'max:100', 'unique:roles,name',
+                // PR #343 review, F-001: never adopt an option employees already hold.
+                function ($attribute, $value, $fail) {
+                    if (is_string($value) && ($message = UserRoleMaster::mappedOptionConflict($value))) {
+                        $fail($message);
+                    }
+                },
+            ],
         ]);
 
-        Role::create([
-            'name' => $validated['name']
-        ]);
+        // The Role Assignment step reads user_role_master, so a role created here
+        // gets its option in the same transaction.
+        DB::transaction(function () use ($validated) {
+            Role::create(['name' => $validated['name']]);
+            UserRoleMaster::ensureOptionForRole($validated['name']);
+        });
 
         return redirect()->back()->with('success', 'Role created successfully.');
     }
@@ -367,13 +381,29 @@ class RoleController extends Controller
      */
     public function update(Request $request, $id)
     {
+        $oldName = Role::whereKey($id)->value('name');
+
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:roles,name,'.$id,
+            'name' => [
+                'required', 'string', 'max:100', 'unique:roles,name,'.$id,
+                // PR #343 review, F-001 / F-008: a rename must not adopt an option employees
+                // hold, nor leave the role's own option behind under the old name.
+                function ($attribute, $value, $fail) use ($oldName) {
+                    if (is_string($value) && ($message = UserRoleMaster::renameOptionConflict($value, $oldName))) {
+                        $fail($message);
+                    }
+                },
+            ],
         ]);
 
-        Role::where('id', $id)->update([
-            'name' => $validated['name']
-        ]);
+        DB::transaction(function () use ($id, $validated, $oldName) {
+            Role::where('id', $id)->update(['name' => $validated['name']]);
+
+            if ($oldName !== null) {
+                UserRoleMaster::renameOptionForRole($oldName, $validated['name']);
+            }
+        });
+
         return redirect()->back()->with('success', 'Role updated successfully.');
     }
 
