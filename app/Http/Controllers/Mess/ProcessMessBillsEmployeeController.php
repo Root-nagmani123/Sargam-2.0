@@ -974,7 +974,8 @@ class ProcessMessBillsEmployeeController extends Controller
      * bills reach the statement's allocation but not this pool:
      * - client-id buyer: rows without a client id named with one of the buyer's name variants
      *   (the name, the name without a "(...)" suffix, the employee display name, names on the
-     *   buyer's SV vouchers), unless a bill in the group's period carries that exact name;
+     *   buyer's SV vouchers and kitchen selling issues); if fetched at all they are pooled under
+     *   a separate name: key, never the buyer's cid: key;
      * - any buyer: rows named "<name> (...)" (the filter's LIKE 'name (%' match).
      * MessGenerateInvoiceModalPaidTest covers name-only and client-id buyers on the uncached modal path.
      *
