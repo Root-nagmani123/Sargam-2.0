@@ -32,9 +32,16 @@ trait ExportsEstateGrid
     /** The grid's ?search= as text; search[]=x means no search, not a 500. */
     protected function exportSearchTerm(Request $request): string
     {
-        $search = $request->input('search', '');
+        return static::exportFilterText($request, 'search');
+    }
 
-        return is_string($search) ? $search : '';
+    /** A download filter as text; an array (key[]=x) falls back to $default instead of a 500. */
+    protected static function exportFilterText(Request $request, string $key, string $default = ''): string
+    {
+        $value = $request->input($key, $default);
+
+        // Only an array falls back: a scalar or an emptied field (null) reads exactly as the old (string) cast did.
+        return is_array($value) ? $default : (string) $value;
     }
 
     /**

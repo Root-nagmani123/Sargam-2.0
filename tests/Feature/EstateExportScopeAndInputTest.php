@@ -72,7 +72,7 @@ class EstateExportScopeAndInputTest extends TestCase
         $failures = [];
 
         foreach (self::ROUTES as $name) {
-            foreach ([[], ['cols' => ['req_id']], ['search' => ['x']], ['format' => ['csv']]] as $query) {
+            foreach ([[], ['cols' => ['req_id']], ['search' => ['x']], ['format' => ['csv']], self::arrayFilters()] as $query) {
                 $status = $actor->get(route('admin.estate.'.$name, $query))->getStatusCode();
                 if ($status !== 200) {
                     $failures[] = $name.'?'.urldecode(http_build_query($query)).' => '.$status;
@@ -81,6 +81,15 @@ class EstateExportScopeAndInputTest extends TestCase
         }
 
         $this->assertSame([], $failures);
+    }
+
+    /** Every toolbar filter the Estate downloads read, each sent as an array. */
+    private static function arrayFilters(): array
+    {
+        $keys = ['allotment_date_filter', 'bill_date_filter', 'bill_month', 'bill_year', 'bill_year_filter', 'eligibility_filter',
+            'estate_filter', 'status_filter', 'type_filter', 'unit_type_filter'];
+
+        return array_fill_keys($keys, ['x']);
     }
 
     public function test_scalar_search_and_cols_still_filter(): void

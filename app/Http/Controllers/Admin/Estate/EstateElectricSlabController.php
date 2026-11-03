@@ -109,7 +109,7 @@ class EstateElectricSlabController extends Controller
     private function exportPayload(Request $request): array
     {
         $search = trim($this->exportSearchTerm($request));
-        $unitType = (string) $request->input('unit_type_filter', '');
+        $unitType = static::exportFilterText($request, 'unit_type_filter');
 
         $rows = EstateElectricSlab::with('unitType')
             // Same "Merge with House" filter as the grid.

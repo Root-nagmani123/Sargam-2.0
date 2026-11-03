@@ -1,14 +1,21 @@
 <?php
 
-// One side of a two-connection HAC approval race (PR #349 F-004), started by
+// One side of a two-connection Estate allotment race (PR #349 F-004), started by
 // Tests\Feature\EstateChangeRequestConcurrentApprovalTest in its own PHP process, so
 // it has its own MySQL connection.
 //
-//   php tests/Support/estate_change_request_approve_race_worker.php <holder|second> <changeRequestPk> <housePk> <userPk>
+//   php tests/Support/estate_change_request_approve_race_worker.php <holder|second> <approve|disapprove|allot> <id> <value> <userPk>
 //
-// holder: approves inside an outer transaction and keeps it open 3 s before
-//         committing, so any lock the approval takes is held across the second call.
-// second: waits 1 s, then approves the same change request with another house.
+// approve:    approveChangeRequest(<change request pk>), value = house pk
+// disapprove: disapproveChangeRequest(<change request pk>), value = reason
+// allot:      allotNewRequest(<home request pk>), value = house pk
+// store-other:   storePossession() (Possession for Others), value = JSON form payload, id unused
+// store-details: storePossessionDetails() (Add Possession), value = JSON form payload, id unused
+// delete-house:  destroyDefineHouse(<house pk>), value unused
+//
+// holder: runs the action inside an outer transaction and keeps it open 3 s before
+//         committing, so any lock the action takes is held across the second call.
+// second: waits 1 s, then runs its action.
 // Prints one JSON line: {"role", "started", "returned", "status", "body"}.
 
 use App\Http\Controllers\Admin\EstateController;
@@ -19,7 +26,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-[, $role, $changeRequestPk, $housePk, $userPk] = $argv;
+[, $role, $action, $id, $value, $userPk] = $argv;
 
 $root = dirname(__DIR__, 2);
 require $root.'/vendor/autoload.php';
@@ -35,7 +42,17 @@ $session->put('user_roles', ['Estate Admin']);
 $user = User::findOrFail((int) $userPk);
 Auth::setUser($user);
 
-$request = Request::create('/admin/estate/change-request/approve/'.$changeRequestPk, 'POST', ['estate_house_master_pk' => (int) $housePk]);
+[$method, $payload] = match ($action) {
+    'approve' => ['approveChangeRequest', ['estate_house_master_pk' => (int) $value]],
+    'disapprove' => ['disapproveChangeRequest', ['disapprove_reason' => $value]],
+    'allot' => ['allotNewRequest', ['estate_house_master_pk' => (int) $value]],
+    'store-other' => ['storePossession', json_decode($value, true)],
+    'store-details' => ['storePossessionDetails', json_decode($value, true)],
+    'delete-house' => ['destroyDefineHouse', []],
+};
+$withId = ! in_array($action, ['store-other', 'store-details'], true);
+
+$request = Request::create('/admin/estate/race/'.$id, 'POST', $payload);
 $request->headers->set('Accept', 'application/json');
 $request->setLaravelSession($session);
 $request->setUserResolver(fn () => $user);
@@ -50,7 +67,8 @@ if ($role === 'holder') {
 
 $started = microtime(true) - $t0;
 try {
-    $response = app(EstateController::class)->approveChangeRequest($request, (int) $changeRequestPk);
+    $controller = app(EstateController::class);
+    $response = $withId ? $controller->{$method}($request, (int) $id) : $controller->{$method}($request);
     $status = $response->getStatusCode();
     $body = json_decode($response->getContent(), true);
 } catch (ValidationException $e) {
@@ -69,4 +87,6 @@ echo json_encode([
     'returned' => round($returned, 2),
     'status' => $status,
     'body' => $body,
+    // The possession forms answer with a redirect and a flash message, not JSON.
+    'flash' => ['error' => $session->get('error'), 'success' => $session->get('success')],
 ]), "\n";

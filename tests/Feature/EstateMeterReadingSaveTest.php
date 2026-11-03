@@ -47,6 +47,22 @@ class EstateMeterReadingSaveTest extends TestCase
     }
 
     /**
+     * Possession Details injects ?modal=1 into its dialog. A full page there brings a second
+     * copy of the layout, whose page loader is never hidden and covers every control.
+     */
+    public function test_the_modal_request_gets_the_form_body_without_the_layout(): void
+    {
+        $actor = $this->as($this->staffWithRole('Estate Admin'), ['Estate Admin']);
+
+        $modal = $actor->get(route('admin.estate.update-meter-reading', ['modal' => 1]))->assertOk();
+        $modal->assertSee('id="meterReadingSaveForm"', false);
+        $modal->assertSee('js-umr-save', false);
+        $modal->assertDontSee('id="sargamLoader"', false);
+
+        $actor->get(route('admin.estate.update-meter-reading'))->assertOk()->assertSee('id="sargamLoader"', false);
+    }
+
+    /**
      * One selected row of a current possession, with a reading above its saved one, for the
      * bill period it already belongs to.
      *

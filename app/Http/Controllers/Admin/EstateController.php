@@ -399,8 +399,8 @@ class EstateController extends Controller
     private function requestForOthersExportPayload(Request $request): array
     {
         $search = trim($this->exportSearchTerm($request));
-        $billYear = trim((string) $request->input('bill_year_filter', ''));
-        $billDate = trim((string) $request->input('bill_date_filter', ''));
+        $billYear = trim(static::exportFilterText($request, 'bill_year_filter'));
+        $billDate = trim(static::exportFilterText($request, 'bill_date_filter'));
 
         $rows = EstateOtherRequestDataTable::listingQuery()
             ->tap(fn ($query) => EstateOtherRequestDataTable::applyFilters($query, $search, $billYear, $billDate))
@@ -1946,11 +1946,11 @@ class EstateController extends Controller
             ->tap(fn ($query) => EstateHacApprovedDataTable::applyFilters(
                 $query,
                 $this->exportSearchTerm($request),
-                (string) $request->input('type_filter', '')
+                static::exportFilterText($request, 'type_filter')
             ))
             ->get();
 
-        $typeFilter = trim((string) $request->input('type_filter', ''));
+        $typeFilter = trim(static::exportFilterText($request, 'type_filter'));
         $typeLabel = match ($typeFilter) {
             'change' => 'Change Request',
             'new' => 'New Request',
@@ -2633,8 +2633,8 @@ class EstateController extends Controller
         $rows = $this->requestForHouseRows()->map(fn ($row) => (object) $row)->values();
 
         // Toolbar filters — exact matches on the values the grid shows.
-        $statusFilter = trim((string) $request->input('status_filter', ''));
-        $eligibilityFilter = trim((string) $request->input('eligibility_filter', ''));
+        $statusFilter = trim(static::exportFilterText($request, 'status_filter'));
+        $eligibilityFilter = trim(static::exportFilterText($request, 'eligibility_filter'));
         if ($statusFilter !== '') {
             $rows = $rows->filter(fn ($row) => strcasecmp(trim((string) ($row->status ?? '')), $statusFilter) === 0)->values();
         }
@@ -3163,8 +3163,19 @@ class EstateController extends Controller
             abort(403, 'You do not have permission to allot estate houses.');
         }
 
+        // One transaction for the whole allotment: a failed write leaves nothing half-allotted.
+        return DB::transaction(fn () => $this->allotLockedNewRequest($request, $id));
+    }
+
+    /**
+     * Body of allotNewRequest(); must run inside its transaction. The row lock makes a concurrent
+     * allotment of the same request wait, then update the one pending possession instead of adding a second.
+     */
+    private function allotLockedNewRequest(Request $request, $id)
+    {
         $homeReq = EstateHomeRequestDetails::where('hac_status', 1)
             ->where('change_status', 0)
+            ->lockForUpdate()
             ->findOrFail($id);
 
         $request->validate([
@@ -3208,7 +3219,8 @@ class EstateController extends Controller
         }
 
         // Align with Define House: only Vacant and not already used houses can be allotted
-        $houseRow = DB::table('estate_house_master')->where('pk', $estateHouseMasterPk)->first();
+        // Row lock on the house: another allotment of the same house waits here, then sees it taken.
+        $houseRow = DB::table('estate_house_master')->where('pk', $estateHouseMasterPk)->lockForUpdate()->first();
         if ($houseRow) {
             if ((int) ($houseRow->vacant_renovation_status ?? 1) !== 1) {
                 $msg = 'Selected house is Under Renovation in Define House. Only Vacant houses can be allotted.';
@@ -3225,13 +3237,14 @@ class EstateController extends Controller
             if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
                 $activeDetails->where('return_home_status', 0);
             }
-            $isOccupied = $activeDetails->exists();
+            // Locking reads see the latest commit, not this transaction's older snapshot.
+            $isOccupied = $activeDetails->sharedLock()->exists();
             if (! $isOccupied) {
                 $activeOther = DB::table('estate_possession_other')
                     ->where('estate_house_master_pk', $estateHouseMasterPk)
                     ->whereNotNull('estate_house_master_pk')
                     ->where('return_home_status', 0);
-                $isOccupied = $activeOther->exists();
+                $isOccupied = $activeOther->sharedLock()->exists();
             }
             if ($isOccupied) {
                 $msg = 'Selected house is already occupied. Please choose a vacant house from the list.';
@@ -3383,7 +3396,8 @@ class EstateController extends Controller
         }
 
         // Align with Define House: only Vacant and not already occupied houses can be allotted
-        $houseRow = DB::table('estate_house_master')->where('pk', $estateHouseMasterPk)->first();
+        // Row lock on the house: another allotment of the same house waits here, then sees it taken.
+        $houseRow = DB::table('estate_house_master')->where('pk', $estateHouseMasterPk)->lockForUpdate()->first();
         if ($houseRow) {
             if ((int) ($houseRow->vacant_renovation_status ?? 1) !== 1) {
                 $msg = 'Selected house is Under Renovation in Define House. Only Vacant houses can be allotted.';
@@ -3399,13 +3413,14 @@ class EstateController extends Controller
             if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
                 $activeDetails->where('return_home_status', 0);
             }
-            $isOccupied = $activeDetails->exists();
+            // Locking reads see the latest commit, not this transaction's older snapshot.
+            $isOccupied = $activeDetails->sharedLock()->exists();
             if (! $isOccupied) {
                 $activeOther = DB::table('estate_possession_other')
                     ->where('estate_house_master_pk', $estateHouseMasterPk)
                     ->whereNotNull('estate_house_master_pk')
                     ->where('return_home_status', 0);
-                $isOccupied = $activeOther->exists();
+                $isOccupied = $activeOther->sharedLock()->exists();
             }
             if ($isOccupied) {
                 $msg = 'Selected house is already occupied. Please choose a vacant house from the list.';
@@ -3884,6 +3899,13 @@ class EstateController extends Controller
      */
     public function storePossession(Request $request)
     {
+        // One transaction, so the house row lock below serialises allotments of the same house.
+        return DB::transaction(fn () => $this->storePossessionLocked($request));
+    }
+
+    /** Body of storePossession(); must run inside its transaction. */
+    private function storePossessionLocked(Request $request)
+    {
         // Special-case: Return House for LBSNAA employees uses estate_possession_details, not estate_possession_other.
         if ($request->get('redirect_to') === 'return-house' && $request->input('employee_type') === 'LBSNAA') {
             $validated = $request->validate([
@@ -4076,7 +4098,8 @@ class EstateController extends Controller
             if ($request->filled('id')) {
                 $duplicateQuery->where('pk', '!=', (int) $request->id);
             }
-            if ($duplicateQuery->exists()) {
+            // Locking read: sees an entry a concurrent save just committed, not this transaction's snapshot.
+            if ($duplicateQuery->sharedLock()->exists()) {
                 $dupMsg = 'Selected requester already has a possession entry.';
                 if ($json = $this->estateFormFailure($request, $dupMsg, ['estate_other_req_pk' => $dupMsg])) {
                     return $json;
@@ -4089,8 +4112,10 @@ class EstateController extends Controller
             }
         }
 
+        // Row lock: a concurrent allotment of this house waits, then reads it as used.
         $house = DB::table('estate_house_master')
             ->where('pk', $validated['estate_house_master_pk'])
+            ->lockForUpdate()
             ->first();
         if (!$house) {
             $missingHouse = 'Selected house not found. Please reselect the house and try again.';
@@ -5010,7 +5035,7 @@ class EstateController extends Controller
 
         $renovation = 'COALESCE(h.vacant_renovation_status, 1)';
         $allotted = 'COALESCE(h.used_home_status, 0)';
-        switch ((string) $request->input('status_filter', '')) {
+        switch (static::exportFilterText($request, 'status_filter')) {
             case 'renovation':
                 $query->whereRaw("$renovation = 0");
                 break;
@@ -5271,8 +5296,8 @@ class EstateController extends Controller
             }
         }
         $statusLabels = ['vacant' => 'Vacant', 'occupied' => 'Occupied', 'renovation' => 'Under Renovation'];
-        if (isset($statusLabels[(string) $request->input('status_filter')])) {
-            $filters[] = 'Status: ' . $statusLabels[(string) $request->input('status_filter')];
+        if (isset($statusLabels[static::exportFilterText($request, 'status_filter')])) {
+            $filters[] = 'Status: ' . $statusLabels[static::exportFilterText($request, 'status_filter')];
         }
         if ($search !== '') {
             $filters[] = 'Search: "' . $search . '"';
@@ -5488,7 +5513,14 @@ class EstateController extends Controller
      */
     public function destroyDefineHouse(Request $request, $id)
     {
-        $house = EstateHouse::find($id);
+        // One transaction: the house stays locked from the occupied check to the delete.
+        return DB::transaction(fn () => $this->destroyLockedDefineHouse($request, $id));
+    }
+
+    /** Body of destroyDefineHouse(); must run inside its transaction. */
+    private function destroyLockedDefineHouse(Request $request, $id)
+    {
+        $house = EstateHouse::lockForUpdate()->find($id);
         if (! $house) {
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => 'House not found.'], 404);
@@ -5897,19 +5929,19 @@ class EstateController extends Controller
             ->tap(fn ($query) => EstatePossessionDetailsDataTable::applyFilters(
                 $query,
                 $this->exportSearchTerm($request),
-                (string) $request->input('estate_filter', ''),
-                (string) $request->input('allotment_date_filter', '')
+                static::exportFilterText($request, 'estate_filter'),
+                static::exportFilterText($request, 'allotment_date_filter')
             ))
             ->get();
 
-        $estateFilter = trim((string) $request->input('estate_filter', ''));
+        $estateFilter = trim(static::exportFilterText($request, 'estate_filter'));
         $estateLabel = $estateFilter !== ''
             ? (DB::table('estate_campus_master')->where('pk', (int) $estateFilter)->value('campus_name') ?: 'All')
             : 'All';
 
         $filters = ['Estate: ' . $estateLabel];
-        if (trim((string) $request->input('allotment_date_filter', '')) !== '') {
-            $filters[] = 'Allotment date: ' . trim((string) $request->input('allotment_date_filter'));
+        if (trim(static::exportFilterText($request, 'allotment_date_filter')) !== '') {
+            $filters[] = 'Allotment date: ' . trim(static::exportFilterText($request, 'allotment_date_filter'));
         }
         if (trim($this->exportSearchTerm($request)) !== '') {
             $filters[] = 'Search: "' . trim($this->exportSearchTerm($request)) . '"';
@@ -6118,6 +6150,13 @@ class EstateController extends Controller
      */
     public function storePossessionDetails(Request $request)
     {
+        // One transaction, so the house row lock below serialises allotments of the same house.
+        return DB::transaction(fn () => $this->storePossessionDetailsLocked($request));
+    }
+
+    /** Body of storePossessionDetails(); must run inside its transaction. */
+    private function storePossessionDetailsLocked(Request $request)
+    {
         $messages = [
             'electric_meter_reading_primary.regex' => 'Primary meter reading must be numbers only (max 10 digits).',
             'electric_meter_reading_secondary.regex' => 'Secondary meter reading must be numbers only (max 10 digits).',
@@ -6258,6 +6297,8 @@ class EstateController extends Controller
             ->where('estate_campus_master_pk', (int) $validated['estate_campus_master_pk'])
             ->where('estate_block_master_pk', (int) $validated['estate_block_master_pk'])
             ->where('estate_unit_sub_type_master_pk', (int) $validated['estate_unit_sub_type_master_pk'])
+            // Row lock: a concurrent allotment of this house waits, then reads it as used.
+            ->lockForUpdate()
             ->first();
 
         if (! $house) {
@@ -6394,8 +6435,8 @@ class EstateController extends Controller
     private function possessionForOthersExportPayload(Request $request): array
     {
         $search = trim($this->exportSearchTerm($request));
-        $billYear = trim((string) $request->input('bill_year_filter', ''));
-        $billDate = trim((string) $request->input('bill_date_filter', ''));
+        $billYear = trim(static::exportFilterText($request, 'bill_year_filter'));
+        $billDate = trim(static::exportFilterText($request, 'bill_date_filter'));
 
         $rows = EstatePossessionOtherDataTable::listingQuery()
             ->tap(fn ($query) => EstatePossessionOtherDataTable::applyFilters(
@@ -7246,9 +7287,15 @@ class EstateController extends Controller
             }
         }
 
-        return view('admin.estate.update_meter_reading', compact(
-            'campuses', 'unitTypes', 'billMonths', 'unitSubTypes', 'prefill'
-        ));
+        $payload = compact('campuses', 'unitTypes', 'billMonths', 'unitSubTypes', 'prefill');
+
+        // The Possession Details listing's Update Meter Reading modal asks for the
+        // body only (filter + readings grid).
+        if (request()->boolean('modal')) {
+            return view('admin.estate._update_meter_reading_form', $payload + ['inModal' => true]);
+        }
+
+        return view('admin.estate.update_meter_reading', $payload);
     }
 
     /** Estate listing cache version token ki key ({@see estateCacheVersion()}). */
@@ -8623,8 +8670,8 @@ class EstateController extends Controller
                 'draw' => 1,
                 'start' => 0,
                 'length' => -1,
-                'bill_year' => $request->input('bill_year'),
-                'bill_month' => $request->input('bill_month'),
+                'bill_year' => static::exportFilterText($request, 'bill_year'),
+                'bill_month' => static::exportFilterText($request, 'bill_month'),
                 'search' => ['value' => $this->exportSearchTerm($request)],
             ], fn ($v) => $v !== null && $v !== '')
         );
@@ -8635,7 +8682,7 @@ class EstateController extends Controller
 
         $monthNum = (int) $request->input('bill_month', 0);
         $filters = [];
-        $filters[] = 'Bill Year: ' . ($request->input('bill_year') ?: 'All');
+        $filters[] = 'Bill Year: ' . (static::exportFilterText($request, 'bill_year') ?: 'All');
         $filters[] = 'Bill Month: ' . ($monthNum >= 1 && $monthNum <= 12
             ? date('F', mktime(0, 0, 0, $monthNum, 1))
             : 'All');
@@ -12342,7 +12389,7 @@ class EstateController extends Controller
     {
         $this->authorizeEstateMasterMeterAndReports();
 
-        $billMonth = trim((string) $request->input('bill_month', date('Y-m')));
+        $billMonth = trim(static::exportFilterText($request, 'bill_month', date('Y-m')));
         $blockId = $request->input('block_id', 'all');
         $employeeType = trim((string) $request->input('employee_type', 'LBSNAA'));
         $search = trim($this->exportSearchTerm($request));
@@ -13582,7 +13629,7 @@ class EstateController extends Controller
      */
     private function generateBillForOtherExportPayload(Request $request): array
     {
-        $billMonth = trim((string) $request->input('bill_month', date('Y-m')));
+        $billMonth = trim(static::exportFilterText($request, 'bill_month', date('Y-m')));
         $search = trim($this->exportSearchTerm($request));
 
         $parts = explode('-', $billMonth);

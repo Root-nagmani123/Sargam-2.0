@@ -36,6 +36,37 @@ class EstateChangeRequestApprovalTest extends TestCase
         $this->assertSame($before['houseB'], $after['houseB'], 'the refused approval did not touch its house');
     }
 
+    public function test_an_approved_request_cannot_then_be_rejected(): void
+    {
+        [$cr, $houseA] = $this->fixture();
+        $actor = $this->as($this->staffWithRole('Estate Admin'), ['Estate Admin']);
+
+        $actor->postJson(route('admin.estate.change-request.approve', $cr->pk), ['estate_house_master_pk' => $houseA])->assertOk();
+        $actor->postJson(route('admin.estate.change-request.disapprove', $cr->pk), ['disapprove_reason' => 'too late'])
+            ->assertStatus(409)->assertJson(['success' => false]);
+
+        $this->assertSame(1, (int) DB::table('estate_change_home_req_details')->where('pk', $cr->pk)->value('change_ap_dis_status'));
+        $this->assertNull(DB::table('estate_change_home_req_details')->where('pk', $cr->pk)->value('remarks'));
+    }
+
+    public function test_a_rejected_request_cannot_be_rejected_again_or_approved(): void
+    {
+        [$cr, $houseA, $houseB] = $this->fixture();
+        $before = $this->state($cr, $houseA, $houseB);
+        $actor = $this->as($this->staffWithRole('Estate Admin'), ['Estate Admin']);
+
+        $actor->postJson(route('admin.estate.change-request.disapprove', $cr->pk), ['disapprove_reason' => 'first reason'])
+            ->assertOk()->assertJson(['success' => true]);
+        $actor->postJson(route('admin.estate.change-request.disapprove', $cr->pk), ['disapprove_reason' => 'second reason'])->assertStatus(409);
+        $actor->postJson(route('admin.estate.change-request.approve', $cr->pk), ['estate_house_master_pk' => $houseA])->assertStatus(409);
+
+        $this->assertSame('first reason', DB::table('estate_change_home_req_details')->where('pk', $cr->pk)->value('remarks'), 'the first decision\'s remark stands');
+        $after = $this->state($cr, $houseA, $houseB);
+        $this->assertSame(2, $after['decision']);
+        $this->assertSame($before['possessions'], $after['possessions'], 'a rejection allots nothing');
+        $this->assertSame($before['houseA'], $after['houseA']);
+    }
+
     public function test_a_failed_write_rolls_back_the_whole_decision(): void
     {
         [$cr, $houseA, $houseB] = $this->fixture();

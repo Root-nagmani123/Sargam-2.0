@@ -667,10 +667,11 @@ $(document).ready(function() {
 
     if (!umrInModal) return;
 
-    // In the dialog, save over AJAX so the listing can refresh in place. This
-    // handler is bound AFTER the page's own submit handler, so if that one
-    // already blocked the submit (its validation), we leave it blocked.
-    $('#meterReadingSaveForm').on('submit', function(e) {
+    // In the dialog, save over AJAX so the listing can refresh in place. Queued as a
+    // ready callback so it binds AFTER the validation handler above: injected into an
+    // already-loaded page, jQuery runs ready callbacks later and in order. That handler
+    // fills the hidden month/date fields; if it blocked the submit, we leave it blocked.
+    $(function() { $('#meterReadingSaveForm').on('submit', function(e) {
         if (e.isDefaultPrevented()) return;
         e.preventDefault();
 
@@ -700,7 +701,7 @@ $(document).ready(function() {
             },
             complete: function() { $btn.prop('disabled', false).text('Save'); }
         });
-    });
+    }); });
 }
 })();
 </script>
