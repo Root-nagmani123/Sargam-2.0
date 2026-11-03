@@ -1932,7 +1932,11 @@ if (!function_exists('notice_feed_base_query')) {
             ->when($scope === 'archive', function ($q) use ($today) {
                 $q->where('notices_notification.expiry_date', '<', $today);
             })
-            ->orderBy('notices_notification.display_date', 'desc');
+            ->orderBy('notices_notification.display_date', 'desc')
+            // Tie-break: notices sharing a display date must keep one order, or a
+            // page boundary can show one twice and skip another, and a bell link
+            // cannot work out which page holds its notice.
+            ->orderBy('notices_notification.pk', 'desc');
     }
 }
 if (!function_exists('notice_audience_has_any')) {
@@ -1985,6 +1989,24 @@ if (!function_exists('notice_audience_unpinned_or_any')) {
         });
     }
 }
+if (!function_exists('notice_staff_faculty_role_names')) {
+    /**
+     * Role names that put a login with no user_category on the Staff/Faculty side
+     * of the notice feed. Shared with NoticeBellNotifier, which has to pick the
+     * same people when it rings their bell.
+     */
+    function notice_staff_faculty_role_names(): array
+    {
+        return [
+            'Internal Faculty', 'Guest Faculty', 'Staff', 'Faculty', 'Employee',
+            'Doctor', 'Admin', 'Super Admin', 'Personal Assistant', 'Estate',
+            'Estate Admin', 'Estate HAC', 'Mess-Staff', 'Mess-Admin',
+            'Training-Induction', 'Training-MCTP', 'Training MCTP Admin',
+            'Training IST', 'IST', 'Discipline Admin', 'Admin Security',
+            'Security Card', 'Centcom Admin', 'CR-Admin', 'TA and RF',
+        ];
+    }
+}
 if (!function_exists('notice_feed_query_by_role')) {
     /**
      * Role-scoped notice feed as an UNEXECUTED query builder.
@@ -2023,14 +2045,7 @@ if (!function_exists('notice_feed_query_by_role')) {
         // is why Staff/Faculty notices reached nobody.
         $category = (string) ($user->user_category ?? '');
 
-        $roleStaffFaculty = [
-            'Internal Faculty', 'Guest Faculty', 'Staff', 'Faculty', 'Employee',
-            'Doctor', 'Admin', 'Super Admin', 'Personal Assistant', 'Estate',
-            'Estate Admin', 'Estate HAC', 'Mess-Staff', 'Mess-Admin',
-            'Training-Induction', 'Training-MCTP', 'Training MCTP Admin',
-            'Training IST', 'IST', 'Discipline Admin', 'Admin Security',
-            'Security Card', 'Centcom Admin', 'CR-Admin', 'TA and RF',
-        ];
+        $roleStaffFaculty = notice_staff_faculty_role_names();
         $roleStudent = ['Student-OT', 'Officer Trainee'];
 
         // 'F' is a faculty login (is_faculty_portal_user()), so it gets the

@@ -10,6 +10,7 @@ use App\Models\NoticeNotification as Notice;
 use App\Models\NoticeAudienceMap;
 use App\Models\CourseMaster;
 use App\Models\DepartmentMaster;
+use App\Services\NoticeBellNotifier;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -282,10 +283,14 @@ class NoticeNotificationController extends Controller
         // One transaction: a notice committed without its audience rows reads as
         // "every course / every department" in the feed, so a failed audience
         // insert must take the notice down with it.
-        DB::transaction(function () use ($data, $request) {
+        $notice = DB::transaction(function () use ($data, $request) {
             $notice = Notice::create($data);
             $this->syncAudience($notice, $request);
+
+            return $notice;
         });
+
+        $this->ringBell($notice->pk, false);
 
         return redirect()
             ->route('admin.notice.index')
@@ -427,6 +432,7 @@ class NoticeNotificationController extends Controller
             // Audience untouched: no audience columns written, no rows re-synced.
             $notice->update($data);
             $this->deleteReplacedAttachment($notice, $previousDocument);
+            $this->ringBell($notice->pk, true);
 
             return redirect()->route('admin.notice.index')->with('success', 'Notice updated!');
         }
@@ -440,8 +446,27 @@ class NoticeNotificationController extends Controller
             $this->syncAudience($notice, $request);
         });
         $this->deleteReplacedAttachment($notice, $previousDocument);
+        $this->ringBell($notice->pk, true);
 
         return redirect()->route('admin.notice.index')->with('success', 'Notice updated!');
+    }
+
+    /**
+     * Ring the audience's bell once the response has gone out: an "All" notice
+     * reaches every login, and those inserts must not hold up the author's save.
+     * A failure is reported, never surfaced, since the notice itself is saved.
+     */
+    private function ringBell(int $noticePk, bool $updated): void
+    {
+        $sender = Auth::id();
+
+        app()->terminating(function () use ($noticePk, $updated, $sender) {
+            try {
+                app(NoticeBellNotifier::class)->publish($noticePk, $updated, $sender);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        });
     }
 
     private function deleteReplacedAttachment(Notice $notice, ?string $previousDocument): void
@@ -480,6 +505,7 @@ class NoticeNotificationController extends Controller
                 $data->audienceMaps()->delete();
                 $data->delete();
             });
+            app(NoticeBellNotifier::class)->withdraw($data->pk);
             // Public-disk files stay on disk until removed; don't leave a deleted
             // notice's attachment behind.
             $this->deleteAttachmentFile($data->document);
