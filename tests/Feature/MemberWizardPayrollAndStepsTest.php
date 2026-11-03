@@ -773,6 +773,60 @@ class MemberWizardPayrollAndStepsTest extends TestCase
     }
 
     /**
+     * PR #343 review, F-005: a member holding a hidden option and a wizard-granted role has
+     * every offered role unticked with Step 3 shown. The save is accepted (no tick is required
+     * while a hidden option is kept), the offered mapping is removed, the wizard-granted role is
+     * revoked, and the hidden option is kept exactly once.
+     */
+    public function test_unticking_every_offered_role_of_a_member_with_a_hidden_option_revokes_only_wizard_roles(): void
+    {
+        $actor = $this->makeActor('untick_all_hidden');
+        $actor->assignRole('Super Admin');
+
+        // Created with the payload's offered role (Doctor), granted through the wizard.
+        $createPayload = $this->basicMemberPayload('UntickAllHidden');
+        $this->actingAs($actor)->post(route('member.store'), $createPayload)->assertOk();
+
+        $employeePk = DB::table('employee_master')->where('emp_id', $createPayload['id'])->value('pk');
+        $credentialPk = DB::table('user_credentials')->where('user_name', $createPayload['userid'])->value('pk');
+        $this->assertNotNull($employeePk);
+        $this->assertNotNull($credentialPk);
+        $this->assertSame(['Doctor'], User::find($credentialPk)->getRoleNames()->values()->all(), 'Fixture: only Doctor, granted through the wizard.');
+
+        $hiddenPk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'Hidden Tag ' . uniqid(),
+            'user_role_display_name' => 'Hidden Tag ' . uniqid(),
+            'active_inactive'        => 1,
+        ]);
+        DB::table('employee_role_mapping')->insert(['user_credentials_pk' => $credentialPk, 'user_role_master_pk' => $hiddenPk]);
+        $this->assertFalse(UserRoleMaster::getUserRoleList()->has($hiddenPk), 'Fixture: the hidden option is not offered by Step 3.');
+
+        $updatePayload = $this->basicMemberPayload('UntickAllHidden', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['first_name'] = 'Changed';
+        // Step 3 was rendered and every box unticked: only its marker is posted.
+        unset($updatePayload['userrole']);
+        $updatePayload['userrole_step_shown'] = '1';
+
+        $stepUrl = str_replace('edit-step', 'update-validate-step', route('member.edit-step', ['step' => 3, 'id' => $employeePk]));
+        $this->actingAs($actor)->postJson($stepUrl, ['userrole_step_shown' => '1'])->assertOk();
+
+        $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
+
+        $this->assertSame('Changed', DB::table('employee_master')->where('pk', $employeePk)->value('first_name'));
+        $this->assertSame(
+            [$hiddenPk],
+            DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->pluck('user_role_master_pk')->map(fn ($pk) => (int) $pk)->all(),
+            'The offered mapping is removed; the hidden option is kept exactly once.'
+        );
+        $this->assertSame(
+            [],
+            User::find($credentialPk)->getRoleNames()->values()->all(),
+            'Doctor, granted through the wizard, is revoked; nothing is granted for the hidden option.'
+        );
+    }
+
+    /**
      * Shared step 1-5 payload valid against combinedMemberRules(). $employeePk, when given,
      * targets update() against an existing record instead of creating a new one.
      */

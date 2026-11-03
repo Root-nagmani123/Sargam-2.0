@@ -192,3 +192,4 @@ backfill should have covered (rerun it).
 | 27 Oct 2026 | PR #343 review round 6 fixes (`558a94883`): F-011 credential lookup ordered like `update()`; F-012 test docblock moved back. |
 | 28 Oct 2026 | PR #343 review round 7 fix, F-013: step 3 posts a hidden `userrole_step_shown` marker; the F-009 "no tick required" rule applies only when it is present, so a save without step 3 is refused instead of removing the member's roles. |
 | 2 Nov 2026 | PR #343 review round 8: `4852fc843` gives an active-but-unoffered option its own Step 3 refusal message (F-002) and adds the duplicate-spelling test (F-003). F-004: validator docblocks corrected and `rejectOnlyInactiveRoles()` renamed `rejectOnlyUnofferedRoles()`; no behaviour change. |
+| 3 Nov 2026 | PR #343 review round 4, F-005: test for unticking every offered role of a member who holds a hidden option (the wizard-granted role is revoked, the hidden option is kept). Test only; no behaviour change. |
