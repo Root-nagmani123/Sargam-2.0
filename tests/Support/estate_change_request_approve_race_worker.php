@@ -16,11 +16,16 @@
 // holder: runs the action inside an outer transaction and keeps it open 3 s before
 //         committing, so any lock the action takes is held across the second call.
 // second: waits 1 s, then runs its action.
+// together: starts at once, and pauses 3 s right after its occupancy / duplicate check (the
+//         first "select exists" on a possession table), so two of them both hold whatever that
+//         check locked before either writes: the F-007 deadlock shape. "hook" is that pause as
+//         absolute [from, to] times, so the caller can prove the two pauses overlapped.
 // Prints one JSON line: {"role", "started", "returned", "status", "body"}.
 
 use App\Http\Controllers\Admin\EstateController;
 use App\Models\User;
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -64,6 +69,16 @@ if ($role === 'second') {
 if ($role === 'holder') {
     DB::beginTransaction();
 }
+$hook = null;
+if ($role === 'together') {
+    DB::listen(function ($query) use (&$hook) {
+        if ($hook === null && str_starts_with($query->sql, 'select exists') && str_contains($query->sql, '`estate_possession_')) {
+            $hook = [microtime(true)];
+            sleep(3);
+            $hook[] = microtime(true);
+        }
+    });
+}
 
 $started = microtime(true) - $t0;
 try {
@@ -73,6 +88,9 @@ try {
     $body = json_decode($response->getContent(), true);
 } catch (ValidationException $e) {
     [$status, $body] = [422, $e->errors()];
+} catch (QueryException $e) {
+    // What the browser would get as an HTTP 500 (a deadlock is SQLSTATE 40001 / 1213).
+    [$status, $body] = [500, ['message' => $e->getMessage()]];
 }
 $returned = microtime(true) - $t0;
 
@@ -87,6 +105,7 @@ echo json_encode([
     'returned' => round($returned, 2),
     'status' => $status,
     'body' => $body,
+    'hook' => $hook,
     // The possession forms answer with a redirect and a flash message, not JSON.
     'flash' => ['error' => $session->get('error'), 'success' => $session->get('success')],
 ]), "\n";

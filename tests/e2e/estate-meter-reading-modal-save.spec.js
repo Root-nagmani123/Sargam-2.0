@@ -68,8 +68,8 @@ const DIALOG = `<!doctype html><html><body>
 </body></html>`;
 
 const ROW = {
-  pk: 1253, meter_slot: 1, house_no: "HV-04", name: "Probe", last_reading_date: "31-07-2026",
-  old_meter_no: "16019464", electric_meter_reading: 29441, baseline_min_reading: 29441,
+  pk: 1, meter_slot: 1, house_no: "T-01", name: "Probe", last_reading_date: "31-07-2026",
+  old_meter_no: "00000001", electric_meter_reading: 1000, baseline_min_reading: 1000,
 };
 
 async function mount(pw) {
@@ -103,7 +103,7 @@ async function mount(pw) {
   await pw.waitForSelector("#updateMeterReadingTable tbody tr[data-pk]");
   const row = pw.locator("#updateMeterReadingTable tbody tr[data-pk]").first();
   await row.locator(".row-check-master").check();
-  await row.locator(".new-meter-reading").fill("29446");
+  await row.locator(".new-meter-reading").fill("1005");
   return { errors, posts, dialogs };
 }
 
@@ -116,7 +116,7 @@ test("dialog Save posts the month and reading date the server requires", async (
 
   expect(posts[0].get("reading_bill_month")).toBe("2026-08");
   expect(posts[0].get("reading_current_date")).toBe("2026-11-03");
-  expect(posts[0].get("readings[0][curr_month_elec_red]")).toBe("29446");
+  expect(posts[0].get("readings[0][curr_month_elec_red]")).toBe("1005");
   await expect.poll(() => pw.evaluate(() => window.__saved)).toBe("Meter readings updated successfully.");
   expect(dialogs).toEqual([]);
   expect(errors).toEqual([]);

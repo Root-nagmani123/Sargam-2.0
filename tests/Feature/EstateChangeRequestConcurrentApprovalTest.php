@@ -18,6 +18,12 @@ use Tests\TestCase;
  *  - two allotments of one new request            → one pending possession, not two
  *  - an approval racing a rejection               → the rejection is refused, no remark
  *
+ * And writers of DIFFERENT houses, both paused right after their occupancy check so each
+ * holds what that check locked while the other writes (F-007: share-mode scans deadlocked
+ * here). Each runs 10 times; every run must end with both writes made and no deadlock:
+ *
+ *  - approve × approve, allot × allot, approve × allot, Possession for Others × itself
+ *
  * The child processes COMMIT, so this cannot run inside a rolled-back transaction.
  * It is skipped unless SARGAM_ALLOW_COMMITTED_PROBES names the database, and it puts
  * back every row it can touch (tearDown).
@@ -29,6 +35,8 @@ use Tests\TestCase;
  */
 class EstateChangeRequestConcurrentApprovalTest extends TestCase
 {
+    private const RUNS = 10;
+
     /** @var array<string, mixed> */
     private array $fixture = [];
 
@@ -53,23 +61,37 @@ class EstateChangeRequestConcurrentApprovalTest extends TestCase
         $vacant = $this->vacantHouses();
         $admin = DB::table('model_has_roles as m')->join('roles as r', 'r.id', '=', 'm.role_id')
             ->where('r.name', 'Estate Admin')->where('m.model_type', User::class)->orderBy('m.model_id')->value('m.model_id');
-        [$newReq, $allotHouses] = $this->newRequestWithEligibleHouses($vacant);
+        $newReqs = $this->eligibleNewRequests($vacant);
+        [$newReq, $allotHouses] = collect($newReqs)->first(fn ($c) => count($c[1]) >= 2) ?? [null, []];
         if ($crs->count() < 2 || count($vacant) < 2 || ! $admin || ! $newReq) {
             $this->markTestSkipped('needs two pending change requests at HAC, a new request at HAC with no possession, vacant houses and an Estate Admin');
         }
+        // A second new request, on a house other than the first one's, for allot × allot.
+        [$newReq2, $allot2] = [null, null];
+        foreach ($newReqs as [$pk, $houses]) {
+            $house = collect($houses)->first(fn ($h) => $h !== $allotHouses[0]);
+            if ($pk !== $newReq && $house) {
+                [$newReq2, $allot2] = [$pk, $house];
+                break;
+            }
+        }
 
-        // For the other allotment screens: a requester from outside with no possession yet, and an
+        // For the other allotment screens: requesters from outside with no possession yet, and an
         // LBSNAA allotment still waiting for its possession details (what Add Possession completes).
-        $otherReq = DB::table('estate_other_req as r')
+        $otherReqs = DB::table('estate_other_req as r')
             ->whereNotExists(fn ($q) => $q->from('estate_possession_other as p')->whereColumn('p.estate_other_req_pk', 'r.pk'))
-            ->orderBy('r.pk')->value('r.pk');
+            ->orderBy('r.pk')->limit(2)->pluck('r.pk')->map(fn ($pk) => (int) $pk)->all();
+        $otherReq = $otherReqs[0] ?? null;
+        // Possession for Others also refuses a house still flagged used, so it needs flag-free ones.
+        $flagFree = DB::table('estate_house_master')->whereIn('pk', $vacant)->whereRaw('COALESCE(used_home_status, 0) = 0')
+            ->orderBy('pk')->limit(2)->pluck('pk')->map(fn ($pk) => (int) $pk)->all();
         $pending = DB::table('estate_possession_details as p')
             ->join('estate_home_request_details as h', 'h.pk', '=', 'p.estate_home_request_details')
             ->where('h.hac_status', 1)->where('p.possession_date', '<=', '1900-01-01')->where('p.return_home_status', 0)
             ->orderBy('p.pk')->first(['p.pk', 'p.estate_home_request_details as home_req', 'h.employee_pk']);
         $pendingHouse = $pending ? $this->houseEligibleFor((int) $pending->employee_pk, $vacant) : null;
 
-        $homeReqs = array_merge($crs->pluck('home_req')->all(), [$newReq], $pending ? [(int) $pending->home_req] : []);
+        $homeReqs = array_merge($crs->pluck('home_req')->all(), [$newReq], $newReq2 ? [$newReq2] : [], $pending ? [(int) $pending->home_req] : []);
         $possessions = DB::table('estate_possession_details')->whereIn('estate_home_request_details', $homeReqs)->get();
         $this->fixture = [
             'cr1' => (int) $crs[0]->pk,
@@ -81,9 +103,13 @@ class EstateChangeRequestConcurrentApprovalTest extends TestCase
             'houseB' => $vacant[1],
             'allotA' => $allotHouses[0],
             'allotB' => $allotHouses[1],
+            'new_req2' => $newReq2,
+            'allot2' => $allot2,
             'home_reqs' => $homeReqs,
             'admin' => (int) $admin,
-            'other_req' => $otherReq ? (int) $otherReq : null,
+            'other_req' => $otherReq,
+            'other_reqs' => $otherReqs,
+            'flag_free' => $flagFree,
             'pending' => $pending,
             'pending_house' => $pendingHouse,
             'max_possession' => (int) DB::table('estate_possession_details')->max('pk'),
@@ -97,7 +123,7 @@ class EstateChangeRequestConcurrentApprovalTest extends TestCase
         $this->snap('estate_home_request_details', $homeReqs);
         $this->snap('estate_possession_details', $possessions->pluck('pk')->all());
         $this->snap('estate_house_master', array_merge($vacant, $allotHouses, $possessions->pluck('estate_house_master_pk')->filter()->all()));
-        $this->snap('estate_other_req', $otherReq ? [$otherReq] : []);
+        $this->snap('estate_other_req', $otherReqs);
         $this->snap('estate_month_reading_details', DB::table('estate_month_reading_details')
             ->whereIn('estate_possession_details_pk', $possessions->pluck('pk')->all())->pluck('pk')->all());
     }
@@ -118,47 +144,56 @@ class EstateChangeRequestConcurrentApprovalTest extends TestCase
 
     protected function tearDown(): void
     {
-        if ($this->fixture) {
-            $possessionPks = DB::table('estate_possession_details')->whereIn('estate_home_request_details', $this->fixture['home_reqs'])->pluck('pk');
-            DB::table('estate_month_reading_details')->whereIn('estate_possession_details_pk', $possessionPks)
-                ->where('pk', '>', $this->fixture['max_reading'])->delete();
-            DB::table('estate_possession_details')
-                ->whereIn('estate_home_request_details', $this->fixture['home_reqs'])
-                ->where('pk', '>', $this->fixture['max_possession'])
-                ->delete();
-            if ($this->fixture['other_req']) {
-                $otherPks = DB::table('estate_possession_other')->where('estate_other_req_pk', $this->fixture['other_req'])
-                    ->where('pk', '>', $this->fixture['max_possession_other'])->pluck('pk');
-                DB::table('estate_month_reading_details_other')->whereIn('estate_possession_other_pk', $otherPks)->delete();
-                DB::table('estate_possession_other')->whereIn('pk', $otherPks)->delete();
-            }
-            foreach ($this->snapshot as $table => $rows) {
-                foreach ($rows as $pk => $row) {
-                    // Every column, including ON UPDATE timestamps, so the restore leaves no trace.
-                    // A row the race deleted (a house) is put back whole.
-                    DB::table($table)->where('pk', $pk)->exists()
-                        ? DB::table($table)->where('pk', $pk)->update($row)
-                        : DB::table($table)->insert($row);
-                }
-            }
-            $drift = [];
-            foreach ($this->snapshot as $table => $rows) {
-                foreach ($rows as $pk => $row) {
-                    if ((array) DB::table($table)->where('pk', $pk)->first() != $row) {
-                        $drift[] = "$table#$pk";
-                    }
-                }
-            }
-            $left = DB::table('estate_possession_details')->whereIn('estate_home_request_details', $this->fixture['home_reqs'])
-                ->where('pk', '>', $this->fixture['max_possession'])->count();
-        }
+        $left = $this->fixture ? $this->restore() : null;
 
         parent::tearDown();
 
-        if (isset($drift)) {
-            $this->assertSame([], $drift, 'every probed row restored');
-            $this->assertSame(0, $left, 'every probe possession removed');
+        if ($left !== null) {
+            $this->assertSame([], $left, 'every probed row restored and every probe possession removed');
         }
+    }
+
+    /**
+     * Puts back every row a race can write and removes the possessions it added.
+     *
+     * @return list<string> what is still not as it was (empty when restored)
+     */
+    private function restore(): array
+    {
+        $possessionPks = DB::table('estate_possession_details')->whereIn('estate_home_request_details', $this->fixture['home_reqs'])->pluck('pk');
+        DB::table('estate_month_reading_details')->whereIn('estate_possession_details_pk', $possessionPks)
+            ->where('pk', '>', $this->fixture['max_reading'])->delete();
+        DB::table('estate_possession_details')
+            ->whereIn('estate_home_request_details', $this->fixture['home_reqs'])
+            ->where('pk', '>', $this->fixture['max_possession'])
+            ->delete();
+        $otherPks = DB::table('estate_possession_other')->whereIn('estate_other_req_pk', $this->fixture['other_reqs'])
+            ->where('pk', '>', $this->fixture['max_possession_other'])->pluck('pk');
+        DB::table('estate_month_reading_details_other')->whereIn('estate_possession_other_pk', $otherPks)->delete();
+        DB::table('estate_possession_other')->whereIn('pk', $otherPks)->delete();
+        foreach ($this->snapshot as $table => $rows) {
+            foreach ($rows as $pk => $row) {
+                // Every column, including ON UPDATE timestamps, so the restore leaves no trace.
+                // A row the race deleted (a house) is put back whole.
+                DB::table($table)->where('pk', $pk)->exists()
+                    ? DB::table($table)->where('pk', $pk)->update($row)
+                    : DB::table($table)->insert($row);
+            }
+        }
+        $left = [];
+        foreach ($this->snapshot as $table => $rows) {
+            foreach ($rows as $pk => $row) {
+                if ((array) DB::table($table)->where('pk', $pk)->first() != $row) {
+                    $left[] = "$table#$pk";
+                }
+            }
+        }
+        if (DB::table('estate_possession_details')->whereIn('estate_home_request_details', $this->fixture['home_reqs'])
+            ->where('pk', '>', $this->fixture['max_possession'])->exists()) {
+            $left[] = 'probe possession';
+        }
+
+        return $left;
     }
 
     public function test_two_concurrent_approvals_allot_exactly_one_house(): void
@@ -276,6 +311,101 @@ class EstateChangeRequestConcurrentApprovalTest extends TestCase
         $this->assertTrue(DB::table('estate_house_master')->where('pk', $house)->exists(), 'the allotted house still exists');
     }
 
+    public function test_approvals_onto_different_houses_at_once_both_succeed(): void
+    {
+        $f = $this->fixture;
+        $this->runTogether(['approve', $f['cr1'], $f['houseA']], ['approve', $f['cr2'], $f['houseB']], function () use ($f) {
+            $this->assertContains($f['houseA'], $this->possessionsOf($f['home_req1']), 'first approval wrote its possession');
+            $this->assertContains($f['houseB'], $this->possessionsOf($f['home_req2']), 'second approval wrote its possession');
+            $this->assertSame([1, 1], [$this->decision($f['cr1']), $this->decision($f['cr2'])], 'both decisions recorded');
+        });
+    }
+
+    public function test_allotments_of_different_requests_at_once_both_succeed(): void
+    {
+        $f = $this->fixture;
+        if (! $f['new_req2']) {
+            $this->markTestSkipped('needs a second new request at HAC, with no possession, eligible for another vacant house');
+        }
+        $this->runTogether(['allot', $f['new_req'], $f['allotA']], ['allot', $f['new_req2'], $f['allot2']], function () use ($f) {
+            $this->assertSame([$f['allotA']], $this->possessionsOf($f['new_req']));
+            $this->assertSame([$f['allot2']], $this->possessionsOf($f['new_req2']));
+        });
+    }
+
+    public function test_an_approval_and_an_allotment_of_different_houses_at_once_both_succeed(): void
+    {
+        $f = $this->fixture;
+        $approveHouse = $f['houseA'] !== $f['allotA'] ? $f['houseA'] : $f['houseB'];
+        $this->runTogether(['approve', $f['cr1'], $approveHouse], ['allot', $f['new_req'], $f['allotA']], function () use ($f, $approveHouse) {
+            $this->assertContains($approveHouse, $this->possessionsOf($f['home_req1']));
+            $this->assertSame(1, $this->decision($f['cr1']));
+            $this->assertSame([$f['allotA']], $this->possessionsOf($f['new_req']));
+            $this->assertOneOccupant($approveHouse);
+            $this->assertOneOccupant($f['allotA']);
+        });
+    }
+
+    public function test_two_possessions_for_others_at_once_both_succeed(): void
+    {
+        $f = $this->fixture;
+        if (count($f['other_reqs']) < 2 || count($f['flag_free']) < 2) {
+            $this->markTestSkipped('needs two requesters for others with no possession and two vacant houses not flagged used');
+        }
+        $save = fn (int $otherReq, int $house) => ['store-other', 0, json_encode($this->housePayload($house) + [
+            'estate_other_req_pk' => $otherReq,
+            'allotment_date' => now()->toDateString(),
+            'possession_date_oth' => now()->toDateString(),
+            'meter_reading_oth' => '100',
+        ])];
+        [$req1, $req2] = $f['other_reqs'];
+        [$house1, $house2] = $f['flag_free'];
+        $this->runTogether($save($req1, $house1), $save($req2, $house2), function () use ($req1, $req2, $house1, $house2) {
+            foreach ([$req1 => $house1, $req2 => $house2] as $req => $house) {
+                $this->assertSame([$house], DB::table('estate_possession_other')->where('estate_other_req_pk', $req)
+                    ->pluck('estate_house_master_pk')->map(fn ($h) => (int) $h)->all(), "requester {$req} has its one possession");
+                $this->assertOneOccupant($house);
+            }
+        });
+    }
+
+    /**
+     * Runs both sides paused together self::RUNS times, restoring in between. Every run: both
+     * 200, the pauses overlapped (both checks done before either wrote), $check holds, and the
+     * server's deadlock counter did not move (a retried deadlock would still count).
+     */
+    private function runTogether(array $a, array $b, \Closure $check): void
+    {
+        for ($run = 1; $run <= self::RUNS; $run++) {
+            $deadlocks = $this->deadlockCount();
+            [$outA, $outB] = $this->race($a, $b, ['together', 'together']);
+
+            $this->assertSucceeded($outA);
+            $this->assertSucceeded($outB);
+            $this->assertNotNull($outA['hook'], "run {$run}: side A reached its check: ".json_encode($outA));
+            $this->assertNotNull($outB['hook'], "run {$run}: side B reached its check: ".json_encode($outB));
+            $this->assertLessThan(min($outA['hook'][1], $outB['hook'][1]), max($outA['hook'][0], $outB['hook'][0]), "run {$run}: the two pauses overlapped");
+            $check();
+            if ($deadlocks !== null) {
+                $this->assertSame($deadlocks, $this->deadlockCount(), "run {$run}: no deadlock on the server");
+            }
+
+            $this->assertSame([], $this->restore(), "run {$run}: restored");
+        }
+    }
+
+    /** InnoDB's server-wide deadlock counter, or null where the metric is not readable. */
+    private function deadlockCount(): ?int
+    {
+        try {
+            $count = DB::table('information_schema.INNODB_METRICS')->where('NAME', 'lock_deadlocks')->value('COUNT');
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        return $count === null ? null : (int) $count;
+    }
+
     /** The house's own Estate / Building / Unit Sub Type, as the possession forms post them. */
     private function housePayload(int $house): array
     {
@@ -356,13 +486,13 @@ class EstateChangeRequestConcurrentApprovalTest extends TestCase
     }
 
     /**
-     * A new request at HAC with no possession yet, and two vacant houses its employee is
+     * New requests at HAC with no possession yet, each with the vacant houses its employee is
      * eligible for (the allotment refuses any other).
      *
      * @param  list<int>  $vacant
-     * @return array{0: int|null, 1: list<int>}
+     * @return list<array{0: int, 1: list<int>}>
      */
-    private function newRequestWithEligibleHouses(array $vacant): array
+    private function eligibleNewRequests(array $vacant): array
     {
         $controller = app(EstateController::class);
         $canonical = (new \ReflectionMethod($controller, 'resolveEmployeeMasterCanonicalPk'))->getClosure($controller);
@@ -372,6 +502,7 @@ class EstateChangeRequestConcurrentApprovalTest extends TestCase
             ->where('h.hac_status', 1)->where('h.change_status', 0)->whereNotNull('h.employee_pk')
             ->whereNotExists(fn ($q) => $q->from('estate_possession_details as p')->whereColumn('p.estate_home_request_details', 'h.pk'))
             ->orderBy('h.pk')->get(['h.pk', 'h.employee_pk']);
+        $found = [];
         foreach ($requests as $request) {
             $employee = $canonical((int) $request->employee_pk);
             if (! $employee) {
@@ -379,20 +510,21 @@ class EstateChangeRequestConcurrentApprovalTest extends TestCase
             }
             $allowed = $eligible($employee);
             $houses = $allowed->isEmpty() ? $vacant : array_values(array_intersect($vacant, $allowed->map(fn ($h) => (int) $h)->all()));
-            if (count($houses) >= 2) {
-                return [(int) $request->pk, array_slice($houses, 0, 2)];
+            if ($houses) {
+                $found[] = [(int) $request->pk, array_slice($houses, 0, 2)];
             }
         }
 
-        return [null, []];
+        return $found;
     }
 
     /**
-     * Runs $first as the holder and $second 1 s later; each is [action, id, value].
+     * Runs $first as the holder and $second 1 s later (or, with ['together', 'together'], both at
+     * once); each is [action, id, value].
      *
-     * @return array{0: array, 1: array} holder output, second output
+     * @return array{0: array, 1: array} first output, second output
      */
-    private function race(array $first, array $second): array
+    private function race(array $first, array $second, array $roles = ['holder', 'second']): array
     {
         $worker = base_path('tests/Support/estate_change_request_approve_race_worker.php');
         $start = function (string $role, array $side) use ($worker) {
@@ -403,19 +535,19 @@ class EstateChangeRequestConcurrentApprovalTest extends TestCase
             return [$proc, $pipes];
         };
 
-        $procs = ['holder' => $start('holder', $first), 'second' => $start('second', $second)];
+        $procs = [$start($roles[0], $first), $start($roles[1], $second)];
         $out = [];
-        foreach ($procs as $role => [$proc, $pipes]) {
+        foreach ($procs as $i => [$proc, $pipes]) {
             $stdout = stream_get_contents($pipes[1]);
             $stderr = stream_get_contents($pipes[2]);
             fclose($pipes[1]);
             fclose($pipes[2]);
-            $this->assertSame(0, proc_close($proc), "{$role} worker failed: {$stderr}");
-            $out[$role] = json_decode(trim($stdout), true);
-            $this->assertIsArray($out[$role], "{$role} printed no result: {$stdout} {$stderr}");
+            $this->assertSame(0, proc_close($proc), "{$roles[$i]} worker failed: {$stderr}");
+            $out[$i] = json_decode(trim($stdout), true);
+            $this->assertIsArray($out[$i], "{$roles[$i]} printed no result: {$stdout} {$stderr}");
         }
 
-        return [$out['holder'], $out['second']];
+        return [$out[0], $out[1]];
     }
 
     /** @param  list<int|string>  $pks */

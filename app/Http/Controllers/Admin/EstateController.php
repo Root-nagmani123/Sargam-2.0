@@ -3148,6 +3148,33 @@ class EstateController extends Controller
     }
 
     /**
+     * One allotment decision (allot, approve, reject, possession save, house delete) in one transaction.
+     *
+     * Two writers of one house are serialised by the house row lock each path takes. READ COMMITTED
+     * lets the occupancy re-read after that lock see the other writer's commit without share-locking
+     * every scanned possession row; those scans deadlocked writers of different houses (PR #349 F-007).
+     * Locks are taken request row first, then house row. A deadlock that still occurs is retried.
+     */
+    private function runAllotmentTransaction(\Closure $callback)
+    {
+        for ($attempt = 1; ; $attempt++) {
+            // SET TRANSACTION covers only the next transaction, so it precedes every attempt. Inside an
+            // outer transaction it is not allowed and the outer one's level applies.
+            if (DB::transactionLevel() === 0 && DB::getDriverName() === 'mysql') {
+                DB::unprepared('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');
+            }
+            try {
+                return DB::transaction($callback);
+            } catch (\Illuminate\Database\QueryException $e) {
+                $deadlock = (int) ($e->errorInfo[1] ?? 0) === 1213;
+                if (! $deadlock || $attempt >= 3 || DB::transactionLevel() > 0) {
+                    throw $e;
+                }
+            }
+        }
+    }
+
+    /**
      * Allot house to new request.
      *
      * IMPORTANT:
@@ -3164,7 +3191,7 @@ class EstateController extends Controller
         }
 
         // One transaction for the whole allotment: a failed write leaves nothing half-allotted.
-        return DB::transaction(fn () => $this->allotLockedNewRequest($request, $id));
+        return $this->runAllotmentTransaction(fn () => $this->allotLockedNewRequest($request, $id));
     }
 
     /**
@@ -3237,14 +3264,14 @@ class EstateController extends Controller
             if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
                 $activeDetails->where('return_home_status', 0);
             }
-            // Locking reads see the latest commit, not this transaction's older snapshot.
-            $isOccupied = $activeDetails->sharedLock()->exists();
+            // Read after the house lock under READ COMMITTED (runAllotmentTransaction): sees the latest commit.
+            $isOccupied = $activeDetails->exists();
             if (! $isOccupied) {
                 $activeOther = DB::table('estate_possession_other')
                     ->where('estate_house_master_pk', $estateHouseMasterPk)
                     ->whereNotNull('estate_house_master_pk')
                     ->where('return_home_status', 0);
-                $isOccupied = $activeOther->sharedLock()->exists();
+                $isOccupied = $activeOther->exists();
             }
             if ($isOccupied) {
                 $msg = 'Selected house is already occupied. Please choose a vacant house from the list.';
@@ -3337,7 +3364,7 @@ class EstateController extends Controller
         }
 
         // One transaction for the whole decision: a failed write leaves nothing half-allotted.
-        return DB::transaction(fn () => $this->approveLockedChangeRequest($request, $id));
+        return $this->runAllotmentTransaction(fn () => $this->approveLockedChangeRequest($request, $id));
     }
 
     /**
@@ -3346,8 +3373,7 @@ class EstateController extends Controller
      */
     private function approveLockedChangeRequest(Request $request, $id)
     {
-        $record = EstateChangeHomeReqDetails::with('estateHomeRequestDetails')
-            ->where('estate_change_hac_status', 1)
+        $record = EstateChangeHomeReqDetails::where('estate_change_hac_status', 1)
             ->lockForUpdate()
             ->findOrFail($id);
 
@@ -3363,7 +3389,8 @@ class EstateController extends Controller
 
         $estateHouseMasterPk = (int) $request->estate_house_master_pk;
         $homeReqPk = $record->estate_home_req_details_pk;
-        $homeReq = $record->estateHomeRequestDetails;
+        // Request row before house row, the order allotNewRequest() locks them in.
+        $homeReq = EstateHomeRequestDetails::lockForUpdate()->find($homeReqPk);
         $employeePk = $homeReq->employee_pk ? (int) $homeReq->employee_pk : null;
 
         // If employee_pk is missing, try to resolve from employee_id via employee_master (canonical pk)
@@ -3413,14 +3440,14 @@ class EstateController extends Controller
             if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
                 $activeDetails->where('return_home_status', 0);
             }
-            // Locking reads see the latest commit, not this transaction's older snapshot.
-            $isOccupied = $activeDetails->sharedLock()->exists();
+            // Read after the house lock under READ COMMITTED (runAllotmentTransaction): sees the latest commit.
+            $isOccupied = $activeDetails->exists();
             if (! $isOccupied) {
                 $activeOther = DB::table('estate_possession_other')
                     ->where('estate_house_master_pk', $estateHouseMasterPk)
                     ->whereNotNull('estate_house_master_pk')
                     ->where('return_home_status', 0);
-                $isOccupied = $activeOther->sharedLock()->exists();
+                $isOccupied = $activeOther->exists();
             }
             if ($isOccupied) {
                 $msg = 'Selected house is already occupied. Please choose a vacant house from the list.';
@@ -3523,7 +3550,7 @@ class EstateController extends Controller
         ]);
 
         // Same row lock as approval, so an approve and a reject cannot both pass the decided check.
-        $refusal = DB::transaction(function () use ($request, $id) {
+        $refusal = $this->runAllotmentTransaction(function () use ($request, $id) {
             $record = EstateChangeHomeReqDetails::where('estate_change_hac_status', 1)->lockForUpdate()->findOrFail($id);
             if ($refusal = $this->refuseDecidedChangeRequest($request, $record)) {
                 return $refusal;
@@ -3900,7 +3927,7 @@ class EstateController extends Controller
     public function storePossession(Request $request)
     {
         // One transaction, so the house row lock below serialises allotments of the same house.
-        return DB::transaction(fn () => $this->storePossessionLocked($request));
+        return $this->runAllotmentTransaction(fn () => $this->storePossessionLocked($request));
     }
 
     /** Body of storePossession(); must run inside its transaction. */
@@ -4094,12 +4121,14 @@ class EstateController extends Controller
         }
 
         if ($request->get('redirect_to') !== 'return-house') {
+            // Requester row before house row: a concurrent save for this requester waits here, then
+            // (READ COMMITTED, runAllotmentTransaction) sees the entry it committed.
+            DB::table('estate_other_req')->where('pk', $validated['estate_other_req_pk'])->lockForUpdate()->first();
             $duplicateQuery = EstatePossessionOther::where('estate_other_req_pk', $validated['estate_other_req_pk']);
             if ($request->filled('id')) {
                 $duplicateQuery->where('pk', '!=', (int) $request->id);
             }
-            // Locking read: sees an entry a concurrent save just committed, not this transaction's snapshot.
-            if ($duplicateQuery->sharedLock()->exists()) {
+            if ($duplicateQuery->exists()) {
                 $dupMsg = 'Selected requester already has a possession entry.';
                 if ($json = $this->estateFormFailure($request, $dupMsg, ['estate_other_req_pk' => $dupMsg])) {
                     return $json;
@@ -5095,7 +5124,7 @@ class EstateController extends Controller
             9 => 'h.licence_fee',
         ];
         $orderCol = (int) data_get($request->get('order'), '0.column', -1);
-        $orderDir = strtolower((string) data_get($request->get('order'), '0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+        $orderDir = strtolower(static::exportFilterText($request, 'order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
         if (isset($sortable[$orderCol])) {
             $query->orderBy($sortable[$orderCol], $orderDir);
         } else {
@@ -5109,7 +5138,7 @@ class EstateController extends Controller
         if ($request->filled('search.value')) {
             // DataTables search: make it robust for multi-word terms and odd spacing
             // (e.g. double spaces / non-breaking spaces in DB or user input).
-            $rawTerm = (string) data_get($request->get('search'), 'value', '');
+            $rawTerm = static::exportFilterText($request, 'search.value');
             $rawTerm = str_replace("\xC2\xA0", ' ', $rawTerm); // NBSP -> normal space
             $rawTerm = trim(preg_replace('/\s+/u', ' ', $rawTerm));
 
@@ -5162,7 +5191,7 @@ class EstateController extends Controller
     private function defineHouseDataTableCacheFingerprint(Request $request): array
     {
         $hasUnitTypeOnSubType = Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
-        $rawTerm = (string) data_get($request->get('search'), 'value', '');
+        $rawTerm = static::exportFilterText($request, 'search.value');
         $rawTerm = str_replace("\xC2\xA0", ' ', $rawTerm);
         $qKey = trim(preg_replace('/\s+/u', ' ', $rawTerm));
 
@@ -5174,14 +5203,14 @@ class EstateController extends Controller
             // The payload is now ordered by the clicked header, so the sort has
             // to be part of the key or a re-sort serves the previous order.
             'oc' => (int) data_get($request->get('order'), '0.column', -1),
-            'od' => strtolower((string) data_get($request->get('order'), '0.dir', 'asc')) === 'desc' ? 'desc' : 'asc',
+            'od' => strtolower(static::exportFilterText($request, 'order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc',
             // Toolbar filters (applyDefineHouseFilters) — part of the key, or a
             // filtered request would be answered from the unfiltered cache entry.
             'f' => [
-                (string) $request->input('campus_filter', ''),
-                (string) $request->input('block_filter', ''),
-                (string) $request->input('unit_sub_type_filter', ''),
-                (string) $request->input('status_filter', ''),
+                static::exportFilterText($request, 'campus_filter'),
+                static::exportFilterText($request, 'block_filter'),
+                static::exportFilterText($request, 'unit_sub_type_filter'),
+                static::exportFilterText($request, 'status_filter'),
             ],
         ];
     }
@@ -5514,7 +5543,7 @@ class EstateController extends Controller
     public function destroyDefineHouse(Request $request, $id)
     {
         // One transaction: the house stays locked from the occupied check to the delete.
-        return DB::transaction(fn () => $this->destroyLockedDefineHouse($request, $id));
+        return $this->runAllotmentTransaction(fn () => $this->destroyLockedDefineHouse($request, $id));
     }
 
     /** Body of destroyDefineHouse(); must run inside its transaction. */
@@ -6151,7 +6180,7 @@ class EstateController extends Controller
     public function storePossessionDetails(Request $request)
     {
         // One transaction, so the house row lock below serialises allotments of the same house.
-        return DB::transaction(fn () => $this->storePossessionDetailsLocked($request));
+        return $this->runAllotmentTransaction(fn () => $this->storePossessionDetailsLocked($request));
     }
 
     /** Body of storePossessionDetails(); must run inside its transaction. */
@@ -6211,7 +6240,9 @@ class EstateController extends Controller
         // electric_meter_reading_2 column = secondary (second meter, if any)
         $electricReading2 = $secondary !== '' ? (int) $secondary : null;
 
+        // Request row before house row, the order allotNewRequest() locks them in.
         $homeReq = EstateHomeRequestDetails::where('hac_status', 1)
+            ->lockForUpdate()
             ->findOrFail((int) $validated['estate_home_request_details_pk']);
 
         // Use latest possession (same row as in listing: orderBy epd.pk desc)
@@ -9072,10 +9103,10 @@ class EstateController extends Controller
         if (! $showAllRows && $length <= 0) {
             $length = 10;
         }
-        $searchValue = trim((string) data_get($request->all(), 'search.value', ''));
+        $searchValue = trim(static::exportFilterText($request, 'search.value'));
 
-        $billMonth = $request->get('bill_month');
-        $billYear = $request->get('bill_year');
+        $billMonth = static::exportFilterText($request, 'bill_month');
+        $billYear = static::exportFilterText($request, 'bill_year');
         $filterByMonth = $billMonth && $billYear;
         if ($filterByMonth) {
             $billYear = (string) $billYear;
@@ -9117,7 +9148,7 @@ class EstateController extends Controller
         }
 
         $orderCol = (int) data_get($request->all(), 'order.0.column', 0);
-        $orderDir = strtolower((string) data_get($request->all(), 'order.0.dir', 'desc')) === 'desc' ? 'desc' : 'asc';
+        $orderDir = strtolower(static::exportFilterText($request, 'order.0.dir', 'desc')) === 'desc' ? 'desc' : 'asc';
 
         $cacheKey = 'estate_umn:v1:' . md5(json_encode([
             'dt' => $isDataTables ? 1 : 0,
@@ -11079,7 +11110,7 @@ class EstateController extends Controller
             $billMonth = $currentYm;
         }
         $unitSubTypePk = $request->get('unit_sub_type_pk');
-        $searchRaw = trim((string) $request->get('search', ''));
+        $searchRaw = trim(static::exportFilterText($request, 'search'));
         $bills = collect();
 
         // Search: Estate role only (not Home ?scope=self). Admin / Super Admin use self-service bill view without global search.
@@ -11365,7 +11396,7 @@ class EstateController extends Controller
     {
         $this->authorizeEstateMasterMeterAndReports();
 
-        $employeeCategory = trim((string) $request->get('employee_category', 'LBSNAA'));
+        $employeeCategory = trim(static::exportFilterText($request, 'employee_category', 'LBSNAA'));
         $month = $request->get('month');
         $year = is_string($request->get('year')) && trim($request->get('year')) !== '' ? trim($request->get('year')) : null;
 
@@ -11495,7 +11526,7 @@ class EstateController extends Controller
         $year = $request->get('year');
         $employeeTypePk = $request->get('employee_type_pk');
         $employeePk = $request->get('employee_pk');
-        $employeeCategory = trim((string) $request->get('employee_category', 'LBSNAA'));
+        $employeeCategory = trim(static::exportFilterText($request, 'employee_category', 'LBSNAA'));
         $bill = null;
         $billIsOther = false; // resolved bill regular (l) hai ya Other/contract (o) — meter-change lookup type ke liye.
 
@@ -12391,7 +12422,7 @@ class EstateController extends Controller
 
         $billMonth = trim(static::exportFilterText($request, 'bill_month', date('Y-m')));
         $blockId = $request->input('block_id', 'all');
-        $employeeType = trim((string) $request->input('employee_type', 'LBSNAA'));
+        $employeeType = trim(static::exportFilterText($request, 'employee_type', 'LBSNAA'));
         $search = trim($this->exportSearchTerm($request));
 
         $parts = explode('-', $billMonth);
@@ -12956,9 +12987,9 @@ class EstateController extends Controller
         @ini_set('max_execution_time', '120');
         @set_time_limit(120);
 
-        $billMonth = $request->get('bill_month');
-        $blockId = $request->get('block_id');
-        $employeeType = trim((string) $request->get('employee_type', 'LBSNAA'));
+        $billMonth = static::exportFilterText($request, 'bill_month');
+        $blockId = static::exportFilterText($request, 'block_id');
+        $employeeType = trim(static::exportFilterText($request, 'employee_type', 'LBSNAA'));
         $isDataTables = $request->has('draw');
         $draw = (int) $request->get('draw', 0);
         $start = max(0, (int) $request->get('start', 0));
@@ -12966,7 +12997,7 @@ class EstateController extends Controller
         if ($length <= 0) {
             $length = 10;
         }
-        $searchValue = (string) data_get($request->all(), 'search.value', '');
+        $searchValue = static::exportFilterText($request, 'search.value');
         $searchValue = trim($searchValue);
 
         if (!$billMonth) {
@@ -13011,7 +13042,7 @@ class EstateController extends Controller
         $normalizedBillMonth = $billYearStr . '-' . $billMonthNumPadded;
         $employeeTypeFingerprint = strtolower(preg_replace('/\s+/', ' ', $employeeType));
         $orderCol = $isDataTables ? (int) data_get($request->all(), 'order.0.column', 0) : 0;
-        $orderDir = $isDataTables && strtolower((string) data_get($request->all(), 'order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+        $orderDir = $isDataTables && strtolower(static::exportFilterText($request, 'order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
 
         $reqLenForKey = (int) $request->get('length', 10);
         if ($reqLenForKey <= 0) {
@@ -13443,7 +13474,7 @@ class EstateController extends Controller
 
         $billMonth = $request->get('bill_month');
         // Employee Type filter (optional): all | lbsnaa | other.
-        $employeeTypeFilter = strtolower(trim((string) $request->get('employee_type', 'all')));
+        $employeeTypeFilter = strtolower(trim(static::exportFilterText($request, 'employee_type', 'all')));
         if (! in_array($employeeTypeFilter, ['all', 'lbsnaa', 'other'], true)) {
             $employeeTypeFilter = 'all';
         }
@@ -13457,7 +13488,7 @@ class EstateController extends Controller
         if (! $fetchAllRows && $length <= 0) {
             $length = 10;
         }
-        $searchValue = trim((string) data_get($request->all(), 'search.value', ''));
+        $searchValue = trim(static::exportFilterText($request, 'search.value'));
 
         if (! $billMonth || ! is_string($billMonth)) {
             if ($isDataTables) {
@@ -13501,7 +13532,7 @@ class EstateController extends Controller
         }
 
         $orderCol = $isDataTables ? (int) data_get($request->all(), 'order.0.column', 0) : 0;
-        $orderDir = $isDataTables && strtolower((string) data_get($request->all(), 'order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+        $orderDir = $isDataTables && strtolower(static::exportFilterText($request, 'order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
 
         $normalizedBillMonth = $billYearStr . '-' . $billMonthNumPadded;
         $employeeIdsSorted = array_values($employeeIds);
@@ -13976,7 +14007,7 @@ class EstateController extends Controller
             ]);
         }
 
-        $employeeTypeFilter = strtolower(trim((string) $request->get('employee_type', 'all')));
+        $employeeTypeFilter = strtolower(trim(static::exportFilterText($request, 'employee_type', 'all')));
         if (! in_array($employeeTypeFilter, ['all', 'lbsnaa', 'other'], true)) {
             $employeeTypeFilter = 'all';
         }

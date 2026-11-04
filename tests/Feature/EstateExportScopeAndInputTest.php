@@ -15,7 +15,9 @@ use Tests\TestCase;
  * authority still gets everyone's (control).
  *
  * F-006: ?cols[]= and ?search[]= on every Estate export/print route are treated as "all
- * columns" / "no search" instead of a TypeError or "Array to string conversion" 500.
+ * columns" / "no search" instead of a TypeError or "Array to string conversion" 500. So are
+ * the toolbar filters and DataTables' own search[value] / order[0][dir], on the downloads and
+ * on the grids' data feeds.
  */
 class EstateExportScopeAndInputTest extends TestCase
 {
@@ -38,6 +40,13 @@ class EstateExportScopeAndInputTest extends TestCase
         'list-meter-reading.download', 'list-meter-reading.print',
         'generate-estate-bill-for-other.download', 'generate-estate-bill-for-other.print',
         'define-electric-slab.download', 'define-electric-slab.print',
+    ];
+
+    /** The Estate grid data feeds and pages that read DataTables / toolbar input. */
+    private const FEEDS = [
+        'define-house.data', 'list-meter-reading.data', 'update-meter-no.list', 'generate-estate-bill',
+        'reports.bill-report-grid.data', 'reports.bill-report-print', 'reports.bill-report-print.employees',
+        'reports.pending-meter-reading.data',
     ];
 
     public function test_request_for_estate_export_is_limited_to_the_staff_users_own_requests(): void
@@ -66,13 +75,22 @@ class EstateExportScopeAndInputTest extends TestCase
         $this->assertNotEmpty(array_intersect($all, $others), 'control: the Estate authority sees other employees');
     }
 
+    public function test_a_guest_gets_no_estate_download(): void
+    {
+        foreach (['request-for-estate.export', 'possession-details.export'] as $name) {
+            $response = $this->get(route('admin.estate.'.$name, ['format' => 'csv']));
+            $this->assertTrue($response->isRedirect(), "{$name}: a guest is sent away, got ".$response->getStatusCode());
+            $this->assertStringNotContainsString('Request ID', (string) $response->getContent(), "{$name}: no export body");
+        }
+    }
+
     public function test_array_cols_and_search_never_500_on_any_estate_download(): void
     {
         $actor = $this->as($this->staffWithRole('Estate Admin'), self::AUTHORITY_ROLES);
         $failures = [];
 
         foreach (self::ROUTES as $name) {
-            foreach ([[], ['cols' => ['req_id']], ['search' => ['x']], ['format' => ['csv']], self::arrayFilters()] as $query) {
+            foreach ([[], ['cols' => ['req_id']], ['search' => ['x']], ['format' => ['csv']], self::arrayFilters(), ...self::nestedDataTablesInput()] as $query) {
                 $status = $actor->get(route('admin.estate.'.$name, $query))->getStatusCode();
                 if ($status !== 200) {
                     $failures[] = $name.'?'.urldecode(http_build_query($query)).' => '.$status;
@@ -83,13 +101,58 @@ class EstateExportScopeAndInputTest extends TestCase
         $this->assertSame([], $failures);
     }
 
-    /** Every toolbar filter the Estate downloads read, each sent as an array. */
+    public function test_array_datatables_input_never_500_on_any_estate_grid_feed(): void
+    {
+        $actor = $this->as($this->staffWithRole('Estate Admin'), self::AUTHORITY_ROLES);
+        $failures = [];
+
+        foreach (self::FEEDS as $name) {
+            foreach ([['draw' => 1, 'start' => 0, 'length' => 10], ['search' => ['x']], self::arrayFilters(), ...self::nestedDataTablesInput()] as $query) {
+                $status = $actor->getJson(route('admin.estate.'.$name, $query + ['draw' => 1, 'start' => 0, 'length' => 10]))->getStatusCode();
+                if ($status !== 200) {
+                    $failures[] = $name.'?'.urldecode(http_build_query($query)).' => '.$status;
+                }
+            }
+        }
+
+        $this->assertSame([], $failures);
+    }
+
+    public function test_scalar_datatables_search_and_order_still_apply_on_the_define_house_feed(): void
+    {
+        $actor = $this->as($this->staffWithRole('Estate Admin'), self::AUTHORITY_ROLES);
+        $feed = fn (array $q) => $actor->getJson(route('admin.estate.define-house.data', $q + ['draw' => 1, 'start' => 0, 'length' => 5]))
+            ->assertOk()->json('data');
+        $houseNo = (string) DB::table('estate_house_master')->whereNotNull('house_no')->where('house_no', '!=', '')->orderBy('pk')->value('house_no');
+
+        $asc = $feed(['order' => [['column' => 5, 'dir' => 'asc']]]);
+        $desc = $feed(['order' => [['column' => 5, 'dir' => 'desc']]]);
+        $this->assertNotEquals(array_column($asc, 'house_no'), array_column($desc, 'house_no'), 'order[0][dir] still reverses the sort');
+
+        $found = $feed(['search' => ['value' => $houseNo]]);
+        $this->assertNotEmpty($found, 'search[value] still finds the house');
+        foreach ($found as $row) {
+            $this->assertStringContainsStringIgnoringCase($houseNo, json_encode($row), 'every row matches the search');
+        }
+    }
+
+    /** Every toolbar filter the Estate downloads and feeds read, each sent as an array. */
     private static function arrayFilters(): array
     {
         $keys = ['allotment_date_filter', 'bill_date_filter', 'bill_month', 'bill_year', 'bill_year_filter', 'eligibility_filter',
-            'estate_filter', 'status_filter', 'type_filter', 'unit_type_filter'];
+            'estate_filter', 'status_filter', 'type_filter', 'unit_type_filter', 'employee_type', 'employee_category',
+            'campus_filter', 'block_filter', 'unit_sub_type_filter', 'block_id'];
 
         return array_fill_keys($keys, ['x']);
+    }
+
+    /** DataTables' nested input with an array where a string belongs. */
+    private static function nestedDataTablesInput(): array
+    {
+        return [
+            ['search' => ['value' => ['x']]],
+            ['order' => [['column' => '0', 'dir' => ['x']]]],
+        ];
     }
 
     public function test_scalar_search_and_cols_still_filter(): void

@@ -46,6 +46,20 @@ class EstateMeterReadingSaveTest extends TestCase
         $this->assertReadingStored($row, $reading);
     }
 
+    public function test_an_invalid_reading_is_refused_and_nothing_is_written(): void
+    {
+        [$payload, $row] = $this->payload();
+        $payload['readings'][0]['curr_month_elec_red'] = '12abc';
+        $before = DB::table('estate_month_reading_details')->where('estate_possession_details_pk', $row->estate_possession_details_pk)->get();
+
+        $this->as($this->staffWithRole('Estate Admin'), ['Estate Admin'])
+            ->postJson(route('admin.estate.update-meter-reading.store'), $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['readings.0.curr_month_elec_red']);
+
+        $this->assertEquals($before, DB::table('estate_month_reading_details')->where('estate_possession_details_pk', $row->estate_possession_details_pk)->get(), 'no reading row changed');
+    }
+
     /**
      * Possession Details injects ?modal=1 into its dialog. A full page there brings a second
      * copy of the layout, whose page loader is never hidden and covers every control.
