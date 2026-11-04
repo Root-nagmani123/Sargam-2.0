@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Modules\Protocol\Entities\ProtocolRequest;
+use Modules\Protocol\Entities\VehiclePassRequest;
 use Modules\Protocol\Services\ProtocolDirectory;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -195,6 +196,45 @@ class ProtocolRequestWorkflowTest extends TestCase
         $login->user_id = $employee->pk_old;
 
         $this->assertSame((string) $employee->pk, (string) app(ProtocolDirectory::class)->employeeFor($login)?->pk);
+    }
+
+    /** F-024: the vehicle dropdown offers active, undeleted vehicles; edit keeps the saved one */
+    public function test_the_vehicle_dropdown_offers_only_active_vehicles_and_keeps_the_saved_one_on_edit(): void
+    {
+        $owner = $this->plainEmployee();
+        $active = $this->seedVehicle('Active Test Car', 1);
+        $inactive = $this->seedVehicle('Inactive Test Car', 0);
+        $deleted = $this->seedVehicle('Deleted Test Car', 0, now());
+
+        $offered = $this->actingAs($owner)->get(route('protocol.requests.create'))->assertOk()->viewData('vehicles');
+        $this->assertArrayHasKey($active, $offered->all());
+        $this->assertArrayNotHasKey($inactive, $offered->all());
+        $this->assertArrayNotHasKey($deleted, $offered->all());
+
+        // A pending vehicle request whose vehicle has since been made inactive
+        $pass = VehiclePassRequest::create(['vehicle_type' => (string) $inactive, 'one_way_booking' => false, 'payment_will_be_done_by' => 'Myself']);
+        $request = $this->seedRequest($owner, ProtocolRequest::STATUS_PENDING, null, [
+            'request_type' => 'vehicle', 'requestable_id' => $pass->id, 'requestable_type' => VehiclePassRequest::class,
+        ]);
+
+        $onEdit = $this->actingAs($owner)->get(route('protocol.requests.edit', $request))->assertOk()->viewData('vehicles');
+        $this->assertArrayHasKey($inactive, $onEdit->all());
+        $this->assertArrayHasKey($active, $onEdit->all());
+        $this->assertArrayNotHasKey($deleted, $onEdit->all());
+    }
+
+    private function seedVehicle(string $name, int $status, $deletedAt = null): int
+    {
+        $unique = uniqid('T', true);
+
+        return (int) DB::table('protocol_vehicle_masters')->insertGetId([
+            'vehicle_name' => $name, 'vehicle_number' => $unique, 'manufacturer' => 'Test', 'engine_number' => $unique,
+            'chassis_number' => $unique, 'model' => 'Test', 'current_reading' => 0, 'fuel_type' => 'Petrol',
+            'vehicle_type' => 'Car', 'capacity' => 4, 'status' => $status, 'maintained_by' => 'Test',
+            'registration_number' => $unique, 'country_id' => 1, 'state_id' => 1, 'city_id' => 1, 'driver_id' => '1',
+            'registration_authority' => 'Test', 'validity_years' => 1, 'purchase_type' => 'purchase', 'has_insurance' => 0,
+            'deleted_at' => $deletedAt, 'created_at' => now(), 'updated_at' => now(),
+        ]);
     }
 
     /** F-007: only users the screen lists can be changed */

@@ -76,7 +76,7 @@ class ProtocolRequestController extends Controller
     public function create()
     {
         $courses = CourseMaster::activeRunning()->orderBy('course_name', 'asc')->pluck('course_name', 'pk');
-        $vehicles = Vehicle::orderBy('vehicle_name', 'asc')->pluck('vehicle_name', 'id');
+        $vehicles = $this->vehicleOptions();
         return view('protocol::requests.create', compact('courses', 'vehicles'));
     }
 
@@ -121,8 +121,25 @@ class ProtocolRequestController extends Controller
             })
             ->orderBy('course_name', 'asc')
             ->pluck('course_name', 'pk');
-        $vehicles = Vehicle::orderBy('vehicle_name', 'asc')->pluck('vehicle_name', 'id');
+        // Active vehicles, but keep the one already saved even if it has since been retired
+        $vehicles = $this->vehicleOptions($protocolRequest->request_type === 'vehicle' ? $protocolRequest->requestable?->vehicle_type : null);
         return view('protocol::requests.edit', compact('protocolRequest', 'courses', 'vehicles'));
+    }
+
+    /**
+     * Vehicle dropdown: active vehicles that have not been deleted (PR #348 F-024).
+     * $keepId keeps a request's saved vehicle selectable on edit.
+     */
+    protected function vehicleOptions($keepId = null)
+    {
+        return Vehicle::where(function ($q) use ($keepId) {
+                $q->where(fn ($active) => $active->whereNull('deleted_at')->where('status', 1));
+                if ($keepId !== null && $keepId !== '') {
+                    $q->orWhere('id', $keepId);
+                }
+            })
+            ->orderBy('vehicle_name', 'asc')
+            ->pluck('vehicle_name', 'id');
     }
 
     /**
