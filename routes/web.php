@@ -197,6 +197,9 @@ Route::middleware(['auth', EnsureMenuPermission::class.':roles'])->group(functio
 // Protected Routes
 Route::middleware(['auth'])->group(function () {
 
+    Route::get('inventory/login', [\App\Http\Controllers\InventoryLoginController::class, 'redirect'])
+        ->name('inventory.login');
+
     Route::prefix('admin')->name('admin.')->group(function () {
         // Roles under /admin: the same screen as the un-prefixed group above, so the
         // same screen gate. store/update/destroy are additionally Super Admin only

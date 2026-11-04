@@ -41,4 +41,8 @@ return [
         'iv'  => env('MOODLE_SHARED_IV'),
     ],
 
+'inventory' => [
+        'login_url' => env('INVENTORY_LOGIN_URL', 'https://centre.lbsnaa.gov.in/lbsinv/login-to-account'),
+    ],
+
 ];
