@@ -88,6 +88,9 @@ missing row denies everyone. Run this once on each environment as a deploy step
 php artisan db:seed --class="Modules\Protocol\Database\Seeders\ProtocolPermissionsSeeder"
 ```
 
+The same seeder creates the empty `Protocol Approver` role. Assign it to the people who
+should appear in the "Recommend to" list; until someone holds it, staff can only approve directly.
+
 Sidebar menus are added from `/sidebar/menus`.
 
 ## 6. Roles and access
@@ -117,79 +120,41 @@ deliberately, not a bug fix.
 `ProtocolRolesSeeder` and `config('protocol.roles')` still exist for the sidebar partial's
 `@role(...)` checks; the routes themselves do not use `role:` middleware.
 
-## 7. Integrating into your existing UI (important)
+## 7. Layout
 
-`Resources/views/layouts/app.blade.php` is a **complete standalone
-layout** (its own `<html>`, sidebar, topbar) so the module works
-out-of-the-box on its own. Since you're integrating this into existing
-software, you have two options:
+Every screen extends the app's `admin.layouts.master` and appears in the app sidebar
+through the menus added at `/sidebar/menus`. `Resources/views/layouts/app.blade.php` and
+`partials/sidebar.blade.php` are left over from the standalone version; no route renders them.
 
-**Option A — quick:** leave it as-is. The module will render as its
-own full page with its own sidebar, reachable at `/protocol`. Good for
-a first integration pass / demo to stakeholders.
+## 8. Employee identity
 
-**Option B — proper integration (recommended):** open every Blade
-file under `Resources/views/` and change:
-```blade
-@extends('protocol::layouts.app')
-```
-to your existing app's master layout, e.g.:
-```blade
-@extends('layouts.master')
-```
-Then delete `Resources/views/partials/sidebar.blade.php`'s markup and
-instead add the module's nav links (Dashboard, New Request, Approval
-Queue, etc.) into your existing sidebar/menu partial, guarded by the
-same `@role(...)` checks used here. The controllers, models and routes
-do not need any changes for either option — only the
-Blade views' `@extends` line and the nav menu.
-
-## 8. Employee model relation
-
-The models reference the logged-in user via
-`config('auth.providers.users.model')`, so they automatically pick up
-whatever `User` model your app already uses — no changes needed unless
-your user table's primary key isn't named `id`.
-
-If you track `department` on your `users` table under a different
-column name, update this one line in
-`ProtocolRequestController@createRequest`:
-```php
-'employee_department' => Auth::user()->department ?? null,
-```
+A signed-in actor (requester, staff, manager, approver) is identified with
+`User::resolveEmployeePk()`: `employee_master.pk` first, else a unique `pk_old`
+(`ProtocolDirectory::employeePkFor()`). A login that resolves to no single employee is
+refused (422 when raising a request, 403 when deciding).
 
 ## 9. Routes reference
 
-| Route name                      | URL                                   | Role            |
-|---------------------------------|---------------------------------------|-----------------|
-| `protocol.dashboard`            | `/protocol`                           | any             |
-| `protocol.requests.create`      | `/protocol/new`                       | employee        |
-| `protocol.requests.my`          | `/protocol/my-requests`               | employee        |
-| `protocol.guest-house.store`    | `POST /protocol/guest-house`          | employee        |
-| `protocol.vehicle-pass.store`   | `POST /protocol/vehicle-pass`         | employee        |
-| `protocol.ticket.store`         | `POST /protocol/ticket`               | employee        |
-| `protocol.approval.queue`       | `/protocol/approval/queue`            | protocol-staff  |
-| `protocol.approval.review`      | `/protocol/approval/queue/{id}`       | protocol-staff  |
-| `protocol.approval.decide`      | `POST .../{id}/decide`                | protocol-staff  |
-| `protocol.manager.queue`        | `/protocol/manager/queue`             | protocol-manager|
-| `protocol.manager.review`       | `/protocol/manager/queue/{id}`        | protocol-manager|
-| `protocol.manager.decide`       | `POST .../{id}/decide`                | protocol-manager|
-| `protocol.history.index`        | `/protocol/history`                   | any             |  
-| `protocol.requests.show`        | `/protocol/requests/{id}`             | any (shared)    |
+| Route name | URL | Gate |
+| --- | --- | --- |
+| `protocol.dashboard` | `/protocol` | `protocol.my_requests` |
+| `protocol.requests.create` | `/protocol/new` | `protocol.my_requests` |
+| `protocol.requests.store` | `POST /protocol/requests` | `protocol.my_requests` |
+| `protocol.requests.my` | `/protocol/my-requests` | `protocol.my_requests` |
+| `protocol.requests.show` / `edit` / `update` | `/protocol/requests/{id}` | `protocol.my_requests`, own requests only |
+| `protocol.requests.all` | `/protocol/all-requests` | `protocol.protocol_requests` |
+| `protocol.approval.queue` / `review` / `decide` | `/protocol/approval/queue/...` | `protocol.protocol_requests` |
+| `protocol.recommended-booking` | `/protocol/recommended_booking` | `protocol.recommended_booking` |
+| `protocol.manager.queue` / `review` / `decide` | `/protocol/manager/queue/...` | signed in; only the person the request is recommended to |
+| `protocol.driver-master.*` | `/protocol/driver-master` | `protocol.driver_master` |
+| `protocol.vehicle-master.*` | `/protocol/vehicle-master` | `protocol.vehicle_master` |
+| `protocol.permissions` | `/protocol/permissions` | `protocol.permissions` |
 
-## 10. What's intentionally left for you to plug in
+`php artisan route:list --path=protocol` is the source of truth.
 
-- **Guest House / Vehicle master data** — the dropdowns in the create
-  forms are hardcoded sample options (`Yamuna Guest House`, `Innova`,
-  etc.). Swap these for a real `guest_house_masters` /
-  `vehicle_masters` table + dropdown if you want admin-managed lists,
-  using the `guest_house_master_id` / `vehicle_master_id` nullable
-  columns already present on the migrations.
-- **Notifications** — no email/SMS is wired up. The obvious hook point
-  is right after each `->logs()->create(...)` call inside
-  `ProtocolRequest.php` (approveDirectly / recommendTo / approveByManager
-  / rejectByManager) — fire a Laravel Notification there.
-- **Manager selection list** — `ApprovalController@review` currently
-  pulls everyone with the `protocol-manager` role. If recommendation
-  should only go to a specific person's actual line manager, replace
-  that query with your existing org-hierarchy lookup.
+## 10. Not built yet
+
+- **Notifications** — no email/SMS is sent. The hook point is each `logs()->create(...)`
+  in `ProtocolRequest.php` (approveDirectly / recommendTo / approveByManager / rejectByManager).
+- **Vehicle categories and types** — their routes are commented out in `routes/web.php`,
+  and the DBA schema has no tables for them.

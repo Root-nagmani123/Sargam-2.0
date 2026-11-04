@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Modules\Protocol\Database\Seeders\ProtocolPermissionsSeeder;
+use Modules\Protocol\Services\ProtocolDirectory;
 use Tests\TestCase;
 
 /**
@@ -24,5 +25,11 @@ class ProtocolPermissionsSeederTest extends TestCase
 
         $this->assertNotEmpty($gated);
         $this->assertSame([], $gated->diff(ProtocolPermissionsSeeder::PERMISSIONS)->values()->all());
+    }
+
+    /** The "Recommend to" list is the holders of this role, so the deploy must create it (PR #348 F-027) */
+    public function test_the_seeder_creates_the_approver_role(): void
+    {
+        $this->assertContains(ProtocolDirectory::APPROVER_ROLE, ProtocolPermissionsSeeder::ROLES);
     }
 }

@@ -3,7 +3,9 @@
 namespace Modules\Protocol\Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Modules\Protocol\Services\ProtocolDirectory;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 class ProtocolPermissionsSeeder extends Seeder
@@ -29,10 +31,23 @@ class ProtocolPermissionsSeeder extends Seeder
         'protocol.ticket_booking',
     ];
 
+    /**
+     * Roles the module checks by name. Only "Recommend to" reads one: its list is the
+     * holders of this role (ProtocolDirectory::approvers). Created empty; holders are
+     * assigned per environment (PR #348 F-027).
+     */
+    const ROLES = [
+        ProtocolDirectory::APPROVER_ROLE,
+    ];
+
     public function run(): void
     {
         foreach (self::PERMISSIONS as $permission) {
             Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+        }
+
+        foreach (self::ROLES as $role) {
+            Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
         }
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
