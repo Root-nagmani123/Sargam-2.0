@@ -29,15 +29,16 @@ return [
 
     // Notice Notifications
     // Open the dashboard feed on its Notices tab (not the notice master list),
-    // so the user lands on the same notice cards shown on the dashboard.
+    // so the user lands on the same notice cards shown on the dashboard. `notice`
+    // makes the feed open the page holding that notice and expand its card.
     'notice' => [
         'Notice' => [
             'route' => 'admin.dashboard.feed',
-            'params' => ['tab' => 'notices'],
+            'params' => ['tab' => 'notices', 'notice' => 'reference_pk'],
         ],
         'NoticeNotification' => [
             'route' => 'admin.dashboard.feed',
-            'params' => ['tab' => 'notices'],
+            'params' => ['tab' => 'notices', 'notice' => 'reference_pk'],
         ],
     ],
 
