@@ -13,60 +13,66 @@
     $selects = [
         ['name' => 'salary_grade_master_pk', 'label' => 'Pay Scale', 'options' => $payScales ?? collect(), 'placeholder' => 'Select pay scale'],
         ['name' => 'estate_unit_type_master_pk', 'label' => 'Unit Type', 'options' => $unitTypes ?? collect(), 'placeholder' => 'Select unit type'],
-        ['name' => 'estate_unit_sub_type_master_pk', 'label' => 'Unit Sub Type', 'options' => $unitSubTypes ?? collect(), 'placeholder' => 'Select unit sub type'],
+        ['name' => 'estate_unit_sub_type_master_pk', 'label' => 'Unit Sub-Type', 'options' => $unitSubTypes ?? collect(), 'placeholder' => 'Select unit sub type'],
     ];
 @endphp
 
 @section('setup_content')
-<div class="container-fluid em-page">
-    {{-- Breadcrumb trail + page title (the app-wide header component). --}}
-    <x-breadcrum title="Eligibility - Criteria" :showBack="false" />
+{{-- Figma "Eligibility Criteria": same list pattern as partials/master_crud. --}}
+<div class="container-fluid rfe-page em-page em-list-page">
+    <x-breadcrum title="Eligibility - Criteria" :showBack="false">
+        <button type="button" class="btn ds-btn-primary em-btn-add" id="eligibilityAddBtn">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <span>Add Eligibility/ Criteria</span>
+        </button>
+    </x-breadcrum>
 
     <x-session_message />
 
-    {{-- .ds-page-header: what the screen is for, and its one primary action. --}}
-    <div class="ds-page-header">
-        <p class="ds-page-subtitle">Each row makes employees on that pay scale eligible to request houses of that unit type and sub type.</p>
-        <button type="button" class="btn ds-btn-primary" id="eligibilityAddBtn">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            <span>Add Criteria</span>
-        </button>
+    @include('admin.estate.partials.export_actions', ['prefix' => 'eligibility', 'formats' => ['csv']])
+
+    <div class="card overflow-hidden em-grid-card">
+        <div class="card-body">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="eligibilityBtnColumns"
+                        data-bs-toggle="modal" data-bs-target="#eligibilityColumnVisibilityModal" title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="eligibilityDtSearch" class="programme-dt-search" data-dt-search-for="eligibilityCriteriaTable"></div>
+                </div>
+            </div>
+
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    {!! $dataTable->table(['aria-label' => 'Eligibility criteria']) !!}
+                </div>
+                {{-- Yajra paginates through DataTables, so the global UI fills this slot. --}}
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                    data-dt-footer-for="eligibilityCriteriaTable"></div>
+            </div>
+        </div>
     </div>
+</div>
 
-    <section class="card ds-card" aria-labelledby="eligibilityCardTitle">
-        <div class="ds-card-header">
-            <h2 class="em-card-title" id="eligibilityCardTitle">Eligibility criteria list</h2>
-            <button type="button" class="btn em-btn-utility" id="btnPrintEligibilityCriteria" title="Print the full list">
-                <i class="bi bi-printer" aria-hidden="true"></i>
-                <span>Print</span>
-            </button>
-        </div>
-
-        <div class="ds-card-body">
-            {{-- How a row is read: the rules themselves are the rows below. --}}
-            <p class="em-flow" aria-label="How eligibility criteria work">
-                <span class="em-flow__step"><i class="bi bi-cash-stack" aria-hidden="true"></i> Pay Scale</span>
-                <span class="em-flow__arrow" aria-hidden="true">→</span>
-                <span class="em-flow__step"><i class="bi bi-house" aria-hidden="true"></i> Unit Type</span>
-                <span class="em-flow__arrow" aria-hidden="true">→</span>
-                <span class="em-flow__step"><i class="bi bi-diagram-3" aria-hidden="true"></i> Unit Sub Type</span>
-            </p>
-
-            {{-- .ds-toolbar: search on the right (DataTables filter is moved into the slot). --}}
-            <div class="ds-toolbar">
-                <span class="ds-toolbar-spacer"></span>
-                <div id="eligibilityDtSearch" class="programme-dt-search" data-dt-search-for="eligibilityCriteriaTable"></div>
+{{-- Columns (EstateReportGrid.columnVisibility fills the grid). --}}
+<div class="modal fade" id="eligibilityColumnVisibilityModal" tabindex="-1" aria-labelledby="eligibilityColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="eligibilityColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-
-            <div class="ds-table-wrap">
-                {!! $dataTable->table(['aria-describedby' => 'eligibilityCardTitle']) !!}
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="eligibilityColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
-
-        {{-- Yajra paginates through DataTables, so the global UI fills this slot. --}}
-        <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
-            data-dt-footer-for="eligibilityCriteriaTable"></div>
-    </section>
+    </div>
 </div>
 
 {{-- Add / Edit — one modal for both (§3c). --}}
@@ -82,7 +88,7 @@
                 <input type="hidden" name="_em_edit_pk" id="eligibilityEditPk" value="{{ $reopenPk }}">
 
                 <div class="modal-header">
-                    <h5 class="modal-title" id="eligibilityFormModalLabel">{{ $isReopenEdit ? 'Edit' : 'Add' }} Eligibility Criteria</h5>
+                    <h5 class="modal-title" id="eligibilityFormModalLabel">{{ $isReopenEdit ? 'Edit' : 'Add' }} Eligibility/ Criteria</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
@@ -93,7 +99,7 @@
                         $err = $reopen ? $errors->first($s['name']) : null;
                         $sel = $reopen ? (string) old($s['name'], '') : '';
                     @endphp
-                    <div class="{{ $loop->last ? 'mb-0' : 'mb-3' }}">
+                    <div class="{{ $loop->last ? 'mb-0' : 'mb-2' }}">
                         <label class="ds-form-label" for="{{ $id }}">{{ $s['label'] }}<span class="ds-req" aria-hidden="true">*</span></label>
                         <select class="form-select @if($err) is-invalid @endif" id="{{ $id }}" name="{{ $s['name'] }}"
                             data-em-field="{{ $s['name'] }}" data-searchable="true" data-placeholder="{{ $s['placeholder'] }}"
@@ -113,38 +119,19 @@
 
                 <div class="modal-footer">
                     <button type="button" class="btn ds-btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn ds-btn-primary" id="eligibilityFormSubmit">{{ $isReopenEdit ? 'Update' : 'Add' }} Criteria</button>
+                    <button type="submit" class="btn ds-btn-primary" id="eligibilityFormSubmit">{{ $isReopenEdit ? 'Update' : 'Add' }} Eligibility/ Criteria</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-{{-- Delete confirmation (.ds-modal-confirm). --}}
-<div class="modal fade ds-modal ds-modal-confirm em-modal" id="eligibilityDeleteModal" tabindex="-1"
-    aria-labelledby="eligibilityDeleteModalLabel" aria-describedby="eligibilityDeleteText" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form id="eligibilityDeleteForm" method="POST" action="">
-                @csrf
-                @method('DELETE')
-                <div class="modal-body">
-                    <div class="ds-confirm-icon" aria-hidden="true">!</div>
-                    <h5 class="ds-confirm-title" id="eligibilityDeleteModalLabel">Delete eligibility criteria?</h5>
-                    <p class="ds-confirm-text" id="eligibilityDeleteText">This action can't be undone.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn ds-btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn ds-btn-primary em-btn-delete">Yes, Delete</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+@include('admin.estate.partials.master_delete_modal', ['key' => 'eligibility'])
 @endsection
 
 @push('styles')
 @include('admin.layouts.partials.select2-assets')
+<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
 @include('admin.estate.partials.master_styles')
 @endpush
 
@@ -167,8 +154,8 @@ $(function () {
     function openForm(pk, values) {
         var isEdit = !!pk;
         clearErrors();
-        $('#eligibilityFormModalLabel').text((isEdit ? 'Edit' : 'Add') + ' Eligibility Criteria');
-        $('#eligibilityFormSubmit').text((isEdit ? 'Update' : 'Add') + ' Criteria').prop('disabled', false);
+        $('#eligibilityFormModalLabel').text((isEdit ? 'Edit' : 'Add') + ' Eligibility/ Criteria');
+        $('#eligibilityFormSubmit').text((isEdit ? 'Update' : 'Add') + ' Eligibility/ Criteria').prop('disabled', false);
         $form.attr('action', isEdit ? updateTemplate.replace('__ID__', pk) : storeUrl);
         $('#eligibilityFormMethod').val(isEdit ? 'PUT' : 'POST');
         $('#eligibilityEditPk').val(isEdit ? pk : '');
@@ -188,9 +175,7 @@ $(function () {
     });
 
     $(document).on('click', '#eligibilityCriteriaTable .js-em-delete', function () {
-        var name = String($(this).data('name') || '').trim();
         $('#eligibilityDeleteForm').attr('action', $(this).data('url'));
-        $('#eligibilityDeleteText').text((name ? '“' + name + '” will be removed. ' : '') + "This action can't be undone.");
         deleteModal.show();
     });
 
@@ -202,41 +187,50 @@ $(function () {
     });
 
     $form.on('submit', function () { $('#eligibilityFormSubmit').prop('disabled', true); });
-    $('#eligibilityDeleteForm').on('submit', function () { $(this).find('[type="submit"]').prop('disabled', true); });
-    $(window).on('pageshow', function () {
-        $('#eligibilityFormSubmit, #eligibilityDeleteForm [type="submit"]').prop('disabled', false);
-    });
+    $(window).on('pageshow', function () { $('#eligibilityFormSubmit').prop('disabled', false); });
 
     @if($reopen)
     formModal.show();
     @endif
 
-    /* ---------- Print: every row, on the module's branded print layout ---------- */
-    // EstateReportGrid (public/js/estate-report-grid.js) is the Estate print helper:
-    // LBSNAA header, no popup (hidden iframe), visible columns only.
-    $('#btnPrintEligibilityCriteria').on('click', function () {
+    /* ---------- Columns, Download (CSV) and Print: every row, visible columns ---------- */
+    // EstateReportGrid (public/js/estate-report-grid.js) is the Estate grid helper:
+    // Columns modal, row collection, CSV, and the branded print (hidden iframe).
+    $(document).on('init.dt', function (e, settings) {
+        if (settings.nTable.id !== 'eligibilityCriteriaTable') return;
+        EstateReportGrid.columnVisibility($(settings.nTable).DataTable(), {
+            grid: '#eligibilityColumnToggleGrid',
+            storageKey: 'estate.master.eligibility.hiddenCols',
+            skip: ['S. No.', 'Action']
+        });
+    });
+
+    function withEveryRow($btn, fn) {
         var table = document.getElementById('eligibilityCriteriaTable');
         if (!table || !$.fn.DataTable.isDataTable(table) || !window.EstateReportGrid) return;
         var api = $(table).DataTable();
-        var $btn = $(this).prop('disabled', true);
-
-        // Fetch every row (server honours length = -1), print, then restore the pager.
-        var originalLen = api.page.len();
-        var originalPage = api.page();
-        api.one('draw', function () {
-            setTimeout(function () {
-                var data = EstateReportGrid.collectRows(api, { skip: ['Action'] });
-                EstateReportGrid.printGrid({
-                    title: 'Eligibility - Criteria',
-                    meta: api.search() ? ['Search: "' + api.search() + '"'] : [],
-                    headers: data.headers,
-                    rows: data.rows
-                });
-                api.page.len(originalLen).page(originalPage).draw(false);
-                $btn.prop('disabled', false);
-            }, 250);
+        $btn.prop('disabled', true);
+        EstateReportGrid.withAllRows(api, function () {
+            fn(api, EstateReportGrid.collectRows(api, { skip: ['Action'] }));
+            $btn.prop('disabled', false);
         });
-        api.page.len(-1).draw();
+    }
+
+    $(document).on('click', '[data-export-for="eligibility"]', function () {
+        withEveryRow($(this), function (api, data) {
+            EstateReportGrid.downloadCsv('Eligibility Criteria', data.headers, data.rows);
+        });
+    });
+
+    $('#eligibilityPrintBtn').on('click', function () {
+        withEveryRow($(this), function (api, data) {
+            EstateReportGrid.printGrid({
+                title: 'Eligibility - Criteria',
+                meta: api.search() ? ['Search: "' + api.search() + '"'] : [],
+                headers: data.headers,
+                rows: data.rows
+            });
+        });
     });
 });
 </script>

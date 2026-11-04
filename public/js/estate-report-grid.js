@@ -13,6 +13,8 @@
  *   EstateReportGrid.columnVisibility(dt, opts)     Columns modal, remembered by LABEL
  *   EstateReportGrid.collectRows(dt, opts)          visible columns × filtered rows
  *   EstateReportGrid.printGrid(opts)                branded print via hidden iframe
+ *   EstateReportGrid.downloadCsv(title, h, rows)    CSV of the same rows (Excel-safe)
+ *   EstateReportGrid.withAllRows(dt, fn)            run fn with every row loaded (server-side grids)
  */
 (function (window, $) {
     'use strict';
@@ -115,10 +117,12 @@
      * Visible columns × rows currently in scope (search applied, on-screen order,
      * every page that is loaded). Cell text only — no markup reaches the printout.
      *
-     * opts: { skip: ['Action'] }
+     * opts: { skip: ['Action'], serial: 'S. No.' } — serial renumbers that column
+     * 1..n in output order (a client-side grid only renumbers the page on screen).
      */
     function collectRows(dt, opts) {
         var skip = (opts && opts.skip) || [];
+        var serial = opts && opts.serial;
         var cols = [];
         dt.columns().every(function (idx) {
             var label = headerLabel(this);
@@ -128,7 +132,9 @@
         dt.rows({ search: 'applied', order: 'applied' }).every(function () {
             var rowNode = this.node();
             if (!rowNode) return;
+            var n = rows.length + 1;
             rows.push(cols.map(function (c) {
+                if (serial && c.label === serial) return String(n);
                 var cell = dt.cell(rowNode, c.idx).node();
                 return cell ? $(cell).text().replace(/\s+/g, ' ').trim() : '';
             }));
@@ -221,11 +227,57 @@
         }, 500);
     }
 
+    /**
+     * CSV download of headers × rows. UTF-8 BOM so Excel reads Devanagari / ₹;
+     * cells starting with = + - @ get a leading apostrophe so Excel cannot run
+     * them as formulas — same rule as App\Support\ExportCellValue::safe(), which
+     * leaves the "-" placeholder and genuine numbers alone.
+     */
+    function downloadCsv(title, headers, rows) {
+        function cell(v) {
+            var s = v == null ? '' : String(v);
+            var probe = s.replace(/^[ \t\r\n]+/, '');
+            var harmless = probe === '' || /^[-–—]+$/.test(probe.trim()) || (probe.trim() !== '' && isFinite(Number(probe)));
+            if (!harmless && /^[=+\-@\t\r]/.test(probe)) s = "'" + s;
+            return '"' + s.replace(/"/g, '""') + '"';
+        }
+        var csv = [headers].concat(rows).map(function (r) { return r.map(cell).join(','); }).join('\r\n');
+        var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+        var name = String(title || 'export').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '') +
+            '_' + new Date().toISOString().slice(0, 10) + '.csv';
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+    }
+
+    /**
+     * A server-side grid only holds the current page: load every row (the
+     * Yajra feeds honour length = -1), run fn, then restore the pager.
+     * A client-side grid already holds every row, so fn runs at once.
+     */
+    function withAllRows(dt, fn) {
+        if (!dt.settings()[0].oFeatures.bServerSide) { fn(); return; }
+        var len = dt.page.len();
+        var page = dt.page();
+        dt.one('draw', function () {
+            setTimeout(function () {
+                fn();
+                dt.page.len(len).page(page).draw(false);
+            }, 0);
+        });
+        dt.page.len(-1).draw();
+    }
+
     window.EstateReportGrid = {
         esc: esc,
         stateRow: stateRow,
         columnVisibility: columnVisibility,
         collectRows: collectRows,
-        printGrid: printGrid
+        printGrid: printGrid,
+        downloadCsv: downloadCsv,
+        withAllRows: withAllRows
     };
 })(window, jQuery);

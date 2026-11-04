@@ -97,10 +97,39 @@
     .lmr-page .programme-dt-table th.dtr-control {
         display: none;
     }
+
+    /* Collapsed search (Figma: icon button beside Columns) — three filters
+       plus a 300px search box wrapped the toolbar onto two rows. */
+    .lmr-page .lmr-search-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--ds-control-h, 2.5rem);
+        height: var(--ds-control-h, 2.5rem);
+        padding: 0;
+        color: var(--ds-primary, #004a93);
+        background: var(--ds-surface, #fff);
+        border: 1px solid var(--ds-line, #d0d5dd);
+        border-radius: var(--ds-radius, 4px);
+    }
+
+    /* Three 180px pills + Remove Filter + Columns don't fit one row at 1440;
+       the design sizes them to their labels. */
+    @media (min-width: 768px) {
+        .lmr-page .programme-dt-filter-select {
+            width: 150px;
+        }
+    }
+
+    .lmr-page .lmr-search-toggle[aria-expanded="true"],
+    .lmr-page .lmr-search-toggle:hover {
+        border-color: var(--ds-primary, #004a93);
+        background: #f2f7fc;
+    }
 </style>
 @endpush
 
-<div class="container-fluid px-2 px-sm-3 px-md-4 lmr-page">
+<div class="container-fluid lmr-page">
     <x-breadcrum title="List Meter Reading" :showBack="false" />
 
     <x-session_message />
@@ -110,11 +139,11 @@
          window.print(), so the printout and the Excel can't drift apart. --}}
     @include('admin.estate.partials.export_actions', ['prefix' => 'lmr'])
 
-    <div class="card shadow-sm border-0 rounded-3">
+    <div class="card overflow-hidden rounded-1">
         <div class="card-body p-3 p-md-4">
             {{-- Toolbar: filters left · Columns + search right (§2) --}}
             <div
-                class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3 programme-dt-toolbar">
                 <div class="d-flex flex-wrap align-items-center gap-3">
                     <span class="programme-dt-filters-label">Filter</span>
 
@@ -146,14 +175,19 @@
                     <button type="button" class="btn programme-dt-btn-reset" id="lmrResetFilters">Remove Filter</button>
                 </div>
 
-                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                <div class="d-flex flex-wrap flex-lg-nowrap align-items-center gap-2 ms-lg-auto">
                     <button type="button" class="btn programme-dt-btn-columns" data-bs-toggle="modal"
                         data-bs-target="#lmrColumnModal" title="Show / hide columns">
                         <span>Columns</span>
                         <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
 
-                    <div id="lmrDtSearch" class="programme-dt-search" data-dt-search-for="listMeterReadingTable"></div>
+                    <button type="button" class="btn lmr-search-toggle" id="lmrSearchToggle"
+                        aria-expanded="false" aria-controls="lmrDtSearch" title="Search">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <span class="visually-hidden">Search</span>
+                    </button>
+                    <div id="lmrDtSearch" class="programme-dt-search d-none" data-dt-search-for="listMeterReadingTable"></div>
                 </div>
             </div>
 
@@ -401,6 +435,20 @@
         }
 
         $('#bill_month, #employee_type, #block_id').on('change', reload);
+
+        $('#lmrSearchToggle').on('click', function () {
+            var $slot = $('#lmrDtSearch');
+            var opening = $slot.hasClass('d-none');
+            $slot.toggleClass('d-none', !opening);
+            $(this).attr('aria-expanded', opening ? 'true' : 'false');
+            if (opening) {
+                $slot.find('input').trigger('focus');
+            } else if (dt && dt.search()) {
+                // Collapsing clears the query — a hidden active filter is a trap.
+                dt.search('').draw();
+                $slot.find('input').val('');
+            }
+        });
 
         $('#lmrResetFilters').on('click', function () {
             $('#bill_month').prop('selectedIndex', 0);

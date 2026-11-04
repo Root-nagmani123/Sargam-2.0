@@ -7,9 +7,13 @@
     <x-breadcrum title="Pending Meter Reading" :showBack="false" />
     <x-session_message />
 
-    {{-- Print sits above the card (new-design-index-page.md §1); enabled once data loads. --}}
+    {{-- Download + Print sit above the card (Figma 1:42824); enabled once data loads. --}}
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 er-export">
-        <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="btnPrintPendingMeter" title="Print the filtered list" disabled>
+        <button type="button" class="btn estate-export-btn" id="btnDownloadPendingMeter" title="Download the filtered list (CSV)" disabled>
+            <i class="bi bi-download" aria-hidden="true"></i>
+            <span>Download</span>
+        </button>
+        <button type="button" class="btn estate-export-btn" id="btnPrintPendingMeter" title="Print the filtered list" disabled>
             <i class="bi bi-printer" aria-hidden="true"></i>
             <span>Print</span>
         </button>
@@ -49,22 +53,23 @@
 
     <div class="card border-0 shadow-sm rounded-1">
         <div class="card-body p-3 p-md-4">
-            <div class="d-flex flex-column flex-lg-row align-items-lg-end justify-content-between gap-3 mb-3 programme-dt-toolbar">
-                <form id="pmrFilterForm" class="er-filters" novalidate>
+            {{-- Toolbar: "Filter" · pills (the placeholder option is the field's label) ·
+                 Remove Filter · Columns + search on the right (Figma 1:42824). --}}
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3 programme-dt-toolbar">
+                <form id="pmrFilterForm" class="er-filters align-items-center" novalidate>
+                    <span class="programme-dt-filters-label">Filter</span>
                     <div class="programme-dt-filter-select">
-                        <label for="bill_month" class="er-filter-label">Bill Month <span class="text-danger" aria-hidden="true">*</span></label>
-                        <input type="month" class="form-control" id="bill_month" name="bill_month"
-                            value="{{ date('Y-m') }}" max="{{ date('Y-m') }}" required aria-required="true">
+                        <input type="month" class="form-control" id="bill_month" name="bill_month" aria-label="Bill Month"
+                            value="{{ date('Y-m') }}" max="{{ date('Y-m') }}" required aria-required="true" title="Bill Month">
                     </div>
                     <div class="programme-dt-filter-select">
-                        <label for="employee_type_filter" class="er-filter-label">Employee Type</label>
-                        <select class="form-select" id="employee_type_filter" name="employee_type_filter" data-searchable="true">
-                            <option value="all" selected>All</option>
+                        <select class="form-select" id="employee_type_filter" name="employee_type_filter" data-searchable="true" aria-label="Employee Type">
+                            <option value="all" selected>Employee Type</option>
                             <option value="lbsnaa">LBSNAA</option>
-                            <option value="other">OTHER</option>
+                            <option value="other">Other</option>
                         </select>
                     </div>
-                    <button type="button" class="btn programme-dt-btn-reset" id="pmrResetBtn">Reset Filters</button>
+                    <button type="button" class="btn programme-dt-btn-reset" id="pmrResetBtn">Remove Filter</button>
                 </form>
 
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
@@ -77,7 +82,8 @@
                 </div>
             </div>
 
-            <p class="er-summary mb-3" id="pmrSummary" aria-live="polite">Readings not yet entered for the selected bill month.</p>
+            {{-- Announced, not shown: the footer already carries the count (Figma has no summary line). --}}
+            <p class="visually-hidden" id="pmrSummary" aria-live="polite">Readings not yet entered for the selected bill month.</p>
 
             <div class="programme-dt-panel">
                 <div class="table-responsive er-scroll">
@@ -128,6 +134,12 @@
 @push('styles')
 @include('admin.layouts.partials.select2-assets')
 <link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
+<style>
+    /* Figma pills carry the label only — no leading dot. */
+    .pmr-page .er-badge::before { display: none; }
+    /* Keeps Filter · pills · Columns · search on one row at 1440 (Figma uses a 40px search icon). */
+    .pmr-page .programme-dt-search { width: 200px; }
+</style>
 @endpush
 
 @push('scripts')
@@ -164,19 +176,17 @@ $(function () {
     function destroyTable() {
         if ($.fn.DataTable.isDataTable($table)) $table.DataTable().destroy();
         dt = null;
-        $('#btnPrintPendingMeter, #pmrColumnsBtn').prop('disabled', true);
+        $('#btnPrintPendingMeter, #btnDownloadPendingMeter, #pmrColumnsBtn').prop('disabled', true);
         $('[data-dt-footer-for="pendingMeterReadingTable"], #pmrDtSearch').empty();
     }
 
     function rowHtml(row, i) {
         var type = String(row.employee_type || '').toUpperCase();
-        var typeBadge = type === 'OTHER'
-            ? '<span class="er-badge er-badge--other">OTHER</span>'
-            : (type === 'LBSNAA' ? '<span class="er-badge er-badge--lbsnaa">LBSNAA</span>' : '<span class="er-badge er-badge--neutral">' + esc(type || 'N/A') + '</span>');
         var url = entryUrl[type];
         return '<tr>' +
             '<td>' + esc(row.sno || (i + 1)) + '</td>' +
-            '<td data-search="' + esc(type) + '">' + typeBadge + '</td>' +
+            // Plain text, as in Figma: "Other" / "LBSNAA".
+            '<td data-search="' + esc(type) + '">' + esc(type === 'OTHER' ? 'Other' : (type || 'N/A')) + '</td>' +
             '<td class="er-col-wrap fw-medium">' + esc(row.name || 'N/A') + '</td>' +
             '<td class="er-col-wrap">' + esc(row.designation || 'N/A') + '</td>' +
             '<td>' + esc(row.house_no || 'N/A') + '</td>' +
@@ -237,7 +247,7 @@ $(function () {
                 storageKey: 'sargam.pendingMeterReading.hiddenCols.' + @json(auth()->id() ?? 'guest'),
                 skip: ['Action']
             });
-            $('#btnPrintPendingMeter, #pmrColumnsBtn').prop('disabled', false);
+            $('#btnPrintPendingMeter, #btnDownloadPendingMeter, #pmrColumnsBtn').prop('disabled', false);
         }).fail(function (xhr, status) {
             if (status === 'abort') return;
             setStats([], billMonth);
@@ -258,6 +268,10 @@ $(function () {
         load();
     });
 
+    function typeLabel() {
+        return { all: 'All', lbsnaa: 'LBSNAA', other: 'Other' }[$('#employee_type_filter').val()] || 'All';
+    }
+
     $('#btnPrintPendingMeter').on('click', function () {
         if (!dt) return;
         var data = G.collectRows(dt, { skip: ['Action', 'Status'] });
@@ -265,13 +279,19 @@ $(function () {
             alert('At least one column must be visible to print.');
             return;
         }
-        var type = $('#employee_type_filter option:selected').text();
         G.printGrid({
             title: 'Pending Meter Reading',
-            meta: ['Bill Month: ' + monthLabel($('#bill_month').val()) + '  |  Employee Type: ' + type],
+            meta: ['Bill Month: ' + monthLabel($('#bill_month').val()) + '  |  Employee Type: ' + typeLabel()],
             headers: data.headers,
             rows: data.rows
         });
+    });
+
+    // Same rows and columns as Print.
+    $('#btnDownloadPendingMeter').on('click', function () {
+        if (!dt) return;
+        var data = G.collectRows(dt, { skip: ['Action', 'Status'] });
+        G.downloadCsv('Pending Meter Reading ' + $('#bill_month').val(), data.headers, data.rows);
     });
 
     load(); // current month on open

@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\DataTables\Concerns\RendersEstateRowActions;
 use App\Models\EstateHomeReqApprovalMgmt;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Yajra\DataTables\EloquentDataTable;
@@ -11,20 +12,14 @@ use Yajra\DataTables\Services\DataTable;
 
 class EstateApprovalSettingDataTable extends DataTable
 {
+    use RendersEstateRowActions;
+
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->editColumn('requested_by', function ($row) {
-                $emp = $row->requestedBy;
-                $name = $emp ? (trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')) ?: '—') : '—';
-                return e($name);
-            })
-            ->editColumn('approved_by', function ($row) {
-                $emp = $row->approvedBy;
-                $name = $emp ? (trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')) ?: '—') : '—';
-                return e($name);
-            })
+            ->editColumn('requested_by', fn ($row) => e($this->employeeName($row->requestedBy)))
+            ->editColumn('approved_by', fn ($row) => e($this->employeeName($row->approvedBy)))
             ->filterColumn('requested_by', function ($query, $keyword) {
                 $this->applyNameSearch($query, $keyword, false);
             })
@@ -45,15 +40,15 @@ class EstateApprovalSettingDataTable extends DataTable
             ->addColumn('action', function ($row) {
                 $editUrl = route('admin.estate.add-approved-request-house', ['approver' => $row->employees_pk]);
                 $deleteUrl = route('admin.estate.estate-approval-setting.destroy', ['id' => $row->pk]);
-                $token = csrf_token();
-                return '<div class="d-inline-flex align-items-center gap-1" role="group">' .
-                    '<a href="' . e($editUrl) . '" class="text-primary" title="Edit"><i class="material-icons menu-icon material-symbols-rounded">edit</i></a>' .
-                    '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this approval setting?\');">' .
-                    '<input type="hidden" name="_token" value="' . e($token) . '">' .
-                    '<input type="hidden" name="_method" value="DELETE">' .
-                    '<button type="submit" class="btn btn-link p-0 text-primary border-0" title="Delete"><i class="material-icons material-symbols-rounded">delete</i></button>' .
-                    '</form>' .
-                    '</div>';
+                // Icon-over-label actions shared with every Estate grid; Delete opens
+                // the confirm dialog on estate_approval_setting.blade.php.
+                return '<div class="rfe-actions" role="group">'
+                    . self::actionLink('edit', 'Edit', 'edit', ['href' => $editUrl])
+                    . self::actionLink('delete', 'Delete', 'delete', [
+                        'class' => 'js-em-delete',
+                        'attrs' => 'data-url="' . e($deleteUrl) . '"',
+                    ])
+                    . '</div>';
             })
             ->rawColumns(['action'])
             ->setRowId('pk');
@@ -70,7 +65,9 @@ class EstateApprovalSettingDataTable extends DataTable
     {
         return $this->builder()
             ->setTableId('estateApprovalSettingTable')
-            ->addTableClass('table table-striped table-hover align-middle mb-0')
+            // programme-dt chrome — no `dom` / `language`: datatable-global-ui.js owns
+            // both and fills the search / footer slots on the page.
+            ->addTableClass('table align-middle mb-0 w-100 programme-dt-table em-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
@@ -82,36 +79,27 @@ class EstateApprovalSettingDataTable extends DataTable
                 'pageLength' => 10,
                 'order' => [[0, 'asc']],
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-                'language' => [
-                    'search' => 'Search:',
-                    'lengthMenu' => 'Show _MENU_ entries',
-                    'info' => 'Showing _START_ to _END_ of _TOTAL_ entries',
-                    'infoEmpty' => 'Showing 0 to 0 of 0 entries',
-                    'infoFiltered' => '(filtered from _MAX_ total entries)',
-                    'paginate' => [
-                        'first' => 'First',
-                        'last' => 'Last',
-                        'next' => 'Next',
-                        'previous' => 'Previous',
-                    ],
-                ],
-                'dom' => '<"row align-items-center mb-3"<"col-12 col-md-4"l><"col-12 col-md-8 estate-approval-search-col"f>>rt<"row align-items-center mt-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>',
             ]);
     }
 
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(true)->searchable(false)->width('60px'),
+            Column::computed('DT_RowIndex')->title('S. No.')->addClass('em-col-sno')->orderable(true)->searchable(false),
             Column::make('requested_by')->title('Requested By')->orderable(false)->searchable(true),
             Column::make('approved_by')->title('Approved By')->orderable(false)->searchable(true),
-            Column::computed('action')->title('Action')->addClass('text-center')->orderable(false)->searchable(false)->width('100px'),
+            Column::computed('action')->title('Action')->addClass('em-col-action no-sort')->orderable(false)->searchable(false),
         ];
     }
 
     protected function filename(): string
     {
         return 'EstateApprovalSetting_' . date('YmdHis');
+    }
+
+    private function employeeName($emp): string
+    {
+        return $emp ? (trim(($emp->first_name ?? '') . ' ' . ($emp->last_name ?? '')) ?: '—') : '—';
     }
 
     /**

@@ -75,10 +75,6 @@
         gap: var(--ds-space-3) var(--ds-space-4);
     }
 
-    .rh-form-grid > .rh-form-grid-wide {
-        grid-column: span 2;
-    }
-
     @media (max-width: 991.98px) {
         .rh-form-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -88,10 +84,6 @@
     @media (max-width: 575.98px) {
         .rh-form-grid {
             grid-template-columns: minmax(0, 1fr);
-        }
-
-        .rh-form-grid > .rh-form-grid-wide {
-            grid-column: auto;
         }
     }
 
@@ -326,7 +318,7 @@
                                     name="returning_date">
                             </div>
 
-                            <div class="rh-form-grid-wide">
+                            <div>
                                 <label for="request_noc_document" class="ds-form-label">Upload NOC Document<span
                                         class="ds-req">*</span></label>
                                 <div class="noc-file-wrap">
@@ -452,6 +444,21 @@
     /* Height/border ko Bootstrap form-select ke saath align rakho */
     .select2-container--default .select2-selection--single { min-height: calc(1.5em + 0.75rem + 2px); display: flex; align-items: center; }
     .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.5; padding-left: 0.25rem; }
+
+    /* Figma fits every column in the panel: headers wrap, cells tighten
+       (overrides the table's text-nowrap utility). */
+    .rh-page .programme-dt-table thead th,
+    .rh-page .programme-dt-table tbody td {
+        padding-left: var(--ds-space-2) !important;
+        padding-right: var(--ds-space-2) !important;
+        white-space: normal !important;
+    }
+
+    .rh-page .programme-dt-table thead th.sorting,
+    .rh-page .programme-dt-table thead th.sorting_asc,
+    .rh-page .programme-dt-table thead th.sorting_desc {
+        padding-right: 1.25rem !important; /* room for the sort arrows only */
+    }
 </style>
 @endpush
 

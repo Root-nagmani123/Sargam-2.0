@@ -31,7 +31,7 @@
 
             <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
                 <div class="d-flex flex-wrap align-items-center gap-3">
-                    <span class="programme-dt-filters-label">Filters</span>
+                    <span class="programme-dt-filters-label">Filter</span>
 
                     <div class="programme-dt-filter-select">
                         <select id="epoBillYearFilter" class="form-select" aria-label="Filter by bill year">
@@ -48,7 +48,7 @@
                     </div>
 
                     <button type="button" id="epoClearFilter" class="btn programme-dt-btn-reset">
-                        Reset Filters
+                        Remove Filter
                     </button>
                 </div>
 
@@ -178,6 +178,46 @@
 @push('styles')
 @include('admin.layouts.partials.select2-assets')
 <link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
+<style>
+    /* Title left, Update Reading + Add Possession right, on one row (Figma);
+       the long trail wraps inside the title block instead. */
+    @media (min-width: 992px) {
+        .epo-page .modern-breadcrumb-shell > .d-flex {
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+        }
+        .epo-page .modern-breadcrumb-action {
+            flex-shrink: 0;
+        }
+    }
+
+    /* Figma fits every column in the panel: headers wrap, cells tighten. */
+    .epo-page .programme-dt-table thead th,
+    .epo-page .programme-dt-table tbody td {
+        padding-left: var(--ds-space-2) !important;
+        padding-right: var(--ds-space-2) !important;
+        white-space: normal !important;
+    }
+
+    .epo-page .programme-dt-table thead th.sorting,
+    .epo-page .programme-dt-table thead th.sorting_asc,
+    .epo-page .programme-dt-table thead th.sorting_desc {
+        padding-right: 1.25rem !important; /* room for the sort arrows only */
+    }
+
+    /* The shared min-widths keep S. No. / Request ID / Name wide; Figma lets them wrap. */
+    .epo-page .programme-dt-table th.epo-col-sno,
+    .epo-page .programme-dt-table td.epo-col-sno,
+    .epo-page .programme-dt-table th.epo-col-req,
+    .epo-page .programme-dt-table td.epo-col-req {
+        min-width: 0;
+    }
+
+    .epo-page .programme-dt-table th.pd-col-name,
+    .epo-page .programme-dt-table td.pd-col-name {
+        min-width: 7.5rem;
+    }
+</style>
 @endpush
 
 @push('scripts')

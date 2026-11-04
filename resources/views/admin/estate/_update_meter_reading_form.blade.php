@@ -28,7 +28,7 @@
                     <div class="col-md-6">
                         <label for="estate_name" class="form-label">Estate Name <span class="ds-req">*</span></label>
                         <select class="form-select" id="estate_name" name="estate_name">
-                            <option value="">Select</option>
+                            <option value="">Select Estate</option>
                             @foreach($campuses ?? [] as $c)
                                 <option value="{{ $c->pk }}" {{ isset($prefill['campus_id']) && (int)$prefill['campus_id'] === (int)$c->pk ? 'selected' : '' }}>{{ $c->campus_name }}</option>
                             @endforeach
@@ -37,7 +37,7 @@
                     <div class="col-md-6">
                         <label for="unit_name" class="form-label">Unit Name <span class="ds-req">*</span></label>
                         <select class="form-select" id="unit_name" name="unit_type_id">
-                            <option value="">Select</option>
+                            <option value="">Select Unit</option>
                             @foreach($unitTypes ?? [] as $ut)
                                 <option value="{{ $ut->pk }}" {{ (isset($prefill['unit_type_id']) && (int)$prefill['unit_type_id'] === (int)$ut->pk) ? 'selected' : (($ut->unit_type ?? '') == 'Residential' && !isset($prefill) ? 'selected' : '') }}>{{ $ut->unit_type }}</option>
                             @endforeach
@@ -46,13 +46,13 @@
                     <div class="col-md-6">
                         <label for="building" class="form-label">Building Name <span class="ds-req">*</span></label>
                         <select class="form-select" id="building" name="building">
-                            <option value="">Select</option>
+                            <option value="">Select Building</option>
                         </select>
                     </div>
                     <div class="col-md-6">
                         <label for="unit_sub_type" class="form-label">Unit Sub-type <span class="ds-req">*</span></label>
                         <select class="form-select" id="unit_sub_type" name="unit_sub_type">
-                            <option value="">Select</option>
+                            <option value="">Select Sub-type</option>
                             @foreach($unitSubTypes ?? [] as $ust)
                                 <option value="{{ $ust->pk }}">{{ $ust->unit_sub_type }}</option>
                             @endforeach
@@ -150,29 +150,29 @@ $(document).ready(function() {
     function getSelVal(el) { var v = el ? $(el).val() : ''; return (v === null || v === undefined) ? '' : v; }
 
     var tsEstate = null, tsUnitName = null, tsBuilding = null, tsUnitSub = null;
-    if (document.getElementById('estate_name')) tsEstate = initTs(document.getElementById('estate_name'), 'Select');
-    if (document.getElementById('unit_name')) tsUnitName = initTs(document.getElementById('unit_name'), 'Select');
-    if (document.getElementById('building')) tsBuilding = initTs(document.getElementById('building'), 'Select');
-    if (document.getElementById('unit_sub_type')) tsUnitSub = initTs(document.getElementById('unit_sub_type'), 'Select');
+    if (document.getElementById('estate_name')) tsEstate = initTs(document.getElementById('estate_name'), 'Select Estate');
+    if (document.getElementById('unit_name')) tsUnitName = initTs(document.getElementById('unit_name'), 'Select Unit');
+    if (document.getElementById('building')) tsBuilding = initTs(document.getElementById('building'), 'Select Building');
+    if (document.getElementById('unit_sub_type')) tsUnitSub = initTs(document.getElementById('unit_sub_type'), 'Select Sub-type');
 
     function loadBuildingsThenPrefill(campusId, blockId, unitSubTypeId, thenLoadData) {
         var elB = document.getElementById('building'), elSub = document.getElementById('unit_sub_type');
         if (tsBuilding) { try { $('#building').select2('destroy'); } catch (e) {} tsBuilding = null; }
         if (tsUnitSub) { try { $('#unit_sub_type').select2('destroy'); } catch (e) {} tsUnitSub = null; }
-        $('#building').html('<option value="">Select</option>');
+        $('#building').html('<option value="">Select Building</option>');
         $('#unit_sub_type').html('<option value="">All</option>');
-        if (elB) tsBuilding = initTs(elB, 'Select');
+        if (elB) tsBuilding = initTs(elB, 'Select Building');
         if (elSub) tsUnitSub = initTs(elSub, 'All');
         if (!campusId) { if (thenLoadData) $('#loadMeterReadingsBtn').click(); return; }
         $.get(blocksUrl, { campus_id: campusId }, function(res) {
             if (res.status && res.data) {
                 if (tsBuilding) { try { $('#building').select2('destroy'); } catch (e) {} tsBuilding = null; }
-                $('#building').html('<option value="">Select</option>');
+                $('#building').html('<option value="">Select Building</option>');
                 $.each(res.data, function(i, b) {
                     var sel = (blockId && String(b.pk) === String(blockId)) ? ' selected' : '';
                     $('#building').append('<option value="'+b.pk+'"'+sel+'>'+b.block_name+'</option>');
                 });
-                if (elB) tsBuilding = initTs(elB, 'Select');
+                if (elB) tsBuilding = initTs(elB, 'Select Building');
                 if (blockId && tsBuilding) $('#building').val(String(blockId)).trigger('change.select2');
             }
             if (blockId && unitSubTypeId != null) {
@@ -209,19 +209,19 @@ $(document).ready(function() {
         var elB = document.getElementById('building'), elSub = document.getElementById('unit_sub_type');
         if (tsBuilding) { try { $('#building').select2('destroy'); } catch (e) {} tsBuilding = null; }
         if (tsUnitSub) { try { $('#unit_sub_type').select2('destroy'); } catch (e) {} tsUnitSub = null; }
-        $('#building').html('<option value="">Select</option>');
+        $('#building').html('<option value="">Select Building</option>');
         $('#unit_sub_type').html('<option value="">All</option>');
-        if (elB) tsBuilding = initTs(elB, 'Select');
+        if (elB) tsBuilding = initTs(elB, 'Select Building');
         if (elSub) tsUnitSub = initTs(elSub, 'All');
         if (!campusId) return;
         $.get(blocksUrl, { campus_id: campusId }, function(res) {
             if (res.status && res.data) {
                 if (tsBuilding) { try { $('#building').select2('destroy'); } catch (e) {} tsBuilding = null; }
-                $('#building').html('<option value="">Select</option>');
+                $('#building').html('<option value="">Select Building</option>');
                 $.each(res.data, function(i, b) {
                     $('#building').append('<option value="'+b.pk+'">'+b.block_name+'</option>');
                 });
-                if (elB) tsBuilding = initTs(elB, 'Select');
+                if (elB) tsBuilding = initTs(elB, 'Select Building');
             }
         });
     });

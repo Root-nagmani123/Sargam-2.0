@@ -25,7 +25,7 @@
 
                 <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
                     <div class="d-flex flex-wrap align-items-center gap-3">
-                        <span class="programme-dt-filters-label">Filters</span>
+                        <span class="programme-dt-filters-label">Filter</span>
 
                         <div class="programme-dt-filter-select">
                             <select id="eorBillYearFilter" class="form-select" aria-label="Filter by bill year">
@@ -42,7 +42,7 @@
                         </div>
 
                         <button type="button" id="eorClearFilter" class="btn programme-dt-btn-reset">
-                            Reset Filters
+                            Remove Filter
                         </button>
                     </div>
 

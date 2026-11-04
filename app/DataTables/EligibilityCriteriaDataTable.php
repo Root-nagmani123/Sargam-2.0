@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\DataTables\Concerns\RendersEstateRowActions;
 use App\Models\EligibilityCriterion;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Yajra\DataTables\EloquentDataTable;
@@ -11,6 +12,8 @@ use Yajra\DataTables\Services\DataTable;
 
 class EligibilityCriteriaDataTable extends DataTable
 {
+    use RendersEstateRowActions;
+
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
@@ -18,17 +21,17 @@ class EligibilityCriteriaDataTable extends DataTable
             ->addColumn('pay_scale', function ($row) {
                 $label = $row->salaryGrade?->display_label_text;
 
-                return $label ? '<span class="em-pay-scale">' . e($label) . '</span>' : '<span class="em-muted">—</span>';
+                return $label ? e($label) : '-';
             })
             ->addColumn('unit_type', function ($row) {
                 $label = $row->unitType?->name;
 
-                return $label ? '<span class="em-chip em-chip--type">' . e($label) . '</span>' : '<span class="em-muted">—</span>';
+                return $label ? e($label) : '-';
             })
             ->addColumn('unit_sub_type', function ($row) {
                 $label = $row->unitSubType?->name;
 
-                return $label ? '<span class="em-chip em-chip--subtype">' . e($label) . '</span>' : '<span class="em-muted">—</span>';
+                return $label ? e($label) : '-';
             })
             ->orderColumn('pay_scale', 'salary_grade_master_pk $1')
             ->filterColumn('pay_scale', function ($query, $keyword) {
@@ -53,24 +56,24 @@ class EligibilityCriteriaDataTable extends DataTable
             })
             ->addColumn('actions', function ($row) {
                 // Edit opens the Add / Edit modal on the index with these values;
-                // Delete opens the shared confirm dialog (eligibility_criteria/index).
+                // Delete opens the shared confirm dialog (partials/master_delete_modal).
                 $values = [
                     'salary_grade_master_pk' => (string) $row->salary_grade_master_pk,
                     'estate_unit_type_master_pk' => (string) $row->estate_unit_type_master_pk,
                     'estate_unit_sub_type_master_pk' => (string) $row->estate_unit_sub_type_master_pk,
                 ];
-                $name = trim(($row->salaryGrade?->display_label_text ?? '') . ' → ' . ($row->unitSubType?->name ?? ''), ' →');
                 $deleteUrl = route('admin.estate.eligibility-criteria.destroy', $row->pk);
 
-                // .ds-actions + .btn-icon (docs/design.md, Layer C) — same markup as the
-                // other Estate Master grids (partials/master_crud.blade.php).
-                return '<div class="ds-actions" role="group" aria-label="Actions for ' . e($name) . '">'
-                    . '<button type="button" class="btn btn-icon em-act-edit js-em-edit" data-pk="' . (int) $row->pk . '"'
-                    . ' data-values="' . e(json_encode($values)) . '" title="Edit" aria-label="Edit ' . e($name) . '">'
-                    . '<i class="bi bi-pencil-square" aria-hidden="true"></i></button>'
-                    . '<button type="button" class="btn btn-icon em-act-delete js-em-delete" data-url="' . e($deleteUrl) . '"'
-                    . ' data-name="' . e($name) . '" title="Delete" aria-label="Delete ' . e($name) . '">'
-                    . '<i class="bi bi-trash3" aria-hidden="true"></i></button>'
+                // Icon-over-label actions shared with every Estate grid (RendersEstateRowActions).
+                return '<div class="rfe-actions" role="group">'
+                    . self::actionLink('edit', 'Edit', 'edit', [
+                        'class' => 'js-em-edit',
+                        'attrs' => 'data-pk="' . (int) $row->pk . '" data-values="' . e(json_encode($values)) . '"',
+                    ])
+                    . self::actionLink('delete', 'Delete', 'delete', [
+                        'class' => 'js-em-delete',
+                        'attrs' => 'data-url="' . e($deleteUrl) . '"',
+                    ])
                     . '</div>';
             })
             ->rawColumns(['pay_scale', 'unit_type', 'unit_sub_type', 'actions'])
@@ -91,7 +94,7 @@ class EligibilityCriteriaDataTable extends DataTable
             // programme-dt chrome (docs/new-design-index-page.md) — no `dom` and no
             // `language` on purpose: datatable-global-ui.js owns both, and a page-level
             // override would break the "Showing N of M items" footer.
-            ->addTableClass('table table-hover align-middle w-100 ds-table-sticky em-table')
+            ->addTableClass('table align-middle mb-0 w-100 programme-dt-table em-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
@@ -114,7 +117,7 @@ class EligibilityCriteriaDataTable extends DataTable
             Column::computed('DT_RowIndex')->title('S. No.')->addClass('em-col-sno no-sort')->orderable(false)->searchable(false),
             Column::computed('pay_scale')->title('Pay Scale')->orderable(true)->searchable(true),
             Column::computed('unit_type')->title('Unit Type')->orderable(true)->searchable(true),
-            Column::computed('unit_sub_type')->title('Unit Sub Type')->name('unit_sub_type')->orderable(true)->searchable(true),
+            Column::computed('unit_sub_type')->title('Sub-Unit Type')->name('unit_sub_type')->orderable(true)->searchable(true),
             Column::computed('actions')->title('Action')->addClass('em-col-action no-sort')->orderable(false)->searchable(false),
         ];
     }

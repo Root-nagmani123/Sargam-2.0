@@ -1283,3 +1283,78 @@
     pointer-events: none;
     text-decoration: none;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Estate — responsive filter toolbar (every Estate screen)
+   Only Estate pages load this file, so these rules stay inside the module.
+   Toolbar = filter group (label, .programme-dt-filter-select pills, Remove
+   Filter) + action group (.ms-lg-auto: Columns + search).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* The two groups wrap as whole groups. Without this, a narrow card (laptop
+   with the sidebar open) squeezes the filter group to one pill wide and every
+   control lands on its own row. */
+.programme-dt-toolbar {
+    flex-wrap: wrap;
+}
+
+.programme-dt-toolbar > .ms-lg-auto,
+.programme-dt-toolbar > .ms-xl-auto {
+    flex-wrap: nowrap !important;
+}
+
+/* Phones: filters in a two-column grid instead of one full-width pill per row;
+   the label, Remove Filter and any link span the row. Columns + search share
+   one row, the search taking the rest of it. */
+@media (max-width: 767.98px) {
+    .programme-dt-toolbar > div:not(.ms-lg-auto):not(.ms-xl-auto):not(.visually-hidden),
+    .programme-dt-toolbar .er-filters {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--ds-space-2);
+        width: 100%;
+    }
+
+    .programme-dt-toolbar > div:not(.ms-lg-auto):not(.ms-xl-auto) > :not(.programme-dt-filter-select),
+    .programme-dt-toolbar .er-filters > :not(.programme-dt-filter-select) {
+        grid-column: 1 / -1;
+    }
+
+    .programme-dt-toolbar .programme-dt-filter-select {
+        width: auto;
+        min-width: 0;
+    }
+
+    /* A screen with a single filter gives it the whole row. */
+    .programme-dt-toolbar .programme-dt-filter-select:only-of-type {
+        grid-column: 1 / -1;
+    }
+
+    .programme-dt-toolbar .programme-dt-btn-reset {
+        width: 100%;
+    }
+
+}
+
+/* Below lg the toolbar stacks its groups (flex-column) and custom.css makes the
+   search 100% wide; with Columns beside it that would push past the card, so
+   the search takes whatever the row has left instead. */
+@media (max-width: 991.98px) {
+    .programme-dt-toolbar > .ms-lg-auto,
+    .programme-dt-toolbar > .ms-xl-auto {
+        width: 100%;
+    }
+
+    .programme-dt-toolbar > .ms-lg-auto .programme-dt-search,
+    .programme-dt-toolbar > .ms-xl-auto .programme-dt-search {
+        flex: 1 1 auto;
+        width: auto !important;
+        min-width: 0;
+    }
+
+    .programme-dt-toolbar .programme-dt-search .dataTables_filter,
+    .programme-dt-toolbar .programme-dt-search .dataTables_filter label,
+    .programme-dt-toolbar .programme-dt-search input {
+        width: 100% !important;
+    }
+}

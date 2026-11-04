@@ -2,11 +2,12 @@
     Estate master grid — one implementation for Define Estate/Campus, Unit Type,
     Unit Sub Type and Block/Building, so the four screens cannot drift apart.
 
-    Design: docs/design.md — Layer C components from sargam-app.css
-    (.ds-page-header, .ds-card, .ds-toolbar, .ds-table-wrap / .ds-table-sticky,
-    .ds-actions + .btn-icon, .ds-empty-state, .ds-form-label / .ds-req,
-    .ds-btn-primary / .ds-btn-cancel) and --ds-* tokens. Page-scoped styles:
-    partials/master_styles.blade.php, pushed into @stack('styles').
+    Layout follows the Figma Estate Master frames and the house list pattern the
+    Estate Management grids already use (request_for_estate): header card with
+    the Add button in the x-breadcrum slot → Download / Print row → card with the
+    programme-dt toolbar (Columns + search) → programme-dt table → footer.
+    Row actions are the shared icon-over-label .rfe-action buttons. Tokens and
+    Layer C components per docs/design.md; page styles in master_styles.
 
     Add / Edit is a plain form POST to the controller's existing store / update
     routes — no AJAX, no controller change. A validation failure redirects back
@@ -14,16 +15,19 @@
     underscore fields (_em_form, _em_edit_pk) only tell this page which modal to
     reopen; the controllers validate named fields, so they never reach the model.
 
+    Download (CSV) and Print are built in the browser from the grid's own rows
+    (EstateReportGrid), so they always match the search and the Columns choice.
+
     Expects $cfg:
       key          short id prefix ('campus')
       title        page title
-      intro        one-line description under the title
-      singular     record noun for captions ('Estate/Campus')
+      singular     record noun for the dialog ('Estate/ Campus')
+      addLabel     header button text (default 'Add ' . singular)
       routePrefix  'admin.estate.define-campus' (.store / .update / .destroy)
       tableId      DataTables id
-      emptyIcon    bootstrap-icons name for the empty state
       items        Collection of rows (full set — the grid pages client-side)
-      fields       [['name','label','type' => text|textarea,'required','maxlength','placeholder','wrap']]
+      fields       [['name','label','column','type' => text|textarea,'required','maxlength','placeholder','wrap']]
+                   label = dialog label, column = table heading (defaults to label)
 --}}
 @php
     $key = $cfg['key'];
@@ -36,104 +40,102 @@
     $updateTemplate = route($cfg['routePrefix'] . '.update', ['id' => '__ID__']);
 @endphp
 
-<div class="container-fluid em-page">
-    {{-- Breadcrumb trail + page title (the app-wide header component). --}}
-    <x-breadcrum :title="$cfg['title']" :showBack="false" />
+<div class="container-fluid rfe-page em-page em-list-page">
+    <x-breadcrum :title="$cfg['title']" :showBack="false">
+        <button type="button" class="btn ds-btn-primary em-btn-add" id="{{ $key }}AddBtn">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <span>{{ $cfg['addLabel'] ?? 'Add ' . $singular }}</span>
+        </button>
+    </x-breadcrum>
 
     <x-session_message />
 
-    {{-- .ds-page-header: what the screen is for, and its one primary action. --}}
-    <div class="ds-page-header">
-        <p class="ds-page-subtitle">{{ $cfg['intro'] }}</p>
-        <button type="button" class="btn ds-btn-primary" id="{{ $key }}AddBtn">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            <span>Add {{ $singular }}</span>
-        </button>
+    @include('admin.estate.partials.export_actions', ['prefix' => $key, 'formats' => ['csv']])
+
+    <div class="card overflow-hidden em-grid-card">
+        <div class="card-body">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="{{ $key }}BtnColumns"
+                        data-bs-toggle="modal" data-bs-target="#{{ $key }}ColumnVisibilityModal" title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="{{ $key }}DtSearch" class="programme-dt-search" data-dt-search-for="{{ $cfg['tableId'] }}"></div>
+                </div>
+            </div>
+
+            <div class="programme-dt-panel">
+                <div class="table-responsive">
+                    <table id="{{ $cfg['tableId'] }}" class="table align-middle mb-0 w-100 programme-dt-table em-table"
+                        aria-label="{{ $cfg['title'] }}">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="em-col-sno">S. No.</th>
+                                @foreach($fields as $f)
+                                <th scope="col">{{ $f['column'] ?? $f['label'] }}</th>
+                                @endforeach
+                                <th scope="col" class="em-col-action no-sort">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($items as $row)
+                            @php
+                                $values = collect($fields)->mapWithKeys(fn ($f) => [$f['name'] => (string) ($row->{$f['name']} ?? '')])->all();
+                                $label = $values[$fields[0]['name']] ?? '';
+                            @endphp
+                            <tr>
+                                <td class="em-col-sno">{{ $loop->iteration }}</td>
+                                @foreach($fields as $f)
+                                @php $v = trim($values[$f['name']]); @endphp
+                                <td @class(['em-col-wrap' => ! empty($f['wrap'])])>{{ $v === '' || $v === '--' ? '-' : $v }}</td>
+                                @endforeach
+                                <td class="em-col-action">
+                                    <div class="rfe-actions" role="group" aria-label="Actions for {{ $label }}">
+                                        <button type="button" class="rfe-action rfe-action--edit js-em-edit"
+                                            data-pk="{{ $row->pk }}" data-values="{{ json_encode($values) }}"
+                                            title="Edit" aria-label="Edit {{ $label }}">
+                                            <i class="material-icons material-symbols-rounded" aria-hidden="true">edit</i>
+                                            <span class="rfe-action-label">Edit</span>
+                                        </button>
+                                        <button type="button" class="rfe-action rfe-action--delete js-em-delete"
+                                            data-url="{{ route($cfg['routePrefix'] . '.destroy', $row->pk) }}"
+                                            title="Delete" aria-label="Delete {{ $label }}">
+                                            <i class="material-icons material-symbols-rounded" aria-hidden="true">delete</i>
+                                            <span class="rfe-action-label">Delete</span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                {{-- DataTables paginates, so the footer is an empty slot the global UI fills. --}}
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
+                    data-dt-footer-for="{{ $cfg['tableId'] }}"></div>
+            </div>
+        </div>
     </div>
+</div>
 
-    <section class="card ds-card" aria-labelledby="{{ $key }}CardTitle">
-        <div class="ds-card-header">
-            <h2 class="em-card-title" id="{{ $key }}CardTitle">{{ $cfg['title'] }} list</h2>
-            <span class="em-count">{{ $items->count() }} {{ $items->count() === 1 ? 'record' : 'records' }}</span>
+{{-- Columns (EstateReportGrid.columnVisibility fills the grid). --}}
+<div class="modal fade" id="{{ $key }}ColumnVisibilityModal" tabindex="-1" aria-labelledby="{{ $key }}ColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="{{ $key }}ColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="{{ $key }}ColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
         </div>
-
-        <div class="ds-card-body">
-            @if($items->isEmpty())
-            <div class="ds-empty-state" role="status">
-                <i class="bi bi-{{ $cfg['emptyIcon'] ?? 'inbox' }}" aria-hidden="true"></i>
-                <p class="em-empty-title">No {{ strtolower($singular) }} records yet</p>
-                <p class="small mb-3">Add the first one to make it available across the Estate module.</p>
-                <button type="button" class="btn ds-btn-primary js-em-add">Add {{ $singular }}</button>
-            </div>
-            @else
-            {{-- .ds-toolbar: search on the right. The slot keeps its programme-dt
-                 hook; datatable-global-ui.js moves the DataTables filter into it. --}}
-            <div class="ds-toolbar">
-                <span class="ds-toolbar-spacer"></span>
-                <div id="{{ $key }}DtSearch" class="programme-dt-search" data-dt-search-for="{{ $cfg['tableId'] }}"></div>
-            </div>
-
-            <div class="ds-table-wrap">
-                <table id="{{ $cfg['tableId'] }}" class="table table-hover align-middle w-100 ds-table-sticky em-table"
-                    aria-describedby="{{ $key }}CardTitle">
-                    <thead>
-                        <tr>
-                            <th scope="col" class="em-col-sno no-sort">S. No.</th>
-                            @foreach($fields as $f)
-                            <th scope="col">{{ $f['label'] }}</th>
-                            @endforeach
-                            <th scope="col" class="em-col-action no-sort">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($items as $row)
-                        @php
-                            $values = collect($fields)->mapWithKeys(fn ($f) => [$f['name'] => (string) ($row->{$f['name']} ?? '')])->all();
-                            $label = $values[$fields[0]['name']] ?? '';
-                        @endphp
-                        <tr>
-                            <td class="em-col-sno">{{ $loop->iteration }}</td>
-                            @foreach($fields as $f)
-                            @php $v = trim($values[$f['name']]); @endphp
-                            <td @class(['em-col-wrap' => ! empty($f['wrap']), 'fw-medium' => $loop->first])>
-                                @if($v === '' || $v === '--')
-                                <span class="em-muted" aria-label="Not set">—</span>
-                                @else
-                                {{ $v }}
-                                @endif
-                            </td>
-                            @endforeach
-                            <td class="em-col-action">
-                                {{-- .ds-actions + .btn-icon: 32px, 4px-radius icon buttons. --}}
-                                <div class="ds-actions" role="group" aria-label="Actions for {{ $label }}">
-                                    <button type="button" class="btn btn-icon em-act-edit js-em-edit"
-                                        data-pk="{{ $row->pk }}" data-values="{{ json_encode($values) }}"
-                                        title="Edit" aria-label="Edit {{ $label }}">
-                                        <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                                    </button>
-                                    {{-- The server refuses a delete that would break a reference
-                                         (FK) and says so in the flash message. --}}
-                                    <button type="button" class="btn btn-icon em-act-delete js-em-delete"
-                                        data-url="{{ route($cfg['routePrefix'] . '.destroy', $row->pk) }}"
-                                        data-name="{{ $label }}" title="Delete" aria-label="Delete {{ $label }}">
-                                        <i class="bi bi-trash3" aria-hidden="true"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-            @endif
-        </div>
-
-        @if($items->isNotEmpty())
-        {{-- DataTables paginates, so the footer is an empty slot the global UI fills. --}}
-        <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
-            data-dt-footer-for="{{ $cfg['tableId'] }}"></div>
-        @endif
-    </section>
+    </div>
 </div>
 
 {{-- Add / Edit — one modal for both so they look alike. --}}
@@ -160,7 +162,7 @@
                         $err = $reopen ? $errors->first($f['name']) : null;
                         $val = $reopen ? old($f['name'], '') : '';
                     @endphp
-                    <div class="{{ $loop->last ? 'mb-0' : 'mb-3' }}">
+                    <div class="{{ $loop->last ? 'mb-0' : 'mb-2' }}">
                         <label class="ds-form-label" for="{{ $id }}">
                             {{ $f['label'] }}@if(! empty($f['required']))<span class="ds-req" aria-hidden="true">*</span>@endif
                         </label>
@@ -195,37 +197,20 @@
     </div>
 </div>
 
-{{-- Delete confirmation (.ds-modal-confirm). --}}
-<div class="modal fade ds-modal ds-modal-confirm em-modal" id="{{ $key }}DeleteModal" tabindex="-1"
-    aria-labelledby="{{ $key }}DeleteModalLabel" aria-describedby="{{ $key }}DeleteText" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form id="{{ $key }}DeleteForm" method="POST" action="">
-                @csrf
-                @method('DELETE')
-                <div class="modal-body">
-                    <div class="ds-confirm-icon" aria-hidden="true">!</div>
-                    <h5 class="ds-confirm-title" id="{{ $key }}DeleteModalLabel">Delete {{ $singular }}?</h5>
-                    <p class="ds-confirm-text" id="{{ $key }}DeleteText">This action can't be undone.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn ds-btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn ds-btn-primary em-btn-delete">Yes, Delete</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+@include('admin.estate.partials.master_delete_modal', ['key' => $key])
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
 @include('admin.estate.partials.master_styles')
 @endpush
 
 @push('scripts')
+@include('admin.estate.partials.report_print_assets')
 <script>
 $(function () {
     var key = @json($key);
     var singular = @json($singular);
+    var title = @json($cfg['title']);
     var storeUrl = @json(route($cfg['routePrefix'] . '.store'));
     var updateTemplate = @json($updateTemplate);
     var $form = $('#' + key + 'Form');
@@ -252,7 +237,7 @@ $(function () {
         formModal.show();
     }
 
-    $('#' + key + 'AddBtn, .js-em-add').on('click', function () { openForm(null); });
+    $('#' + key + 'AddBtn').on('click', function () { openForm(null); });
 
     // Delegated: DataTables re-renders rows on every page/search.
     $(document).on('click', '.js-em-edit', function () {
@@ -260,9 +245,7 @@ $(function () {
     });
 
     $(document).on('click', '.js-em-delete', function () {
-        var name = String($(this).data('name') || '').trim();
         $('#' + key + 'DeleteForm').attr('action', $(this).data('url'));
-        $('#' + key + 'DeleteText').text((name ? '“' + name + '” will be removed. ' : '') + "This action can't be undone.");
         deleteModal.show();
     });
 
@@ -276,12 +259,9 @@ $(function () {
     $form.on('submit', function () {
         $('#' + key + 'FormSubmit').prop('disabled', true);
     });
-    $('#' + key + 'DeleteForm').on('submit', function () {
-        $(this).find('[type="submit"]').prop('disabled', true);
-    });
     // Back/forward cache restores the disabled state; undo it.
     $(window).on('pageshow', function () {
-        $('#' + key + 'FormSubmit, #' + key + 'DeleteForm [type="submit"]').prop('disabled', false);
+        $('#' + key + 'FormSubmit').prop('disabled', false);
     });
 
     @if($reopen)
@@ -289,12 +269,12 @@ $(function () {
     @endif
 
     var $table = $('#' + @json($cfg['tableId']));
-    if (!$table.length) return; // empty state: nothing to paginate
 
     // The controller already sends newest-first; order: [] keeps that until a header is clicked.
     var dt = $table.DataTable({
         order: [],
-        responsive: false, // the wrap scrolls; never fold columns into child rows
+        responsive: false, // the panel scrolls; never fold columns into child rows
+        language: { emptyTable: 'No ' + singular.toLowerCase() + ' records yet — use “' + $('#' + key + 'AddBtn').text().trim() + '” to add one.' },
         columnDefs: [
             { targets: [0, -1], orderable: false, searchable: false }
         ]
@@ -309,6 +289,27 @@ $(function () {
     }
     dt.on('draw.dt', renumber);
     renumber();
+
+    EstateReportGrid.columnVisibility(dt, {
+        grid: '#' + key + 'ColumnToggleGrid',
+        storageKey: 'estate.master.' + key + '.hiddenCols',
+        skip: ['S. No.', 'Actions']
+    });
+
+    // Download (CSV) + Print: the rows the grid holds after search, visible columns only.
+    $(document).on('click', '[data-export-for="' + key + '"]', function () {
+        var data = EstateReportGrid.collectRows(dt, { skip: ['Actions'], serial: 'S. No.' });
+        EstateReportGrid.downloadCsv(title, data.headers, data.rows);
+    });
+    $('#' + key + 'PrintBtn').on('click', function () {
+        var data = EstateReportGrid.collectRows(dt, { skip: ['Actions'], serial: 'S. No.' });
+        EstateReportGrid.printGrid({
+            title: title,
+            meta: dt.search() ? ['Search: "' + dt.search() + '"'] : [],
+            headers: data.headers,
+            rows: data.rows
+        });
+    });
 });
 </script>
 @endpush

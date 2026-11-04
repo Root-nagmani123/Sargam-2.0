@@ -1,12 +1,13 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Estate Migration Report (1998–2026) - Sargam')
+@section('title', 'Migration Report 1998-2026 - Sargam')
 
 {{--
     Filters keep their original ids, option sources and cascade endpoint
     (migration-report/filter-options). Nine filters do not fit one toolbar row,
-    so the four primary ones stay in the toolbar and the rest sit in a
-    "More Filters" panel (new-design-index-page.md §2 "Filter overflow").
+    so the six Figma ones (1:44382) stay in the toolbar and the other three sit
+    behind "+3 Filter" (Figma popover 1:44799; here an inline panel).
+    Each pill's empty option is its label (Year, Campus Name, …).
 
     "1998–2026" is the source dataset's own name (table
     estate_migration_report_1998_2026); the Year filter itself is built from the
@@ -14,37 +15,47 @@
 --}}
 @php
     $primaryFilters = [
-        ['id' => 'filter_allotment_year', 'label' => 'Allotment Year', 'all' => '— All Years —', 'options' => $years ?? []],
-        ['id' => 'filter_campus_name', 'label' => 'Campus Name', 'all' => '— All Campuses —', 'options' => $campuses ?? []],
-        ['id' => 'filter_building_name', 'label' => 'Building Name', 'all' => '— All Buildings —', 'options' => $buildings ?? []],
-        ['id' => 'filter_employee_type', 'label' => 'Employee Type', 'all' => '— All Types —', 'options' => $employeeTypes ?? []],
+        ['id' => 'filter_allotment_year', 'label' => 'Year', 'options' => $years ?? []],
+        ['id' => 'filter_campus_name', 'label' => 'Campus Name', 'options' => $campuses ?? []],
+        ['id' => 'filter_building_name', 'label' => 'Building Name', 'options' => $buildings ?? []],
+        ['id' => 'filter_type_of_building', 'label' => 'Building Type', 'options' => $buildingTypes ?? []],
+        ['id' => 'filter_house_no', 'label' => 'House No.', 'options' => $houseNos ?? []],
+        ['id' => 'filter_employee_name', 'label' => 'Employee', 'options' => $employeeNames ?? []],
     ];
     $moreFilters = [
-        ['id' => 'filter_type_of_building', 'label' => 'Type of Building', 'all' => '— All Types —', 'options' => $buildingTypes ?? []],
-        ['id' => 'filter_house_no', 'label' => 'House No.', 'all' => '— All Houses —', 'options' => $houseNos ?? []],
-        ['id' => 'filter_employee_name', 'label' => 'Employee Name', 'all' => '— All Employees —', 'options' => $employeeNames ?? []],
-        ['id' => 'filter_department_name', 'label' => 'Department', 'all' => '— All Departments —', 'options' => $departments ?? []],
-        ['id' => 'filter_stay_period_text', 'label' => 'Stay Period', 'all' => '— All Periods —', 'options' => $stayPeriods ?? []],
+        ['id' => 'filter_department_name', 'label' => 'Department', 'options' => $departments ?? []],
+        ['id' => 'filter_employee_type', 'label' => 'Employee Type', 'options' => $employeeTypes ?? []],
+        ['id' => 'filter_stay_period_text', 'label' => 'Stay Period', 'options' => $stayPeriods ?? []],
     ];
 @endphp
 
 @section('setup_content')
 <div class="container-fluid er-report emr-page">
-    <x-breadcrum title="Estate Migration Report (1998–2026)" :showBack="false"></x-breadcrum>
+    <x-breadcrum title="Migration Report 1998-2026" :showBack="false"></x-breadcrum>
 
     <x-session_message />
 
+    {{-- Download + Print above the card (Figma 1:44382); both take every filtered row. --}}
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 er-export">
+        <button type="button" class="btn estate-export-btn" id="btnMigrationDownload" title="Download the filtered list (CSV)">
+            <i class="bi bi-download" aria-hidden="true"></i>
+            <span>Download</span>
+        </button>
+        <button type="button" class="btn estate-export-btn" id="btnMigrationPrint" title="Print the filtered list">
+            <i class="bi bi-printer" aria-hidden="true"></i>
+            <span>Print</span>
+        </button>
+    </div>
+
     <div class="card border-0 shadow-sm rounded-1">
         <div class="card-body p-3 p-md-4">
-            <p class="er-summary mb-3">Historical estate allotment records. Narrow them by year, campus, building, house, employee, department and employee type; every filter narrows the options of the ones after it.</p>
-
-            <div class="d-flex flex-column flex-xl-row align-items-xl-end justify-content-between gap-3 mb-3 programme-dt-toolbar">
-                <div class="er-filters">
+            <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3 programme-dt-toolbar">
+                <div class="er-filters align-items-center">
+                    <span class="programme-dt-filters-label">Filter</span>
                     @foreach($primaryFilters as $f)
                     <div class="programme-dt-filter-select">
-                        <label for="{{ $f['id'] }}" class="er-filter-label">{{ $f['label'] }}</label>
-                        <select class="form-select" id="{{ $f['id'] }}">
-                            <option value="">{{ $f['all'] }}</option>
+                        <select class="form-select" id="{{ $f['id'] }}" aria-label="{{ $f['label'] }}">
+                            <option value="">{{ $f['label'] }}</option>
                             @foreach($f['options'] as $opt)
                             <option value="{{ $opt }}">{{ $opt }}</option>
                             @endforeach
@@ -52,13 +63,12 @@
                     </div>
                     @endforeach
 
-                    <button type="button" class="btn programme-dt-btn-columns" id="emrMoreFiltersBtn"
+                    <button type="button" class="btn btn-link px-1 emr-more-btn" id="emrMoreFiltersBtn"
                         data-bs-toggle="collapse" data-bs-target="#emrMoreFilters" aria-expanded="false" aria-controls="emrMoreFilters">
-                        <i class="bi bi-sliders" aria-hidden="true"></i>
-                        <span>More Filters</span>
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i><span>{{ count($moreFilters) }} Filter</span>
                         <span class="badge text-bg-primary rounded-1 d-none" id="emrMoreCount" aria-label="active"></span>
                     </button>
-                    <button type="button" id="btnResetFilters" class="btn programme-dt-btn-reset">Reset Filters</button>
+                    <button type="button" id="btnResetFilters" class="btn programme-dt-btn-reset">Remove Filter</button>
                 </div>
 
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-xl-auto">
@@ -75,9 +85,8 @@
                 <div class="er-filters p-3 mb-3 bg-light border rounded-1">
                     @foreach($moreFilters as $f)
                     <div class="programme-dt-filter-select">
-                        <label for="{{ $f['id'] }}" class="er-filter-label">{{ $f['label'] }}</label>
-                        <select class="form-select" id="{{ $f['id'] }}">
-                            <option value="">{{ $f['all'] }}</option>
+                        <select class="form-select" id="{{ $f['id'] }}" aria-label="{{ $f['label'] }}">
+                            <option value="">{{ $f['label'] }}</option>
                             @foreach($f['options'] as $opt)
                             <option value="{{ $opt }}">{{ $opt }}</option>
                             @endforeach
@@ -124,6 +133,20 @@
 @push('styles')
 @include('admin.layouts.partials.select2-assets')
 <link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
+<style>
+    /* Figma pills carry the label only — no leading dot. */
+    .emr-page .er-badge::before { display: none; }
+    /* "+3 Filter" is a text link in Figma, not a button. */
+    .emr-page .emr-more-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--ds-space-1);
+        color: var(--ds-primary);
+        font-weight: 500;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+</style>
 @endpush
 
 @push('scripts')
@@ -133,7 +156,7 @@ $(function () {
     var G = window.EstateReportGrid;
     var esc = G.esc;
     var filterSelectIds = ['filter_allotment_year', 'filter_campus_name', 'filter_building_name', 'filter_type_of_building', 'filter_house_no', 'filter_employee_name', 'filter_department_name', 'filter_employee_type', 'filter_stay_period_text'];
-    var moreFilterIds = ['filter_type_of_building', 'filter_house_no', 'filter_employee_name', 'filter_department_name', 'filter_stay_period_text'];
+    var moreFilterIds = ['filter_department_name', 'filter_employee_type', 'filter_stay_period_text'];
 
     function initFilterSelects() {
         if (typeof $.fn.select2 === 'undefined') return;
@@ -246,14 +269,14 @@ $(function () {
     // department → employee type → stay period. Changing one resets those after it.
     var CASCADE = [
         null,
-        ['filter_campus_name', 'campuses', '— All Campuses —'],
-        ['filter_building_name', 'buildings', '— All Buildings —'],
-        ['filter_type_of_building', 'buildingTypes', '— All Types —'],
-        ['filter_house_no', 'houseNos', '— All Houses —'],
-        ['filter_employee_name', 'employeeNames', '— All Employees —'],
-        ['filter_department_name', 'departments', '— All Departments —'],
-        ['filter_employee_type', 'employeeTypes', '— All Types —'],
-        ['filter_stay_period_text', 'stayPeriods', '— All Periods —']
+        ['filter_campus_name', 'campuses', 'Campus Name'],
+        ['filter_building_name', 'buildings', 'Building Name'],
+        ['filter_type_of_building', 'buildingTypes', 'Building Type'],
+        ['filter_house_no', 'houseNos', 'House No.'],
+        ['filter_employee_name', 'employeeNames', 'Employee'],
+        ['filter_department_name', 'departments', 'Department'],
+        ['filter_employee_type', 'employeeTypes', 'Employee Type'],
+        ['filter_stay_period_text', 'stayPeriods', 'Stay Period']
     ];
 
     function refreshCascadingFilters(resetFrom, opts) {
@@ -291,13 +314,38 @@ $(function () {
         filterSelectIds.forEach(function (id) { $('#' + id).val(''); });
         $.get(filterOptionsUrl, {}, function (opts) {
             opts = opts || {};
-            fillSelect($('#filter_allotment_year'), opts.years || [], '— All Years —');
+            fillSelect($('#filter_allotment_year'), opts.years || [], 'Year');
             for (var i = 1; i < CASCADE.length; i++) {
                 fillSelect($('#' + CASCADE[i][0]), opts[CASCADE[i][1]] || [], CASCADE[i][2]);
             }
             initFilterSelects();
             syncMoreCount();
             table.search('').ajax.reload(null, false);
+        });
+    });
+
+    function filterMeta() {
+        var parts = [];
+        filterSelectIds.forEach(function (id) {
+            var v = $('#' + id).val();
+            if (v) parts.push($('#' + id).attr('aria-label') + ': ' + v);
+        });
+        if (table.search()) parts.push('Search: "' + table.search() + '"');
+        return parts.length ? [parts.join('  |  ')] : [];
+    }
+
+    // Both fetch every filtered row (server honours length = -1) and then restore the pager.
+    $('#btnMigrationPrint').on('click', function () {
+        G.withAllRows(table, function () {
+            var data = G.collectRows(table);
+            G.printGrid({ title: 'Migration Report 1998-2026', meta: filterMeta(), headers: data.headers, rows: data.rows });
+        });
+    });
+
+    $('#btnMigrationDownload').on('click', function () {
+        G.withAllRows(table, function () {
+            var data = G.collectRows(table);
+            G.downloadCsv('Migration Report 1998-2026', data.headers, data.rows);
         });
     });
 });

@@ -5,31 +5,23 @@
 @php
     $estateSelfHomeTab = request('scope') === 'self'
         && (isEstateAuthority());
-    $estateSelfQuery = $estateSelfHomeTab ? ['scope' => 'self'] : [];
-
-    // HAC Person (and nothing else) reaches this queue from the HAC side and has
-    // no Request For Estate listing to go back to.
-    $showBackToRequests = ! hasRole('HAC Person')
-        || hasRole('Estate Admin') || hasRole('Super Admin')
-        || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin')
-        || hasRole('Training IST') || hasRole('Staff') || hasRole('Officer Trainee')
-        || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty');
 @endphp
 @section($estateSelfHomeTab ? 'content' : 'setup_content')
 <div class="container-fluid rfe-page pih-page">
+    {{-- Back-to-requests now lives in the workflow stepper below (Figma). --}}
     <x-breadcrum title="Put In HAC" :showBack="false">
-        @if($showBackToRequests)
-            <a href="{{ route('admin.estate.request-for-estate', $estateSelfQuery) }}" class="btn ds-btn-neutral me-3">
-                Back to Request for Estate
-            </a>
-        @endif
         <span class="pih-selected-count me-3" id="selectedCountText">0 selected</span>
-        <button type="button" class="btn ds-btn-submit" id="btnPutInHac" disabled>
-            Put Selected in HAC
+        <button type="button"
+            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-semibold text-nowrap shadow-sm"
+            id="btnPutInHac" disabled>
+            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+            <span>Put in HAC</span>
         </button>
     </x-breadcrum>
 
     <x-session_message />
+
+    <x-estate-workflow-stepper current="put-in-hac" />
 
     {{-- Download (CSV · Excel · PDF) + Print — the queue as filtered on screen. --}}
     @include('admin.estate.partials.export_actions', ['prefix' => 'pih'])
@@ -85,21 +77,21 @@
         </div>
     </div>
 </div>
-{{-- Put in HAC confirmation (.ds-modal-confirm, affirmative variant). Nothing is
-     posted until the user confirms here. --}}
-<div class="modal fade ds-modal ds-modal-confirm ds-modal-confirm--success" id="pihConfirmModal" tabindex="-1"
+{{-- Put in HAC confirmation (.ds-modal-confirm, amber "forward" variant per Figma).
+     Nothing is posted until the user confirms here. --}}
+<div class="modal fade ds-modal ds-modal-confirm pih-confirm" id="pihConfirmModal" tabindex="-1"
     aria-labelledby="pihConfirmTitle" aria-describedby="pihConfirmText" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-body">
-                <div class="ds-confirm-icon" aria-hidden="true"><i class="bi bi-check2"></i></div>
+                <div class="ds-confirm-icon" aria-hidden="true"><i class="material-icons material-symbols-rounded">other_houses</i></div>
                 <h5 class="ds-confirm-title" id="pihConfirmTitle">Put in HAC?</h5>
                 <p class="ds-confirm-text" id="pihConfirmText"></p>
                 <p class="ds-confirm-text pih-confirm-ids mt-2 mb-0" id="pihConfirmIds"></p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn ds-btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn ds-btn-submit" id="pihConfirmBtn">Yes, Put in HAC</button>
+                <button type="button" class="btn ds-btn-back" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn ds-btn-submit pih-confirm-btn" id="pihConfirmBtn">Yes, Put in HAC</button>
             </div>
         </div>
     </div>
@@ -108,6 +100,22 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
+<style>
+    /* Amber "forward" confirm (Figma 1:13238); sargam-app.css ships only red and green. */
+    .pih-confirm .ds-confirm-icon {
+        background: color-mix(in srgb, var(--ds-warning) 14%, var(--ds-surface));
+        color: var(--ds-warning);
+    }
+    .pih-confirm .ds-confirm-icon .material-icons { font-size: 1.75rem; }
+    .pih-confirm .pih-confirm-btn,
+    .pih-confirm .pih-confirm-btn:hover,
+    .pih-confirm .pih-confirm-btn:active,
+    .pih-confirm .pih-confirm-btn:focus-visible {
+        background: var(--ds-warning);
+        border-color: var(--ds-warning);
+        color: var(--ds-surface);
+    }
+</style>
 @endpush
 
 @push('scripts')

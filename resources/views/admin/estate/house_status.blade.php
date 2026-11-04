@@ -52,8 +52,13 @@
             @endforeach
         </ul>
 
+        {{-- Download + Print (Figma 1:43346). --}}
         <div class="d-flex flex-wrap gap-2 er-export">
-            <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="btnPrintHouseStatus" title="Print the filtered list" disabled>
+            <button type="button" class="btn estate-export-btn" id="btnDownloadHouseStatus" title="Download the filtered list (CSV)" disabled>
+                <i class="bi bi-download" aria-hidden="true"></i>
+                <span>Download</span>
+            </button>
+            <button type="button" class="btn estate-export-btn" id="btnPrintHouseStatus" title="Print the filtered list" disabled>
                 <i class="bi bi-printer" aria-hidden="true"></i>
                 <span>Print</span>
             </button>
@@ -63,7 +68,7 @@
     <div class="card border-0 shadow-sm rounded-1">
         <div class="card-body p-3 p-md-4">
             <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3 programme-dt-toolbar">
-                <p class="er-summary" id="hsSummary">House-wise status: Occupied, Vacant, or Under Renovation.</p>
+                <p class="visually-hidden" id="hsSummary">House-wise status: Occupied, Vacant, or Under Renovation.</p>
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
                     <button type="button" class="btn programme-dt-btn-columns" id="hsColumnsBtn"
                         data-bs-toggle="modal" data-bs-target="#hsColumnModal" title="Show / hide columns" disabled>
@@ -81,13 +86,13 @@
                         <thead>
                             <tr>
                                 <th scope="col" class="no-sort">S. No.</th>
-                                <th scope="col">Qtr No.</th>
+                                <th scope="col">QTR No.</th>
                                 <th scope="col">Building Name</th>
                                 <th scope="col">Type</th>
-                                <th scope="col">Allottee Name (Ms/Mr/Mrs.)</th>
-                                <th scope="col">Section/Designation</th>
-                                <th scope="col">Mobile Number</th>
-                                <th scope="col">Alloted Date</th>
+                                <th scope="col">Allottee Name</th>
+                                <th scope="col">Section/ Designation</th>
+                                <th scope="col">Phone Number</th>
+                                <th scope="col">Allotted Date</th>
                                 <th scope="col">Occupied Date</th>
                                 <th scope="col">Vacated Date</th>
                                 <th scope="col">Status</th>
@@ -124,6 +129,10 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
+<style>
+    /* Figma pills carry the label only — no leading dot. */
+    .hs-page .er-badge::before { display: none; }
+</style>
 @endpush
 
 @push('scripts')
@@ -138,7 +147,8 @@ $(function () {
     var statusFilter = '';
 
     // The report's three states (EstateController::getHouseStatusData) → badge tone.
-    var TONE = { 'Occupied': 'occupied', 'Vacant': 'vacant', 'Under Renovation': 'renovation' };
+    // Figma: occupied/allotted green, vacant amber; renovation grey so it stays distinct.
+    var TONE = { 'Occupied': 'occupied', 'Vacant': 'pending', 'Under Renovation': 'neutral' };
 
     function badge(status) {
         var s = String(status || '').trim();
@@ -193,7 +203,7 @@ $(function () {
                     '<td class="fw-medium">' + blank(row.qtr_no) + '</td>' +
                     '<td>' + blank(row.building_name) + '</td>' +
                     '<td>' + blank(row.type) + '</td>' +
-                    '<td class="er-col-wrap">' + (vacant ? '<span class="text-muted">VACANT</span>' : esc(row.allottee_name)) + '</td>' +
+                    '<td class="er-col-wrap">' + (vacant ? blank('') : esc(row.allottee_name)) + '</td>' +
                     '<td class="er-col-wrap">' + blank(row.section_designation) + '</td>' +
                     '<td>' + blank(row.mobile_number) + '</td>' +
                     '<td data-order="' + dateKey(row.alloted_date) + '">' + blank(row.alloted_date) + '</td>' +
@@ -218,7 +228,7 @@ $(function () {
                 storageKey: 'sargam.houseStatus.hiddenCols.' + @json(auth()->id() ?? 'guest')
             });
             applyStatusFilter();
-            $('#btnPrintHouseStatus, #hsColumnsBtn').prop('disabled', false);
+            $('#btnPrintHouseStatus, #btnDownloadHouseStatus, #hsColumnsBtn').prop('disabled', false);
         }).fail(function (xhr) {
             var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to load data. Please try again.';
             G.stateRow($table, 'error', msg);
@@ -241,6 +251,13 @@ $(function () {
             headers: data.headers,
             rows: data.rows
         });
+    });
+
+    // Same rows and columns as Print (status tab + search applied).
+    $('#btnDownloadHouseStatus').on('click', function () {
+        if (!dt) return;
+        var data = G.collectRows(dt);
+        G.downloadCsv('House Status', data.headers, data.rows);
     });
 
     load();

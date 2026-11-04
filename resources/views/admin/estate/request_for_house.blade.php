@@ -1,11 +1,11 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Change Request For House')
+@section('title', 'Change House Request')
 
 @section('setup_content')
-<div class="container-fluid px-2 px-sm-3 px-md-4 rfh-page">
-    <x-breadcrum title="Change Request For House" :showBack="false"
-        :items="['Home', 'My Requests / Complaints', 'Change Request For House']" />
+<div class="container-fluid px-2 px-sm-3 px-md-4 rfe-page rfh-page">
+    <x-breadcrum title="Change House Request" :showBack="false"
+        :items="['Home', 'My Requests / Complaints', 'Change House Request']" />
 
     <x-session_message />
 
@@ -25,7 +25,7 @@
             <div
                 class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar no-print">
                 <div class="d-flex flex-wrap align-items-center gap-3">
-                    <span class="programme-dt-filters-label">Filters</span>
+                    <span class="programme-dt-filters-label">Filter</span>
                     <div class="programme-dt-filter-select">
                         <select id="rfhStatusFilter" class="form-select" aria-label="Filter by status of request"
                             data-searchable="true" data-placeholder="Status of Request" data-allow-clear="true">
@@ -44,7 +44,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <button type="button" id="rfhResetFilters" class="btn programme-dt-btn-reset">Reset Filters</button>
+                    <button type="button" id="rfhResetFilters" class="btn programme-dt-btn-reset">Remove Filter</button>
                 </div>
 
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
@@ -70,17 +70,17 @@
                     <caption class="visually-hidden">Request For House – list of request details</caption>
                     <thead>
                         <tr>
-                            <th scope="col" class="text-nowrap">S. No.</th>
-                            <th scope="col" class="text-nowrap">Request ID</th>
-                            <th scope="col" class="text-nowrap">Request Date</th>
-                            <th scope="col" class="text-nowrap">Name &amp; ID</th>
-                            <th scope="col" class="text-nowrap">Date of Joining in Academy</th>
-                            <th scope="col" class="text-nowrap">Status of Request</th>
-                            <th scope="col" class="text-nowrap">Alloted House</th>
-                            <th scope="col" class="text-nowrap">Eligibility Type</th>
-                            <th scope="col" class="text-nowrap">Possession From</th>
-                            <th scope="col" class="text-nowrap">Possession To</th>
-                            <th scope="col" class="text-nowrap">Action</th>
+                            <th scope="col">S. No.</th>
+                            <th scope="col">Request ID</th>
+                            <th scope="col">Request Date</th>
+                            <th scope="col">Name &amp; ID</th>
+                            <th scope="col">Date of Joining in Academy</th>
+                            <th scope="col">Status of Request</th>
+                            <th scope="col">Alloted House</th>
+                            <th scope="col">Eligibility Type</th>
+                            <th scope="col">Possession From</th>
+                            <th scope="col">Possession To</th>
+                            <th scope="col">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -90,7 +90,13 @@
                             <td></td>
                             <td>{{ $row->request_id ?? '—' }}</td>
                             <td data-order="{{ $row->request_date_sort ?? '' }}">{{ $row->request_date ?? '—' }}</td>
-                            <td>{{ ($row->name ?? '—') }} ({{ $row->emp_id ?? '—' }})</td>
+                            {{-- Name on top, muted ID beneath (.estate-name-id, as RendersEstateRowActions::nameWithId). --}}
+                            <td data-search="{{ ($row->name ?? '') . ' ' . ($row->emp_id ?? '') }}">
+                                <span class="estate-name-id">
+                                    <span class="estate-name-id__name rfe-name">{{ $row->name ?? '—' }}</span>
+                                    @if(! empty($row->emp_id))<span class="estate-name-id__id rfe-emp-id">{{ $row->emp_id }}</span>@endif
+                                </span>
+                            </td>
                             <td>{{ $row->doj_academy ?? '—' }}</td>
                             @php
                                 $rfhStatus = trim((string) ($row->status ?? ''));
@@ -118,28 +124,27 @@
 
                                 @if($isAuthority)
                                     @if($changeStatus === 0)
-                                        <button type="button"
-                                                class="btn btn-sm btn-success btn-approve-change-request me-1"
-                                                data-id="{{ $row->pk }}">
-                                            Approve
-                                        </button>
-                                        <button type="button"
-                                                class="btn btn-sm btn-danger btn-disapprove-change-request"
-                                                data-id="{{ $row->pk }}"
-                                                data-request-id="{{ $row->request_id }}">
-                                            Disapprove
-                                        </button>
-                                    @elseif($changeStatus === 1)
-                                        <span class="badge bg-success">Approved</span>
-                                    @elseif($changeStatus === 2)
-                                        <span class="badge bg-danger">Disapproved</span>
+                                        <div class="rfe-actions">
+                                            <button type="button" class="rfe-action rfe-action--approve btn-approve-change-request"
+                                                    data-id="{{ $row->pk }}" title="Approve" aria-label="Approve {{ $row->request_id }}">
+                                                <i class="material-icons material-symbols-rounded" aria-hidden="true">check_circle</i>
+                                                <span class="rfe-action-label">Approve</span>
+                                            </button>
+                                            <button type="button" class="rfe-action rfe-action--reject btn-disapprove-change-request"
+                                                    data-id="{{ $row->pk }}"
+                                                    data-request-id="{{ $row->request_id }}" title="Disapprove" aria-label="Disapprove {{ $row->request_id }}">
+                                                <i class="material-icons material-symbols-rounded" aria-hidden="true">cancel</i>
+                                                <span class="rfe-action-label">Reject</span>
+                                            </button>
+                                        </div>
                                     @endif
+                                    {{-- Decided requests: no action (Figma); the outcome is in Status of Request. --}}
                                 @else
                                     @if($changeStatus === 0)
-                                        <button type="button"
-                                                class="btn btn-sm btn-outline-primary btn-change-request"
-                                                data-request-id="{{ $row->pk }}">
-                                            Change
+                                        <button type="button" class="rfe-action rfe-action--change btn-change-request"
+                                                data-request-id="{{ $row->pk }}" title="Change Request" aria-label="Change request {{ $row->request_id }}">
+                                            <i class="material-icons material-symbols-rounded" aria-hidden="true">swap_horiz</i>
+                                            <span class="rfe-action-label">Change</span>
                                         </button>
                                     @elseif($changeStatus === 1)
                                         <span class="text-success small d-block mt-1">(Your request has been approved)</span>
@@ -393,6 +398,24 @@
 
     .rfh-page .programme-dt-footer:empty {
         display: none;
+    }
+
+    /* Approve / Reject tones (Figma) — the shared file scopes them to .hac-page. */
+    .rfh-page .rfe-action--approve { color: #12b76a; }
+    .rfh-page .rfe-action--reject { color: #f04438; }
+
+    /* Figma fits every column in the panel: headers wrap, cells tighten. */
+    .rfh-page .programme-dt-table thead th,
+    .rfh-page .programme-dt-table tbody td {
+        padding-left: var(--ds-space-2) !important;
+        padding-right: var(--ds-space-2) !important;
+        white-space: normal !important;
+    }
+
+    .rfh-page .programme-dt-table thead th.sorting,
+    .rfh-page .programme-dt-table thead th.sorting_asc,
+    .rfh-page .programme-dt-table thead th.sorting_desc {
+        padding-right: 1.25rem !important; /* room for the sort arrows only */
     }
 </style>
 @endpush

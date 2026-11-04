@@ -40,8 +40,8 @@
          A stale duplicate of that markup used to sit here, which put every
          id on the page twice (getElementById then resolved to the dead
          copy) and left two stray closing tags behind. --}}
-    <div class="ds-card">
-        <div class="ds-card-body">
+    <div class="card overflow-hidden rounded-1">
+        <div class="card-body p-3 p-md-4">
             @include('admin.estate._update_meter_reading_form', ['inModal' => false])
         </div>
     </div>
@@ -103,10 +103,10 @@ $(document).ready(function() {
     function getSelVal(el) { var v = el ? $(el).val() : ''; return (v === null || v === undefined) ? '' : v; }
 
     var tsEstate = null, tsUnitName = null, tsBuilding = null, tsUnitSub = null;
-    if (document.getElementById('estate_name')) tsEstate = initTs(document.getElementById('estate_name'), 'Select');
-    if (document.getElementById('unit_name')) tsUnitName = initTs(document.getElementById('unit_name'), 'Select');
-    if (document.getElementById('building')) tsBuilding = initTs(document.getElementById('building'), 'Select');
-    if (document.getElementById('unit_sub_type')) tsUnitSub = initTs(document.getElementById('unit_sub_type'), 'Select');
+    if (document.getElementById('estate_name')) tsEstate = initTs(document.getElementById('estate_name'), 'Select Estate');
+    if (document.getElementById('unit_name')) tsUnitName = initTs(document.getElementById('unit_name'), 'Select Unit');
+    if (document.getElementById('building')) tsBuilding = initTs(document.getElementById('building'), 'Select Building');
+    if (document.getElementById('unit_sub_type')) tsUnitSub = initTs(document.getElementById('unit_sub_type'), 'Select Sub-type');
 
     function loadBuildingsThenPrefill(campusId, blockId, unitSubTypeId, thenLoadData) {
         var elB = document.getElementById('building'), elSub = document.getElementById('unit_sub_type');
@@ -114,7 +114,7 @@ $(document).ready(function() {
         if (tsUnitSub) { try { $('#unit_sub_type').select2('destroy'); } catch (e) {} tsUnitSub = null; }
         $('#building').html('<option value="">Select</option>');
         $('#unit_sub_type').html('<option value="">All</option>');
-        if (elB) tsBuilding = initTs(elB, 'Select');
+        if (elB) tsBuilding = initTs(elB, 'Select Building');
         if (elSub) tsUnitSub = initTs(elSub, 'All');
         if (!campusId) { if (thenLoadData) $('#loadMeterReadingsBtn').click(); return; }
         $.get(blocksUrl, { campus_id: campusId }, function(res) {
@@ -125,7 +125,7 @@ $(document).ready(function() {
                     var sel = (blockId && String(b.pk) === String(blockId)) ? ' selected' : '';
                     $('#building').append('<option value="'+b.pk+'"'+sel+'>'+b.block_name+'</option>');
                 });
-                if (elB) tsBuilding = initTs(elB, 'Select');
+                if (elB) tsBuilding = initTs(elB, 'Select Building');
                 if (blockId && tsBuilding) $('#building').val(String(blockId)).trigger('change.select2');
             }
             if (blockId && unitSubTypeId != null) {
@@ -164,7 +164,7 @@ $(document).ready(function() {
         if (tsUnitSub) { try { $('#unit_sub_type').select2('destroy'); } catch (e) {} tsUnitSub = null; }
         $('#building').html('<option value="">Select</option>');
         $('#unit_sub_type').html('<option value="">All</option>');
-        if (elB) tsBuilding = initTs(elB, 'Select');
+        if (elB) tsBuilding = initTs(elB, 'Select Building');
         if (elSub) tsUnitSub = initTs(elSub, 'All');
         if (!campusId) return;
         $.get(blocksUrl, { campus_id: campusId }, function(res) {
@@ -174,7 +174,7 @@ $(document).ready(function() {
                 $.each(res.data, function(i, b) {
                     $('#building').append('<option value="'+b.pk+'">'+b.block_name+'</option>');
                 });
-                if (elB) tsBuilding = initTs(elB, 'Select');
+                if (elB) tsBuilding = initTs(elB, 'Select Building');
             }
         });
     });

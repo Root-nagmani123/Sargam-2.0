@@ -183,8 +183,24 @@ class EstateReturnHouseDataTable extends DataTable
                 }
                 return $remarks ?: '—';
             })
+            // Dates read as dd-mm-yyyy like the rest of the module (raw values carry a time).
+            ->editColumn('allotment_date', fn ($row) => self::displayDate($row->allotment_date ?? null))
+            ->editColumn('possession_date_oth', fn ($row) => self::displayDate($row->possession_date_oth ?? null))
+            ->editColumn('returning_date', fn ($row) => self::displayDate($row->returning_date ?? null))
             ->rawColumns(['upload_document'])
             ->setRowId('row_id');
+    }
+
+    private static function displayDate($value): string
+    {
+        if ($value === null || trim((string) $value) === '') {
+            return '—';
+        }
+        try {
+            return \Illuminate\Support\Carbon::parse($value)->format('d-m-Y');
+        } catch (\Throwable $e) {
+            return (string) $value; // unparseable legacy text: show as stored
+        }
     }
 
     public function query(): QueryBuilder

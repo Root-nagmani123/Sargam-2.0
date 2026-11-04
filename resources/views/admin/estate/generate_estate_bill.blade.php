@@ -16,7 +16,7 @@
 
 @section($estateSelfHomeTab ? 'content' : 'setup_content')
 <div class="container-fluid geb-page">
-    <x-breadcrum title="{{ $estateBillPageLabel }}"></x-breadcrum>
+    <x-breadcrum title="{{ $estateBillPageLabel }}" :showBack="false"></x-breadcrum>
     <x-session_message />
 
     {{-- Actions sit above the card, right-aligned, as the export row does on the
@@ -341,6 +341,8 @@
 @push('styles')
 <link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
 <link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
+{{-- Shared Estate controls incl. the responsive filter toolbar. --}}
+<link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
 <style>
     /* ── Generate Estate Bill — page-scoped chrome (namespaced .geb-page, §7),
        built on the --ds-* tokens (design.md Layer A). ── */
@@ -723,7 +725,7 @@
             var unitSubEl = document.getElementById('unit_sub_type_pk');
             if (unitSubEl && !$(unitSubEl).data('select2')) {
                 $(unitSubEl).select2({
-                    placeholder: '— Select Unit Sub Type —',
+                    placeholder: 'Unit Sub Type',
                     allowClear: false,
                     width: '100%'
                 });

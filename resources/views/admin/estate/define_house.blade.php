@@ -32,7 +32,7 @@
             <div
                 class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar no-print">
                 <div class="d-flex flex-wrap align-items-center gap-3 dh-filters">
-                    <span class="programme-dt-filters-label">Filters</span>
+                    <span class="programme-dt-filters-label">Filter</span>
 
                     <div class="programme-dt-filter-select">
                         <select id="dhCampusFilter" class="form-select" aria-label="Filter by estate"
@@ -74,7 +74,7 @@
                         </select>
                     </div>
 
-                    <button type="button" id="dhResetFilters" class="btn programme-dt-btn-reset">Reset Filters</button>
+                    <button type="button" id="dhResetFilters" class="btn programme-dt-btn-reset">Remove Filter</button>
                 </div>
 
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
@@ -237,7 +237,7 @@
         align-items: center;
         justify-content: flex-start;
         gap: 4px;
-        min-width: 52px;
+        min-width: 40px;
         margin: 0;
         padding: 0;
         border: 0;
@@ -304,6 +304,37 @@
     .define-house-table-wrapper {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+    }
+
+    /* Figma fits every column in the panel: headers wrap, cells tighten. */
+    .dh-page .programme-dt-table thead th,
+    .dh-page .programme-dt-table tbody td {
+        padding-left: var(--ds-space-2) !important;
+        padding-right: var(--ds-space-2) !important;
+        white-space: normal;
+    }
+
+    .dh-page .programme-dt-table thead th.sorting,
+    .dh-page .programme-dt-table thead th.sorting_asc,
+    .dh-page .programme-dt-table thead th.sorting_desc {
+        padding-right: 1.25rem !important; /* room for the sort arrows only */
+    }
+
+    /* Four filters + Remove Filter share one row with Columns / search. */
+    .dh-page .dh-filters {
+        gap: var(--ds-space-2) !important;
+    }
+
+    /* Desktop only: on phones the shared two-column filter grid sizes them. */
+    @media (min-width: 768px) {
+        .dh-page .dh-filters .programme-dt-filter-select {
+            width: 128px;
+        }
+    }
+
+    .dh-page .programme-dt-toolbar > .ms-lg-auto {
+        flex-wrap: nowrap !important;
+        flex-shrink: 0;
     }
 </style>
 @endpush

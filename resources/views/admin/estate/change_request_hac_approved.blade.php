@@ -12,6 +12,8 @@
 
     <x-session_message />
 
+    <x-estate-workflow-stepper current="hac-approved" />
+
     {{-- Exports sit above the card (docs/new-design-index-page.md §1). Both honour
          the applied Request Type filter, the search box and the Columns choice. --}}
     @include('admin.estate.partials.export_actions', ['prefix' => 'hac'])

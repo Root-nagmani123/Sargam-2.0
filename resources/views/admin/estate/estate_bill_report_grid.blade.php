@@ -1,14 +1,18 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Estate Bill Report - Grid View - Sargam')
+@section('title', 'Estate Bill Grid - Sargam')
 
 @section('setup_content')
 <div class="container-fluid er-report ebr-page">
-    <x-breadcrum title="Estate Bill Report - Grid View" :showBack="false"></x-breadcrum>
+    <x-breadcrum title="Estate Bill Grid" :showBack="false"></x-breadcrum>
 
-    {{-- Print sits above the card (new-design-index-page.md §1). --}}
+    {{-- Download + Print sit above the card (Figma 1:43933); both take every row for the month. --}}
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 er-export">
-        <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" id="btnBillReportPrint" title="Print every row for the selected month" disabled>
+        <button type="button" class="btn estate-export-btn" id="btnBillReportDownload" title="Download every row for the selected month (CSV)" disabled>
+            <i class="bi bi-download" aria-hidden="true"></i>
+            <span>Download</span>
+        </button>
+        <button type="button" class="btn estate-export-btn" id="btnBillReportPrint" title="Print every row for the selected month" disabled>
             <i class="bi bi-printer" aria-hidden="true"></i>
             <span>Print</span>
         </button>
@@ -16,28 +20,24 @@
 
     <div class="card border-0 shadow-sm rounded-1">
         <div class="card-body p-3 p-md-4">
-            <div class="mb-3">
-                <h2 class="h6 fw-semibold mb-1">List Bill For Other And LBSNAA</h2>
-                <p class="er-summary">Only notified bills are listed for the selected month, except for other employees. If you expect more records, make sure those bills are notified.</p>
-            </div>
-
-            <div class="d-flex flex-column flex-lg-row align-items-lg-end justify-content-between gap-3 mb-4 programme-dt-toolbar">
-                <form id="billReportGridFilterForm" class="er-filters" novalidate>
+            {{-- Toolbar: "Filter" · pills (placeholder option = label) · Remove Filter ·
+                 Columns + search on the right (Figma 1:43933). --}}
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3 programme-dt-toolbar">
+                <form id="billReportGridFilterForm" class="er-filters align-items-center" novalidate>
+                    <span class="programme-dt-filters-label">Filter</span>
                     <div class="programme-dt-filter-select">
-                        <label for="bill_month" class="er-filter-label">Bill Month <span class="text-danger" aria-hidden="true">*</span></label>
-                        <input type="month" class="form-control" id="bill_month" name="bill_month"
+                        <input type="month" class="form-control" id="bill_month" name="bill_month" aria-label="Bill Month"
                             value="{{ request('bill_month', date('Y-m')) }}" max="{{ date('Y-m') }}" required aria-required="true"
-                            title="Current month or earlier">
+                            title="Bill Month (current month or earlier)">
                     </div>
                     <div class="programme-dt-filter-select">
-                        <label for="employee_type_filter" class="er-filter-label">Employee Type</label>
-                        <select class="form-select" id="employee_type_filter" name="employee_type" data-searchable="true">
-                            <option value="all" selected>All</option>
+                        <select class="form-select" id="employee_type_filter" name="employee_type" data-searchable="true" aria-label="Employee Type">
+                            <option value="all" selected>Employee Type</option>
                             <option value="lbsnaa">LBSNAA</option>
                             <option value="other">Other Employee</option>
                         </select>
                     </div>
-                    <button type="button" class="btn programme-dt-btn-reset" id="btnBillReportReset">Reset Filters</button>
+                    <button type="button" class="btn programme-dt-btn-reset" id="btnBillReportReset">Remove Filter</button>
                 </form>
 
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
@@ -51,22 +51,25 @@
                 </div>
             </div>
 
+            {{-- Business caveat kept from the old screen (not in Figma). --}}
+            <p class="er-summary mb-3" id="billReportNote">Only notified bills are listed for the selected month, except for other employees.</p>
+
             <div class="programme-dt-panel">
                 <div class="table-responsive er-scroll">
-                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table ds-table-sticky" id="estateBillReportTable">
+                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table ds-table-sticky" id="estateBillReportTable" aria-describedby="billReportNote">
                         <thead>
                             <tr>
                                 <th scope="col">S. No.</th>
                                 <th scope="col">Employee Type</th>
                                 <th scope="col">Name</th>
                                 <th scope="col">Section</th>
-                                <th scope="col">Building</th>
-                                <th scope="col">House No.</th>
+                                <th scope="col">Building Name</th>
+                                <th scope="col">House Number</th>
                                 <th scope="col">From</th>
                                 <th scope="col">To</th>
                                 <th scope="col">Meter No.</th>
-                                <th scope="col" class="er-num">Prev. Reading</th>
-                                <th scope="col" class="er-num">Curr. Reading</th>
+                                <th scope="col" class="er-num">Previous Reading</th>
+                                <th scope="col" class="er-num">Current Reading</th>
                                 <th scope="col" class="er-num">Units</th>
                                 <th scope="col" class="er-num">Total Charge</th>
                                 <th scope="col" class="er-num">Licence</th>
@@ -108,6 +111,10 @@
 @push('styles')
 @include('admin.layouts.partials.select2-assets')
 <link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
+<style>
+    /* Keeps Filter · pills · Columns · search on one row at 1440 (Figma uses a 40px search icon). */
+    .ebr-page .programme-dt-search { width: 200px; }
+</style>
 @endpush
 
 @push('scripts')
@@ -132,12 +139,6 @@ $(function () {
     // Dual-meter rows carry "\n"-separated values — one line per meter.
     function lines(v) {
         return (v == null || v === '' ? '—' : String(v)).split(/\n/).map(function (s) { return esc(s.trim() || '—'); }).join('<br>');
-    }
-
-    function typeBadge(v) {
-        var s = String(v || '').trim();
-        var tone = /other/i.test(s) ? 'other' : (/lbsnaa/i.test(s) ? 'lbsnaa' : 'neutral');
-        return '<span class="er-badge er-badge--' + tone + '">' + esc(s || '—') + '</span>';
     }
 
     function initOrReloadBillReportGrid() {
@@ -169,7 +170,7 @@ $(function () {
             },
             columns: [
                 { data: 'sno', orderable: false, searchable: false },
-                { data: 'employee_type', render: function (v, t) { return t === 'display' ? typeBadge(v) : v; } },
+                { data: 'employee_type', render: function (v, t) { return t === 'display' ? text(v) : v; } }, // plain text, as in Figma
                 { data: 'name', className: 'er-col-wrap fw-medium', render: function (v, t) { return t === 'display' ? text(v) : v; } },
                 { data: 'section', className: 'er-col-wrap', render: function (v, t) { return t === 'display' ? text(v) : v; } },
                 { data: 'building_name', render: function (v, t) { return t === 'display' ? text(v) : v; } },
@@ -201,7 +202,7 @@ $(function () {
             storageKey: 'estateBillReportGrid:columns:v2'
         });
 
-        $('#btnBillReportColumns, #btnBillReportPrint').prop('disabled', false);
+        $('#btnBillReportColumns, #btnBillReportPrint, #btnBillReportDownload').prop('disabled', false);
     }
 
     $('#billReportGridFilterForm').on('submit', function (e) {
@@ -220,32 +221,30 @@ $(function () {
         initOrReloadBillReportGrid();
     });
 
+    // Both fetch every row (server honours length = -1) and then restore the pager.
     $('#btnBillReportPrint').on('click', function () {
         if (!billReportDt) return;
-
-        // Fetch every row (server honours length = -1), print, then restore the pager.
-        var originalLen = billReportDt.page.len();
-        var originalPage = billReportDt.page();
-        var $btn = $(this).prop('disabled', true);
-
-        billReportDt.one('draw', function () {
-            setTimeout(function () {
-                var data = G.collectRows(billReportDt);
-                var type = $('#employee_type_filter option:selected').text();
-                G.printGrid({
-                    title: 'Estate Bill Report',
-                    meta: ['Bill Month: ' + ($('#bill_month').val() || '') + '  |  Employee Type: ' + type],
-                    headers: data.headers,
-                    rows: data.rows,
-                    numericCols: data.headers.map(function (h, i) {
-                        return ['Prev. Reading', 'Curr. Reading', 'Units', 'Total Charge', 'Licence', 'Water', 'Grand Total'].indexOf(h) !== -1 ? i : -1;
-                    }).filter(function (i) { return i !== -1; })
-                });
-                billReportDt.page.len(originalLen).page(originalPage).draw(false);
-                $btn.prop('disabled', false);
-            }, 250);
+        G.withAllRows(billReportDt, function () {
+            var data = G.collectRows(billReportDt);
+            var type = { all: 'All', lbsnaa: 'LBSNAA', other: 'Other Employee' }[$('#employee_type_filter').val()] || 'All';
+            G.printGrid({
+                title: 'Estate Bill Grid',
+                meta: ['Bill Month: ' + ($('#bill_month').val() || '') + '  |  Employee Type: ' + type],
+                headers: data.headers,
+                rows: data.rows,
+                numericCols: data.headers.map(function (h, i) {
+                    return ['Previous Reading', 'Current Reading', 'Units', 'Total Charge', 'Licence', 'Water', 'Grand Total'].indexOf(h) !== -1 ? i : -1;
+                }).filter(function (i) { return i !== -1; })
+            });
         });
-        billReportDt.page.len(-1).draw();
+    });
+
+    $('#btnBillReportDownload').on('click', function () {
+        if (!billReportDt) return;
+        G.withAllRows(billReportDt, function () {
+            var data = G.collectRows(billReportDt);
+            G.downloadCsv('Estate Bill Grid ' + ($('#bill_month').val() || ''), data.headers, data.rows);
+        });
     });
 
     // Load the default / requested month on open.

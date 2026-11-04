@@ -374,6 +374,77 @@
         filter: brightness(0.92);
     }
 
+    /* ── List page (master_crud / eligibility): Figma Estate Master frames ─
+       Header-card Add button and dialog actions are 48px; dialog inputs 32px. */
+    .em-list-page .em-btn-add,
+    .em-modal .modal-footer .ds-btn-primary,
+    .em-modal .modal-footer .ds-btn-cancel {
+        min-height: var(--ds-space-6);
+        padding: 0 1.25rem;
+        font-size: 1rem;
+        font-weight: 500;
+        border-radius: var(--ds-radius-card);
+    }
+
+    .em-list-page .em-grid-card {
+        border: 0;
+        border-radius: var(--ds-radius-card);
+    }
+
+    .em-list-page .em-grid-card > .card-body {
+        padding: 0.75rem;
+    }
+
+    .em-list-page .programme-dt-toolbar {
+        margin-bottom: var(--ds-space-3);
+    }
+
+    .em-list-page .em-table .em-col-sno {
+        width: 4.5rem;
+    }
+
+    .em-list-page .em-table .em-col-action {
+        width: 7rem;
+    }
+
+    .em-list-page .rfe-actions {
+        flex-wrap: nowrap;
+    }
+
+    .em-modal .modal-title {
+        font-size: 1.25rem;
+        font-weight: 400;
+        color: #000;
+    }
+
+    .em-modal .modal-header {
+        border-bottom: 1px solid var(--ds-line);
+    }
+
+    .em-modal .ds-form-label {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: #404040;
+    }
+
+    .em-modal input.form-control,
+    .em-modal .form-select {
+        min-height: var(--ds-control-h-sm);
+        height: var(--ds-control-h-sm);
+        font-size: 0.75rem;
+        border-radius: var(--ds-radius-card);
+    }
+
+    .em-modal textarea.form-control {
+        font-size: 0.75rem;
+        border-radius: var(--ds-radius-card);
+    }
+
+    .em-modal .modal-footer {
+        border-top: 0;
+        gap: var(--ds-space-3);
+    }
+
     @media (max-width: 575.98px) {
         .em-page .ds-page-header .ds-btn-primary {
             width: 100%;

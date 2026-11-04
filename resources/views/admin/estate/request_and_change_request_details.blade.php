@@ -35,7 +35,7 @@
     <x-session_message />
 
     {{-- Identity banner: the one thing you need to know you're on the right record. --}}
-    <div class="rfe-view-banner mb-3">
+    <div class="rfe-view-banner mb-0">
         <h2 class="rfe-view-banner-title">Request ID #{{ $requestForHouse->req_id }}</h2>
         <div class="rfe-view-banner-meta">
             <div>
@@ -195,6 +195,18 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/estate-request-admin.css') }}?v={{ @filemtime(public_path('css/estate-request-admin.css')) ?: time() }}">
+<style>
+    /* Figma: the blue ID banner is the head of the details card, not a separate card. */
+    .rfe-view-page .rfe-view-banner {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+    .rfe-view-page .rfe-view-banner + .card {
+        border-top: 0;
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+    }
+</style>
 @endpush
 
 @push('scripts')

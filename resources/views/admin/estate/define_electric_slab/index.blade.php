@@ -24,7 +24,7 @@
             <div
                 class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar no-print">
                 <div class="d-flex flex-wrap align-items-center gap-3">
-                    <span class="programme-dt-filters-label">Filters</span>
+                    <span class="programme-dt-filters-label">Filter</span>
                     <div class="programme-dt-filter-select">
                         <select id="esUnitTypeFilter" class="form-select" aria-label="Filter by Merge with House"
                             data-searchable="true" data-placeholder="Merge with House" data-allow-clear="true">
@@ -34,7 +34,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <button type="button" id="esResetFilters" class="btn programme-dt-btn-reset">Reset Filters</button>
+                    <button type="button" id="esResetFilters" class="btn programme-dt-btn-reset">Remove Filter</button>
                 </div>
 
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
