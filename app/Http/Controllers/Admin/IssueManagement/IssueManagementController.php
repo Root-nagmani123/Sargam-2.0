@@ -295,18 +295,26 @@ class IssueManagementController extends Controller
         // First-paint values for the toolbar; the grid takes over from here.
         $search = trim((string) $request->get('search', ''));
         $raisedBy = $request->get('raised_by') === 'self' ? 'self' : 'all';
+        // The grid opens on Reported (new, untouched complaints) unless the
+        // link names a status; an explicit empty ?status= shows every status.
+        // The grid's ajax and the export links read the dropdown, so seeding
+        // it here is the whole default.
+        $statusFilter = $request->has('status')
+            ? (string) $request->get('status')
+            : (string) IssueLogManagement::STATUS_REPORTED;
         $hasFilters = filled($search)
             || $request->filled('category')
             || $request->filled('priority')
             || $request->filled('date_from')
             || $request->filled('date_to')
-            || $request->filled('status');
+            || $statusFilter !== '';
 
         return view('admin.issue_management.index', compact(
             'categories',
             'priorities',
             'search',
             'raisedBy',
+            'statusFilter',
             'hasFilters'
         ));
     }
@@ -1403,6 +1411,113 @@ class IssueManagementController extends Controller
         return $isEmployeeKey ? [] : [(string) $userId];
     }
 
+    /**
+     * In-app (bell) notification to the given complaint parties, by employee
+     * key. Each key becomes the logins it signs in with
+     * (User::loginUserIdsForEmployee()); a free-text "Other" assignee has none
+     * and is skipped. The signed-in user is never told about their own action,
+     * and $skipUserIds lets a caller avoid telling someone twice.
+     *
+     * Never throws: the complaint action has already been saved, and a failed
+     * notification must not turn that into an error page.
+     *
+     * @param  array<int, mixed>  $employeeKeys
+     * @param  array<int, int>  $skipUserIds
+     * @return array<int, int>  the user_ids notified
+     */
+    private function notifyIssueParties(int $issuePk, array $employeeKeys, string $title, string $message, array $skipUserIds = []): array
+    {
+        try {
+            $actorUserId = (int) (Auth::user()->user_id ?? 0);
+            $receivers = [];
+            foreach ($employeeKeys as $key) {
+                if ($key === null || $key === '' || ! is_numeric($key)) {
+                    continue;
+                }
+                $receivers = array_merge($receivers, User::loginUserIdsForEmployee($key));
+            }
+            $receivers = array_values(array_diff(array_unique($receivers), [$actorUserId], $skipUserIds));
+            if ($receivers === []) {
+                return [];
+            }
+
+            app(\App\Services\NotificationService::class)->createMultiple(
+                $receivers, 'issue_management', 'IssueManagement', $issuePk, $title, $message
+            );
+
+            return $receivers;
+        } catch (\Throwable $e) {
+            Log::error('Issue Management notification failed', ['issue_pk' => $issuePk, 'title' => $title, 'error' => $e->getMessage()]);
+
+            return [];
+        }
+    }
+
+    /** "Issue #12 (Electrical)" for notification text. */
+    private function issueNotificationLabel(int $issuePk, $categoryPk): string
+    {
+        $category = $categoryPk ? DB::table('issue_category_master')->where('pk', $categoryPk)->value('issue_category') : null;
+
+        return 'Issue #' . $issuePk . ($category ? ' (' . $category . ')' : '');
+    }
+
+    private static function issueStatusName(int $status): string
+    {
+        return [
+            IssueLogManagement::STATUS_REPORTED => 'Reported',
+            IssueLogManagement::STATUS_IN_PROGRESS => 'In Progress',
+            IssueLogManagement::STATUS_COMPLETED => 'Completed',
+            IssueLogManagement::STATUS_PENDING => 'Pending',
+            IssueLogManagement::STATUS_REOPENED => 'Reopened',
+        ][$status] ?? 'Updated';
+    }
+
+    /**
+     * Notifications for a status_update(): the new assignee is told it is
+     * theirs; everyone else on the complaint (complainant, logger, nodal
+     * officer, assignee) is told what changed. The actor is left out.
+     */
+    private function notifyStatusUpdate(IssueLogManagement $issue, int $previousStatus, string $previousAssignee, ?string $remark): void
+    {
+        $label = $this->issueNotificationLabel((int) $issue->pk, $issue->issue_category_master_pk);
+        $newStatus = (int) $issue->issue_status;
+        $statusName = self::issueStatusName($newStatus);
+        $remarkText = ($remark !== null && trim($remark) !== '') ? ' Remark: ' . \Illuminate\Support\Str::limit(trim($remark), 200) : '';
+
+        $alreadyTold = [];
+        $assignee = (string) ($issue->assigned_to ?? '');
+        if ($assignee !== '' && $assignee !== $previousAssignee) {
+            $alreadyTold = $this->notifyIssueParties(
+                (int) $issue->pk,
+                [$assignee],
+                'Complaint assigned to you',
+                $label . ' has been assigned to you. Current status: ' . $statusName . '.' . $remarkText
+            );
+        }
+
+        if ($newStatus !== $previousStatus) {
+            $title = $label . ' — ' . $statusName;
+            $message = match ($newStatus) {
+                IssueLogManagement::STATUS_COMPLETED => $label . ' has been marked Completed.' . $remarkText . ' If the problem persists, the complainant can reopen it.',
+                IssueLogManagement::STATUS_REOPENED => $label . ' has been reopened and needs attention again.' . $remarkText,
+                default => $label . ' status changed from ' . self::issueStatusName($previousStatus) . ' to ' . $statusName . '.' . $remarkText,
+            };
+        } elseif ($remarkText !== '') {
+            $title = $label . ' — remark added';
+            $message = 'A remark was added on ' . $label . ' (status: ' . $statusName . ').' . $remarkText;
+        } else {
+            return;
+        }
+
+        $this->notifyIssueParties(
+            (int) $issue->pk,
+            [$issue->created_by, $issue->issue_logger, $issue->employee_master_pk, $issue->assigned_to],
+            $title,
+            $message,
+            $alreadyTold
+        );
+    }
+
     /** An employee id from the query string, or null unless it is all digits. */
     private function employeeIdQuery(Request $request, string $key): ?string
     {
@@ -1591,6 +1706,24 @@ class IssueManagementController extends Controller
             DB::table('Issue_log_status')->insert($status_data);
 
             static::bumpIndexListCacheEpoch();
+
+            // Nodal officer: a new complaint is in their CentCom queue.
+            // Complainant: only when someone else logged it on their behalf
+            // (the logger is the actor, so is never notified).
+            $label = $this->issueNotificationLabel((int) $id, $request->issue_category_id);
+            $this->notifyIssueParties(
+                (int) $id,
+                [$nodalEmployeePk],
+                'New complaint in your CentCom queue',
+                $label . ' has been raised and you are its nodal officer. Please assign it and update the status.'
+            );
+            $this->notifyIssueParties(
+                (int) $id,
+                [$request->created_by],
+                'Complaint logged on your behalf',
+                $label . ' has been logged on your behalf. You can track its progress from Issue Management.',
+                User::loginUserIdsForEmployee($nodalEmployeePk)
+            );
 
             return redirect()->route('admin.issue-management.show', $id)
                 ->with('success', $successMessage);
@@ -1882,6 +2015,8 @@ class IssueManagementController extends Controller
             }
         }
 
+        $previousNodal = User::resolveEmployeePk($issue->employee_master_pk);
+
         DB::beginTransaction();
         try {
             // Update main issue record. created_by is deliberately absent.
@@ -1938,6 +2073,26 @@ class IssueManagementController extends Controller
             DB::commit();
 
             static::bumpIndexListCacheEpoch();
+
+            // A new nodal officer is told the complaint is now theirs; when
+            // the officer is unchanged, they and the assignee hear the
+            // complainant / logger changed the details.
+            $label = $this->issueNotificationLabel((int) $issue->pk, $request->issue_category_id);
+            if (User::resolveEmployeePk($nodalEmployeePk) !== $previousNodal) {
+                $this->notifyIssueParties(
+                    (int) $issue->pk,
+                    [$nodalEmployeePk],
+                    'Complaint routed to you',
+                    $label . ' has been moved to your CentCom queue and you are now its nodal officer.'
+                );
+            } else {
+                $this->notifyIssueParties(
+                    (int) $issue->pk,
+                    [$issue->employee_master_pk, $issue->assigned_to],
+                    $label . ' — details updated',
+                    'The details of ' . $label . ' have been updated by the complainant. Please review the latest information.'
+                );
+            }
 
             $showUrl = route('admin.issue-management.show', $issue->pk);
             $successMessage = 'Issue updated successfully.' . $this->nodalOverrideNote($request->nodal_employee_id, $nodalEmployeePk, $keptStored);
@@ -2320,6 +2475,9 @@ class IssueManagementController extends Controller
                 ->with('error', 'That status has already been used since this complaint was last reopened, so it cannot be set again.');
         }
 
+        $previousStatus = (int) $issue->issue_status;
+        $previousAssignee = (string) ($issue->assigned_to ?? '');
+
         DB::beginTransaction();
         try {
             // assigned_to column (VARCHAR): stores employee PK (string) or "Other" person's name
@@ -2409,6 +2567,8 @@ class IssueManagementController extends Controller
             DB::commit();
 
             static::bumpIndexListCacheEpoch();
+
+            $this->notifyStatusUpdate($issue, $previousStatus, $previousAssignee, $request->remark);
 
             return redirect()->route('admin.issue-management.show', $issue->pk)
                 ->with('success', 'Issue status updated successfully.');

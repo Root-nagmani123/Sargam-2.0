@@ -195,6 +195,15 @@ return [
         ],
     ],
 
+    // CentCom / Issue Management complaints (complainant, logger, nodal officer
+    // and assignee click through to the complaint; show() lets all four in).
+    'issue_management' => [
+        'IssueManagement' => [
+            'route'  => 'admin.issue-management.show',
+            'params' => ['id' => 'reference_pk'],
+        ],
+    ],
+
     // Leave Request Notifications (faculty approver clicks through to the leave)
     'leave' => [
         'StationedLeave' => [

@@ -16,7 +16,7 @@
     $exportQuery = array_filter([
         'raised_by' => $raisedBy === 'self' ? 'self' : null,
         'search' => $search,
-        'status' => request('status'),
+        'status' => $statusFilter,
         'category' => request('category'),
         'priority' => request('priority'),
         'date_from' => request('date_from'),
@@ -86,11 +86,11 @@
                     <div class="programme-dt-filter-select">
                         <select name="status" class="form-select im-auto-filter" aria-label="Filter by status">
                             <option value="">Status</option>
-                            <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Reported</option>
-                            <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>In Progress</option>
-                            <option value="2" {{ request('status') === '2' ? 'selected' : '' }}>Completed</option>
-                            <option value="3" {{ request('status') === '3' ? 'selected' : '' }}>Pending</option>
-                            <option value="6" {{ request('status') === '6' ? 'selected' : '' }}>Reopened</option>
+                            <option value="0" {{ $statusFilter === '0' ? 'selected' : '' }}>Reported</option>
+                            <option value="1" {{ $statusFilter === '1' ? 'selected' : '' }}>In Progress</option>
+                            <option value="2" {{ $statusFilter === '2' ? 'selected' : '' }}>Completed</option>
+                            <option value="3" {{ $statusFilter === '3' ? 'selected' : '' }}>Pending</option>
+                            <option value="6" {{ $statusFilter === '6' ? 'selected' : '' }}>Reopened</option>
                         </select>
                     </div>
 

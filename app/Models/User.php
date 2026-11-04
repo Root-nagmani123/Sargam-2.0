@@ -205,6 +205,33 @@ class User extends Authenticatable
     }
 
     /**
+     * The user_credentials.user_id values an employee key (pk or pk_old) signs
+     * in with, for addressing an in-app notification (the bell reads
+     * notifications by Auth::user()->user_id). Same identity rule as
+     * complaintEmployeePkForLogin(), and only logins LoginController lets in:
+     * a notification to an account that cannot sign in is never read.
+     *
+     * @return array<int, int>
+     */
+    public static function loginUserIdsForEmployee($employeeKey): array
+    {
+        $employeePk = self::resolveEmployeePk($employeeKey);
+        if ($employeePk === null) {
+            return [];
+        }
+
+        return self::complaintLoginRows()
+            ->where('e.pk', $employeePk)
+            ->whereRaw(self::LOGIN_ALLOWED_SQL)
+            ->pluck('uc.user_id')
+            ->filter(fn ($id) => is_numeric($id) && (int) $id > 0)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
      * True for a user_credentials row (alias uc) that passes LoginController's
      * inactive-account check, which refuses a login only when user_category is
      * 'E' AND employee_master looked up by pk = user_id (never pk_old) has
