@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Http\Controllers\Mess\ProcessMessBillsEmployeeController;
 use App\Support\MessBuyerClientFilter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use ReflectionMethod;
 use ReflectionProperty;
@@ -125,6 +126,61 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
         $this->assertStatementMatches($buyer, $row, 1000.0, 300.0, 700.0, self::EMPLOYEE_SLUG);
     }
 
+    /**
+     * An employee bill saved without a client id: the pool sums it under the name: key, and the
+     * statement finds the employee through employee_master by display name.
+     */
+    public function test_part_paid_multi_month_voucher_for_an_employee_bill_without_client_id(): void
+    {
+        [$buyer, $employeePk] = $this->employee('F');
+        $this->svVoucher($buyer, 1200, [['2031-08-15', 1000], ['2031-09-10', 1000]], $employeePk, false);
+
+        $this->assertSame(
+            $employeePk,
+            MessBuyerClientFilter::resolveClientId($buyer, [self::EMPLOYEE_SLUG]),
+            'statement does not resolve the employee through employee_master'
+        );
+
+        $row = $this->modalRow($buyer);
+
+        $this->assertNotNull($row, 'employee buyer with a September due is missing from the modal');
+        $this->assertSame('200.00', $row['paid_amount']);
+        $this->assertSame('800.00', $row['due_amount']);
+        $this->assertStatementMatches($buyer, $row, 1000.0, 200.0, 800.0, self::EMPLOYEE_SLUG);
+    }
+
+    /**
+     * The grid request warms the modal summaries (warmModalBillSummaryCacheFromCombinedBills)
+     * from its own grouped rows; the modal opened afterwards must still match the statement.
+     */
+    public function test_modal_warmed_by_the_grid_request_matches_the_statement(): void
+    {
+        config(['cache.redis_backed_unified_store' => 'array']);
+        Cache::store('array')->flush();
+        $client = $this->as($this->staffWithRole('Mess Admin'), ['Mess Admin']);
+
+        $buyer = $this->buyerName('G');
+        $this->svVoucher($buyer, 1200, [['2031-08-15', 1000], ['2031-09-10', 1000]]);
+
+        // invoice_sent '' is the grid's "All" view; the default ("sent") returns early for buyers
+        // who have never been invoiced, as every 2031 test buyer is.
+        $client->getJson(route('admin.mess.process-mess-bills-employee.index', [
+            'draw' => 1, 'start' => 0, 'length' => 25, 'date_from' => self::FROM, 'date_to' => self::TO,
+            'invoice_sent' => '',
+        ]))->assertOk();
+        $this->assertTrue(Cache::store('array')->has($this->modalSummaryCacheKey()), 'grid request did not warm the modal summaries');
+
+        $response = $client->getJson(route('admin.mess.process-mess-bills-employee.modal-data', [
+            'date_from' => self::FROM, 'date_to' => self::TO, 'per_page' => 100, 'skip_lifetime_due' => 1,
+        ]))->assertOk();
+        $row = $this->rowFor($response->json('bills') ?? [], $buyer);
+
+        $this->assertNotNull($row, 'buyer with a September due is missing from the grid-warmed modal');
+        $this->assertSame('200.00', $row['paid_amount']);
+        $this->assertSame('800.00', $row['due_amount']);
+        $this->assertStatementMatches($buyer, $row, 1000.0, 200.0, 800.0);
+    }
+
     private function buyerName(string $tag): string
     {
         return 'Modal Paid Test ' . $tag . ' ' . uniqid();
@@ -163,10 +219,16 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
 
     /**
      * @param  list<array{0: string, 1: float}>  $lines  [issue_date, amount] — qty 1 at rate = amount
-     * @param  int|null  $employeePk  set for an employee buyer keyed by client_id
+     * @param  int|null  $employeePk  set for an employee buyer
+     * @param  bool  $withClientId  false saves the employee's bill without a client id
      */
-    private function svVoucher(string $buyer, float $paid, array $lines, ?int $employeePk = null): void
-    {
+    private function svVoucher(
+        string $buyer,
+        float $paid,
+        array $lines,
+        ?int $employeePk = null,
+        bool $withClientId = true
+    ): void {
         $dates = array_column($lines, 0);
         $total = array_sum(array_column($lines, 1));
 
@@ -179,7 +241,7 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
             'paid_amount' => $paid,
             'client_type_slug' => $employeePk ? self::EMPLOYEE_SLUG : self::SLUG,
             'client_type_pk' => $employeePk ? self::EMPLOYEE_CLIENT_TYPE_PK : self::CLIENT_TYPE_PK,
-            'client_id' => $employeePk,
+            'client_id' => $withClientId ? $employeePk : null,
             'client_name' => $buyer,
             'payment_type' => 1,
             'issue_date' => min($dates),
@@ -242,13 +304,27 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
             'skip_lifetime_due' => 1,
         ]));
 
-        foreach ($response->getData(true)['bills'] ?? [] as $row) {
+        return $this->rowFor($response->getData(true)['bills'] ?? [], $buyer);
+    }
+
+    private function rowFor(array $bills, string $buyer): ?array
+    {
+        foreach ($bills as $row) {
             if (trim((string) $row['buyer_name']) === $buyer) {
                 return $row;
             }
         }
 
         return null;
+    }
+
+    /** The key the modal summaries for FROM..TO (no filters) are cached under. */
+    private function modalSummaryCacheKey(): string
+    {
+        $method = new ReflectionMethod(ProcessMessBillsEmployeeController::class, 'modalBillsSummaryCacheKey');
+        $method->setAccessible(true);
+
+        return $method->invoke($this->controller(), self::FROM, self::TO, [], [], []);
     }
 
     /** @return array{total: float, paid: float, due: float} */

@@ -968,18 +968,19 @@ class ProcessMessBillsEmployeeController extends Controller
      * Paid pool and pre-range net per buyer group key: sale-status SV vouchers with items up to
      * date_to and mess-selling kitchen issues issued up to date_to, fetched where client_id is one
      * of the period's client ids or TRIM(client_name) equals one of the names on the period's bills
-     * without a client id, and pooled under each row's own group key.
+     * without a client id. Each row is pooled under its own group key (messBillBuyerGroupKeyFast():
+     * cid:<client_id> when it has one, otherwise name:<trimmed name>), and a buyer group sums only
+     * the keys of its own period bills.
      *
-     * resolveBuyerBillsForPaymentAllocation (MessBuyerClientFilter) matches more widely; these
-     * bills reach the statement's allocation but not this pool:
-     * - client-id buyer: rows without a client id named with one of the buyer's name variants
-     *   (the name, the name without a "(...)" suffix, the employee display name, names on the
-     *   buyer's SV vouchers and kitchen selling issues); if fetched at all they are pooled under
-     *   a separate name: key, never the buyer's cid: key;
-     * - name-only buyer: rows carrying the client id the filter resolves from the buyer's name
-     *   (MessBuyerClientFilter::resolveClientId);
-     * - any buyer: rows named "<name> (...)" (the filter's LIKE 'name (%' match).
-     * MessGenerateInvoiceModalPaidTest covers name-only and client-id buyers on the uncached modal path.
+     * The statement (resolveBuyerBillsForPaymentAllocation via MessBuyerClientFilter::apply) instead
+     * resolves a client id from the buyer's name (SV vouchers, then kitchen issues, then, for
+     * employee buyers, employee_master and faculty_master). When it finds one it takes rows with that
+     * client id plus rows without a client id named with any of that client's nameVariants(), exactly
+     * or as "<variant> (...)"; when it finds none, rows named exactly the buyer's name or
+     * "<name> (...)". OT/course buyers skip the resolution and match by name only. Any of those rows
+     * outside the group's own keys reach the statement's allocation but not this pool.
+     * MessGenerateInvoiceModalPaidTest covers name-only, client-id and no-client-id employee buyers,
+     * on both the uncached modal path and the path warmed by the grid request.
      *
      * @param  array<int, int>  $clientIds
      * @param  array<int, string>  $names
