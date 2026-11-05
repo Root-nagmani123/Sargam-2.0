@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
 use Tests\TestCase;
 
@@ -207,7 +208,8 @@ class EstateExportScopeAndInputTest extends TestCase
             $this->markTestSkipped('no returned LBSNAA house with a return date');
         }
 
-        foreach ([substr($date, 0, 7), ''] as $search) { // '' = after Reset: everything
+        // Stored month, the on-screen dd-mm-yyyy form, and '' = after Reset: everything.
+        foreach ([substr($date, 0, 7), date('d-m-Y', strtotime($date)), ''] as $search) {
             $this->app->forgetInstance('datatables.request');
             $grid = (int) $actor->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
                 ->getJson(route('admin.estate.return-house', ['draw' => 1, 'start' => 0, 'length' => 10, 'search' => ['value' => $search]]))
@@ -223,6 +225,63 @@ class EstateExportScopeAndInputTest extends TestCase
             $printed = $actor->get(route('admin.estate.return-house.print', ['search' => $search]))->assertOk()->viewData('rows');
             $this->assertCount($grid, $printed, "Print holds the grid's rows for \"{$search}\"");
         }
+    }
+
+    /** The grid's column sort works, and Download/Print list the rows in that same order. */
+    public function test_return_house_sort_applies_to_the_grid_and_its_exports(): void
+    {
+        $actor = $this->as($this->staffWithRole('Estate Admin'), self::AUTHORITY_ROLES);
+        $norm = fn ($v) => preg_replace('/\s+/', ' ', trim(html_entity_decode((string) $v)));
+        $orders = [];
+
+        foreach (['asc', 'desc'] as $dir) {
+            $order = [['column' => 1, 'dir' => $dir]]; // 1 = Name & ID
+            $this->app->forgetInstance('datatables.request');
+            $grid = array_map($norm, array_column($actor->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
+                ->getJson(route('admin.estate.return-house', ['draw' => 1, 'start' => 0, 'length' => -1, 'order' => $order]))
+                ->assertOk()->json('data'), 'name'));
+
+            $this->app->forgetInstance('datatables.request');
+            $csv = array_slice($this->csvRows($actor->get(route('admin.estate.return-house.download', ['format' => 'csv', 'cols' => 'sno,name', 'order' => $order])), 'S. No.'), 1);
+            $downloaded = array_map(fn ($r) => $norm($r[1] ?? ''), array_filter($csv, fn ($r) => is_numeric($r[0] ?? '')));
+
+            $this->app->forgetInstance('datatables.request');
+            $printed = collect($actor->get(route('admin.estate.return-house.print', ['order' => $order]))->assertOk()->viewData('rows'))
+                ->map(fn ($r) => $norm($r->name))->all();
+
+            $this->assertSame($grid, array_values($downloaded), "Download follows the grid's {$dir} sort");
+            $this->assertSame($grid, array_values($printed), "Print follows the grid's {$dir} sort");
+            $orders[$dir] = $grid;
+        }
+
+        $this->assertNotSame($orders['asc'], $orders['desc'], 'the Name sort actually reorders the grid');
+    }
+
+    /** Remarks kept only in the meta file (no remarks column) are searchable and reach Download/Print. */
+    public function test_return_house_meta_file_remarks_are_searched_and_exported(): void
+    {
+        $pk = (int) DB::table('estate_possession_details')->where('return_home_status', 1)
+            ->whereNotNull('estate_house_master_pk')->orderByDesc('pk')->value('pk');
+        if (! $pk) {
+            $this->markTestSkipped('no returned LBSNAA house');
+        }
+        $remark = 'meta-remark-'.uniqid();
+        Storage::fake('local')->put('estate/return-house-meta.json', json_encode(['L:'.$pk => ['remarks' => $remark]]));
+        $actor = $this->as($this->staffWithRole('Estate Admin'), self::AUTHORITY_ROLES);
+
+        $this->app->forgetInstance('datatables.request');
+        $grid = $actor->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
+            ->getJson(route('admin.estate.return-house', ['draw' => 1, 'start' => 0, 'length' => 10, 'search' => ['value' => strtoupper($remark)]]))
+            ->assertOk()->json('data');
+        $this->assertSame([$remark], array_column($grid, 'remarks'), 'the grid finds the row by its meta remark');
+
+        $this->app->forgetInstance('datatables.request');
+        $csv = $actor->get(route('admin.estate.return-house.download', ['format' => 'csv', 'search' => $remark, 'cols' => 'sno,remarks']));
+        $this->assertSame([['1', $remark]], array_values(array_map(fn ($r) => array_slice($r, 0, 2), array_filter(array_slice($this->csvRows($csv, 'S. No.'), 1), fn ($r) => is_numeric($r[0] ?? '')))), 'Download shows the meta remark');
+
+        $this->app->forgetInstance('datatables.request');
+        $printed = $actor->get(route('admin.estate.return-house.print', ['search' => $remark]))->assertOk()->viewData('rows');
+        $this->assertSame([$remark], collect($printed)->pluck('remarks')->all(), 'Print shows the meta remark');
     }
 
     /**

@@ -6772,7 +6772,7 @@ class EstateController extends Controller
     {
         $table = app(EstateReturnHouseDataTable::class);
         $search = $table->searchTerm();
-        $rows = $table->query()->get();
+        $rows = $table->exportRows();
 
         return [
             'rows' => $rows,

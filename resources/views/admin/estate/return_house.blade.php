@@ -538,6 +538,8 @@
         if (!rhDt) return;
         var params = {};
         if (rhDt.search()) params.search = rhDt.search();
+        // Same sort as the grid: DataTables' column index + direction, read back by the server as the grid's own.
+        params.order = rhDt.order().map(function (o) { return { column: o[0], dir: o[1] }; });
         params.cols = RH_EXPORT_KEYS.filter(function (key, i) { return key && rhDt.column(i).visible(); }).join(',');
         this.href = this.href.split('?')[0] + '?' + $.param(params);
     });
