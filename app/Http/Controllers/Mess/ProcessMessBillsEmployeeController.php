@@ -913,15 +913,17 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * Modal only: period paid / due / status per buyer the way computeCombinedBillFinancials
-     * does it — the buyer's payments (bills up to date_to, matched as in
-     * fetchBuyerPaidPoolByGroupKey) pooled and settled against
-     * line items oldest first. FIFO by date reduces to three aggregates, so no per-buyer loads:
+     * Modal only: period paid / due / status per buyer, settling the buyer's payments (bills up to
+     * date_to, matched as in fetchBuyerPaidPoolByGroupKey) against line items oldest first, as
+     * computeCombinedBillFinancials does, but against the grid row's period total. That total
+     * leaves out rejected kitchen issues, which the statement counts, so the two differ when one
+     * falls in the period. FIFO by date reduces to three aggregates, so no per-buyer loads:
      * period paid = min(period total, max(0, paid pool - net of lines dated before date_from)).
      *
      * The grid's light rows set a date-range voucher's whole paid_amount against only its
-     * in-range items, so a buyer with a part-paid multi-month voucher showed due 0 and was
-     * dropped from the modal. Rows are cloned so the cached grid rows stay as they are.
+     * in-range items, so a multi-month voucher whose part payment covered at least its in-range
+     * amount showed due 0 and the buyer was dropped from the modal (a smaller part payment
+     * understated the due). Rows are cloned so the cached grid rows stay as they are.
      */
     private function withBuyerPooledPeriodPaid(Collection $groups, string $dateFrom, string $dateTo): Collection
     {
@@ -973,18 +975,22 @@ class ProcessMessBillsEmployeeController extends Controller
      * date_to and mess-selling kitchen issues issued up to date_to, fetched where client_id is one
      * of the period's client ids or TRIM(client_name) equals one of the names on the period's bills
      * without a client id. Each row is pooled under its own group key (messBillBuyerGroupKeyFast():
-     * cid:<client_id> when it has one, otherwise name:<trimmed name>), and a buyer group sums only
-     * the keys of its own period bills.
+     * cid:<client_id>|<slug> when it has a client id and an allowed slug, otherwise
+     * name:<trimmed name>|<slug>), and a buyer group sums only the keys of its own period bills.
      *
      * The statement (resolveBuyerBillsForPaymentAllocation via MessBuyerClientFilter::apply) instead
      * resolves a client id from the buyer's name (SV vouchers, then kitchen issues, then, for
      * employee buyers, employee_master and faculty_master). When it finds one it takes rows with that
      * client id plus rows without a client id named with any of that client's nameVariants(), exactly
      * or as "<variant> (...)"; when it finds none, rows named exactly the buyer's name or
-     * "<name> (...)". OT/course buyers skip the resolution and match by name only. Any of those rows
-     * outside the group's own keys reach the statement's allocation but not this pool.
-     * MessGenerateInvoiceModalPaidTest covers name-only, client-id and no-client-id employee buyers
-     * on the uncached modal path, and a name-only buyer on the path warmed by the grid's "All" view.
+     * "<name> (...)". OT/course buyers skip the resolution and match by name only. The two row sets
+     * differ wherever these rules disagree: rows outside the group's own keys (e.g. a
+     * "<name> (Dept)" row without a client id) reach the statement's allocation but not this pool,
+     * and for an OT buyer with a client id, a row with that id under another name reaches this
+     * pool but not the statement.
+     * MessGenerateInvoiceModalPaidTest covers name-only buyers and client-id and no-client-id
+     * employee buyers on the uncached modal path, a name-only buyer on the path warmed by the grid's
+     * "All" view, and that the grid's default "Invoice Sent" view does not warm it.
      *
      * @param  array<int, int>  $clientIds
      * @param  array<int, string>  $names
@@ -1117,7 +1123,10 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * After the main grid loads, seed the modal summary cache without a second union query.
+     * Seed the modal summary cache from the grid's rows without a second union query. index()
+     * calls this for every view except "Invoice Sent" (whose rows are only already-invoiced
+     * buyers). It does nothing when a client type, client type pk or buyer filter is set, or when
+     * the summaries are already cached.
      *
      * @param  array<int, string>  $clientTypes
      * @param  array<int, string|int>  $clientTypePks

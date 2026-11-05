@@ -19,7 +19,7 @@ use Tests\TestCase;
  *
  * The modal gets there with a pooled shortcut (withBuyerPooledPeriodPaid) rather than
  * the per-line FIFO loop, so the two only agree while both read the same bills. These
- * tests fail if either side later changes on its own.
+ * tests fail if either side changes in a way that alters the scenarios below.
  *
  * Rows are dated in 2031 so no real bill falls in the period, every test is rolled back,
  * and the controller cache is pointed at the in-memory array store so nothing is left in
@@ -42,7 +42,7 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
 
     private const KITCHEN_CLIENT_TYPE_EMPLOYEE = 1;
 
-    /** mess_client_types "Academy Staff", the most common type on employee vouchers. */
+    /** mess_client_types "Academy Staff", the most common type on employee SV date-range vouchers. */
     private const EMPLOYEE_CLIENT_TYPE_PK = 2;
 
     private const FROM = '2031-09-01';
@@ -98,7 +98,8 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
     /**
      * Same defect for an employee buyer keyed by client_id: the pool is fetched through the
      * client_id filter and summed under the cid: group key. The statement resolves the client
-     * id from the buyer's own voucher and builds its name variants from employee_master.
+     * id from the buyer's own voucher and takes every row with that id (name variants, one of
+     * them from employee_master, only matter for rows without a client id).
      */
     public function test_part_paid_multi_month_voucher_for_an_employee_buyer(): void
     {
@@ -163,8 +164,8 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
         $buyer = $this->buyerName('G');
         $this->svVoucher($buyer, 1200, [['2031-08-15', 1000], ['2031-09-10', 1000]]);
 
-        // invoice_sent '' is the grid's "All" view; the default ("sent") returns early for buyers
-        // who have never been invoiced, as every 2031 test buyer is.
+        // invoice_sent '' is the grid's "All" view; the default "Invoice Sent" view does not warm
+        // the modal (see the next test).
         $client->getJson(route('admin.mess.process-mess-bills-employee.index', [
             'draw' => 1, 'start' => 0, 'length' => 25, 'date_from' => self::FROM, 'date_to' => self::TO,
             'invoice_sent' => '',
@@ -199,7 +200,8 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
         $this->svVoucher($notInvoiced, 0, [['2031-09-12', 700]]);
         $this->invoiceSent($invoiced, (int) $user->user_id);
 
-        // The "Invoice Sent" view narrows its query to this allowlist before the modal warm runs.
+        // The "Invoice Sent" view narrows its query to this allowlist, so its rows would hide any
+        // buyer not on it if they warmed the modal.
         $allowlist = new ReflectionMethod(ProcessMessBillsEmployeeController::class, 'getSentInvoiceBuyerAllowlistForDateRange');
         $allowlist->setAccessible(true);
         $this->assertSame(
@@ -323,7 +325,10 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
         ]);
     }
 
-    /** A combined invoice for the buyer covering FROM..TO, recorded as generateInvoice records it. */
+    /**
+     * A MessInvoiceCombined notification for the buyer covering FROM..TO, with the i/f/t payload
+     * generateInvoice writes (no notified line keys; the acting user is the receiver).
+     */
     private function invoiceSent(string $buyer, int $userId): void
     {
         DB::table('notifications')->insert([

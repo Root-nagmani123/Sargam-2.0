@@ -5,8 +5,9 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Covering index for the Process Mess Bills buyer paid pool (fetchBuyerPaidPoolByGroupKey):
- * the line-amount SUM reads quantity / return_quantity / rate from the index instead of the rows.
+ * Covering index for the kitchen-issue half of the Process Mess Bills buyer paid pool
+ * (fetchBuyerPaidPoolByGroupKey): its line-amount SUM over kitchen_issue_items reads
+ * quantity / return_quantity / rate from the index instead of the rows.
  */
 return new class extends Migration
 {
