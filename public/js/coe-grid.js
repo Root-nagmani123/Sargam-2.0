@@ -18,6 +18,7 @@
  *       rowCheck: '.qp-row-check',            // optional: export only ticked rows, if any
  *       reset: '#qpResetFilters',
  *       download: '#qpDownloadBtn', print: '#qpPrintBtn',
+ *       pdf: '#qpDownloadPdf',                // optional: PDF of the same rows/columns
  *       searchToggle: '#qpSearchToggle', searchSlot: '#qpDtSearch',
  *       colvisGrid: '#qpColumnToggleGrid', colvisKey: 'coeMyQuestionPaper:hiddenColumns:v1',
  *       empty: { title: '…', text: '…' }
@@ -98,14 +99,49 @@
                 ? function (idx, data, node) { return !anyTicked || $(node).find(o.rowCheck).prop('checked'); }
                 : null,
             modifier: { search: 'applied', order: 'applied' },
-            format: { body: function (data, row, column, node) { return $(node).text().replace(/\s+/g, ' ').trim(); } }
+            format: { body: function (data, row, column, node) {
+                // An editable cell exports what is typed in it.
+                var $field = $(node).find('input, select, textarea');
+                var text = $field.length ? $field.map(function () { return $(this).val(); }).get().join(' ') : $(node).text();
+                return String(text).replace(/\s+/g, ' ').trim();
+            } }
         };
         var filename = String(o.title || 'export').toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
         new $.fn.dataTable.Buttons(dt, {
             buttons: [
                 { extend: 'excelHtml5', title: o.title, filename: filename, exportOptions: exportOptions },
-                { extend: 'print', title: o.title, exportOptions: exportOptions }
+                {
+                    extend: 'print', title: o.title, exportOptions: exportOptions,
+                    // Fit every column on the page: landscape, wrapping cells, and
+                    // smaller type as columns grow (wide grids were cut off at the edge).
+                    customize: function (win) {
+                        var $body = $(win.document.body);
+                        var cols = $body.find('table thead th').length;
+                        var size = cols > 16 ? 7 : cols > 10 ? 8 : 10;
+                        $(win.document.head).append('<style>' +
+                            '@page { size: ' + (cols > 16 ? 'A3' : 'A4') + ' landscape; margin: 8mm; }' +
+                            'body { margin: 0; }' +
+                            'table { width: 100% !important; table-layout: fixed; border-collapse: collapse; font-size: ' + size + 'px; }' +
+                            'th, td { white-space: normal !important; word-break: break-word; padding: 3px 4px !important; vertical-align: top; }' +
+                            'h1 { font-size: 16px; margin: 0 0 8px; }' +
+                            '</style>');
+                    }
+                },
+                {
+                    extend: 'pdfHtml5', title: o.title, filename: filename, exportOptions: exportOptions,
+                    orientation: 'landscape', pageSize: 'A4',
+                    // Wide marks sheets: smaller type and a bigger page as columns grow.
+                    customize: function (doc) {
+                        var table = (doc.content || []).filter(function (c) { return c.table; })[0];
+                        var cols = table ? table.table.body[0].length : 0;
+                        var size = cols > 16 ? 6 : cols > 10 ? 7 : 9;
+                        doc.pageSize = cols > 16 ? 'A3' : 'A4';
+                        doc.defaultStyle.fontSize = size;
+                        doc.styles.tableHeader.fontSize = size;
+                        if (table) { table.table.widths = Array(cols).fill('*'); }
+                    }
+                }
             ]
         });
         function exportWith(button) {
@@ -115,6 +151,7 @@
         }
         $(o.download).on('click', function () { exportWith(0); });
         $(o.print).on('click', function () { exportWith(1); });
+        $(o.pdf).on('click', function () { exportWith(2); });
 
         /* Filters. Initialised here rather than through the global data-searchable
            hook: that one runs before admin_assets/js/custom.js, whose unscoped

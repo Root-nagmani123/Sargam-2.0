@@ -2238,6 +2238,16 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
             ->name('result-compilation.index');
         Route::get('result-compilation/participants', [\App\Http\Controllers\Admin\COE\ResultCompilationController::class, 'participants'])
             ->name('result-compilation.participants');
+        Route::post('result-compilation/notify', [\App\Http\Controllers\Admin\COE\ResultCompilationController::class, 'notify'])
+            ->middleware('throttle:10,1')->name('result-compilation.notify');
+    });
+    // Faculty end: enter and approve marks. Which columns and participants each
+    // faculty gets is decided per drive mapping in ResultMarksService.
+    Route::middleware('menu.permission:coe_faculty_result_entry')->group(function () {
+        Route::get('faculty-result-entry', [\App\Http\Controllers\Admin\COE\FacultyResultEntryController::class, 'index'])
+            ->name('faculty-result-entry.index');
+        Route::post('faculty-result-entry', [\App\Http\Controllers\Admin\COE\FacultyResultEntryController::class, 'save'])
+            ->name('faculty-result-entry.save');
     });
     Route::get('merit-ranking', [\App\Http\Controllers\Admin\COE\MeritRankingController::class, 'index'])
         ->middleware('menu.permission:coe_merit_ranking')->name('merit-ranking.index');

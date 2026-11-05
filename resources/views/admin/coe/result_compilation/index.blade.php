@@ -24,9 +24,7 @@
                class="coe-tab {{ $isArchived ? 'is-active' : '' }}" @if ($isArchived) aria-current="page" @endif>Archived</a>
         </nav>
         <div class="d-flex flex-wrap gap-2 coe-secondary-actions">
-            <button type="button" id="rcpDownloadBtn" class="btn programme-dt-btn-columns" title="Download as Excel">
-                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-            </button>
+            @include('admin.coe.partials.download_menu', ['prefix' => 'rcp'])
             <button type="button" id="rcpPrintBtn" class="btn programme-dt-btn-columns" title="Print">
                 <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
             </button>
@@ -42,7 +40,7 @@
                         <select id="rcpFilterCourse" class="form-select" data-placeholder="Course" aria-label="Course">
                             <option value="">Course</option>
                             @foreach ($courses as $c)
-                                <option value="{{ $c['name'] }}">{{ $c['name'] }}</option>
+                                <option value="{{ $c }}">{{ $c }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -76,12 +74,12 @@
                         </thead>
                         <tbody>
                             @foreach ($rows as $row)
-                                @php $q = ['course' => $row['course_key'], 'subject' => $row['subject']]; @endphp
+                                @php $q = ['course' => $row['course_pk'], 'subject' => $row['subject_pk'], 'scope' => $scope]; @endphp
                                 <tr>
                                     <td>{{ $row['course'] }}</td>
                                     <td class="coe-col-wrap">
                                         {{ $row['subject'] }}
-                                        <div class="coe-muted small">{{ $row['code'] }} · Maximum {{ rtrim(rtrim(number_format($row['max'], 2), '0'), '.') }}</div>
+                                        <div class="coe-muted small">{{ $row['code'] !== '' ? $row['code'].' · ' : '' }}Maximum {{ \App\Services\COE\ResultMarksService::number($row['max']) }}</div>
                                     </td>
                                     <td data-order="{{ $row['approved'] }}">
                                         <a href="{{ route('admin.coe.result-compilation.participants', $q + ['status' => 'evaluated']) }}">{{ $row['approved'] }} / {{ $row['total'] }}</a>
@@ -91,8 +89,11 @@
                                     </td>
                                     <td>{{ $row['average'] === null ? '—' : $row['average'].'%' }}</td>
                                     <td>
-                                        @if ($row['pending'] > 0)
-                                            <button type="button" class="coe-act coe-act--edit coe-act--wide rcp-notify">
+                                        @if ($row['pending'] > 0 && ! $isArchived && $row['blocker'])
+                                            <span class="coe-muted small">{{ $row['blocker'] }}</span>
+                                        @elseif ($row['pending'] > 0 && ! $isArchived)
+                                            <button type="button" class="coe-act coe-act--edit coe-act--wide rcp-notify"
+                                                    data-course="{{ $row['course_pk'] }}" data-subject="{{ $row['subject_pk'] }}">
                                                 <span class="coe-act__icon"><i class="bi bi-chat-square-dots" aria-hidden="true"></i></span>
                                                 <span class="coe-act__label">Notify for Pending</span>
                                             </button>
@@ -128,19 +129,30 @@ $(function () {
         exclude: [5],
         filters: { '#rcpFilterCourse': 0 },
         reset: '#rcpResetFilters',
-        download: '#rcpDownloadBtn',
+        download: '#rcpDownloadExcel',
+        pdf: '#rcpDownloadPdf',
         print: '#rcpPrintBtn',
         searchToggle: '#rcpSearchToggle',
         searchSlot: '#rcpDtSearch',
         colvisGrid: '#rcpColumnToggleGrid',
         colvisKey: 'coeResultCompilation:hiddenColumns:v1',
-        empty: { title: 'No Results', zeroTitle: 'No Results Found', text: 'No course has results to compile yet.' }
+        empty: { title: 'No Results', zeroTitle: 'No Results Found', text: 'Results appear here once faculty approve marks in Result Entry.' }
     });
 
-    // shortcut: no faculty notification exists yet; wire it when Evaluation & Marks stores marks.
+    // Bell notification to the faculty who still owe marks for this course + subject.
     $('#rcpTable').on('click', '.rcp-notify', function () {
-        Swal.fire({ icon: 'info', title: 'Notify for Pending',
-            text: 'Faculty reminders will be sent from here once Evaluation & Marks is live. This screen shows sample results.' });
+        var $btn = $(this).prop('disabled', true);
+        $.ajax({
+            url: @json(route('admin.coe.result-compilation.notify')),
+            method: 'POST',
+            data: { course: $btn.data('course'), subject: $btn.data('subject') },
+            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+        }).done(function (res) {
+            Swal.fire({ icon: 'success', title: 'Notify for Pending', text: res.message });
+        }).fail(function (xhr) {
+            Swal.fire({ icon: 'error', title: 'Notify for Pending',
+                text: (xhr.responseJSON && xhr.responseJSON.message) || 'Could not send the reminder.' });
+        }).always(function () { $btn.prop('disabled', false); });
     });
 });
 </script>
