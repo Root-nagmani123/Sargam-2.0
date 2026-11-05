@@ -98,12 +98,12 @@
                          along, minus the page number — page 4 of the live feed is rarely
                          page 4 of the archive. --}}
                     <div class="btn-group btn-group-sm notices-feed-scope" role="group" aria-label="Notice scope">
-                        <a href="{{ route('admin.dashboard.feed', array_merge(request()->except(['notice_scope', 'notice_year', 'page']), ['tab' => 'notices'])) }}"
+                        <a href="{{ route('admin.dashboard.feed', array_merge(request()->except(['notice_scope', 'notice_year', 'page', 'notice']), ['tab' => 'notices'])) }}"
                             class="btn {{ $noticeIsArchive ? 'btn-outline-secondary' : 'btn-primary' }}"
                             @if(!$noticeIsArchive) aria-current="page" @endif>
                             <i class="bi bi-megaphone me-1" aria-hidden="true"></i>Current
                         </a>
-                        <a href="{{ route('admin.dashboard.feed', array_merge(request()->except(['notice_year', 'page']), ['tab' => 'notices', 'notice_scope' => 'archive'])) }}"
+                        <a href="{{ route('admin.dashboard.feed', array_merge(request()->except(['notice_year', 'page', 'notice']), ['tab' => 'notices', 'notice_scope' => 'archive'])) }}"
                             class="btn {{ $noticeIsArchive ? 'btn-primary' : 'btn-outline-secondary' }}"
                             @if($noticeIsArchive) aria-current="page" @endif>
                             <i class="bi bi-archive me-1" aria-hidden="true"></i>Archive
@@ -113,6 +113,12 @@
                         </a>
                     </div>
                 </div>
+
+                @if($noticeFilters['focusMissing'] ?? false)
+                <div class="alert alert-warning small py-2 mb-3 mt-2" role="status">
+                    <i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>The notice you opened is no longer available. It may have been withdrawn or deleted.
+                </div>
+                @endif
 
                 @if($noticeIsArchive)
                 <p class="text-body-secondary small mb-3 mt-2">
@@ -183,7 +189,8 @@
                     @endif
                 </form>
 
-                <div id="dashboard-feed-page-list-notices">
+                <div id="dashboard-feed-page-list-notices"
+                    @if(!empty($noticeFilters['focus'])) data-focus-notice="{{ (int) $noticeFilters['focus'] }}" @endif>
                     @forelse($notices as $feedNotice)
                     @php
                         // Still used below to pick the badge class/label.
@@ -682,6 +689,21 @@ document.addEventListener('click', function(e) {
         e.preventDefault();
         head.click();
     });
+
+    // Arrived from a bell notification (?notice=<pk>): the server has already
+    // picked the page holding it, so pin its card open and bring it into view.
+    const focusPk = list.dataset.focusNotice;
+    if (focusPk) {
+        const focusItem = list.querySelector('.notices-feed-item[data-notice-pk="' + focusPk + '"]');
+        if (focusItem) {
+            closeOthers(focusItem);
+            setOpen(focusItem, true);
+            focusItem.classList.add('is-pinned');
+            focusItem.scrollIntoView({ block: 'center' });
+            const focusHead = focusItem.querySelector('.notices-feed-item__header');
+            if (focusHead) focusHead.focus({ preventScroll: true });
+        }
+    }
 }());
 document.addEventListener('click', function(e) {
     const toggleBtn = e.target && e.target.closest ? e.target.closest('.notice-desc-toggle') : null;

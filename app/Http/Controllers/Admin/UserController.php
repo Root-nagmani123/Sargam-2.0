@@ -30,6 +30,7 @@ use App\Models\EmployeeMaster;
 use App\Models\EmployeeRoleMapping;
 use App\Models\FacultyMaster;
 use App\Models\Holiday;
+use App\Services\NoticeBellNotifier;
 use App\Services\NotificationService;
 use App\Exports\LbsnaaTableExport;
 use Maatwebsite\Excel\Facades\Excel;
@@ -1254,7 +1255,39 @@ class UserController extends Controller
             'dept'     => is_scalar($v = $request?->query('notice_dept')) ? trim((string) $v) : '',
             'audience' => is_scalar($v = $request?->query('notice_audience')) ? trim((string) $v) : '',
             'q'        => is_scalar($v = $request?->query('q')) ? trim((string) $v) : '',
+            'focus'    => null,
+            'focusMissing' => false,
         ];
+
+        // A bell link (?notice=<pk>) opens the page holding that notice, on
+        // whichever side of expiry it now sits, and the view expands its card.
+        // Only on a bare link: a filter or page the user picked wins over it. The
+        // role-scoped query decides visibility, so the link reveals nothing the
+        // feed would not.
+        $rawFocus = $request?->query('notice');
+        $focusPk = is_scalar($rawFocus) && ctype_digit((string) $rawFocus) ? (int) $rawFocus : null;
+        $locateFocus = $focusPk !== null
+            && $request->query('page') === null
+            && $filters['year'] === '' && $filters['type'] === '' && $filters['dept'] === ''
+            && $filters['audience'] === '' && $filters['q'] === '';
+
+        if ($locateFocus) {
+            $visibleIn = fn (string $s) => ($q = notice_feed_query_by_role($s))
+                && $q->where('notices_notification.pk', $focusPk)->exists();
+
+            if ($visibleIn('live')) {
+                $scope = $filters['scope'] = 'live';
+            } elseif ($visibleIn('archive')) {
+                $scope = $filters['scope'] = 'archive';
+            } else {
+                $locateFocus = false;
+                $filters['focusMissing'] = true;
+            }
+        }
+
+        if ($focusPk !== null && ! $filters['focusMissing']) {
+            $filters['focus'] = $focusPk;
+        }
 
         $base = notice_feed_query_by_role($scope);
 
@@ -1345,7 +1378,40 @@ class UserController extends Controller
             });
         }
 
-        $notices = $base->paginate(self::NOTICE_FEED_PER_PAGE)->withQueryString();
+        // Which page holds the focused notice: count the notices the feed orders
+        // ahead of it (display_date desc, then pk desc; NULL dates sort last).
+        $page = null;
+        if ($locateFocus) {
+            $displayDate = DB::table('notices_notification')->where('pk', $focusPk)->value('display_date');
+
+            $ahead = (clone $base)->reorder()->where(function ($w) use ($displayDate, $focusPk) {
+                $samePlace = fn ($q) => $displayDate === null
+                    ? $q->whereNull('notices_notification.display_date')
+                    : $q->where('notices_notification.display_date', $displayDate);
+
+                $w->where(fn ($t) => $samePlace($t)->where('notices_notification.pk', '>', $focusPk));
+
+                if ($displayDate === null) {
+                    $w->orWhereNotNull('notices_notification.display_date');
+                } else {
+                    $w->orWhere('notices_notification.display_date', '>', $displayDate);
+                }
+            })->count();
+
+            $page = intdiv($ahead, self::NOTICE_FEED_PER_PAGE) + 1;
+        }
+
+        // `notice` stays out of the page links: paging on from the focused notice
+        // is ordinary browsing, not a second jump back to it. The scope the link
+        // landed on goes in instead, or page 2 of an archived notice's list would
+        // open the live feed.
+        $linkQuery = $request ? $request->except(['notice', 'page', 'notice_scope']) : [];
+        if ($scope === 'archive') {
+            $linkQuery['notice_scope'] = 'archive';
+        }
+
+        $notices = $base->paginate(self::NOTICE_FEED_PER_PAGE, ['*'], 'page', $page)
+            ->appends($linkQuery);
 
         return [$notices, $filterOptions, $filters];
     }
@@ -9037,6 +9103,23 @@ class UserController extends Controller
             }
             if ($table === 'issue_priority_master') {
                 IssuePriorityController::bumpIndexListCacheEpoch();
+            }
+            // An inactive notice leaves the feed, so its bell entries go with it;
+            // re-activating it announces it again (after the response, as on save).
+            if ($table === 'notices_notification' && (int) $previous !== $status) {
+                if ($status === 1) {
+                    $noticePk = (int) $id;
+                    $sender = Auth::id();
+                    app()->terminating(function () use ($noticePk, $sender) {
+                        try {
+                            app(NoticeBellNotifier::class)->publish($noticePk, false, $sender);
+                        } catch (\Throwable $e) {
+                            report($e);
+                        }
+                    });
+                } else {
+                    app(NoticeBellNotifier::class)->withdraw((int) $id);
+                }
             }
 
             $newState = ((int) $status === 1) ? 'Active' : 'Inactive';
