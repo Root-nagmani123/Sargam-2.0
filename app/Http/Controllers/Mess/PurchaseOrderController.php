@@ -37,7 +37,8 @@ class PurchaseOrderController extends Controller
         if ($request->ajax() && $request->has('draw')) {
             return DataTableRedisCache::serveCachedAjax(
                 $request,
-                'purchase_order_dt:v1:',
+                // v2: list gained Order Date, Bill No. and Challan No. columns.
+                'purchase_order_dt:v2:',
                 self::PURCHASE_ORDER_DT_LIST_EPOCH,
                 [
                     'enabled' => 'PURCHASE_ORDER_DATATABLE_CACHE_ENABLED',
@@ -168,6 +169,8 @@ class PurchaseOrderController extends Controller
                     $like = DataTableSearchHelper::likePattern($token);
                     $q->where(function ($inner) use ($like) {
                         $inner->where('po_number', 'like', $like)
+                            ->orWhere('bill_no', 'like', $like)
+                            ->orWhere('challan_no', 'like', $like)
                             ->orWhere('status', 'like', $like)
                             ->orWhereHas('vendor', function ($v) use ($like) {
                                 $v->where('name', 'like', $like);
@@ -195,16 +198,25 @@ class PurchaseOrderController extends Controller
                 $paged->orderBy($table . '.po_number', $orderDir);
                 break;
             case 2:
+                $paged->orderBy($table . '.po_date', $orderDir);
+                break;
+            case 3:
+                $paged->orderBy($table . '.bill_no', $orderDir);
+                break;
+            case 4:
+                $paged->orderBy($table . '.challan_no', $orderDir);
+                break;
+            case 5:
                 $paged->leftJoin('mess_vendors as po_sort_v', $table . '.vendor_id', '=', 'po_sort_v.id')
                     ->orderBy('po_sort_v.name', $orderDir)
                     ->select($table . '.*');
                 break;
-            case 3:
+            case 6:
                 $paged->leftJoin('mess_stores as po_sort_s', $table . '.store_id', '=', 'po_sort_s.id')
                     ->orderBy('po_sort_s.store_name', $orderDir)
                     ->select($table . '.*');
                 break;
-            case 4:
+            case 7:
                 $paged->orderBy($table . '.status', $orderDir);
                 break;
             default:
@@ -231,6 +243,9 @@ class PurchaseOrderController extends Controller
             $row = [
                 '<span class="ps-4 d-inline-block text-body-secondary fw-medium">' . ($rowStart + $index) . '</span>',
                 '<span class="fw-semibold text-body">' . e($po->po_number) . '</span>',
+                '<span class="text-body-secondary text-nowrap">' . e($po->po_date ? $po->po_date->format('d-m-Y') : '—') . '</span>',
+                '<span class="text-body-secondary">' . e(trim((string) $po->bill_no) !== '' ? $po->bill_no : '—') . '</span>',
+                '<span class="text-body-secondary">' . e(trim((string) $po->challan_no) !== '' ? $po->challan_no : '—') . '</span>',
                 '<span class="text-body-secondary">' . e(optional($po->vendor)->name ?? 'N/A') . '</span>',
                 '<span class="text-body-secondary">' . e(optional($po->store)->store_name ?? 'N/A') . '</span>',
                 '<span class="badge rounded-1 ' . $statusBadgeClass . ' px-3 py-1 fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.02em;">' . e(ucfirst($po->status)) . '</span>',

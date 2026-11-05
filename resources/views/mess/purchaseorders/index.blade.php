@@ -130,6 +130,9 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                                 <tr>
                                     <th scope="col">#</th>
                                     <th scope="col">Order No.</th>
+                                    <th scope="col">Order Date</th>
+                                    <th scope="col">Bill No./Invoice No</th>
+                                    <th scope="col">Challan No./Reference</th>
                                     <th scope="col">Vendor</th>
                                     <th scope="col">Store</th>
                                     <th scope="col">Status</th>
@@ -457,7 +460,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 'tableId' => 'purchaseOrdersTable',
 'searchPlaceholder' => 'Search purchase orders...',
 'orderColumn' => 1,
-'actionColumnIndex' => 5,
+'actionColumnIndex' => 8,
 'infoLabel' => 'purchase orders',
 'serverSide' => true,
 'ajaxUrlBase' => route('admin.mess.purchaseorders.index')
@@ -468,7 +471,7 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 <script>
 (function() {
     var poListPrintRestore = null;
-    var PO_ACTION_COL_INDEX = 5;
+    var PO_ACTION_COL_INDEX = 8;
 
     function poMarkActionColumnCells() {
         if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) return;
