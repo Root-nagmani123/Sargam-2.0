@@ -194,6 +194,23 @@
 }
 
 /* ── Row actions: icon over label (docs/new-design-index-page.md §3b) ── */
+/* Master pages (shared examination_term/index view): with few columns the last
+   column took the spare width and centred its buttons mid-table. Keep Action
+   only as wide as its buttons, at the right edge, and pinned there when the
+   table scrolls sideways. Solid backgrounds so scrolled cells don't show through. */
+.coe-page .coe-master-table th.coe-cell-actions,
+.coe-page .coe-master-table td.coe-cell-actions {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+    position: sticky;
+    right: 0;
+    z-index: 1;
+}
+.coe-page .coe-master-table td.coe-cell-actions { background: #fff; }
+.coe-page .coe-master-table tbody tr:hover td.coe-cell-actions { background: #fafbfd; }
+.coe-page .coe-act[disabled] { opacity: .45; cursor: not-allowed; }
+
 .coe-page .programme-dt-table th:last-child,
 .coe-page .programme-dt-table td:last-child { text-align: center; }
 

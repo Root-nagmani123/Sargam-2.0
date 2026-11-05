@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin\COE;
 
 use App\DataTables\ExaminationTypeMasterDataTable;
+use App\Http\Controllers\Admin\COE\Concerns\ExportsCoeMaster;
 use App\Http\Controllers\Admin\COE\Concerns\RendersSimpleMaster;
 use App\Http\Controllers\Controller;
+use App\Models\ExaminationDrive;
 use App\Models\ExaminationTypeMaster;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,6 +23,7 @@ use Illuminate\Validation\Rule;
 class ExaminationTypeController extends Controller
 {
     use RendersSimpleMaster;
+    use ExportsCoeMaster;
 
     public function index(ExaminationTypeMasterDataTable $dataTable)
     {
@@ -38,11 +41,15 @@ class ExaminationTypeController extends Controller
             ],
             'sno' => ['show' => true, 'label' => 'S. No.'],
             'filters' => [],
+            // Active / Inactive filter and the Action column pinned to the right.
+            'statusFilter' => true,
+            'pinActions' => true,
             'fields' => [
                 $this->nameField('exam_type_name', 'Examination Type', 'eg. Written Test'),
             ],
             'endpoints' => [
                 'list' => route('admin.coe.examination-type.index'),
+                'export' => route('admin.coe.examination-type.export', ['format' => '__FORMAT__']),
                 'store' => route('admin.coe.examination-type.store'),
                 'destroy' => route('admin.coe.examination-type.destroy', ['id' => '__ID__']),
                 'toggle' => route('admin.coe.examination-type.toggle-status', ['id' => '__ID__']),
@@ -50,7 +57,8 @@ class ExaminationTypeController extends Controller
         ];
         $master['formOrder'] = array_column($master['fields'], 'key');
 
-        return $dataTable->render('admin.coe.examination_type.index', ['master' => $master]);
+        // Same shared master page as Term / Component (status filter, actions on the right).
+        return $dataTable->render('admin.coe.examination_term.index', ['master' => $master]);
     }
 
     public function store(Request $request): JsonResponse
@@ -95,10 +103,40 @@ class ExaminationTypeController extends Controller
         return response()->json(['status' => 'success']);
     }
 
+    /** Only an inactive type that no examination drive uses can be deleted. */
     public function destroy(string $id): JsonResponse
     {
-        ExaminationTypeMaster::where('pk', decrypt($id))->delete();
+        $model = ExaminationTypeMaster::findOrFail(decrypt($id));
+
+        if ((int) $model->active_inactive === 1) {
+            return response()->json(['status' => 'error', 'message' => 'An active examination type cannot be deleted. Deactivate it first.'], 422);
+        }
+        $drives = ExaminationDrive::where('examination_type_master_pk', $model->pk)->count();
+        if ($drives > 0) {
+            return response()->json(['status' => 'error',
+                'message' => "This examination type is used by {$drives} examination drive(s) and cannot be deleted."], 422);
+        }
+
+        $model->delete();
 
         return response()->json(['status' => 'success', 'message' => 'Examination type deleted successfully.']);
+    }
+
+    /** CSV / Excel / PDF / Print of the grid as filtered on screen (ExportsCoeMaster). */
+    public function export(Request $request, string $format)
+    {
+        return $this->exportCoeMaster(
+            $request,
+            $format,
+            ExaminationTypeMaster::query()->orderBy('exam_type_name'),
+            [
+                'sno' => $this->coeSnoColumn(),
+                'name' => ['heading' => 'Examination Type', 'width' => '68%', 'align' => 'left', 'value' => fn ($row) => $row->exam_type_name],
+                'status' => $this->coeStatusColumn(),
+            ],
+            fn ($query, string $term) => $query->where('exam_type_name', 'like', '%' . $term . '%'),
+            'Examination Type Master',
+            'ExaminationTypeMaster'
+        );
     }
 }

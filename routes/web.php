@@ -2068,6 +2068,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
     // COE -> Master Data
     Route::get('examination-type', [\App\Http\Controllers\Admin\COE\ExaminationTypeController::class, 'index'])
         ->name('examination-type.index');
+    Route::get('examination-type/export/{format}', [\App\Http\Controllers\Admin\COE\ExaminationTypeController::class, 'export'])
+        ->whereIn('format', ['csv', 'excel', 'pdf', 'print'])->name('examination-type.export');
     Route::post('examination-type', [\App\Http\Controllers\Admin\COE\ExaminationTypeController::class, 'store'])
         ->name('examination-type.store');
     Route::patch('examination-type/{id}/toggle-status', [\App\Http\Controllers\Admin\COE\ExaminationTypeController::class, 'toggleStatus'])
@@ -2076,6 +2078,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('examination-type.destroy');
     Route::get('examination-term', [\App\Http\Controllers\Admin\COE\ExaminationTermController::class, 'index'])
         ->name('examination-term.index');
+    Route::get('examination-term/export/{format}', [\App\Http\Controllers\Admin\COE\ExaminationTermController::class, 'export'])
+        ->whereIn('format', ['csv', 'excel', 'pdf', 'print'])->name('examination-term.export');
     Route::post('examination-term', [\App\Http\Controllers\Admin\COE\ExaminationTermController::class, 'store'])
         ->name('examination-term.store');
     Route::patch('examination-term/{id}/toggle-status', [\App\Http\Controllers\Admin\COE\ExaminationTermController::class, 'toggleStatus'])
@@ -2084,6 +2088,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('examination-term.destroy');
     Route::get('component-master', [\App\Http\Controllers\Admin\COE\ComponentMasterController::class, 'index'])
         ->name('component-master.index');
+    Route::get('component-master/export/{format}', [\App\Http\Controllers\Admin\COE\ComponentMasterController::class, 'export'])
+        ->whereIn('format', ['csv', 'excel', 'pdf', 'print'])->name('component-master.export');
     Route::post('component-master', [\App\Http\Controllers\Admin\COE\ComponentMasterController::class, 'store'])
         ->name('component-master.store');
     Route::delete('component-master/{id}', [\App\Http\Controllers\Admin\COE\ComponentMasterController::class, 'destroy'])
@@ -2092,6 +2098,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('component-master.toggle-status');
     Route::get('subject-max-marks', [\App\Http\Controllers\Admin\COE\SubjectMaxMarksController::class, 'index'])
         ->name('subject-max-marks.index');
+    Route::get('subject-max-marks/export/{format}', [\App\Http\Controllers\Admin\COE\SubjectMaxMarksController::class, 'export'])
+        ->whereIn('format', ['csv', 'excel', 'pdf', 'print'])->name('subject-max-marks.export');
     Route::post('subject-max-marks', [\App\Http\Controllers\Admin\COE\SubjectMaxMarksController::class, 'store'])
         ->name('subject-max-marks.store');
     Route::delete('subject-max-marks/{id}', [\App\Http\Controllers\Admin\COE\SubjectMaxMarksController::class, 'destroy'])
@@ -2100,6 +2108,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('subject-max-marks.toggle-status');
     Route::get('service-passing-marks', [\App\Http\Controllers\Admin\COE\ServicePassingMarksController::class, 'index'])
         ->name('service-passing-marks.index');
+    Route::get('service-passing-marks/export/{format}', [\App\Http\Controllers\Admin\COE\ServicePassingMarksController::class, 'export'])
+        ->whereIn('format', ['csv', 'excel', 'pdf', 'print'])->name('service-passing-marks.export');
     Route::post('service-passing-marks', [\App\Http\Controllers\Admin\COE\ServicePassingMarksController::class, 'store'])
         ->name('service-passing-marks.store');
     Route::delete('service-passing-marks/{id}', [\App\Http\Controllers\Admin\COE\ServicePassingMarksController::class, 'destroy'])

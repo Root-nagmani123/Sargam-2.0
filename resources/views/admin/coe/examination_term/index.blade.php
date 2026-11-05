@@ -31,19 +31,59 @@
 
     <x-session_message />
 
+    @php $exportUrl = fn (string $format) => str_replace('__FORMAT__', $format, $master['endpoints']['export'] ?? ''); @endphp
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 coe-secondary-actions">
+        @if (! empty($master['endpoints']['export']))
+            {{-- Sargam's master export (docs/new-design-index-page.md §1): CSV / Excel / PDF and a
+                 server-rendered branded Print, all from ExportsCoeMaster. ?q=, ?status_filter= and
+                 ?cols= are stamped on by CoeGrid so each format is the grid as currently shown. --}}
+            <div class="dropdown">
+                <button type="button" id="{{ $p }}DownloadToggle"
+                        class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                        data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                    <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="{{ $p }}DownloadToggle">
+                    <li><a class="dropdown-item coe-export-link" href="{{ $exportUrl('csv') }}">
+                        <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i> CSV</a></li>
+                    <li><a class="dropdown-item coe-export-link" href="{{ $exportUrl('excel') }}">
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Excel (.xlsx)</a></li>
+                    <li><a class="dropdown-item coe-export-link" href="{{ $exportUrl('pdf') }}">
+                        <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF</a></li>
+                </ul>
+            </div>
+            <a href="{{ $exportUrl('print') }}" target="_blank" rel="noopener"
+               class="btn programme-dt-btn-columns border-0 text-primary coe-export-link" title="Print">
+                <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
+            </a>
+        @else
         <button type="button" id="{{ $p }}DownloadBtn" class="btn programme-dt-btn-columns" title="Download as Excel">
             <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
         </button>
         <button type="button" id="{{ $p }}PrintBtn" class="btn programme-dt-btn-columns" title="Print">
             <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
         </button>
+        @endif
     </div>
 
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
 
-            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-4 programme-dt-toolbar coe-toolbar">
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar coe-toolbar">
+                {{-- Active / Inactive filter (the grid reads status_filter); only masters that set statusFilter --}}
+                @if (! empty($master['statusFilter']))
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filter</span>
+                    <div class="programme-dt-filter-select">
+                        <select id="{{ $p }}StatusFilter" class="form-select" aria-label="Status">
+                            <option value="">Status</option>
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                    </div>
+                    <button type="button" id="{{ $p }}ResetFilters" class="btn programme-dt-btn-reset">Remove Filter</button>
+                </div>
+                @endif
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
                     <button type="button" class="btn programme-dt-btn-columns"
                             data-bs-toggle="modal" data-bs-target="#{{ $p }}ColumnVisibilityModal"
@@ -62,7 +102,7 @@
 
             <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table id="{{ $p }}Table" class="table table-hover align-middle mb-0 w-100 programme-dt-table">
+                    <table id="{{ $p }}Table" class="table table-hover align-middle mb-0 w-100 programme-dt-table {{ ! empty($master['pinActions']) ? 'coe-master-table' : '' }}">
                         <thead>
                             <tr>
                                 <th scope="col" class="coe-col-sno">{{ $master['sno']['label'] }}</th>

@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin\COE;
 
 use App\DataTables\ExaminationTermMasterDataTable;
+use App\Http\Controllers\Admin\COE\Concerns\ExportsCoeMaster;
 use App\Http\Controllers\Admin\COE\Concerns\RendersSimpleMaster;
 use App\Http\Controllers\Controller;
+use App\Models\ExaminationDrive;
 use App\Models\TermMaster;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,6 +23,7 @@ use Illuminate\Validation\Rule;
 class ExaminationTermController extends Controller
 {
     use RendersSimpleMaster;
+    use ExportsCoeMaster;
 
     public function index(ExaminationTermMasterDataTable $dataTable)
     {
@@ -38,11 +41,15 @@ class ExaminationTermController extends Controller
             ],
             'sno' => ['show' => true, 'label' => 'S. No.'],
             'filters' => [],
+            // Active / Inactive filter and the Action column pinned to the right.
+            'statusFilter' => true,
+            'pinActions' => true,
             'fields' => [
                 $this->nameField('term_name', 'Examination Term', 'eg. Mid term'),
             ],
             'endpoints' => [
                 'list' => route('admin.coe.examination-term.index'),
+                'export' => route('admin.coe.examination-term.export', ['format' => '__FORMAT__']),
                 'store' => route('admin.coe.examination-term.store'),
                 'destroy' => route('admin.coe.examination-term.destroy', ['id' => '__ID__']),
                 'toggle' => route('admin.coe.examination-term.toggle-status', ['id' => '__ID__']),
@@ -95,10 +102,40 @@ class ExaminationTermController extends Controller
         return response()->json(['status' => 'success']);
     }
 
+    /** Only an inactive term that no examination drive uses can be deleted. */
     public function destroy(string $id): JsonResponse
     {
-        TermMaster::where('pk', decrypt($id))->delete();
+        $model = TermMaster::findOrFail(decrypt($id));
+
+        if ((int) $model->active_inactive === 1) {
+            return response()->json(['status' => 'error', 'message' => 'An active examination term cannot be deleted. Deactivate it first.'], 422);
+        }
+        $drives = ExaminationDrive::where('term_master_pk', $model->pk)->count();
+        if ($drives > 0) {
+            return response()->json(['status' => 'error',
+                'message' => "This examination term is used by {$drives} examination drive(s) and cannot be deleted."], 422);
+        }
+
+        $model->delete();
 
         return response()->json(['status' => 'success', 'message' => 'Examination term deleted successfully.']);
+    }
+
+    /** CSV / Excel / PDF / Print of the grid as filtered on screen (ExportsCoeMaster). */
+    public function export(Request $request, string $format)
+    {
+        return $this->exportCoeMaster(
+            $request,
+            $format,
+            TermMaster::query()->orderBy('term_name'),
+            [
+                'sno' => $this->coeSnoColumn(),
+                'name' => ['heading' => 'Examination Term', 'width' => '68%', 'align' => 'left', 'value' => fn ($row) => $row->term_name],
+                'status' => $this->coeStatusColumn(),
+            ],
+            fn ($query, string $term) => $query->where('term_name', 'like', '%' . $term . '%'),
+            'Examination Term Master',
+            'ExaminationTermMaster'
+        );
     }
 }

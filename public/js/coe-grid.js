@@ -943,7 +943,8 @@
             title: cfg.title,
             serverSide: true,
             processing: true,
-            ajax: endpoints.list,
+            // Status filter (Active / Inactive) goes to the grid as status_filter.
+            ajax: { url: endpoints.list, data: function (d) { d.status_filter = $(P + 'StatusFilter').val() || ''; } },
             columns: columns,
             order: [],
             noSort: [COL.sno, COL.status, COL.action],
@@ -960,6 +961,34 @@
         });
 
         function reload() { dt.ajax.reload(null, false); }
+
+        $(P + 'StatusFilter').on('change', function () { dt.ajax.reload(); });
+        $(P + 'ResetFilters').on('click', function () { $(P + 'StatusFilter').val(''); dt.ajax.reload(); });
+
+        /* Export links (CSV / Excel / PDF / Print) follow the grid: search term,
+           status filter and visible columns. Column keys match the controller's
+           export column defs: sno, each field key, status (Action is never exported). */
+        var exportKeys = columns.map(function (c, i) {
+            if (i === COL.sno) { return 'sno'; }
+            if (i === COL.status) { return 'status'; }
+            if (i === COL.action) { return ''; }
+            return fields[i - 1].key;
+        });
+        function syncExportLinks() {
+            var keys = [], all = exportKeys.filter(Boolean).length;
+            dt.columns().every(function () { var k = exportKeys[this.index()]; if (k && this.visible()) { keys.push(k); } });
+            $('.coe-export-link').each(function () {
+                var parts = this.href.split('?'), params = new URLSearchParams(parts[1] || '');
+                ['q', 'status_filter', 'cols'].forEach(function (k) { params.delete(k); });
+                if (dt.search()) { params.set('q', dt.search()); }
+                if ($(P + 'StatusFilter').val()) { params.set('status_filter', $(P + 'StatusFilter').val()); }
+                if (keys.length && keys.length !== all) { params.set('cols', keys.join(',')); }
+                var qs = params.toString();
+                this.href = parts[0] + (qs ? '?' + qs : '');
+            });
+        }
+        dt.on('draw column-visibility.dt', syncExportLinks);
+        syncExportLinks();
 
         confirmStatus({
             table: P + 'Table',

@@ -79,7 +79,9 @@ class ExaminationTermMasterDataTable extends DataTable
             . 'class="form-check-input plain-status-toggle coe-switch"' . ($active ? ' checked' : '')
             . ' aria-label="' . ($active ? 'Deactivate' : 'Activate') . '"></span>'
             . '<span class="coe-act__label">' . ($active ? 'Deactivate' : 'Activate') . '</span></label>'
-            . '<button type="button" class="coe-act coe-act--del">'
+            // An active term cannot be deleted (ExaminationTermController::destroy); deactivate first.
+            . '<button type="button" class="coe-act coe-act--del"'
+            . ($active ? ' disabled title="Deactivate the examination term before deleting it"' : '') . '>'
             . '<span class="coe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>'
             . '<span class="coe-act__label">Delete</span></button>'
             . '</div>';

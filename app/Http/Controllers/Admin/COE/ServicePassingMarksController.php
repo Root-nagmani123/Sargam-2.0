@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin\COE;
 
 use App\DataTables\ServicePassingMarksDataTable;
+use App\DataTables\SubjectMaxMarksDataTable;
+use App\Http\Controllers\Admin\COE\Concerns\ExportsCoeMaster;
 use App\Http\Controllers\Controller;
 use App\Models\ServiceMaster;
 use App\Models\ServicePassingMarksMaster;
@@ -19,6 +21,8 @@ use Illuminate\Validation\Rule;
  */
 class ServicePassingMarksController extends Controller
 {
+    use ExportsCoeMaster;
+
     public function index(ServicePassingMarksDataTable $dataTable)
     {
         $master = [
@@ -35,6 +39,9 @@ class ServicePassingMarksController extends Controller
             ],
             'sno' => ['show' => true, 'label' => 'S. No.'],
             'filters' => [],
+            // Active / Inactive filter (exports follow it) and the Action column pinned to the right.
+            'statusFilter' => true,
+            'pinActions' => true,
             'fields' => [
                 [
                     'key' => 'service', 'name' => 'service_master_pk', 'label' => 'Service', 'column' => 'Service',
@@ -48,6 +55,7 @@ class ServicePassingMarksController extends Controller
             ],
             'endpoints' => [
                 'list' => route('admin.coe.service-passing-marks.index'),
+                'export' => route('admin.coe.service-passing-marks.export', ['format' => '__FORMAT__']),
                 'store' => route('admin.coe.service-passing-marks.store'),
                 'destroy' => route('admin.coe.service-passing-marks.destroy', ['id' => '__ID__']),
                 'toggle' => route('admin.coe.service-passing-marks.toggle-status', ['id' => '__ID__']),
@@ -103,9 +111,16 @@ class ServicePassingMarksController extends Controller
         return response()->json(['status' => 'success']);
     }
 
+    /** Only an inactive entry can be deleted: faculty setup and drives read the active one as the service's passing marks. */
     public function destroy(string $id): JsonResponse
     {
-        ServicePassingMarksMaster::where('pk', decrypt($id))->delete();
+        $model = ServicePassingMarksMaster::findOrFail(decrypt($id));
+
+        if ((int) $model->active_inactive === 1) {
+            return response()->json(['status' => 'error', 'message' => 'Active service passing marks cannot be deleted. Deactivate them first.'], 422);
+        }
+
+        $model->delete();
 
         return response()->json(['status' => 'success', 'message' => 'Service passing marks deleted successfully.']);
     }
@@ -123,5 +138,29 @@ class ServicePassingMarksController extends Controller
             ->pluck('service_name', 'pk')
             ->map(fn ($name) => trim($name))
             ->all();
+    }
+
+    /** CSV / Excel / PDF / Print of the grid as shown on screen (ExportsCoeMaster). */
+    public function export(Request $request, string $format)
+    {
+        return $this->exportCoeMaster(
+            $request,
+            $format,
+            ServicePassingMarksMaster::query()->with('service')->orderByDesc('pk'),
+            [
+                'sno' => $this->coeSnoColumn(),
+                'service' => ['heading' => 'Service', 'width' => '48%', 'align' => 'left',
+                    'value' => fn ($row) => $row->service ? $row->service->service_short_name . ' - ' . $row->service->service_name : ''],
+                'marks' => ['heading' => 'Passing Marks', 'width' => '20%', 'align' => 'center',
+                    'value' => fn ($row) => SubjectMaxMarksDataTable::marks($row->passing_marks)],
+                'status' => $this->coeStatusColumn(),
+            ],
+            // Same match as the grid's search: full or short service name.
+            fn ($query, string $term) => $query->whereHas('service', fn ($q) => $q
+                ->where('service_name', 'like', '%' . $term . '%')
+                ->orWhere('service_short_name', 'like', '%' . $term . '%')),
+            'Service Passing Marks',
+            'ServicePassingMarks'
+        );
     }
 }

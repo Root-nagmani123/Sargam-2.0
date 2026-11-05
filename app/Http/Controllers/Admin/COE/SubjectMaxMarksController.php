@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\COE;
 
 use App\DataTables\SubjectMaxMarksDataTable;
+use App\Http\Controllers\Admin\COE\Concerns\ExportsCoeMaster;
 use App\Http\Controllers\Controller;
 use App\Models\SubjectMaster;
 use App\Models\SubjectMaxMarksMaster;
@@ -19,6 +20,8 @@ use Illuminate\Validation\Rule;
  */
 class SubjectMaxMarksController extends Controller
 {
+    use ExportsCoeMaster;
+
     public function index(SubjectMaxMarksDataTable $dataTable)
     {
         $master = [
@@ -35,6 +38,9 @@ class SubjectMaxMarksController extends Controller
             ],
             'sno' => ['show' => true, 'label' => 'S. No.'],
             'filters' => [],
+            // Active / Inactive filter (exports follow it) and the Action column pinned to the right.
+            'statusFilter' => true,
+            'pinActions' => true,
             'fields' => [
                 [
                     'key' => 'subject', 'name' => 'subject_master_pk', 'label' => 'Subject', 'column' => 'Subject',
@@ -48,6 +54,7 @@ class SubjectMaxMarksController extends Controller
             ],
             'endpoints' => [
                 'list' => route('admin.coe.subject-max-marks.index'),
+                'export' => route('admin.coe.subject-max-marks.export', ['format' => '__FORMAT__']),
                 'store' => route('admin.coe.subject-max-marks.store'),
                 'destroy' => route('admin.coe.subject-max-marks.destroy', ['id' => '__ID__']),
                 'toggle' => route('admin.coe.subject-max-marks.toggle-status', ['id' => '__ID__']),
@@ -103,9 +110,16 @@ class SubjectMaxMarksController extends Controller
         return response()->json(['status' => 'success']);
     }
 
+    /** Only an inactive entry can be deleted: faculty setup reads the active one as the subject's limit. */
     public function destroy(string $id): JsonResponse
     {
-        SubjectMaxMarksMaster::where('pk', decrypt($id))->delete();
+        $model = SubjectMaxMarksMaster::findOrFail(decrypt($id));
+
+        if ((int) $model->active_inactive === 1) {
+            return response()->json(['status' => 'error', 'message' => 'Active subject max marks cannot be deleted. Deactivate them first.'], 422);
+        }
+
+        $model->delete();
 
         return response()->json(['status' => 'success', 'message' => 'Subject max marks deleted successfully.']);
     }
@@ -123,5 +137,26 @@ class SubjectMaxMarksController extends Controller
             ->pluck('subject_name', 'pk')
             ->map(fn ($name) => trim($name))
             ->all();
+    }
+
+    /** CSV / Excel / PDF / Print of the grid as shown on screen (ExportsCoeMaster). */
+    public function export(Request $request, string $format)
+    {
+        return $this->exportCoeMaster(
+            $request,
+            $format,
+            SubjectMaxMarksMaster::query()->with('subject')->orderByDesc('pk'),
+            [
+                'sno' => $this->coeSnoColumn(),
+                'subject' => ['heading' => 'Subject', 'width' => '48%', 'align' => 'left',
+                    'value' => fn ($row) => trim((string) ($row->subject->subject_name ?? ''))],
+                'marks' => ['heading' => 'Max Marks', 'width' => '20%', 'align' => 'center',
+                    'value' => fn ($row) => SubjectMaxMarksDataTable::marks($row->max_marks)],
+                'status' => $this->coeStatusColumn(),
+            ],
+            fn ($query, string $term) => $query->whereHas('subject', fn ($q) => $q->where('subject_name', 'like', '%' . $term . '%')),
+            'Subject Max Marks Master',
+            'SubjectMaxMarks'
+        );
     }
 }
