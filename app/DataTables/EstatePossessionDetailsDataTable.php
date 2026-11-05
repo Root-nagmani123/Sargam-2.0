@@ -290,7 +290,7 @@ class EstatePossessionDetailsDataTable extends DataTable
      */
     public static function listingQuery(?EstateHomeRequestDetails $model = null): QueryBuilder
     {
-        $model = $model ?: new EstateHomeRequestDetails();
+        $model = $model ?: new EstateHomeRequestDetails;
 
         // Last month readings = epd.electric_meter_reading (I) and optional epd.electric_meter_reading_2 (II).
         // Do NOT use estate_month_reading_details (curr_month_elec_red) here — that shows "latest updated"

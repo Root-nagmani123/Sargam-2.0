@@ -4,7 +4,7 @@
 // Tests\Feature\EstateChangeRequestConcurrentApprovalTest in its own PHP process, so
 // it has its own MySQL connection.
 //
-//   php tests/Support/estate_change_request_approve_race_worker.php <holder|second> <approve|disapprove|allot> <id> <value> <userPk>
+//   php tests/Support/estate_change_request_approve_race_worker.php <holder|second> <approve|disapprove|allot> <id> <value> <userPk> [binlogFormat]
 //
 // approve:    approveChangeRequest(<change request pk>), value = house pk
 // disapprove: disapproveChangeRequest(<change request pk>), value = reason
@@ -20,6 +20,8 @@
 //         first "select exists" on a possession table), so two of them both hold whatever that
 //         check locked before either writes: the F-007 deadlock shape. "hook" is that pause as
 //         absolute [from, to] times, so the caller can prove the two pauses overlapped.
+// binlogFormat: optional session binlog_format (STATEMENT|ROW|MIXED) set before the action, to run it
+//         as on a server whose binary log is in that format (PR #349 F-008).
 // Prints one JSON line: {"role", "started", "returned", "status", "body"}.
 
 use App\Http\Controllers\Admin\EstateController;
@@ -32,6 +34,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 [, $role, $action, $id, $value, $userPk] = $argv;
+$binlogFormat = $argv[6] ?? '';
 
 $root = dirname(__DIR__, 2);
 require $root.'/vendor/autoload.php';
@@ -62,6 +65,10 @@ $request->headers->set('Accept', 'application/json');
 $request->setLaravelSession($session);
 $request->setUserResolver(fn () => $user);
 app()->instance('request', $request);
+
+if (in_array($binlogFormat, ['STATEMENT', 'ROW', 'MIXED'], true)) {
+    DB::unprepared("SET SESSION binlog_format = '{$binlogFormat}'");
+}
 
 if ($role === 'second') {
     usleep(1_000_000);

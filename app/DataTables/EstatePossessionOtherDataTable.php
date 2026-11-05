@@ -5,11 +5,13 @@ namespace App\DataTables;
 use App\DataTables\Concerns\RendersEstateRowActions;
 use App\Models\EstatePossessionOther;
 use App\Support\RedisBackedCache;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
@@ -295,7 +297,7 @@ class EstatePossessionOtherDataTable extends DataTable
      */
     public static function listingQuery(?EstatePossessionOther $model = null): QueryBuilder
     {
-        $model = $model ?: new EstatePossessionOther();
+        $model = $model ?: new EstatePossessionOther;
 
         $latestOtherReadings = DB::table('estate_month_reading_details_other as emro')
             ->join(DB::raw('(SELECT estate_possession_other_pk, MAX(pk) as max_pk FROM estate_month_reading_details_other GROUP BY estate_possession_other_pk) as x'), 'emro.pk', '=', 'x.max_pk')
@@ -310,7 +312,7 @@ class EstatePossessionOtherDataTable extends DataTable
                 'eor.request_no_oth',
                 'eor.emp_name',
                 // employee_master.emp_id link — not on every database yet, so fall back to NULL.
-                \Illuminate\Support\Facades\Schema::hasColumn('estate_other_req', 'employee_master_emp_id')
+                Schema::hasColumn('estate_other_req', 'employee_master_emp_id')
                     ? 'eor.employee_master_emp_id as eor_emp_id'
                     : DB::raw('NULL as eor_emp_id'),
                 'eor.section',
@@ -339,7 +341,7 @@ class EstatePossessionOtherDataTable extends DataTable
      * The listing's search + Bill Year / Bill Date filters, shared by the
      * DataTable and the exports so a download matches what the table showed.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $query
+     * @param  Builder|\Illuminate\Database\Query\Builder  $query
      */
     public static function applyFilters($query, string $searchValue, string $billYear = '', string $billDate = ''): void
     {

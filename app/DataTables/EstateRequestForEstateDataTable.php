@@ -359,7 +359,7 @@ class EstateRequestForEstateDataTable extends DataTable
      */
     public static function listingQuery(?EstateHomeRequestDetails $model = null): QueryBuilder
     {
-        $model = $model ?: new EstateHomeRequestDetails();
+        $model = $model ?: new EstateHomeRequestDetails;
 
         $query = $model->newQuery()
             ->select([

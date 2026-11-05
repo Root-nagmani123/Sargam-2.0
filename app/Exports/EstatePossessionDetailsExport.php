@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use App\DataTables\EstatePossessionDetailsDataTable;
 use App\Support\Concerns\BindsExportCellsAsText;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -30,15 +31,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
  * same header row and the same column set — including whatever the user hid in
  * the on-screen "Columns" modal, which arrives as ?cols=.
  */
-class EstatePossessionDetailsExport extends DefaultValueBinder implements
-    FromArray,
-    WithHeadings,
-    ShouldAutoSize,
-    WithStyles,
-    WithEvents,
-    WithTitle,
-    WithCustomStartCell,
-    WithCustomValueBinder
+class EstatePossessionDetailsExport extends DefaultValueBinder implements FromArray, ShouldAutoSize, WithCustomStartCell, WithCustomValueBinder, WithEvents, WithHeadings, WithStyles, WithTitle
 {
     // User text is bound as a TEXT cell on .xlsx, so "=1+1" can never become a live formula.
     use BindsExportCellsAsText;
@@ -78,7 +71,7 @@ class EstatePossessionDetailsExport extends DefaultValueBinder implements
                         return '-';
                     }
 
-                    return $id !== '' ? trim($name . ' - ' . $id) : $name;
+                    return $id !== '' ? trim($name.' - '.$id) : $name;
                 }],
             'emp_designation' => ['heading' => 'Designation', 'center' => false, 'width' => 12,
                 'value' => fn ($row) => $row->emp_designation ?: '-'],
@@ -93,13 +86,13 @@ class EstatePossessionDetailsExport extends DefaultValueBinder implements
             'house_no' => ['heading' => 'House Number', 'center' => true, 'width' => 8,
                 'value' => fn ($row) => $row->house_no ?: '-'],
             'allotment_date' => ['heading' => 'Allotment Date', 'center' => true, 'width' => 9,
-                'value' => fn ($row) => $row->allotment_date ? \Carbon\Carbon::parse($row->allotment_date)->format('d-m-Y') : '-'],
+                'value' => fn ($row) => $row->allotment_date ? Carbon::parse($row->allotment_date)->format('d-m-Y') : '-'],
             'possession_date' => ['heading' => 'Possession Date', 'center' => true, 'width' => 9,
                 'value' => function ($row) {
                     if (! $row->possession_date) {
                         return '-';
                     }
-                    $d = \Carbon\Carbon::parse($row->possession_date);
+                    $d = Carbon::parse($row->possession_date);
 
                     return $d->format('Y-m-d') <= '1900-01-01' ? '-' : $d->format('d-m-Y');
                 }],
@@ -145,7 +138,7 @@ class EstatePossessionDetailsExport extends DefaultValueBinder implements
 
     public function startCell(): string
     {
-        return 'A' . ($this->headerRows + 1);
+        return 'A'.($this->headerRows + 1);
     }
 
     public function headings(): array
@@ -239,7 +232,7 @@ class EstatePossessionDetailsExport extends DefaultValueBinder implements
             }
         }
 
-        $sheet->freezePane('A' . $firstDataRow);
+        $sheet->freezePane('A'.$firstDataRow);
 
         return [];
     }
@@ -271,14 +264,14 @@ class EstatePossessionDetailsExport extends DefaultValueBinder implements
                 $sheet->getRowDimension(2)->setRowHeight(22);
 
                 $sheet->mergeCells("A3:{$lastCol}3");
-                $sheet->setCellValue('A3', $this->filterLine . '  |  Generated: ' . $this->generatedAt);
+                $sheet->setCellValue('A3', $this->filterLine.'  |  Generated: '.$this->generatedAt);
                 $sheet->getStyle('A3')->applyFromArray([
                     'font' => ['size' => 9, 'color' => ['rgb' => '555555']],
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
                 ]);
 
                 $sheet->mergeCells("A4:{$lastCol}4");
-                $sheet->setCellValue('A4', 'Total Records: ' . $this->rows->count());
+                $sheet->setCellValue('A4', 'Total Records: '.$this->rows->count());
                 $sheet->getStyle('A4')->applyFromArray([
                     'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '003366']],
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
@@ -295,7 +288,7 @@ class EstatePossessionDetailsExport extends DefaultValueBinder implements
 
                 $logoPath = public_path('images/lbsnaa_logo.jpg');
                 if (file_exists($logoPath)) {
-                    $drawing = new Drawing();
+                    $drawing = new Drawing;
                     $drawing->setName('LBSNAA Logo');
                     $drawing->setDescription('LBSNAA Logo');
                     $drawing->setPath($logoPath);

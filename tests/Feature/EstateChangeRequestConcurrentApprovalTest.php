@@ -43,6 +43,9 @@ class EstateChangeRequestConcurrentApprovalTest extends TestCase
     /** @var array<string, array<int, array<string, mixed>>> table => pk => full row */
     private array $snapshot = [];
 
+    /** Session binlog_format the workers run under ('' = the server's). */
+    private string $binlogFormat = '';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -370,6 +373,40 @@ class EstateChangeRequestConcurrentApprovalTest extends TestCase
     }
 
     /**
+     * F-008: with the binary log on in STATEMENT format, MySQL refuses READ COMMITTED writes (error
+     * 1665), so every allotment returned 500. The races still hold there: one house is taken once,
+     * and writers of different houses both succeed (a deadlock between them may be retried, so the
+     * server's deadlock counter is not checked).
+     */
+    public function test_allotments_hold_when_the_binary_log_is_statement_based(): void
+    {
+        if ((int) DB::selectOne('SELECT @@log_bin AS on_')->on_ !== 1) {
+            $this->markTestSkipped('binary log is off: binlog_format has no effect');
+        }
+        $f = $this->fixture;
+        $this->binlogFormat = 'STATEMENT';
+
+        [$a, $b] = $this->race(['approve', $f['cr1'], $f['houseA']], ['approve', $f['cr2'], $f['houseA']], ['together', 'together']);
+        $statuses = [$a['status'], $b['status']];
+        sort($statuses);
+        $this->assertSame([200, 422], $statuses, 'one approval takes the house, the other is refused: '.json_encode([$a, $b]));
+        $this->assertOneOccupant($f['houseA']);
+        $this->assertSame([], $this->restore(), 'restored');
+
+        $approveHouse = $f['houseA'] !== $f['allotA'] ? $f['houseA'] : $f['houseB'];
+        for ($run = 1; $run <= self::RUNS; $run++) {
+            [$a, $b] = $this->race(['approve', $f['cr1'], $approveHouse], ['allot', $f['new_req'], $f['allotA']], ['together', 'together']);
+            $this->assertSucceeded($a);
+            $this->assertSucceeded($b);
+            $this->assertContains($approveHouse, $this->possessionsOf($f['home_req1']), "run {$run}");
+            $this->assertSame([$f['allotA']], $this->possessionsOf($f['new_req']), "run {$run}");
+            $this->assertOneOccupant($approveHouse);
+            $this->assertOneOccupant($f['allotA']);
+            $this->assertSame([], $this->restore(), "run {$run}: restored");
+        }
+    }
+
+    /**
      * Runs both sides paused together self::RUNS times, restoring in between. Every run: both
      * 200, the pauses overlapped (both checks done before either wrote), $check holds, and the
      * server's deadlock counter did not move (a retried deadlock would still count).
@@ -529,7 +566,7 @@ class EstateChangeRequestConcurrentApprovalTest extends TestCase
         $worker = base_path('tests/Support/estate_change_request_approve_race_worker.php');
         $start = function (string $role, array $side) use ($worker) {
             [$action, $id, $value] = $side;
-            $args = [PHP_BINARY, $worker, $role, $action, (string) $id, (string) $value, (string) $this->fixture['admin']];
+            $args = [PHP_BINARY, $worker, $role, $action, (string) $id, (string) $value, (string) $this->fixture['admin'], $this->binlogFormat];
             $proc = proc_open($args, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, base_path());
 
             return [$proc, $pipes];

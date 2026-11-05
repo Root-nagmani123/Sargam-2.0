@@ -29,15 +29,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
  * same header row and the same column set — including whatever the user hid in
  * the on-screen "Columns" modal, which arrives as ?cols=.
  */
-class EstateListMeterReadingExport extends DefaultValueBinder implements
-    FromArray,
-    WithHeadings,
-    ShouldAutoSize,
-    WithStyles,
-    WithEvents,
-    WithTitle,
-    WithCustomStartCell,
-    WithCustomValueBinder
+class EstateListMeterReadingExport extends DefaultValueBinder implements FromArray, ShouldAutoSize, WithCustomStartCell, WithCustomValueBinder, WithEvents, WithHeadings, WithStyles, WithTitle
 {
     // User text is bound as a TEXT cell on .xlsx, so "=1+1" can never become a live formula.
     use BindsExportCellsAsText;
@@ -75,7 +67,7 @@ class EstateListMeterReadingExport extends DefaultValueBinder implements
                         return $id !== '' ? $id : '-';
                     }
 
-                    return $id !== '' ? $name . ' - ' . $id : $name;
+                    return $id !== '' ? $name.' - '.$id : $name;
                 }],
             'designation' => ['heading' => 'Designation', 'center' => false, 'width' => 14,
                 'value' => fn ($row) => self::text($row->designation ?? null)],
@@ -141,7 +133,7 @@ class EstateListMeterReadingExport extends DefaultValueBinder implements
 
     public function startCell(): string
     {
-        return 'A' . ($this->headerRows + 1);
+        return 'A'.($this->headerRows + 1);
     }
 
     public function headings(): array
@@ -235,7 +227,7 @@ class EstateListMeterReadingExport extends DefaultValueBinder implements
             }
         }
 
-        $sheet->freezePane('A' . $firstDataRow);
+        $sheet->freezePane('A'.$firstDataRow);
 
         return [];
     }
@@ -267,14 +259,14 @@ class EstateListMeterReadingExport extends DefaultValueBinder implements
                 $sheet->getRowDimension(2)->setRowHeight(22);
 
                 $sheet->mergeCells("A3:{$lastCol}3");
-                $sheet->setCellValue('A3', $this->filterLine . '  |  Generated: ' . $this->generatedAt);
+                $sheet->setCellValue('A3', $this->filterLine.'  |  Generated: '.$this->generatedAt);
                 $sheet->getStyle('A3')->applyFromArray([
                     'font' => ['size' => 9, 'color' => ['rgb' => '555555']],
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
                 ]);
 
                 $sheet->mergeCells("A4:{$lastCol}4");
-                $sheet->setCellValue('A4', 'Total Records: ' . $this->rows->count());
+                $sheet->setCellValue('A4', 'Total Records: '.$this->rows->count());
                 $sheet->getStyle('A4')->applyFromArray([
                     'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '003366']],
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
@@ -291,7 +283,7 @@ class EstateListMeterReadingExport extends DefaultValueBinder implements
 
                 $logoPath = public_path('images/lbsnaa_logo.jpg');
                 if (file_exists($logoPath)) {
-                    $drawing = new Drawing();
+                    $drawing = new Drawing;
                     $drawing->setName('LBSNAA Logo');
                     $drawing->setDescription('LBSNAA Logo');
                     $drawing->setPath($logoPath);

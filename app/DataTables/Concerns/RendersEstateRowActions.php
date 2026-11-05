@@ -17,9 +17,9 @@ trait RendersEstateRowActions
     /**
      * One row action.
      *
-     * @param  string  $icon     material-symbols ligature name
-     * @param  string  $label    caption under the icon
-     * @param  string  $tone     colour key — view|edit|change|delete|possession|return|approve|reject
+     * @param  string  $icon  material-symbols ligature name
+     * @param  string  $label  caption under the icon
+     * @param  string  $tone  colour key — view|edit|change|delete|possession|return|approve|reject
      * @param  array{href?:string,class?:string,title?:string,attrs?:string,disabled?:bool,static?:bool}  $options
      */
     protected static function actionLink(string $icon, string $label, string $tone, array $options = []): string
@@ -28,30 +28,30 @@ trait RendersEstateRowActions
         $isDisabled = ! empty($options['disabled']);
         $isStatic = $isDisabled || ! empty($options['static']);
 
-        $classes = 'rfe-action rfe-action--' . $tone . ($isDisabled ? ' rfe-action--disabled' : '');
+        $classes = 'rfe-action rfe-action--'.$tone.($isDisabled ? ' rfe-action--disabled' : '');
         if (! empty($options['class'])) {
-            $classes .= ' ' . $options['class'];
+            $classes .= ' '.$options['class'];
         }
 
-        $inner = '<i class="material-icons material-symbols-rounded" aria-hidden="true">' . $icon . '</i>'
-            . '<span class="rfe-action-label">' . e($label) . '</span>';
+        $inner = '<i class="material-icons material-symbols-rounded" aria-hidden="true">'.$icon.'</i>'
+            .'<span class="rfe-action-label">'.e($label).'</span>';
 
         if ($isStatic) {
-            return '<span class="' . $classes . '" title="' . $title . '" aria-disabled="true">' . $inner . '</span>';
+            return '<span class="'.$classes.'" title="'.$title.'" aria-disabled="true">'.$inner.'</span>';
         }
 
         $href = $options['href'] ?? 'javascript:void(0);';
-        $extra = ! empty($options['attrs']) ? ' ' . $options['attrs'] : '';
+        $extra = ! empty($options['attrs']) ? ' '.$options['attrs'] : '';
 
-        return '<a href="' . e($href) . '" class="' . $classes . '" title="' . $title . '"'
-            . ' aria-label="' . $title . '"' . $extra . '>' . $inner . '</a>';
+        return '<a href="'.e($href).'" class="'.$classes.'" title="'.$title.'"'
+            .' aria-label="'.$title.'"'.$extra.'>'.$inner.'</a>';
     }
 
     /** Soft status pill (matching .programme-status-badge sizing, estate tones). */
     protected static function statusBadge(string $label, string $tone): string
     {
-        return '<span class="badge rounded-1 programme-status-badge rfe-status rfe-status--' . $tone . '">'
-            . e($label) . '</span>';
+        return '<span class="badge rounded-1 programme-status-badge rfe-status rfe-status--'.$tone.'">'
+            .e($label).'</span>';
     }
 
     /**
@@ -70,12 +70,12 @@ trait RendersEstateRowActions
         // the Figma "Name / ID" layout, rather than one run-on "NAME - ID" string.
         $html = '<span class="estate-name-id">';
         if ($name !== '') {
-            $html .= '<span class="estate-name-id__name rfe-name">' . e($name) . '</span>';
+            $html .= '<span class="estate-name-id__name rfe-name">'.e($name).'</span>';
         }
         if ($employeeId !== '') {
-            $html .= '<span class="estate-name-id__id rfe-emp-id">' . e($employeeId) . '</span>';
+            $html .= '<span class="estate-name-id__id rfe-emp-id">'.e($employeeId).'</span>';
         }
 
-        return $html . '</span>';
+        return $html.'</span>';
     }
 }

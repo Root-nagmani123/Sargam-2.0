@@ -3154,14 +3154,26 @@ class EstateController extends Controller
      * lets the occupancy re-read after that lock see the other writer's commit without share-locking
      * every scanned possession row; those scans deadlocked writers of different houses (PR #349 F-007).
      * Locks are taken request row first, then house row. A deadlock that still occurs is retried.
+     *
+     * READ COMMITTED needs row-based logging: with the binary log on in STATEMENT format, MySQL refuses
+     * its writes (error 1665, PR #349 F-008). There SERIALIZABLE runs instead: every read is current
+     * (share-locked), so the occupancy re-read stays correct; writers of different houses can then
+     * deadlock on those share locks, and the retry below takes the loser after the winner commits.
      */
     private function runAllotmentTransaction(\Closure $callback)
     {
+        $isolation = null;
+        if (DB::transactionLevel() === 0 && DB::getDriverName() === 'mysql') {
+            $log = DB::selectOne('SELECT @@log_bin AS log_bin, @@session.binlog_format AS format');
+            $isolation = (int) $log->log_bin === 1 && strtoupper((string) $log->format) === 'STATEMENT'
+                ? 'SERIALIZABLE'
+                : 'READ COMMITTED';
+        }
         for ($attempt = 1; ; $attempt++) {
             // SET TRANSACTION covers only the next transaction, so it precedes every attempt. Inside an
             // outer transaction it is not allowed and the outer one's level applies.
-            if (DB::transactionLevel() === 0 && DB::getDriverName() === 'mysql') {
-                DB::unprepared('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');
+            if ($isolation !== null) {
+                DB::unprepared("SET TRANSACTION ISOLATION LEVEL {$isolation}");
             }
             try {
                 return DB::transaction($callback);
@@ -3264,7 +3276,7 @@ class EstateController extends Controller
             if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
                 $activeDetails->where('return_home_status', 0);
             }
-            // Read after the house lock under READ COMMITTED (runAllotmentTransaction): sees the latest commit.
+            // Read after the house lock, at runAllotmentTransaction's isolation level: sees the latest commit.
             $isOccupied = $activeDetails->exists();
             if (! $isOccupied) {
                 $activeOther = DB::table('estate_possession_other')
@@ -3440,7 +3452,7 @@ class EstateController extends Controller
             if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
                 $activeDetails->where('return_home_status', 0);
             }
-            // Read after the house lock under READ COMMITTED (runAllotmentTransaction): sees the latest commit.
+            // Read after the house lock, at runAllotmentTransaction's isolation level: sees the latest commit.
             $isOccupied = $activeDetails->exists();
             if (! $isOccupied) {
                 $activeOther = DB::table('estate_possession_other')
@@ -4122,7 +4134,7 @@ class EstateController extends Controller
 
         if ($request->get('redirect_to') !== 'return-house') {
             // Requester row before house row: a concurrent save for this requester waits here, then
-            // (READ COMMITTED, runAllotmentTransaction) sees the entry it committed.
+            // (runAllotmentTransaction's isolation level) sees the entry it committed.
             DB::table('estate_other_req')->where('pk', $validated['estate_other_req_pk'])->lockForUpdate()->first();
             $duplicateQuery = EstatePossessionOther::where('estate_other_req_pk', $validated['estate_other_req_pk']);
             if ($request->filled('id')) {

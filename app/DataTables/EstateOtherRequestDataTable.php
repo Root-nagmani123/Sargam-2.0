@@ -4,6 +4,8 @@ namespace App\DataTables;
 
 use App\DataTables\Concerns\RendersEstateRowActions;
 use App\Models\EstateOtherRequest;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -86,7 +88,7 @@ class EstateOtherRequestDataTable extends DataTable
      */
     public static function listingQuery(?EstateOtherRequest $model = null): QueryBuilder
     {
-        $model = $model ?: new EstateOtherRequest();
+        $model = $model ?: new EstateOtherRequest;
 
         return $model->newQuery()
             ->select([
@@ -116,7 +118,7 @@ class EstateOtherRequestDataTable extends DataTable
      * Toolbar filters + free-text search, in one place so the grid and the
      * exports can never disagree about which rows are in scope.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $query
+     * @param  Builder|\Illuminate\Database\Query\Builder  $query
      */
     public static function applyFilters($query, string $searchValue, string $billYear = '', string $billDate = ''): void
     {
@@ -189,7 +191,7 @@ class EstateOtherRequestDataTable extends DataTable
             return '—';
         }
 
-        return \Carbon\Carbon::parse($value)->format('d-m-Y');
+        return Carbon::parse($value)->format('d-m-Y');
     }
 
     public function html(): HtmlBuilder

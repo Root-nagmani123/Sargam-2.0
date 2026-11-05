@@ -227,7 +227,7 @@ class EstateHacApprovedDataTable extends DataTable
      */
     public static function listingQuery(?EstateHacApprovedRow $model = null): EloquentBuilder
     {
-        $model = $model ?: new EstateHacApprovedRow();
+        $model = $model ?: new EstateHacApprovedRow;
 
         $canSeeHacApproved = hasRole('HAC Person') || isEstateHacAuthority();
 

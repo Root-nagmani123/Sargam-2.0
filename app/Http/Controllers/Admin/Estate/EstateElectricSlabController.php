@@ -11,6 +11,7 @@ use App\Models\EstateElectricSlab;
 use App\Models\UnitType;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Collection;
 
 class EstateElectricSlabController extends Controller
 {
@@ -104,7 +105,7 @@ class EstateElectricSlabController extends Controller
     /**
      * Rows + heading line for the downloads, in the grid's own order.
      *
-     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     * @return array{rows: Collection, cols: string[], filterLine: string, generatedAt: string}
      */
     private function exportPayload(Request $request): array
     {
@@ -118,7 +119,7 @@ class EstateElectricSlabController extends Controller
             ->get()
             ->map(function ($row) {
                 return (object) [
-                    'unit_range' => $row->start_unit_range . '-' . $row->end_unit_range,
+                    'unit_range' => $row->start_unit_range.'-'.$row->end_unit_range,
                     'rate_per_unit' => (float) $row->rate_per_unit,
                     'merge_with_house' => $row->unitType->unit_type ?? '-',
                 ];
@@ -141,8 +142,8 @@ class EstateElectricSlabController extends Controller
             'rows' => $rows,
             'cols' => EstateElectricSlabExport::resolveCols($request->input('cols')),
             'filterLine' => implode('  |  ', array_filter([
-                ctype_digit($unitType) ? 'Merge with House: ' . (UnitType::where('pk', (int) $unitType)->value('unit_type') ?? $unitType) : null,
-                $search !== '' ? 'Search: "' . $search . '"' : null,
+                ctype_digit($unitType) ? 'Merge with House: '.(UnitType::where('pk', (int) $unitType)->value('unit_type') ?? $unitType) : null,
+                $search !== '' ? 'Search: "'.$search.'"' : null,
             ])) ?: 'All slabs',
             'generatedAt' => now()->format('d M Y, h:i A'),
         ];
@@ -165,7 +166,7 @@ class EstateElectricSlabController extends Controller
                 $payload['generatedAt'],
                 $payload['cols']
             ),
-            'define-electric-slab-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+            'define-electric-slab-'.now()->format('Y-m-d_H-i-s').'.xlsx'
         );
     }
 

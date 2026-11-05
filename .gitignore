@@ -33,6 +33,8 @@ docker-compose.yml
 tools/phpstan/vendor/
 # Playwright writes these on every run; they are generated artifacts, not source.
 /test-results/
+# Saved authenticated pages (PR #349 F-002): never commit page dumps
+__rfh*
 /playwright-report/
 /blob-report/
 /playwright/.cache/
