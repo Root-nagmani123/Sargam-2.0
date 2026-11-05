@@ -156,12 +156,12 @@
          (new-design-index-page.md §1). --}}
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 rh-secondary-actions no-print">
         <a href="{{ route('admin.estate.return-house.download') }}"
-            class="btn programme-dt-btn-columns border-0 text-primary" title="Download as Excel">
+            class="btn programme-dt-btn-columns border-0 text-primary js-rh-export" title="Download as Excel">
             <i class="bi bi-download" aria-hidden="true"></i>
             <span>Download</span>
         </a>
         <a href="{{ route('admin.estate.return-house.print') }}" target="_blank" rel="noopener"
-            class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
+            class="btn programme-dt-btn-columns border-0 text-primary js-rh-export" title="Print">
             <i class="bi bi-printer" aria-hidden="true"></i>
             <span>Print</span>
         </a>
@@ -528,6 +528,18 @@
             rhDt.columns.adjust().draw(false);
             rhBuildToggles();
         }
+    });
+
+    // Download / Print carry the grid's search and visible columns, so they export what is on screen (F-012).
+    // Grid column index -> export column key; '' = not exported (Upload Documents).
+    var RH_EXPORT_KEYS = ['sno', 'name', 'employee_type', 'section_name', 'estate_name', 'house_no', 'unit_name',
+        'building_name', 'unit_sub_type', 'allotment_date', 'possession_date', 'returning_date', '', 'remarks'];
+    $(document).on('click', '.js-rh-export', function () {
+        if (!rhDt) return;
+        var params = {};
+        if (rhDt.search()) params.search = rhDt.search();
+        params.cols = RH_EXPORT_KEYS.filter(function (key, i) { return key && rhDt.column(i).visible(); }).join(',');
+        this.href = this.href.split('?')[0] + '?' + $.param(params);
     });
 
     var unitTypesByCampus = @json($unitTypesByCampus ?? []);

@@ -136,6 +136,17 @@ $(document).ready(function() {
     const blocksUrl = "{{ route('admin.estate.update-meter-reading.blocks') }}";
     const unitSubTypesUrl = "{{ route('admin.estate.update-meter-reading.unit-sub-types') }}";
     const prefill = @json($prefill ?? null);
+    // Edit from List Meter Reading opens this same page with reading_pk — us flow me baseline validation nahi lagti.
+    const isListEditMode = !!(prefill && prefill.reading_pk);
+    // Full page: New Meter No. sirf usi Edit flow me editable hai; seedha kholne par field freeze rehti hai. The dialog keeps it editable.
+    const lockNewMeterNo = !umrInModal && !isListEditMode;
+    const newMeterNoLockAttr = lockNewMeterNo ? ' readonly' : '';
+    const newMeterNoLockClass = lockNewMeterNo ? ' bg-light' : '';
+    const newMeterNoPlaceholder = lockNewMeterNo ? '' : 'Enter new meter no.';
+    const belowBaselineMessage = 'New Meter Reading cannot be less than the minimum allowed baseline for this row.\n\nIf the meter was replaced or the saved reading is wrong, open this row from List Meter Reading → Edit.';
+
+    // The dialog injects this script again on every open; drop the previous copy's document handlers first.
+    $(document).off('.umr');
 
     // For this grid we avoid DataTables to keep typing smooth and prevent focus jumps.
     let dataTable = null;
@@ -204,7 +215,7 @@ $(document).ready(function() {
         });
     }
 
-    $(document).on('change', '#estate_name', function() {
+    $(document).on('change.umr', '#estate_name', function() {
         const campusId = getSelVal(this);
         var elB = document.getElementById('building'), elSub = document.getElementById('unit_sub_type');
         if (tsBuilding) { try { $('#building').select2('destroy'); } catch (e) {} tsBuilding = null; }
@@ -226,7 +237,7 @@ $(document).ready(function() {
         });
     });
 
-    $(document).on('change', '#building', function() {
+    $(document).on('change.umr', '#building', function() {
         const campusId = getSelVal(document.getElementById('estate_name'));
         const blockId = getSelVal(this);
         var elSub = document.getElementById('unit_sub_type');
@@ -362,10 +373,10 @@ $(document).ready(function() {
                         '</td>' +
                         '<td class="other-dual-col other-dual-newmeter-col">' +
                             '<div class="other-dual-seg" data-slot="1">' +
-                            '<input type="text" class="form-control form-control-sm new-meter-no" name="readings['+i0+'][new_meter_no]" value="'+ escAttr(nm1) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m1.old_meter_no || '') +'">' +
+                            '<input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+i0+'][new_meter_no]" value="'+ escAttr(nm1) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m1.old_meter_no || '') +'"'+ newMeterNoLockAttr +'>' +
                             '</div>' +
                             '<div class="other-dual-seg" data-slot="2">' +
-                            '<input type="text" class="form-control form-control-sm new-meter-no" name="readings['+i1+'][new_meter_no]" value="'+ escAttr(nm2) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m2.old_meter_no || '') +'">' +
+                            '<input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+i1+'][new_meter_no]" value="'+ escAttr(nm2) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m2.old_meter_no || '') +'"'+ newMeterNoLockAttr +'>' +
                             '</div>' +
                         '</td>' +
                         '<td class="other-dual-col other-dual-reading-col">' +
@@ -411,7 +422,7 @@ $(document).ready(function() {
                     '<td class="text-nowrap">'+ escAttr(row.last_reading_date || 'N/A') +'</td>' +
                     '<td>'+ escAttr(row.old_meter_no || 'N/A') +'</td>' +
                     '<td>'+ escAttr(row.electric_meter_reading ?? 'N/A') +'</td>' +
-                    '<td><input type="text" class="form-control form-control-sm new-meter-no" name="readings['+idx+'][new_meter_no]" value="'+ escAttr(newMeterNo) +'" placeholder="Enter new meter no." inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(oldMeterNoStr) +'"></td>' +
+                    '<td><input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+idx+'][new_meter_no]" value="'+ escAttr(newMeterNo) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(oldMeterNoStr) +'"'+ newMeterNoLockAttr +'></td>' +
                     '<td><input type="number" class="form-control form-control-sm new-meter-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ escAttr(newMeterReading) +'" min="0" placeholder="Enter" step="1" inputmode="numeric">' +
                     '<input type="hidden" name="readings['+idx+'][pk]" value="'+row.pk+'">' +
                     '<input type="hidden" name="readings['+idx+'][meter_slot]" value="'+ meterSlot +'"></td>' +
@@ -425,7 +436,7 @@ $(document).ready(function() {
         });
     });
 
-    $(document).on('change', '#updateMeterReadingTable #select_all', function() {
+    $(document).on('change.umr', '#updateMeterReadingTable #select_all', function() {
         const on = $(this).prop('checked');
         $('#updateMeterReadingTable .row-check-master').each(function() {
             $(this).prop('checked', on);
@@ -436,7 +447,7 @@ $(document).ready(function() {
         });
     });
 
-    $(document).on('change', '#updateMeterReadingTable .row-check-master', function() {
+    $(document).on('change.umr', '#updateMeterReadingTable .row-check-master', function() {
         const on = $(this).prop('checked');
         const sid = $(this).data('pair-sel-id');
         if (sid) {
@@ -475,6 +486,8 @@ $(document).ready(function() {
     }
 
     function isReadingBelowMinAllowed($inp, currReading) {
+        // Edit from List Meter Reading: purani galat reading theek karne ke liye khulta hai, isliye koi min baseline nahi (server: edit_reading_pk).
+        if (isListEditMode) return false;
         if (currReading === null || isNaN(currReading)) return false;
         const minAllowed = getMinAllowedForReadingInput($inp);
         if (minAllowed === null || currReading >= minAllowed) return false;
@@ -526,7 +539,7 @@ $(document).ready(function() {
             const now = Date.now();
             if ((now - lastInvalidReadingAlertAt) > 800) {
                 lastInvalidReadingAlertAt = now;
-                alert('New Meter Reading cannot be less than the minimum allowed baseline for this row.');
+                alert(belowBaselineMessage);
             }
             return;
         }
@@ -609,24 +622,24 @@ $(document).ready(function() {
         }
     }
 
-    $(document).on('input', '#meterReadingSaveForm .new-meter-reading', function() {
+    $(document).on('input.umr', '#meterReadingSaveForm .new-meter-reading', function() {
         this.value = String(this.value || '').replace(/\D/g, '').slice(0, 20);
         const $inp = $(this);
         syncRowDataFromInputs($inp.closest('tr'));
         refreshUnitForReadingInput($inp);
     });
 
-    $(document).on('blur', '#meterReadingSaveForm .new-meter-reading', function() {
+    $(document).on('blur.umr', '#meterReadingSaveForm .new-meter-reading', function() {
         const $inp = $(this);
         const currVal = $inp.val();
         const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
         if (isReadingBelowMinAllowed($inp, currReading)) {
             lastInvalidReadingAlertAt = Date.now();
-            alert('New Meter Reading cannot be less than the minimum allowed baseline for this row.');
+            alert(belowBaselineMessage);
         }
     });
 
-    $(document).on('input change', '#meterReadingSaveForm .new-meter-no', function() {
+    $(document).on('input.umr change.umr', '#meterReadingSaveForm .new-meter-no', function() {
         this.value = String(this.value || '').replace(/\D/g, '').slice(0, 50);
         const $meterInp = $(this);
         const $row = $meterInp.closest('tr');
@@ -643,7 +656,7 @@ $(document).ready(function() {
         if ($readingInp && $readingInp.length) refreshUnitForReadingInput($readingInp);
     });
 
-    $(document).on('keydown', '#meterReadingSaveForm .new-meter-no', function(e) {
+    $(document).on('keydown.umr', '#meterReadingSaveForm .new-meter-no', function(e) {
         if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
             e.preventDefault();
         }

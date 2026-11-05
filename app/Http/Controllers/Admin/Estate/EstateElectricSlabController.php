@@ -116,27 +116,24 @@ class EstateElectricSlabController extends Controller
             // Same "Merge with House" filter as the grid.
             ->when(ctype_digit($unitType), fn ($q) => $q->where('estate_unit_type_master_pk', (int) $unitType))
             ->orderBy('start_unit_range')
-            ->get()
-            ->map(function ($row) {
-                return (object) [
-                    'unit_range' => $row->start_unit_range.'-'.$row->end_unit_range,
-                    'rate_per_unit' => (float) $row->rate_per_unit,
-                    'merge_with_house' => $row->unitType->unit_type ?? '-',
-                ];
-            });
+            ->get();
 
         if ($search !== '') {
-            $needle = mb_strtolower($search);
-            $rows = $rows->filter(function ($row) use ($needle) {
-                foreach (['unit_range', 'rate_per_unit', 'merge_with_house'] as $key) {
-                    if (str_contains(mb_strtolower((string) $row->{$key}), $needle)) {
-                        return true;
-                    }
-                }
-
-                return false;
-            })->values();
+            // The grid's rule (Yajra multi-term search): every word matches the start, the end, the
+            // stored rate ("12.50") or the unit type — so grid and download list the same slabs (F-012).
+            $terms = preg_split('/\s+/', mb_strtolower($search));
+            $rows = $rows->filter(fn ($row) => collect($terms)->every(fn ($term) => collect([
+                $row->start_unit_range, $row->end_unit_range, $row->getRawOriginal('rate_per_unit'), $row->unitType->unit_type ?? null,
+            ])->contains(fn ($value) => str_contains(mb_strtolower((string) $value), $term))))->values();
         }
+
+        $rows = $rows->map(function ($row) {
+            return (object) [
+                'unit_range' => $row->start_unit_range.'-'.$row->end_unit_range,
+                'rate_per_unit' => (float) $row->rate_per_unit,
+                'merge_with_house' => $row->unitType->unit_type ?? '-',
+            ];
+        });
 
         return [
             'rows' => $rows,

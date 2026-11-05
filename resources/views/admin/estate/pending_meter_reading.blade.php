@@ -274,7 +274,7 @@ $(function () {
 
     $('#btnPrintPendingMeter').on('click', function () {
         if (!dt) return;
-        var data = G.collectRows(dt, { skip: ['Action', 'Status'] });
+        var data = G.collectRows(dt, { skip: ['Action', 'Status'], serial: 'S. No.' });
         if (!data.headers.length) {
             alert('At least one column must be visible to print.');
             return;
@@ -290,7 +290,7 @@ $(function () {
     // Same rows and columns as Print.
     $('#btnDownloadPendingMeter').on('click', function () {
         if (!dt) return;
-        var data = G.collectRows(dt, { skip: ['Action', 'Status'] });
+        var data = G.collectRows(dt, { skip: ['Action', 'Status'], serial: 'S. No.' });
         G.downloadCsv('Pending Meter Reading ' + $('#bill_month').val(), data.headers, data.rows);
     });
 

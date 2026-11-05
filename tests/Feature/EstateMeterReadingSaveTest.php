@@ -110,6 +110,16 @@ class EstateMeterReadingSaveTest extends TestCase
         ], $row, $reading];
     }
 
+    /** F-010: the page renders the partial's one handler set, not a second copy of its own. */
+    public function test_the_page_binds_one_set_of_handlers(): void
+    {
+        $html = $this->as($this->staffWithRole('Estate Admin'), ['Estate Admin'])
+            ->get(route('admin.estate.update-meter-reading'))->assertOk()->getContent();
+
+        $this->assertSame(1, substr_count($html, 'function isReadingBelowMinAllowed('));
+        $this->assertSame(1, substr_count($html, "\$('#loadMeterReadingsBtn').on('click'"));
+    }
+
     private function assertReadingStored(object $row, int $reading): void
     {
         $this->assertTrue(

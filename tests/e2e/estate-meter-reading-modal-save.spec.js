@@ -24,18 +24,18 @@ const FORM = process.env.UMR_FORM || path.join(ROOT, "resources", "views", "admi
 const JQUERY = path.join(ROOT, "vendor", "phpunit", "php-code-coverage", "src", "Report", "Html", "Renderer", "Template", "js", "jquery.min.js");
 const ORIGIN = "http://umr.test";
 
-function scriptSource() {
+function scriptSource({ inModal = true, prefill = null } = {}) {
   const src = fs.readFileSync(FORM, "utf8").replace(/\r\n/g, "\n");
   const start = src.indexOf("<script>");
   const end = src.indexOf("</script>", start);
   if (start === -1 || end === -1) throw new Error("<script> block not found in _update_meter_reading_form.blade.php");
   const js = src
     .slice(start + "<script>".length, end)
-    .replace("@json($inModal)", "true")
+    .replace("@json($inModal)", JSON.stringify(inModal))
     .replace("{{ route('admin.estate.update-meter-reading.list') }}", `${ORIGIN}/list`)
     .replace("{{ route('admin.estate.update-meter-reading.blocks') }}", `${ORIGIN}/blocks`)
     .replace("{{ route('admin.estate.update-meter-reading.unit-sub-types') }}", `${ORIGIN}/unit-sub-types`)
-    .replace("@json($prefill ?? null)", "null")
+    .replace("@json($prefill ?? null)", JSON.stringify(prefill))
     .replace("@if (! $errors->any())", "")
     .replace("@endif", "");
   if (/@json|@if|@endif|\{\{|\{!!/.test(js)) throw new Error("a Blade expression in the script needs replacing here");
@@ -67,15 +67,19 @@ const DIALOG = `<!doctype html><html><body>
   <script src="${ORIGIN}/jquery.js"></script>
 </body></html>`;
 
+// The dialog's markup alone: what a reopen swaps in (jQuery stays loaded on the page).
+const DIALOG_BODY = DIALOG.slice(DIALOG.indexOf("<body>") + 6, DIALOG.indexOf("<script"));
+
 const ROW = {
   pk: 1, meter_slot: 1, house_no: "T-01", name: "Probe", last_reading_date: "31-07-2026",
   old_meter_no: "00000001", electric_meter_reading: 1000, baseline_min_reading: 1000,
 };
 
-async function mount(pw) {
+async function mount(pw, { reading = "1005", inject = 1, ...opts } = {}) {
   const errors = [];
   const posts = [];
   const dialogs = [];
+  const lists = [];
   pw.on("pageerror", (e) => errors.push(String(e)));
   pw.on("dialog", async (d) => { dialogs.push(d.message()); await d.dismiss(); });
   await pw.route(`${ORIGIN}/**`, (route) => {
@@ -83,6 +87,7 @@ async function mount(pw) {
     const p = new URL(req.url()).pathname;
     if (p === "/dialog") return route.fulfill({ contentType: "text/html", body: DIALOG });
     if (p === "/jquery.js") return route.fulfill({ contentType: "application/javascript", body: fs.readFileSync(JQUERY, "utf8") });
+    if (p === "/list") lists.push(req.url());
     if (p === "/list") return route.fulfill({ contentType: "application/json", body: JSON.stringify({ status: true, data: [ROW] }) });
     if (p === "/blocks" || p === "/unit-sub-types") return route.fulfill({ contentType: "application/json", body: JSON.stringify({ status: true, data: [] }) });
     if (p === "/store") {
@@ -94,7 +99,11 @@ async function mount(pw) {
   await pw.goto(`${ORIGIN}/dialog`);
   await pw.waitForFunction(() => window.jQuery && window.jQuery.isReady);
   // Injected into a page that is already loaded, exactly as the dialog's $.get().html() does.
-  await pw.addScriptTag({ content: scriptSource() });
+  // inject > 1: the dialog opened again, which re-runs the partial's script on the same page.
+  for (let i = 0; i < inject; i++) {
+    if (i > 0) await pw.evaluate((html) => { document.body.innerHTML = html; }, DIALOG_BODY);
+    await pw.addScriptTag({ content: scriptSource(opts) });
+  }
   await pw.evaluate(() => {
     window.__saved = null;
     document.addEventListener("umr:readings-saved", (e) => { window.__saved = e.detail.message; });
@@ -103,8 +112,8 @@ async function mount(pw) {
   await pw.waitForSelector("#updateMeterReadingTable tbody tr[data-pk]");
   const row = pw.locator("#updateMeterReadingTable tbody tr[data-pk]").first();
   await row.locator(".row-check-master").check();
-  await row.locator(".new-meter-reading").fill("1005");
-  return { errors, posts, dialogs };
+  await row.locator(".new-meter-reading").fill(reading);
+  return { errors, posts, dialogs, lists, row };
 }
 
 test("dialog Save posts the month and reading date the server requires", async ({ page: pw }) => {
@@ -133,5 +142,62 @@ test("dialog Save does not post when the form's own validation refuses it", asyn
   expect(dialogs[0]).toContain("Meter reading date is mandatory");
   expect(posts.length).toBe(0);
   expect(await pw.evaluate(() => window.__saved)).toBeNull();
+  expect(errors).toEqual([]);
+});
+
+// F-010: the full page and the dialog run this one script; the page no longer carries its own copy.
+test("Edit from List saves a reading below the previous one (the server exempts that row)", async ({ page: pw }) => {
+  const { errors, posts, dialogs, row } = await mount(pw, { inModal: false, prefill: { reading_pk: 7 }, reading: "900" });
+  expect(await row.locator(".new-meter-no").getAttribute("readonly")).toBeNull();
+  await pw.fill("#meter_reading_date", "2026-11-03");
+
+  await pw.click(".js-umr-save");
+  await expect.poll(() => posts.length).toBe(1);
+
+  expect(posts[0].get("readings[0][curr_month_elec_red]")).toBe("900");
+  expect(dialogs).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+test("the plain page still refuses a reading below the baseline, with one alert", async ({ page: pw }) => {
+  const { errors, posts, dialogs, lists, row } = await mount(pw, { inModal: false, reading: "900" });
+  expect(await row.locator(".new-meter-no").getAttribute("readonly")).not.toBeNull();
+  expect(lists.length).toBe(1);
+  // Leaving the reading field alerts once (two handler sets alerted twice).
+  await pw.fill("#meter_reading_date", "2026-11-03");
+  await pw.waitForTimeout(300);
+  expect(dialogs.length).toBe(1);
+
+  await pw.click(".js-umr-save");
+  await pw.waitForTimeout(500);
+
+  expect(posts.length).toBe(0);
+  expect(dialogs.length).toBeGreaterThanOrEqual(1);
+  for (const d of dialogs) expect(d).toContain("cannot be less than the minimum allowed baseline");
+  expect(errors).toEqual([]);
+});
+
+test("the plain page saves a normal reading", async ({ page: pw }) => {
+  const { errors, posts, dialogs } = await mount(pw, { inModal: false, reading: "1005" });
+  await pw.fill("#meter_reading_date", "2026-11-03");
+
+  await pw.click(".js-umr-save");
+  await expect.poll(() => posts.length).toBe(1);
+
+  expect(posts[0].get("readings[0][curr_month_elec_red]")).toBe("1005");
+  expect(dialogs).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+test("opening the dialog a second time does not double its handlers", async ({ page: pw }) => {
+  const { errors, posts, dialogs } = await mount(pw, { inject: 2, reading: "900" });
+  // Leaving the reading field alerts once, not once per earlier open.
+  await pw.fill("#meter_reading_date", "2026-11-03");
+  await pw.waitForTimeout(300);
+  expect(dialogs.length).toBe(1);
+
+  await pw.click(".js-umr-save");
+  await pw.waitForTimeout(500);
+  expect(posts.length).toBe(0);
   expect(errors).toEqual([]);
 });

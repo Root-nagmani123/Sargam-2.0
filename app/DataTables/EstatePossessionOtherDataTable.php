@@ -145,8 +145,8 @@ class EstatePossessionOtherDataTable extends DataTable
             'q' => trim((string) data_get($r->all(), 'search.value', '')),
             'order' => $r->input('order', []),
             'cols' => $colSearch,
-            'bill_year_filter' => trim((string) $r->input('bill_year_filter', '')),
-            'bill_date_filter' => trim((string) $r->input('bill_date_filter', '')),
+            'bill_year_filter' => trim(static::filterText('bill_year_filter')),
+            'bill_date_filter' => trim(static::filterText('bill_date_filter')),
             'can_del' => $canDelete ? 1 : 0,
             'uid' => Auth::id(),
         ];
@@ -184,8 +184,8 @@ class EstatePossessionOtherDataTable extends DataTable
                 static::applyFilters(
                     $query,
                     (string) request()->input('search.value', ''),
-                    (string) request()->input('bill_year_filter', ''),
-                    (string) request()->input('bill_date_filter', '')
+                    static::filterText('bill_year_filter'),
+                    static::filterText('bill_date_filter')
                 );
             })
             ->orderColumn('DT_RowIndex', fn ($query, $order) => $query->orderBy('estate_possession_other.pk', $order))
@@ -343,6 +343,14 @@ class EstatePossessionOtherDataTable extends DataTable
      *
      * @param  Builder|\Illuminate\Database\Query\Builder  $query
      */
+    /** A toolbar filter as text; an array (key[]=x) reads as no filter instead of a 500 (F-006). */
+    private static function filterText(string $key): string
+    {
+        $value = request()->input($key);
+
+        return is_array($value) ? '' : (string) $value;
+    }
+
     public static function applyFilters($query, string $searchValue, string $billYear = '', string $billDate = ''): void
     {
         // Keep a possession when it has a bill matching: Bill Year = bill_year,
@@ -378,7 +386,10 @@ class EstatePossessionOtherDataTable extends DataTable
                 ->orWhere('eut.unit_type', 'like', $searchLike)
                 ->orWhere('eust.unit_sub_type', 'like', $searchLike)
                 ->orWhere('estate_possession_other.house_no', 'like', $searchLike)
-                ->orWhere('ehm.house_no', 'like', $searchLike);
+                ->orWhere('ehm.house_no', 'like', $searchLike)
+                // The employee ID shown under the name (F-012); same column guard as query().
+                ->when(Schema::hasColumn('estate_other_req', 'employee_master_emp_id'),
+                    fn ($q) => $q->orWhere('eor.employee_master_emp_id', 'like', $searchLike));
         });
     }
 

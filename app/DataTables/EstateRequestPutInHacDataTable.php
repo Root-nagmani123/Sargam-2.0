@@ -135,9 +135,10 @@ class EstateRequestPutInHacDataTable extends DataTable
                     . '</div>';
             })
             ->rawColumns(['emp_name', 'remarks', 'put_in_hac', 'actions'])
+            // false: applySearch() is the whole search; Yajra's own half has no employee_id column (F-009).
             ->filter(function ($query) {
                 static::applySearch($query, (string) request()->input('search.value', ''));
-            }, true)
+            }, false)
             ->setRowId('pk');
     }
 
@@ -159,6 +160,8 @@ class EstateRequestPutInHacDataTable extends DataTable
             $q->where('estate_home_request_details.req_id', 'like', $searchLike)
                 ->orWhere('estate_home_request_details.emp_name', 'like', $searchLike)
                 ->orWhere('estate_home_request_details.employee_id', 'like', $searchLike)
+                ->orWhere('estate_home_request_details.emp_designation', 'like', $searchLike)
+                ->orWhere('estate_home_request_details.pay_scale', 'like', $searchLike)
                 ->orWhere('estate_home_request_details.current_alot', 'like', $searchLike)
                 ->orWhere('estate_home_request_details.remarks', 'like', $searchLike);
         });

@@ -244,7 +244,7 @@ $(function () {
 
     $('#btnPrintHouseStatus').on('click', function () {
         if (!dt) return;
-        var data = G.collectRows(dt);
+        var data = G.collectRows(dt, { serial: 'S. No.' });
         G.printGrid({
             title: 'House Status',
             meta: ['Status: ' + (statusFilter || 'All') + (dt.search() ? '  |  Search: "' + dt.search() + '"' : '')],
@@ -256,7 +256,7 @@ $(function () {
     // Same rows and columns as Print (status tab + search applied).
     $('#btnDownloadHouseStatus').on('click', function () {
         if (!dt) return;
-        var data = G.collectRows(dt);
+        var data = G.collectRows(dt, { serial: 'S. No.' });
         G.downloadCsv('House Status', data.headers, data.rows);
     });
 

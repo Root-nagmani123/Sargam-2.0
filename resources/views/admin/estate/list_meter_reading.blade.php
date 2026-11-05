@@ -451,9 +451,12 @@
         });
 
         $('#lmrResetFilters').on('click', function () {
-            $('#bill_month').prop('selectedIndex', 0);
+            // Back to the page's own default (the latest period), not the empty placeholder:
+            // reload() ignores an empty month, so the old rows would stay under reset filters (F-012).
+            $('#bill_month').prop('selectedIndex', $('#bill_month option').length > 1 ? 1 : 0);
             $('#employee_type').val('LBSNAA');
             $('#block_id').val('all');
+            $('#lmrDtSearch input').val('');
             if (dt) {
                 dt.search('');
                 reload();

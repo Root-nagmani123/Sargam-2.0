@@ -191,13 +191,14 @@ class EstateHacApprovedDataTable extends DataTable
                     . '</div>';
             })
             ->rawColumns(['request_type', 'name_id', 'status', 'action'])
+            // false: applyFilters() is the whole search; Yajra's own half cannot see name_id (F-009).
             ->filter(function ($query) {
                 static::applyFilters(
                     $query,
                     (string) request()->input('search.value', ''),
                     (string) request()->input('type_filter', '')
                 );
-            }, true)
+            }, false)
             ->orderColumn('request_date', fn ($query, $order) => $query->reorder()
                 ->orderBy('request_date', $order)
                 ->orderBy('pk', $order))

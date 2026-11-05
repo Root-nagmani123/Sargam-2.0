@@ -3939,11 +3939,26 @@ class EstateController extends Controller
     public function storePossession(Request $request)
     {
         // One transaction, so the house row lock below serialises allotments of the same house.
-        return $this->runAllotmentTransaction(fn () => $this->storePossessionLocked($request));
+        // The NOC upload is stored once and reused by a deadlock retry; if no attempt commits it is deleted (F-013).
+        $nocPath = null;
+        try {
+            return $this->runAllotmentTransaction(function () use ($request, &$nocPath) {
+                return $this->storePossessionLocked($request, $nocPath);
+            });
+        } catch (\Throwable $e) {
+            if ($nocPath !== null) {
+                Storage::disk('public')->delete($nocPath);
+            }
+            throw $e;
+        }
     }
 
-    /** Body of storePossession(); must run inside its transaction. */
-    private function storePossessionLocked(Request $request)
+    /**
+     * Body of storePossession(); must run inside its transaction.
+     *
+     * @param  string|null  $nocPath  the stored NOC upload, kept across retries of the transaction
+     */
+    private function storePossessionLocked(Request $request, ?string &$nocPath)
     {
         // Special-case: Return House for LBSNAA employees uses estate_possession_details, not estate_possession_other.
         if ($request->get('redirect_to') === 'return-house' && $request->input('employee_type') === 'LBSNAA') {
@@ -3992,7 +4007,7 @@ class EstateController extends Controller
 
             $uploadedDocumentPath = null;
             if ($request->hasFile('noc_document')) {
-                $uploadedDocumentPath = $request->file('noc_document')->store('estate/return-house-docs', 'public');
+                $uploadedDocumentPath = $nocPath ??= $request->file('noc_document')->store('estate/return-house-docs', 'public');
             }
 
             if (!empty($epdUpdate)) {
@@ -4002,7 +4017,8 @@ class EstateController extends Controller
             }
 
             // Persist remarks / document in meta store for compatibility (same as Other flow).
-            $this->persistReturnHouseMeta((int) $epd->pk, $validated['remarks'] ?? null, $uploadedDocumentPath, 'L');
+            // After commit: a rolled-back attempt must not leave a meta entry behind (F-013).
+            DB::afterCommit(fn () => $this->persistReturnHouseMeta((int) $epd->pk, $validated['remarks'] ?? null, $uploadedDocumentPath, 'L'));
 
             $housePk = (int) ($epd->estate_house_master_pk ?? 0);
             if ($housePk > 0) {
@@ -4251,7 +4267,7 @@ class EstateController extends Controller
 
         $uploadedDocumentPath = null;
         if ($request->hasFile('noc_document')) {
-            $uploadedDocumentPath = $request->file('noc_document')->store('estate/return-house-docs', 'public');
+            $uploadedDocumentPath = $nocPath ??= $request->file('noc_document')->store('estate/return-house-docs', 'public');
             if ($docColumn) {
                 $data[$docColumn] = $uploadedDocumentPath;
             }
@@ -4290,12 +4306,13 @@ class EstateController extends Controller
             }
 
             // Fallback storage when DB has no columns for remarks/upload_document.
-            $this->persistReturnHouseMeta(
+            // After commit: a rolled-back attempt's $targetPk may not exist (F-013).
+            DB::afterCommit(fn () => $this->persistReturnHouseMeta(
                 $targetPk,
                 $validated['remarks'] ?? null,
                 $uploadedDocumentPath,
                 'O'
-            );
+            ));
 
             foreach (array_unique(array_filter([$previousHousePk, (int) $validated['estate_house_master_pk']])) as $housePk) {
                 $this->refreshHouseUsedStatusFromPossession((int) $housePk);

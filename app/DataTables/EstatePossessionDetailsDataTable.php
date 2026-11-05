@@ -161,8 +161,8 @@ class EstatePossessionDetailsDataTable extends DataTable
             'order' => $r->input('order', []),
             'cols' => $colSearch,
             'scope' => (string) $r->input('scope', ''),
-            'estate_filter' => trim((string) $r->input('estate_filter', '')),
-            'allotment_date_filter' => trim((string) $r->input('allotment_date_filter', '')),
+            'estate_filter' => trim(static::filterText('estate_filter')),
+            'allotment_date_filter' => trim(static::filterText('allotment_date_filter')),
             'emp' => $empScope,
             'isa' => $isEstateAuthority ? 1 : 0,
             'ham' => $hideAuthorityMutations ? 1 : 0,
@@ -265,8 +265,8 @@ class EstatePossessionDetailsDataTable extends DataTable
                 static::applyFilters(
                     $query,
                     (string) request()->input('search.value', ''),
-                    (string) request()->input('estate_filter', ''),
-                    (string) request()->input('allotment_date_filter', '')
+                    static::filterText('estate_filter'),
+                    static::filterText('allotment_date_filter')
                 );
             }, true)
             ->rawColumns(array_values(array_filter([
@@ -435,6 +435,14 @@ class EstatePossessionDetailsDataTable extends DataTable
      *
      * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $query
      */
+    /** A toolbar filter as text; an array (key[]=x) reads as no filter instead of a 500 (F-006). */
+    private static function filterText(string $key): string
+    {
+        $value = request()->input($key);
+
+        return is_array($value) ? '' : (string) $value;
+    }
+
     public static function applyFilters($query, string $searchValue, string $estateFilter = '', string $allotmentDate = ''): void
     {
         $estateFilter = trim($estateFilter);

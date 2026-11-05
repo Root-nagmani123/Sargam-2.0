@@ -55,7 +55,7 @@ class EstateElectricSlabDataTable extends DataTable
             ->leftJoin('estate_unit_type_master as ut', 'estate_electric_slab.estate_unit_type_master_pk', '=', 'ut.pk')
             ->select('estate_electric_slab.*', 'ut.unit_type as unit_type_name')
             // Toolbar "Merge with House" filter (the slab's unit type).
-            ->when(ctype_digit((string) request('unit_type_filter', '')), fn ($q) => $q
+            ->when(is_string($unitType = request('unit_type_filter')) && ctype_digit($unitType), fn ($q) => $q
                 ->where('estate_electric_slab.estate_unit_type_master_pk', (int) request('unit_type_filter')))
             ->orderBy('start_unit_range');
     }

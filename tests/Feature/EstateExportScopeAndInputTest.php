@@ -118,6 +118,33 @@ class EstateExportScopeAndInputTest extends TestCase
         $this->assertSame([], $failures);
     }
 
+    public function test_array_toolbar_filters_never_500_on_the_yajra_grids(): void
+    {
+        $actor = $this->as($this->staffWithRole('Estate Admin'), self::AUTHORITY_ROLES);
+        $failures = [];
+        $grids = [
+            'define-electric-slab.index' => ['unit_type_filter'],
+            'possession-details' => ['estate_filter', 'allotment_date_filter'],
+            'possession-for-others' => ['bill_year_filter', 'bill_date_filter'],
+        ];
+
+        foreach ($grids as $name => $keys) {
+            foreach ($keys as $key) {
+                foreach ([[$key => '1'], [$key => ['1']]] as $query) {
+                    // Yajra keeps one request object per app; drop it so each call reads its own request.
+                    $this->app->forgetInstance('datatables.request');
+                    $status = $actor->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
+                        ->getJson(route('admin.estate.'.$name, $query + ['draw' => 1, 'start' => 0, 'length' => 10]))->getStatusCode();
+                    if ($status !== 200) {
+                        $failures[] = $name.'?'.urldecode(http_build_query($query)).' => '.$status;
+                    }
+                }
+            }
+        }
+
+        $this->assertSame([], $failures);
+    }
+
     public function test_scalar_datatables_search_and_order_still_apply_on_the_define_house_feed(): void
     {
         $actor = $this->as($this->staffWithRole('Estate Admin'), self::AUTHORITY_ROLES);
