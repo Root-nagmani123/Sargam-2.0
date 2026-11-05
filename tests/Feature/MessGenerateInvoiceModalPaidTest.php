@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\Mess\ProcessMessBillsEmployeeController;
+use App\Services\NotificationService;
 use App\Support\MessBuyerClientFilter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -181,6 +182,45 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
         $this->assertStatementMatches($buyer, $row, 1000.0, 200.0, 800.0);
     }
 
+    /**
+     * The grid's default "Invoice Sent" view lists only already-invoiced buyers, so it must not
+     * warm the modal summaries: the modal opened afterwards still lists a buyer never invoiced.
+     */
+    public function test_default_invoice_sent_grid_view_does_not_narrow_the_modal(): void
+    {
+        config(['cache.redis_backed_unified_store' => 'array']);
+        Cache::store('array')->flush();
+        $user = $this->staffWithRole('Mess Admin');
+        $client = $this->as($user, ['Mess Admin']);
+
+        $invoiced = $this->buyerName('H sent');
+        $notInvoiced = $this->buyerName('H new');
+        $this->svVoucher($invoiced, 0, [['2031-09-10', 500]]);
+        $this->svVoucher($notInvoiced, 0, [['2031-09-12', 700]]);
+        $this->invoiceSent($invoiced, (int) $user->user_id);
+
+        // The "Invoice Sent" view narrows its query to this allowlist before the modal warm runs.
+        $allowlist = new ReflectionMethod(ProcessMessBillsEmployeeController::class, 'getSentInvoiceBuyerAllowlistForDateRange');
+        $allowlist->setAccessible(true);
+        $this->assertSame(
+            [['name' => $invoiced, 'slug' => self::SLUG]],
+            $allowlist->invoke($this->controller(), self::FROM, self::TO),
+            'test invoice is not the only sent invoice in the period'
+        );
+
+        // No invoice_sent parameter: the grid's default view, as on a first page load.
+        $client->getJson(route('admin.mess.process-mess-bills-employee.index', [
+            'draw' => 1, 'start' => 0, 'length' => 25, 'date_from' => self::FROM, 'date_to' => self::TO,
+        ]))->assertOk();
+
+        $bills = $client->getJson(route('admin.mess.process-mess-bills-employee.modal-data', [
+            'date_from' => self::FROM, 'date_to' => self::TO, 'per_page' => 100, 'skip_lifetime_due' => 1,
+        ]))->assertOk()->json('bills') ?? [];
+
+        $this->assertSame('500.00', $this->rowFor($bills, $invoiced)['due_amount'] ?? null, 'invoiced buyer missing from the modal');
+        $this->assertSame('700.00', $this->rowFor($bills, $notInvoiced)['due_amount'] ?? null, 'buyer not yet invoiced missing from the modal');
+    }
+
     private function buyerName(string $tag): string
     {
         return 'Modal Paid Test ' . $tag . ' ' . uniqid();
@@ -280,6 +320,27 @@ class MessGenerateInvoiceModalPaidTest extends TestCase
             'quantity' => 1,
             'rate' => $amount,
             'amount' => $amount,
+        ]);
+    }
+
+    /** A combined invoice for the buyer covering FROM..TO, recorded as generateInvoice records it. */
+    private function invoiceSent(string $buyer, int $userId): void
+    {
+        DB::table('notifications')->insert([
+            'sender_user_id' => $userId,
+            'receiver_user_id' => $userId,
+            'type' => 'mess',
+            'module_name' => 'MessInvoiceCombined',
+            'reference_pk' => 0,
+            'title' => 'Mess invoice',
+            'message' => NotificationService::appendMessCombinedReceiptPayload(
+                'Test invoice',
+                'combined-' . rawurlencode($buyer) . '-' . self::SLUG,
+                self::FROM,
+                self::TO
+            ),
+            'is_read' => 0,
+            'created_at' => now(),
         ]);
     }
 

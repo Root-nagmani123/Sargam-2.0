@@ -166,14 +166,18 @@ class ProcessMessBillsEmployeeController extends Controller
                 ]
             );
 
-            $this->warmModalBillSummaryCacheFromCombinedBills(
-                $combinedBills,
-                $dateFrom,
-                $dateTo,
-                $clientTypes,
-                $clientTypePks,
-                $buyerNames
-            );
+            // The "Invoice Sent" view holds only already-invoiced buyers; warming the modal from it
+            // would hide every buyer still to be invoiced.
+            if ($invoiceSentFilter !== 'sent') {
+                $this->warmModalBillSummaryCacheFromCombinedBills(
+                    $combinedBills,
+                    $dateFrom,
+                    $dateTo,
+                    $clientTypes,
+                    $clientTypePks,
+                    $buyerNames
+                );
+            }
 
             if ($statusFilter !== null && $statusFilter !== '') {
                 $statusMap = [
@@ -979,8 +983,8 @@ class ProcessMessBillsEmployeeController extends Controller
      * or as "<variant> (...)"; when it finds none, rows named exactly the buyer's name or
      * "<name> (...)". OT/course buyers skip the resolution and match by name only. Any of those rows
      * outside the group's own keys reach the statement's allocation but not this pool.
-     * MessGenerateInvoiceModalPaidTest covers name-only, client-id and no-client-id employee buyers,
-     * on both the uncached modal path and the path warmed by the grid request.
+     * MessGenerateInvoiceModalPaidTest covers name-only, client-id and no-client-id employee buyers
+     * on the uncached modal path, and a name-only buyer on the path warmed by the grid's "All" view.
      *
      * @param  array<int, int>  $clientIds
      * @param  array<int, string>  $names
