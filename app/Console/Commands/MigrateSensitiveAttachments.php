@@ -12,7 +12,11 @@ class MigrateSensitiveAttachments extends Command
 {
     protected $signature = 'attachments:migrate-sensitive {--dry-run : Check every referenced file without changing storage}';
 
-    protected $description = 'Move leave and notice attachments from public to private storage';
+    // Notice attachments stay on the public disk by client requirement, so only
+    // leave attachments are moved. Notice files are protected by the web server
+    // denying direct /storage/notice_docs/ requests (see deploy notes); the
+    // admin.notice.attachment route is the only way to read them.
+    protected $description = 'Move leave attachments from public to private storage';
 
     public function handle(): int
     {
@@ -76,7 +80,6 @@ class MigrateSensitiveAttachments extends Command
     {
         $sources = [
             ['leave_application_attachment', 'file_path', 'uploads/leave-applications/'],
-            ['notices_notification', 'document', 'notice_docs/'],
         ];
         $paths = [];
 
