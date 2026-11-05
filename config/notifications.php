@@ -216,6 +216,14 @@ return [
         ],
     ],
 
+    // COE Result Compilation "Notify for Pending": the faculty's Result Entry sheet for that course.
+    'coe_result_entry' => [
+        'FacultyResultEntry' => [
+            'route' => 'admin.coe.faculty-result-entry.index',
+            'params' => ['course' => 'reference_pk'],
+        ],
+    ],
+
     // Default fallback route
     'default' => [
         'route' => 'admin.dashboard',

@@ -3,15 +3,15 @@
 namespace App\Http\Controllers\Admin\COE\Concerns;
 
 /**
- * Sample results behind the design-first Result Management and Document Management
- * screens (Result Compilation, Merit & Ranking, Marksheet Generation, Verified
- * Marksheet). Evaluation & Marks, which would feed them, is itself design-first,
- * so there is no marks table to read yet.
+ * Sample results behind the design-first Merit & Ranking, Marksheet Generation and
+ * Verified Marksheet screens. Result Compilation has moved to real marks
+ * (coe_evaluation_marks, via App\Services\COE\ResultMarksService).
  *
  * Marks are derived from a hash of (course, participant, component), so every
  * screen shows the same numbers for the same OT on every request.
  *
- * shortcut: sample data only, replace with queries once Evaluation & Marks stores marks.
+ * shortcut: sample data only, replace with ResultMarksService::courseSheets() once
+ * the merit rules (which subjects are Director Assessment, which are qualifying) are stored.
  */
 trait SampleResultData
 {
