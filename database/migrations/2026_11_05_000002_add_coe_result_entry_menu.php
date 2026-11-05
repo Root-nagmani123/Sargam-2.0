@@ -3,7 +3,9 @@
 use App\Services\SidebarMenu\MenuService;
 use App\Services\SidebarMenu\SidebarNavResolver;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -20,6 +22,11 @@ use Spatie\Permission\PermissionRegistrar;
  * the container, or Menu Management may have made "Result Management" as a plain
  * link — either is turned into the container, keeping its icon and position.
  * A child whose route already exists is moved under the container, not duplicated.
+ *
+ * Where it goes: the group that already holds the COE screens (any admin/coe/ route),
+ * else a "COE" group under Setup, else a new "COE" group — staging made its COE menus
+ * through Menu Management, so its group need not be the one 2026_09_30 creates.
+ * deleted_at / is_container / target are written only where the column exists.
  *
  * Faculty get Result Entry (the faculty-end screen, like Examination Drive (Faculty));
  * the admin screens go to no role — Super Admin passes, others via Roles & Permissions.
@@ -49,35 +56,25 @@ return new class extends Migration
     {
         $now = now();
 
-        $categoryId = DB::table('sidebar_categories')
-            ->where('slug', self::CATEGORY_SLUG)->whereNull('deleted_at')->value('id');
-        if (! $categoryId) {
-            throw new RuntimeException('Sidebar category "'.self::CATEGORY_SLUG.'" not found.');
-        }
-        $groupId = DB::table('menu_groups')
-            ->where('category_id', $categoryId)->where('name', self::GROUP_NAME)->whereNull('deleted_at')
-            ->value('id');
-        if (! $groupId) {
-            throw new RuntimeException('Menu group "'.self::GROUP_NAME.'" not found — run the COE sidebar migration first.');
-        }
+        DB::transaction(function () use ($now) {
+            [$categoryId, $groupId] = $this->coeGroup($now);
 
-        DB::transaction(function () use ($categoryId, $groupId, $now) {
             Permission::firstOrCreate(['name' => self::CONTAINER_PERMISSION, 'guard_name' => 'web']);
 
-            $containerId = DB::table('menus')
-                ->where('group_id', $groupId)->whereNull('parent_id')->where('name', self::CONTAINER)->whereNull('deleted_at')
+            $containerId = $this->live(DB::table('menus'), 'menus')
+                ->where('group_id', $groupId)->whereNull('parent_id')->where('name', self::CONTAINER)
                 ->value('id');
 
             if ($containerId) {
-                DB::table('menus')->where('id', $containerId)->update([
+                DB::table('menus')->where('id', $containerId)->update($this->menuColumns([
                     'route' => null,
                     'is_container' => 1,
                     'target' => '0',
                     'permission_name' => self::CONTAINER_PERMISSION,
                     'updated_at' => $now,
-                ]);
+                ]));
             } else {
-                $containerId = DB::table('menus')->insertGetId([
+                $containerId = DB::table('menus')->insertGetId($this->menuColumns([
                     'category_id' => $categoryId,
                     'group_id' => $groupId,
                     'parent_id' => null,
@@ -91,14 +88,14 @@ return new class extends Migration
                     'target' => '0',
                     'created_at' => $now,
                     'updated_at' => $now,
-                ]);
+                ]));
             }
 
             foreach (self::CHILDREN as $i => [$name, $route, $icon, $permission]) {
                 Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
 
-                $existing = DB::table('menus')
-                    ->where('route', $route)->where('is_container', 0)->whereNull('deleted_at')
+                $existing = $this->live(DB::table('menus'), 'menus')
+                    ->where('route', $route)->where('id', '!=', $containerId)
                     ->value('id');
 
                 if ($existing) {
@@ -113,7 +110,7 @@ return new class extends Migration
                     continue;
                 }
 
-                DB::table('menus')->insert([
+                DB::table('menus')->insert($this->menuColumns([
                     'category_id' => $categoryId,
                     'group_id' => $groupId,
                     'parent_id' => $containerId,
@@ -127,7 +124,7 @@ return new class extends Migration
                     'target' => '0',
                     'created_at' => $now,
                     'updated_at' => $now,
-                ]);
+                ]));
             }
 
             $faculty = Role::where('name', self::FACULTY_ROLE)->where('guard_name', 'web')->first();
@@ -137,6 +134,60 @@ return new class extends Migration
         });
 
         $this->clearCaches();
+    }
+
+    /**
+     * [category id, group id] of the COE menus: the group of an existing admin/coe/
+     * screen, else the "COE" group under Setup, else a new one there.
+     *
+     * @return array{0:int, 1:int}
+     */
+    private function coeGroup($now): array
+    {
+        $existing = $this->live(DB::table('menus'), 'menus')
+            ->where('route', 'like', 'admin/coe/%')->whereNotNull('group_id')
+            ->orderBy('id')->first(['category_id', 'group_id']);
+        if ($existing) {
+            return [(int) $existing->category_id, (int) $existing->group_id];
+        }
+
+        $categoryId = $this->live(DB::table('sidebar_categories'), 'sidebar_categories')
+            ->where('slug', self::CATEGORY_SLUG)->value('id');
+        if (! $categoryId) {
+            throw new RuntimeException('Sidebar category "'.self::CATEGORY_SLUG.'" not found — cannot place the COE menus.');
+        }
+
+        $groupId = $this->live(DB::table('menu_groups'), 'menu_groups')
+            ->where('category_id', $categoryId)->where('name', self::GROUP_NAME)->value('id');
+        if (! $groupId) {
+            // Same group 2026_09_30_120000_add_coe_sidebar_menus would have made.
+            $groupId = DB::table('menu_groups')->insertGetId(array_intersect_key([
+                'category_id' => $categoryId,
+                'name' => self::GROUP_NAME,
+                'icon' => 'fact_check',
+                'order' => (int) DB::table('menu_groups')->where('category_id', $categoryId)->max('order') + 1,
+                'is_active' => '1', // enum('1','0'): the string, not the enum index
+                'created_at' => $now,
+                'updated_at' => $now,
+            ], array_flip(Schema::getColumnListing('menu_groups'))));
+        }
+
+        return [(int) $categoryId, (int) $groupId];
+    }
+
+    /** Not soft-deleted, on tables that have deleted_at. */
+    private function live(Builder $query, string $table): Builder
+    {
+        return Schema::hasColumn($table, 'deleted_at') ? $query->whereNull('deleted_at') : $query;
+    }
+
+    /** Only the columns the menus table has on this database. */
+    private function menuColumns(array $row): array
+    {
+        static $columns;
+        $columns ??= array_flip(Schema::getColumnListing('menus'));
+
+        return array_intersect_key($row, $columns);
     }
 
     /**
