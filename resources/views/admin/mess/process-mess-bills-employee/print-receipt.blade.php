@@ -423,8 +423,19 @@
         });
         function closeReceipt() {
             window.close();
+            // The browser keeps the tab when the script may not close it (e.g. after a reload);
+            // then go back to the Mess bill page the receipt came from, not the dashboard.
             setTimeout(function() {
-                window.location.href = '{{ route("admin.dashboard") }}';
+                if (window.history.length > 1) {
+                    window.history.back();
+                    return;
+                }
+                var ref = document.referrer;
+                if (ref && ref.indexOf(window.location.origin + '/') === 0) {
+                    window.location.href = ref;
+                    return;
+                }
+                window.location.href = '{{ route("admin.mess.process-mess-bills-employee.index") }}';
             }, 150);
         }
     </script>
