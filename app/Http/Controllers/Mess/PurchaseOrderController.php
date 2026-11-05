@@ -6,6 +6,7 @@ use App\Support\DataTableRedisCache;
 use App\Support\DataTableSearchHelper;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use App\Models\Mess\PurchaseOrder;
 use App\Models\Mess\PurchaseOrderItem;
@@ -757,7 +758,7 @@ class PurchaseOrderController extends Controller
     {
         $purchaseOrder = PurchaseOrder::findOrFail($id);
         if ($refusal = $this->approvalRefusal($purchaseOrder)) {
-            return redirect()->route('admin.mess.purchaseorders.index')->with('po_edit_error', $refusal);
+            return $this->backToPurchaseOrderList()->with('po_edit_error', $refusal);
         }
         // Only a still-pending PO changes: if another approve/reject landed first, nothing is written.
         $changed = PurchaseOrder::whereKey($purchaseOrder->id)->where('status', 'pending')->update([
@@ -766,12 +767,12 @@ class PurchaseOrderController extends Controller
             'approved_at' => now(),
         ]);
         if ($changed === 0) {
-            return redirect()->route('admin.mess.purchaseorders.index')
+            return $this->backToPurchaseOrderList()
                 ->with('po_edit_error', $this->approvalRefusal($purchaseOrder->refresh()) ?? 'Purchase order ' . $purchaseOrder->po_number . ' was not changed.');
         }
         self::bumpPurchaseOrderListingCacheEpoch();
 
-        return redirect()->route('admin.mess.purchaseorders.index')
+        return $this->backToPurchaseOrderList()
             ->with('success', 'Purchase order ' . $purchaseOrder->po_number . ' approved. Its items are now in stock and can be sold.');
     }
 
@@ -779,17 +780,35 @@ class PurchaseOrderController extends Controller
     {
         $purchaseOrder = PurchaseOrder::findOrFail($id);
         if ($refusal = $this->approvalRefusal($purchaseOrder)) {
-            return redirect()->route('admin.mess.purchaseorders.index')->with('po_edit_error', $refusal);
+            return $this->backToPurchaseOrderList()->with('po_edit_error', $refusal);
         }
         $changed = PurchaseOrder::whereKey($purchaseOrder->id)->where('status', 'pending')->update(['status' => 'rejected']);
         if ($changed === 0) {
-            return redirect()->route('admin.mess.purchaseorders.index')
+            return $this->backToPurchaseOrderList()
                 ->with('po_edit_error', $this->approvalRefusal($purchaseOrder->refresh()) ?? 'Purchase order ' . $purchaseOrder->po_number . ' was not changed.');
         }
         self::bumpPurchaseOrderListingCacheEpoch();
 
-        return redirect()->route('admin.mess.purchaseorders.index')
+        return $this->backToPurchaseOrderList()
             ->with('success', 'Purchase order ' . $purchaseOrder->po_number . ' rejected');
+    }
+
+    /**
+     * Back to the list the user approved or rejected from, with its filters (e.g. ?status=pending),
+     * so they can go on to the next pending PO. Only the list's own filters are carried over.
+     */
+    private function backToPurchaseOrderList(): RedirectResponse
+    {
+        $listUrl = route('admin.mess.purchaseorders.index');
+        $previous = url()->previous();
+        if (parse_url($previous, PHP_URL_PATH) !== parse_url($listUrl, PHP_URL_PATH)) {
+            return redirect()->to($listUrl);
+        }
+
+        parse_str((string) parse_url($previous, PHP_URL_QUERY), $query);
+        $filters = array_intersect_key($query, array_flip(['date_from', 'date_to', 'vendor_id', 'store_id', 'status']));
+
+        return redirect()->route('admin.mess.purchaseorders.index', $filters);
     }
 
     /**
