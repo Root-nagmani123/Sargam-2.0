@@ -16,8 +16,8 @@ use Illuminate\Validation\ValidationException;
  * entries are throttled separately (CWE-307), like FcOtpService.
  *
  * Delivery needs a DLT-approved SMS template (services.coe_freeze_otp). Until
- * one is registered, local/testing write the code to the log so the flow can be
- * exercised, and every other environment refuses to freeze.
+ * one is registered, local/testing/staging write the code to the log so the flow
+ * can be exercised, and every other environment refuses to freeze.
  */
 class FreezeOtpService
 {
@@ -93,7 +93,7 @@ class FreezeOtpService
         $body = (string) config('services.coe_freeze_otp.message');
 
         if (! $templateId || $body === '') {
-            if (app()->environment(['local', 'testing'])) {
+            if (app()->environment(['local', 'testing', 'staging'])) {
                 Log::info('COE freeze OTP (no SMS template configured, not sent)', [
                     'mobile' => self::mask($mobile),
                     'otp' => $code,
