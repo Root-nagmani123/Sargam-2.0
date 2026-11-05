@@ -90,17 +90,15 @@ class EstateReturnHouseDataTable extends DataTable
                 if (! is_array($c)) {
                     continue;
                 }
+                $sv = data_get($c, 'search.value', '');
                 $colSearch[] = [
                     'data' => $c['data'] ?? '',
-                    'sv' => trim((string) data_get($c, 'search.value', '')),
+                    'sv' => is_scalar($sv) ? trim((string) $sv) : '',
                 ];
             }
         }
 
-        $searchRaw = '';
-        if ($r && is_array($r->get('search'))) {
-            $searchRaw = strtolower((string) ($r->get('search')['value'] ?? ''));
-        }
+        $searchRaw = strtolower($this->searchTerm());
 
         $user = Auth::user();
         $isPrivileged = isEstateAuthority();
@@ -203,14 +201,22 @@ class EstateReturnHouseDataTable extends DataTable
         }
     }
 
+    /**
+     * The one search term for the grid and its Download/Print: the grid sends search[value]=x,
+     * the exports send search=x. Array-shaped input (search[value][]=x) reads as no search, not a 500.
+     */
+    public function searchTerm(): string
+    {
+        $search = $this->request()->input('search');
+        $value = is_array($search) ? ($search['value'] ?? '') : $search;
+
+        return is_scalar($value) ? trim((string) $value) : '';
+    }
+
     public function query(): QueryBuilder
     {
         $hasUnitTypeOnSubType = Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
-        $request = $this->request();
-        $searchValue = '';
-        if ($request && is_array($request->get('search'))) {
-            $searchValue = strtolower((string) ($request->get('search')['value'] ?? ''));
-        }
+        $searchValue = strtolower($this->searchTerm());
 
         $user = \Illuminate\Support\Facades\Auth::user();
         $isPrivileged = isEstateAuthority();

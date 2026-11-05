@@ -91,6 +91,8 @@ class EstateExportScopeAndInputTest extends TestCase
 
         foreach (self::ROUTES as $name) {
             foreach ([[], ['cols' => ['req_id']], ['search' => ['x']], ['format' => ['csv']], self::arrayFilters(), ...self::nestedDataTablesInput()] as $query) {
+                // Without this, exports built on a Yajra DataTable read the first request of the loop, not $query.
+                $this->app->forgetInstance('datatables.request');
                 $status = $actor->get(route('admin.estate.'.$name, $query))->getStatusCode();
                 if ($status !== 200) {
                     $failures[] = $name.'?'.urldecode(http_build_query($query)).' => '.$status;
@@ -193,6 +195,36 @@ class EstateExportScopeAndInputTest extends TestCase
         $this->assertSame(['Request ID'], $this->csvHeader($csv), 'cols narrows to the one column');
     }
 
+    /** F-012: Return House Download and Print hold exactly the grid's rows for the same search. */
+    public function test_return_house_download_and_print_match_the_grid_for_the_same_search(): void
+    {
+        $actor = $this->as($this->staffWithRole('Estate Admin'), self::AUTHORITY_ROLES);
+        // A return month ('2024-03'): the grid matches it on the dates, which the old export filter never searched.
+        $date = (string) DB::table('estate_possession_details')->where('return_home_status', 1)
+            ->whereNotNull('estate_house_master_pk')->whereNotNull('current_meter_reading_date')
+            ->orderByDesc('pk')->value('current_meter_reading_date');
+        if ($date === '') {
+            $this->markTestSkipped('no returned LBSNAA house with a return date');
+        }
+
+        foreach ([substr($date, 0, 7), ''] as $search) { // '' = after Reset: everything
+            $this->app->forgetInstance('datatables.request');
+            $grid = (int) $actor->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
+                ->getJson(route('admin.estate.return-house', ['draw' => 1, 'start' => 0, 'length' => 10, 'search' => ['value' => $search]]))
+                ->assertOk()->json('recordsFiltered');
+            $this->assertGreaterThan(0, $grid, "grid finds rows for \"{$search}\"");
+
+            $this->app->forgetInstance('datatables.request');
+            $csv = $actor->get(route('admin.estate.return-house.download', ['format' => 'csv', 'search' => $search, 'cols' => 'sno,name']));
+            $downloaded = count(array_filter(array_slice($this->csvRows($csv, 'S. No.'), 1), fn ($r) => is_numeric($r[0] ?? '')));
+            $this->assertSame($grid, $downloaded, "Download holds the grid's rows for \"{$search}\"");
+
+            $this->app->forgetInstance('datatables.request');
+            $printed = $actor->get(route('admin.estate.return-house.print', ['search' => $search]))->assertOk()->viewData('rows');
+            $this->assertCount($grid, $printed, "Print holds the grid's rows for \"{$search}\"");
+        }
+    }
+
     /**
      * A non-Estate staff login with an active possession, its own req_id and the req_ids
      * of other employees' active possessions.
@@ -227,12 +259,12 @@ class EstateExportScopeAndInputTest extends TestCase
     }
 
     /** @return list<list<string>> CSV rows from the heading row on */
-    private function csvRows($response): array
+    private function csvRows($response, string $heading = 'Request ID'): array
     {
         $response->assertOk();
         $lines = array_map('str_getcsv', preg_split('/\r?\n/', trim(ltrim($response->streamedContent(), "\xEF\xBB\xBF"))));
         foreach ($lines as $i => $line) {
-            if (in_array('Request ID', $line, true)) {
+            if (in_array($heading, $line, true)) {
                 return array_slice($lines, $i);
             }
         }

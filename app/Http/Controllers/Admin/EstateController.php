@@ -6763,30 +6763,16 @@ class EstateController extends Controller
     /**
      * Rows + heading line for the Return House downloads.
      *
-     * Reuses the grid's own query builder, so the export is scoped exactly as
-     * the table is — including the non-privileged employee restriction.
+     * Reuses the grid's own query builder and search, so the export holds exactly
+     * the grid's rows — including the non-privileged employee restriction (F-012).
      *
      * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
      */
     private function returnHouseExportPayload(Request $request): array
     {
-        $search = trim($this->exportSearchTerm($request));
-
-        $rows = app(EstateReturnHouseDataTable::class)->query()->get();
-
-        if ($search !== '') {
-            $needle = mb_strtolower($search);
-            $rows = $rows->filter(function ($row) use ($needle) {
-                foreach (['name', 'employee_type', 'section_name', 'estate_name', 'house_no', 'unit_name',
-                    'building_name', 'unit_sub_type', 'remarks'] as $key) {
-                    if (str_contains(mb_strtolower((string) ($row->{$key} ?? '')), $needle)) {
-                        return true;
-                    }
-                }
-
-                return false;
-            })->values();
-        }
+        $table = app(EstateReturnHouseDataTable::class);
+        $search = $table->searchTerm();
+        $rows = $table->query()->get();
 
         return [
             'rows' => $rows,
