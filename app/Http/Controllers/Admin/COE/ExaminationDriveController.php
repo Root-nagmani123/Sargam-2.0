@@ -33,7 +33,7 @@ use Illuminate\Validation\Rule;
 /**
  * COE → Examination Management → Examination Drive Configuration.
  *
- * Design-first screen. Sub-pages:
+ * Sub-pages:
  *   index          — drive list (Active / Archived tabs)
  *   show/{id}      — Map Faculty to Examination Drive (editable component table)
  *   coordinates/{id} — Faculty Coordinates & Components (view with Assign Faculty modal)
@@ -41,11 +41,6 @@ use Illuminate\Validation\Rule;
 class ExaminationDriveController extends Controller
 {
     public const SCOPES       = ['active', 'archived'];
-    public const STATUSES     = ['Draft', 'Pending at COE', 'Active', 'Closed'];
-    public const EXAM_TYPES   = ['Written Test', 'Practical', 'Viva', 'Assignment'];
-    public const TERMS        = ['Annual Term', 'Semester 1', 'Semester 2', 'Term I', 'Term II'];
-    public const PHASES       = ['Phase-IV 2025', 'Phase-III 2025', 'Phase-II 2024'];
-    public const COURSES      = ['Phase IV 2025', 'Phase III 2025', 'Foundation Course 2026'];
     public const SOURCES      = ['Faculty', 'Sargam', 'Sargam 2.0'];
     public const EXAM_MODES   = ['Online', 'Offline', 'Offline & Online'];
     public const COMPONENT_EXAM_TYPES = ['Online Objective', 'Offline Objective', 'Online Descriptive', 'Offline Descriptive'];
@@ -1073,45 +1068,5 @@ class ExaminationDriveController extends Controller
     private function phaseValues(): array
     {
         return ExaminationDrive::whereNotNull('phase')->distinct()->orderBy('phase')->pluck('phase')->filter()->values()->all();
-    }
-
-    private function sampleDrives(): Collection
-    {
-        $rows = [
-            // name, examType, term, course, session, faculty, sub, components, start, end, status, archived
-            ['Law Drive',                    'Law Exam',    'Annual Term', 'Phase IV 2025', '2024', 'Lee Brown',   3, 3, '05-01-2027', '08-02-2027', 'Pending at COE', false],
-            ['Computer Proficiency Test Drive','-',         'Annual Term', 'Phase IV 2025', '2024', 'Casey Sims',  0, 0, '05-01-2027', '08-02-2027', 'Active',         false],
-            ['Presentation Assessment Drive',  '-',         'Annual Term', 'Phase IV 2025', '2024', 'Gene Brewer', 0, 0, '05-01-2027', '08-02-2027', 'Closed',         false],
-            ['Director Assessment Drive',      '-',         'Annual Term', 'Phase IV 2025', '2024', 'Homer Green', 0, 0, '05-01-2027', '08-02-2027', 'Closed',         false],
-            ['Leadership Drive',             'Written Test','Term I',      'Phase IV 2025', '2025', 'John Doe',    2, 2, '10-03-2027', '15-03-2027', 'Draft',          false],
-            ['Old Exam Drive',               'Practical',   'Annual Term', 'Phase III 2025','2024', 'Lee Brown',   1, 1, '01-01-2026', '10-01-2026', 'Closed',         true],
-        ];
-
-        return collect($rows)->values()->map(fn (array $r, int $i) => [
-            'id'          => $i + 1,
-            'name'        => $r[0],
-            'exam_type'   => $r[1],
-            'term'        => $r[2],
-            'course'      => $r[3],
-            'session'     => $r[4],
-            'faculty'     => $r[5],
-            'sub_coords'  => $r[6],
-            'components'  => $r[7],
-            'start_date'  => $r[8],
-            'end_date'    => $r[9],
-            'status'      => $r[10],
-            'archived'    => $r[11],
-            // Sample component rows for the show/coordinates sub-pages
-            'component_rows' => [
-                ['component' => 'Ethics & Integrity', 'max_marks' => 100, 'passing_marks' => 40.00,
-                 'source' => 'Faculty', 'faculty' => 'John Doe', 'weightage' => 40.00,
-                 'exam_date' => '01/11/2026', 'exam_type' => 'Online',
-                 'sub_faculty' => ['Eileen Lane', 'Helen Riley', 'Johnathan Juarez', 'Sharon Ross', 'Jan Harmon']],
-                ['component' => 'Discipline',         'max_marks' => 100, 'passing_marks' => 40.00,
-                 'source' => 'Sargam 2.0', 'faculty' => 'Sargam 2.0', 'weightage' => 60.00,
-                 'exam_date' => '01/11/2026', 'exam_type' => 'Offline',
-                 'sub_faculty' => []],
-            ],
-        ]);
     }
 }
