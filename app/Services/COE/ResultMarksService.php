@@ -530,6 +530,7 @@ class ResultMarksService
      * One sheet per course with drives in $scope: active = Active drives,
      * archived = Closed drives (Draft drives are not released yet). A participant's
      * subject is evaluated once every component of it, on every drive, is approved.
+     * Only approved marks are carried: draft marks are blank and left out of totals.
      *
      * @return array<int, array{course_pk:int, course:string, subjects:array, rows:array}> keyed by course pk
      */
@@ -580,9 +581,10 @@ class ResultMarksService
                 $total = 0.0;
                 $done = true;
                 foreach ($s['columns'] as $key => $col) {
-                    $m = $marks[$key][$pk] ?? null;
+                    // Only faculty-approved marks are results; a draft shows as not entered.
+                    $m = ($marks[$key][$pk] ?? null)?->isApproved() ? $marks[$key][$pk] : null;
                     $row['marks'][$key] = $m === null ? null : ($m->is_absent ? 'AB' : $m->marks);
-                    $done = $done && $m?->isApproved();
+                    $done = $done && $m !== null;
                     $total += $m && ! $m->is_absent ? (float) $m->marks : 0;
                 }
                 $row['subjects'][$spk] = round($total, 2);

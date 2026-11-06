@@ -296,6 +296,13 @@ class CoeResultManagementFlowTest extends TestCase
         $row = $this->compilationRow($this->subjectA);
         $this->assertSame([0, $n, 80.0, null], [$row['approved'], $row['pending'], $row['max'], $row['average']]);
 
+        // Only approved marks are shown: the first OT's draft X (10) is blank and not in the total.
+        $pending = $this->actingAs($this->admin)->get(route('admin.coe.result-compilation.participants', [
+            'course' => $this->drive->course_master_pk, 'subject' => $this->subjectA, 'status' => 'pending',
+        ]))->assertOk();
+        $first = $pending->viewData('rows')[0];
+        $this->assertSame([null, 15.0], [$first['marks'][$x], $first['subjects'][$this->subjectA]]);
+
         // F1 owns subject A, so approving needs Y for the other OTs too; F2's 3 are locked.
         $this->save(1, $this->fill($x, '25'), true)->assertStatus(422);
         $this->save(1, $this->fill($x, '25') + $this->fill($y, '5', array_slice($this->ots, 3)), true)->assertOk();
