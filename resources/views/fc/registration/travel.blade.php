@@ -182,7 +182,6 @@
                 <dt class="col-sm-3">Code</dt><dd class="col-sm-9">{{ $displayCode ?? '—' }}</dd>
                 <dt class="col-sm-3">Mobile</dt><dd class="col-sm-9">{{ $step1->mobile_no ?? '—' }}</dd>
                 <dt class="col-sm-3">Arrival date</dt><dd class="col-sm-9">{{ $plan->joining_date?->format('d M Y') ?? '—' }}</dd>
-                {{-- Activity slot hidden for now (will be used in future).
                 <dt class="col-sm-3">Slot &amp; time</dt><dd class="col-sm-9">
                     {{ $plan->fcArrivalSlot?->slot_label ?? '—' }}
                     @if($plan->fcArrivalSlot?->time_start && $plan->fcArrivalSlot?->time_end)
@@ -191,15 +190,12 @@
                         )</span>
                     @endif
                 </dd>
-                --}}
                 <dt class="col-sm-3">Mode of journey</dt><dd class="col-sm-9">{{ $plan->mode_of_journey ?? '—' }}</dd>
                 <dt class="col-sm-3">Flight / Train / Vehicle no.</dt><dd class="col-sm-9">{{ $plan->journey_vehicle_no ?? '—' }}</dd>
                 <dt class="col-sm-3">Date of arrival at Academy</dt><dd class="col-sm-9">{{ $plan->academy_arrival_date?->format('d M Y') ?? '—' }}</dd>
-                <dt class="col-sm-3">Arrival time at Dehradun</dt><dd class="col-sm-9">{{ $plan->arrival_time_dehradun ?? '—' }}</dd>
-                {{-- Require academy vehicle hidden for now (will be used in future).
+                <dt class="col-sm-3">Arrival time at Airport/Railway Station</dt><dd class="col-sm-9">{{ $plan->arrival_time_dehradun ?? '—' }}</dd>
                 <dt class="col-sm-3">Require academy vehicle</dt>
                 <dd class="col-sm-9">{{ $plan->requiresAcademyVehicleYes() ? 'Yes' : 'No' }}</dd>
-                --}}
             </dl>
             @if($plan->special_requirements)
                 <p class="small mt-2"><span class="text-muted">Remarks:</span> {{ $plan->special_requirements }}</p>
@@ -257,12 +253,11 @@
                             <option value="{{ $t }}" {{ $currentArrivalTime === $t ? 'selected' : '' }}>{{ $t }}</option>
                         @endforeach
                     </select>
-                    {{-- <div class="form-text text-muted">Choose an activity slot at least 2 hours after this time.</div> --}}
+                    <div class="form-text text-muted">Choose an activity slot at least 2 hours after this time.</div>
                 </div>
             </div>
 
             <div class="row g-3 mb-1">
-                {{-- Activity slot hidden for now (will be used in future). Server treats it as optional.
                 <div class="col-12 col-md-6 field-block">
                     <label class="form-label">Activity slot <span class="text-danger">*</span></label>
                     <select name="fc_travel_arrival_slot_id" id="arrivalSlotSelect" class="form-select" required>
@@ -294,7 +289,6 @@
                     </select>
                     <div class="form-text text-muted">Slots are shown only for the selected arrival date.</div>
                 </div>
-                --}}
                 <div class="col-12 col-md-6 field-block">
                     <label class="form-label">Mode of journey <span class="text-danger">*</span></label>
                     {{-- Options come from mctp_travel_mode_masters (active rows). The plan
@@ -336,13 +330,15 @@
                            value="{{ old('joining_time', $plan?->joining_time) }}">
                 </div>
                 --}}
+            </div>
+
+            <div class="row g-3 mb-1">
                 <div class="col-12 col-md-6 field-block">
                     <label class="form-label">Flight No / Train No/ Vehicle No <span class="text-danger">*</span></label>
                     <input type="text" name="journey_vehicle_no" class="form-control @error('journey_vehicle_no') is-invalid @enderror" maxlength="200" required
                            value="{{ old('journey_vehicle_no', $plan?->journey_vehicle_no) }}">
                     @error('journey_vehicle_no')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
-                {{-- Require academy vehicle hidden for now (will be used in future). Server treats it as optional.
                 <div class="col-12 col-md-6 field-block">
                     <label class="form-label">Whether Require Academy Vehicle From Dehradun Airport/Railway Station to Academy <span class="text-danger">*</span></label>
                     <div class="vehicle-choice-group">
@@ -358,7 +354,6 @@
                         </div>
                     </div>
                 </div>
-                --}}
                 {{-- Keep for future use (currently hidden):
                 <div class="col-12 col-md-6 field-block">
                     <label class="form-label small fw-semibold">Date of arrival at Academy</label>
@@ -398,16 +393,12 @@
                         <p class="small text-muted mb-3">Please review your details before final submission.</p>
                         <dl class="row small mb-0 preview-list">
                             <dt class="col-sm-4">Arrival date</dt><dd class="col-sm-8 preview-highlight" data-preview="joining_date">—</dd>
-                            {{-- Activity slot hidden for now (will be used in future).
                             <dt class="col-sm-4">Slot name</dt><dd class="col-sm-8 preview-highlight" data-preview="slot_name">—</dd>
                             <dt class="col-sm-4">Slot time</dt><dd class="col-sm-8 preview-highlight" data-preview="slot_time">—</dd>
-                            --}}
                             <dt class="col-sm-4">Mode of journey</dt><dd class="col-sm-8 preview-highlight" data-preview="mode_of_journey">—</dd>
                             <dt class="col-sm-4">Flight/Train/Vehicle no.</dt><dd class="col-sm-8 preview-highlight" data-preview="journey_vehicle_no">—</dd>
-                            <dt class="col-sm-4">Arrival time at Dehradun</dt><dd class="col-sm-8 preview-highlight" data-preview="arrival_time_dehradun">—</dd>
-                            {{-- Require academy vehicle hidden for now (will be used in future).
+                            <dt class="col-sm-4">Arrival time at Airport/Railway Station</dt><dd class="col-sm-8 preview-highlight" data-preview="arrival_time_dehradun">—</dd>
                             <dt class="col-sm-4">Require academy vehicle</dt><dd class="col-sm-8 preview-highlight" data-preview="require_academy_vehicle">—</dd>
-                            --}}
                             <dt class="col-sm-4">Remarks</dt><dd class="col-sm-8 preview-highlight" data-preview="special_requirements">—</dd>
                         </dl>
                 </div>
@@ -431,8 +422,7 @@
                 const confirmSubmitBtn = document.getElementById('confirmTravelPlanSubmitBtn');
                 const closePreviewBtn = document.getElementById('closeTravelPlanPreviewBtn');
                 const editTravelPlanBtn = document.getElementById('editTravelPlanBtn');
-                // slotSelect is optional: the Activity slot field is hidden for now.
-                if (!dateSelect || !form || !previewBtn || !previewModalEl || !confirmSubmitBtn || !closePreviewBtn || !editTravelPlanBtn) return;
+                if (!dateSelect || !slotSelect || !form || !previewBtn || !previewModalEl || !confirmSubmitBtn || !closePreviewBtn || !editTravelPlanBtn) return;
 
                 const MIN_GAP_MINUTES = 120;
 
@@ -458,17 +448,16 @@
                 }
 
                 function arrivalSlotGapMessage() {
-                    if (!slotSelect) return null;
                     const arrivalMinutes = parseTimeToMinutes(arrivalTimeInput ? arrivalTimeInput.value : '');
                     if (arrivalMinutes === null) {
-                        return 'Please enter your arrival time at Dehradun in a valid format (e.g. 06:00 or 18:30).';
+                        return 'Please enter your arrival time at the Airport/Railway Station in a valid format (e.g. 06:00 or 18:30).';
                     }
                     const slotOpt = slotSelect.options[slotSelect.selectedIndex];
                     const slotStart = slotOpt ? slotOpt.getAttribute('data-slot-start') : '';
                     const slotMinutes = parseTimeToMinutes(slotStart);
                     if (slotMinutes === null) return null; // slot has no start time to compare against
                     if (slotMinutes - arrivalMinutes < MIN_GAP_MINUTES) {
-                        return 'The activity slot must be at least 2 hours after your arrival time at Dehradun. Please choose a later slot or adjust your Dehradun arrival time.';
+                        return 'The activity slot must be at least 2 hours after your arrival time at the Airport/Railway Station. Please choose a later slot or adjust your arrival time.';
                     }
                     return null;
                 }
@@ -487,10 +476,9 @@
                 }
 
                 if (arrivalTimeInput) arrivalTimeInput.addEventListener('change', clearGapError);
-                if (slotSelect) slotSelect.addEventListener('change', clearGapError);
+                slotSelect.addEventListener('change', clearGapError);
 
                 function filterSlotsByDate() {
-                    if (!slotSelect) return;
                     const selectedDate = dateSelect.value;
                     const currentSlot = slotSelect.value;
                     let hasVisible = false;

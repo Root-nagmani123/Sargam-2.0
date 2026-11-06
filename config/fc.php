@@ -195,7 +195,7 @@ return [
     //
     // Reordering, deleting and every per-field lock keep their own flags; this one is only
     // about reaching the two editors.
-    'form_step_actions_enabled'     => (bool) env('FC_FORM_STEP_ACTIONS_ENABLED', false),
+    'form_step_actions_enabled'     => (bool) env('FC_FORM_STEP_ACTIONS_ENABLED', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -286,12 +286,9 @@ return [
     | FcRosterApplicationGuardService::exemptionRestrictedServiceIds().
     |
     */
-    // Disabled for now: no service is barred from applying for an exemption. With the key
-    // absent, config() returns the [] default and hasExemptionRestrictedService() is false.
-    // Uncomment to restore the IAS restriction.
-    // 'exemption_restricted_services' => array_values(array_filter(array_map(
-    //     'trim',
-    //     explode(',', (string) env('FC_EXEMPTION_RESTRICTED_SERVICES', 'IAS'))
-    // ))),
+    'exemption_restricted_services' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('FC_EXEMPTION_RESTRICTED_SERVICES', 'IAS'))
+    ))),
 
 ];
