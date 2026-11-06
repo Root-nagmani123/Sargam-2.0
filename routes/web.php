@@ -2185,8 +2185,6 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('evaluation-marks.index');
     Route::get('faculty-evaluation-marks', [\App\Http\Controllers\Admin\COE\EvaluationMarksController::class, 'facultyIndex'])
         ->name('faculty-evaluation-marks.index');
-    Route::get('result-calculation', [\App\Http\Controllers\Admin\COE\ResultCalculationController::class, 'index'])
-        ->name('result-calculation.index');
     Route::get('venue-allocation/{id}/edit', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'edit'])
         ->whereNumber('id')->name('venue-allocation.edit');
     Route::get('venue-allocation/{id}', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'show'])
