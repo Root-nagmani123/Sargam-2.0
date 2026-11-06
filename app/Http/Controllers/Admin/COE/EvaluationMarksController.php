@@ -21,7 +21,8 @@ class EvaluationMarksController extends Controller
     /** Faculty-end: enter/revise marks for assigned OTs. */
     public function facultyIndex(Request $request)
     {
-        $tab = in_array($request->query('tab'), ['pending', 'completed', 'recheck'], true)
+        // Return for Recheck is hidden for now; its view branch is kept for when it returns.
+        $tab = in_array($request->query('tab'), ['pending', 'completed'], true)
             ? $request->query('tab') : 'pending';
 
         $rows = $this->sampleRows();

@@ -36,7 +36,7 @@
 @endphp
 
 <div class="container-fluid coe-page">
-    <x-breadcrum title="Examination Drive Configuration" :showBack="false"
+    <x-breadcrum title="Evaluation & Marks Entry" :showBack="false"
                  :items="['Setup', 'COE', 'Examination Management', 'Evaluation & Marks Entry']">
         @if ($isPending)
         <div class="d-flex flex-wrap gap-3">
@@ -61,11 +61,6 @@
             <a href="{{ route('admin.coe.faculty-evaluation-marks.index', ['tab' => 'completed']) }}"
                class="coe-tab {{ $isCompleted ? 'is-active' : '' }}"
                @if($isCompleted) aria-current="page" @endif>Completed: {{ $completed->count() }}</a>
-            @if ($recheck->isNotEmpty() || $isRecheck)
-            <a href="{{ route('admin.coe.faculty-evaluation-marks.index', ['tab' => 'recheck']) }}"
-               class="coe-tab {{ $isRecheck ? 'is-active' : '' }}"
-               @if($isRecheck) aria-current="page" @endif>Return for Recheck: {{ $recheck->count() }}</a>
-            @endif
         </nav>
         <div class="d-flex gap-2 coe-secondary-actions">
             <button type="button" id="femDownloadBtn" class="btn programme-dt-btn-columns">
