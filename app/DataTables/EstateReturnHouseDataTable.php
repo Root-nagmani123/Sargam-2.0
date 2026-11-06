@@ -5,6 +5,7 @@ namespace App\DataTables;
 use App\Support\RedisBackedCache;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -90,17 +91,15 @@ class EstateReturnHouseDataTable extends DataTable
                 if (! is_array($c)) {
                     continue;
                 }
+                $sv = data_get($c, 'search.value', '');
                 $colSearch[] = [
                     'data' => $c['data'] ?? '',
-                    'sv' => trim((string) data_get($c, 'search.value', '')),
+                    'sv' => is_scalar($sv) ? trim((string) $sv) : '',
                 ];
             }
         }
 
-        $searchRaw = '';
-        if ($r && is_array($r->get('search'))) {
-            $searchRaw = strtolower((string) ($r->get('search')['value'] ?? ''));
-        }
+        $searchRaw = strtolower($this->searchTerm());
 
         $user = Auth::user();
         $isPrivileged = isEstateAuthority();
@@ -146,52 +145,150 @@ class EstateReturnHouseDataTable extends DataTable
 
     public function dataTable(QueryBuilder $query)
     {
-        $meta = $this->returnHouseMetaByPk();
-
         return DataTables::of($query)
             // Use a no-op filter callback to disable Yajra's default
             // global search. Actual search is handled inside query().
             ->filter(function ($query) {
                 // Intentionally left blank.
             })
+            // Sorting is applied in query() too, so Download/Print share it; Yajra's would only append after it.
+            ->order(function ($query) {})
             ->addIndexColumn()
-            ->editColumn('upload_document', function ($row) use ($meta) {
-                $scope = (string) ($row->scope ?? '');
-                $pk = (string) ($row->pk ?? '');
-                $key = $scope !== '' ? ($scope . ':' . $pk) : $pk;
-
-                $path = $row->upload_document ?? null;
-                if (!$path) {
-                    $path = $meta[$key]['upload_document'] ?? ($meta[$pk]['upload_document'] ?? null);
-                }
+            ->editColumn('upload_document', function ($row) {
+                $path = ($row->upload_document ?? null) ?: $this->metaFor($row, 'upload_document');
                 if (!$path) return '—';
 
                 $url = Storage::disk('public')->url($path);
-                return '<a href="' . e($url) . '" target="_blank" rel="noopener">View</a>';
+                // A real hyperlink (.estate-link: underline, brand colour, focus ring), not
+                // plain text — it opens the uploaded document in a new tab.
+                return '<a href="' . e($url) . '" class="estate-link" target="_blank" rel="noopener">View'
+                    . '<span class="visually-hidden"> document (opens in a new tab)</span></a>';
             })
-            ->editColumn('remarks', function ($row) use ($meta) {
-                $scope = (string) ($row->scope ?? '');
-                $pk = (string) ($row->pk ?? '');
-                $key = $scope !== '' ? ($scope . ':' . $pk) : $pk;
-
-                $remarks = $row->remarks ?? null;
-                if (!$remarks) {
-                    $remarks = $meta[$key]['remarks'] ?? ($meta[$pk]['remarks'] ?? null);
-                }
-                return $remarks ?: '—';
-            })
+            ->editColumn('remarks', fn ($row) => (($row->remarks ?? null) ?: $this->metaFor($row, 'remarks')) ?: '—')
+            // Dates read as dd-mm-yyyy like the rest of the module (raw values carry a time).
+            ->editColumn('allotment_date', fn ($row) => self::displayDate($row->allotment_date ?? null))
+            ->editColumn('possession_date_oth', fn ($row) => self::displayDate($row->possession_date_oth ?? null))
+            ->editColumn('returning_date', fn ($row) => self::displayDate($row->returning_date ?? null))
             ->rawColumns(['upload_document'])
             ->setRowId('row_id');
+    }
+
+    private static function displayDate($value): string
+    {
+        if ($value === null || trim((string) $value) === '') {
+            return '—';
+        }
+        try {
+            return \Illuminate\Support\Carbon::parse($value)->format('d-m-Y');
+        } catch (\Throwable $e) {
+            return (string) $value; // unparseable legacy text: show as stored
+        }
+    }
+
+    /**
+     * The one search term for the grid and its Download/Print: the grid sends search[value]=x,
+     * the exports send search=x. Array-shaped input (search[value][]=x) reads as no search, not a 500.
+     */
+    public function searchTerm(): string
+    {
+        $search = $this->request()->input('search');
+        $value = is_array($search) ? ($search['value'] ?? '') : $search;
+
+        return is_scalar($value) ? trim((string) $value) : '';
+    }
+
+    /**
+     * The grid's sort as [column, direction] pairs: DataTables' order[i][column] is an index
+     * into getColumns(), sent by the grid and by Download/Print alike. Anything else is skipped.
+     *
+     * @return list<array{0: string, 1: string}>
+     */
+    private function sortOrder(): array
+    {
+        $order = $this->request()->input('order');
+        $columns = $this->getColumns();
+        $sort = [];
+        foreach (is_array($order) ? $order : [] as $o) {
+            $index = is_array($o) ? ($o['column'] ?? null) : null;
+            $dir = is_array($o) && is_string($o['dir'] ?? null) ? strtolower($o['dir']) : '';
+            $column = is_numeric($index) ? ($columns[(int) $index] ?? null) : null;
+            if ($column && $column->orderable && in_array($dir, ['asc', 'desc'], true)) {
+                $sort[] = [$column->data, $dir];
+            }
+        }
+
+        return $sort;
+    }
+
+    /** The grid's rows for Download/Print, remarks filled from the meta file exactly as the grid shows them. */
+    public function exportRows(): Collection
+    {
+        return $this->query()->get()->each(function ($row) {
+            $row->remarks = ($row->remarks ?? null) ?: $this->metaFor($row, 'remarks');
+        });
+    }
+
+    /** A remarks/document value kept in the meta file, keyed "L:pk" / "O:pk" (legacy: bare pk). */
+    private function metaFor(object $row, string $field): ?string
+    {
+        $meta = $this->returnHouseMetaByPk();
+        $pk = (string) ($row->pk ?? '');
+        $scope = (string) ($row->scope ?? '');
+
+        return $meta[$scope !== '' ? $scope . ':' . $pk : $pk][$field] ?? ($meta[$pk][$field] ?? null);
+    }
+
+    /**
+     * pks per scope whose meta-file remarks contain the search, so remarks the grid shows
+     * from the meta file are searchable like the DB ones.
+     *
+     * @return array{L: list<int>, O: list<int>}
+     */
+    private function metaRemarksMatches(string $needle): array
+    {
+        $pks = ['L' => [], 'O' => []];
+        foreach ($this->returnHouseMetaByPk() as $key => $entry) {
+            $remarks = is_array($entry) ? ($entry['remarks'] ?? null) : null;
+            if (! is_string($remarks) || ! str_contains(mb_strtolower($remarks), $needle)) {
+                continue;
+            }
+            [$scope, $pk] = str_contains((string) $key, ':') ? explode(':', (string) $key, 2) : ['', (string) $key];
+            foreach ($scope === '' ? ['L', 'O'] : [$scope] as $s) {
+                if (isset($pks[$s]) && ctype_digit($pk)) {
+                    $pks[$s][] = (int) $pk;
+                }
+            }
+        }
+
+        return $pks;
+    }
+
+    /** OR: the row's pk is a meta-remarks match and its own remarks are empty (so the grid shows the meta one). */
+    private static function orMetaRemarks($q, string $alias, string $table, array $pks): void
+    {
+        if ($pks === []) {
+            return;
+        }
+        $q->orWhere(function ($m) use ($alias, $table, $pks) {
+            $m->whereIn($alias . '.pk', $pks);
+            if (Schema::hasColumn($table, 'remarks')) {
+                $m->where(fn ($e) => $e->whereNull($alias . '.remarks')->orWhere($alias . '.remarks', ''));
+            }
+        });
+    }
+
+    /** Stored yyyy-mm-dd, shown dd-mm-yyyy: a search for either form finds the row. */
+    private static function orDateLike($q, string $column, string $like): void
+    {
+        $q->orWhereRaw('LOWER(CAST(' . $column . ' AS CHAR)) LIKE ?', [$like])
+            ->orWhereRaw('DATE_FORMAT(' . $column . ", '%d-%m-%Y') LIKE ?", [$like]);
     }
 
     public function query(): QueryBuilder
     {
         $hasUnitTypeOnSubType = Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
-        $request = $this->request();
-        $searchValue = '';
-        if ($request && is_array($request->get('search'))) {
-            $searchValue = strtolower((string) ($request->get('search')['value'] ?? ''));
-        }
+        $searchValue = strtolower($this->searchTerm());
+        $metaPks = $searchValue !== '' ? $this->metaRemarksMatches(mb_strtolower($searchValue)) : ['L' => [], 'O' => []];
 
         $user = \Illuminate\Support\Facades\Auth::user();
         $isPrivileged = isEstateAuthority();
@@ -228,9 +325,13 @@ class EstateReturnHouseDataTable extends DataTable
                 });
             })
             // Manual global search on underlying columns (cannot use aliases in WHERE).
-            ->when($searchValue !== '', function ($q) use ($searchValue) {
-                $like = '%' . $searchValue . '%';
-                $q->where(function ($sub) use ($like) {
+            ->when($searchValue !== '', function ($q) use ($searchValue, $metaPks) {
+                $like = '%' . addcslashes($searchValue, '%_\\') . '%'; // % and _ typed by the user match literally
+                $q->where(function ($sub) use ($like, $metaPks) {
+                    foreach (['epd.allotment_date', 'epd.possession_date', 'epd.current_meter_reading_date'] as $date) {
+                        self::orDateLike($sub, $date, $like);
+                    }
+                    self::orMetaRemarks($sub, 'epd', 'estate_possession_details', $metaPks['L']);
                     $sub
                         // name (ehrd.emp_name)
                         ->orWhereRaw('LOWER(ehrd.emp_name) LIKE ?', [$like])
@@ -244,12 +345,6 @@ class EstateReturnHouseDataTable extends DataTable
                         ->orWhereRaw('LOWER(ehm.house_no) LIKE ?', [$like])
                         // unit_sub_type (eust.unit_sub_type)
                         ->orWhereRaw('LOWER(eust.unit_sub_type) LIKE ?', [$like])
-                        // allotment_date (epd.allotment_date)
-                        ->orWhereRaw('LOWER(CAST(epd.allotment_date AS CHAR)) LIKE ?', [$like])
-                        // possession_date_oth (epd.possession_date)
-                        ->orWhereRaw('LOWER(CAST(epd.possession_date AS CHAR)) LIKE ?', [$like])
-                        // returning_date (epd.current_meter_reading_date)
-                        ->orWhereRaw('LOWER(CAST(epd.current_meter_reading_date AS CHAR)) LIKE ?', [$like])
                         // remarks (epd.remarks) if exists
                         ->when(Schema::hasColumn('estate_possession_details', 'remarks'), function ($inner) use ($like) {
                             $inner->orWhereRaw('LOWER(epd.remarks) LIKE ?', [$like]);
@@ -291,9 +386,13 @@ class EstateReturnHouseDataTable extends DataTable
                 $q->whereRaw('1 = 0');
             })
             // Manual global search for "Other Employee" branch.
-            ->when($searchValue !== '', function ($q) use ($searchValue) {
-                $like = '%' . $searchValue . '%';
-                $q->where(function ($sub) use ($like) {
+            ->when($searchValue !== '', function ($q) use ($searchValue, $metaPks) {
+                $like = '%' . addcslashes($searchValue, '%_\\') . '%'; // % and _ typed by the user match literally
+                $q->where(function ($sub) use ($like, $metaPks) {
+                    foreach (['epo.allotment_date', 'epo.possession_date_oth', 'epo.current_meter_reading_date'] as $date) {
+                        self::orDateLike($sub, $date, $like);
+                    }
+                    self::orMetaRemarks($sub, 'epo', 'estate_possession_other', $metaPks['O']);
                     $sub
                         // name (eor.emp_name)
                         ->orWhereRaw('LOWER(eor.emp_name) LIKE ?', [$like])
@@ -309,12 +408,6 @@ class EstateReturnHouseDataTable extends DataTable
                         ->orWhereRaw("LOWER(COALESCE(NULLIF(TRIM(epo.house_no), ''), ehm.house_no)) LIKE ?", [$like])
                         // unit_sub_type (eust.unit_sub_type)
                         ->orWhereRaw('LOWER(eust.unit_sub_type) LIKE ?', [$like])
-                        // allotment_date (epo.allotment_date)
-                        ->orWhereRaw('LOWER(CAST(epo.allotment_date AS CHAR)) LIKE ?', [$like])
-                        // possession_date_oth (epo.possession_date_oth)
-                        ->orWhereRaw('LOWER(CAST(epo.possession_date_oth AS CHAR)) LIKE ?', [$like])
-                        // returning_date (epo.current_meter_reading_date)
-                        ->orWhereRaw('LOWER(CAST(epo.current_meter_reading_date AS CHAR)) LIKE ?', [$like])
                         // upload_document (various columns)
                         ->when(Schema::hasColumn('estate_possession_other', 'upload_document') || Schema::hasColumn('estate_possession_other', 'noc_document'), function ($inner) use ($like) {
                             if (Schema::hasColumn('estate_possession_other', 'upload_document') && Schema::hasColumn('estate_possession_other', 'noc_document')) {
@@ -358,68 +451,65 @@ class EstateReturnHouseDataTable extends DataTable
                     : 'CAST(NULL AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci') . " as remarks
             ");
 
-        // Default ordering: latest returned should appear first.
+        // The grid's sort first, then latest returned first (also the tie-break).
         // We must wrap UNION in a subquery to apply ORDER BY reliably.
         $union = $lbsnaa->unionAll($other);
-        return DB::query()
-            ->fromSub($union, 'rh')
-            ->orderByDesc('returning_date')
-            ->orderByDesc('pk');
+        $rows = DB::query()->fromSub($union, 'rh');
+        foreach ($this->sortOrder() as [$column, $dir]) {
+            $rows->orderBy($column, $dir);
+        }
+
+        return $rows->orderByDesc('returning_date')->orderByDesc('pk');
     }
 
     public function html(): HtmlBuilder
     {
         return $this->builder()
             ->setTableId('returnHouseTable')
-            ->addTableClass('table table-striped table-hover align-middle mb-0 text-nowrap w-100')
+            ->addTableClass('table table-hover align-middle mb-0 text-nowrap w-100 programme-dt-table')
             ->columns($this->getColumns())
             ->minifiedAjax('', null, [
                 'scope' => 'new URLSearchParams(window.location.search).get("scope") || ""',
             ])
+            // No dom / language / lengthMenu here: datatable-global-ui.js owns the
+            // toolbar and footer chrome, and hand-rolling them stops it relocating
+            // the search and pager (new-design-index-page.md §3, §5). Responsive is
+            // off for the same reason as the other grids — its control column would
+            // shift every Column-Visibility index.
             ->parameters([
-                'responsive' => true,
+                'responsive' => false,
                 'autoWidth' => false,
                 'ordering' => true,
+                // Keep header sorting on the server (whole list, not just the loaded page), so
+                // Download/Print can carry it; datatable-global-ui.js turns it off without this.
+                'sargamServerOrder' => true,
                 'searching' => true,
-                'lengthChange' => true,
-                'pageLength' => 10,
-                // Default sort by Returning Date (desc). Column index is 0-based in DataTables config.
+                // Default sort by Return Date (desc). Column index is 0-based.
                 'order' => [[11, 'desc']],
-                'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-                'language' => [
-                    'search' => 'Search:',
-                    'lengthMenu' => 'Show _MENU_ entries',
-                    'info' => 'Showing _START_ to _END_ of _TOTAL_ entries',
-                    'infoEmpty' => 'Showing 0 to 0 of 0 entries',
-                    'infoFiltered' => '(filtered from _MAX_ total entries)',
-                    'paginate' => [
-                        'first' => 'First',
-                        'last' => 'Last',
-                        'next' => 'Next',
-                        'previous' => 'Previous',
-                    ],
-                ],
-                'dom' => '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
-                'scrollX' => true,
+                // NO scrollX: it splits the grid into a scrollHead table plus a
+                // second <thead> inside the scroll body for column sizing, and
+                // that sizing row shows through as an empty band under the real
+                // header. The .table-responsive wrapper already scrolls this
+                // 14-column grid horizontally.
             ]);
     }
 
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
-            Column::make('name')->title('Name'),
+            Column::computed('DT_RowIndex')->title('S. No.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
+            Column::make('name')->title('Name & ID'),
             Column::make('employee_type')->title('Employee Type'),
             Column::make('section_name')->title('Section'),
             Column::make('estate_name')->title('Estate Name'),
-            Column::make('house_no')->title('House No.'),
+            Column::make('house_no')->title('House Number'),
             Column::make('unit_name')->title('Unit Name'),
             Column::make('building_name')->title('Building Name'),
             Column::make('unit_sub_type')->title('Unit Subtype'),
-            Column::make('allotment_date')->title('Date of Allotment'),
-            Column::make('possession_date_oth')->title('Date of Possession'),
-            Column::make('returning_date')->title('Returning Date'),
-            Column::make('upload_document')->title('Upload Document'),
+            Column::make('allotment_date')->title('Allotment Date'),
+            Column::make('possession_date_oth')->title('Possession Date'),
+            Column::make('returning_date')->title('Return Date'),
+            Column::make('upload_document')->title('Upload Documents'),
             Column::make('remarks')->title('Remarks'),
         ];
     }
@@ -429,21 +519,22 @@ class EstateReturnHouseDataTable extends DataTable
         return 'EstateReturnHouse_' . date('YmdHis');
     }
 
+    /** Per instance, not static: a static copy outlives the request and goes stale after a save. */
+    private ?array $meta = null;
+
     private function returnHouseMetaByPk(): array
     {
-        static $meta = null;
-        if ($meta !== null) {
-            return $meta;
+        if ($this->meta !== null) {
+            return $this->meta;
         }
 
         $file = 'estate/return-house-meta.json';
         if (!Storage::disk('local')->exists($file)) {
-            $meta = [];
-            return $meta;
+            return $this->meta = [];
         }
 
         $decoded = json_decode((string) Storage::disk('local')->get($file), true);
-        $meta = is_array($decoded) ? $decoded : [];
-        return $meta;
+
+        return $this->meta = is_array($decoded) ? $decoded : [];
     }
 }

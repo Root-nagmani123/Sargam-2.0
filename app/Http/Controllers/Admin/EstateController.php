@@ -11,6 +11,18 @@ use App\DataTables\EstateRequestForEstateDataTable;
 use App\DataTables\EstateReturnHouseDataTable;
 use App\DataTables\EstateRequestPutInHacDataTable;
 use App\DataTables\EstateHacApprovedDataTable;
+use App\Exports\EstateChangeRequestHouseExport;
+use App\Exports\EstateDefineHouseExport;
+use App\Exports\EstateGenerateBillForOtherExport;
+use App\Exports\EstateHacApprovedExport;
+use App\Exports\EstateListMeterReadingExport;
+use App\Exports\EstateReturnHouseExport;
+use App\Exports\EstateOtherRequestExport;
+use App\Exports\EstatePossessionDetailsExport;
+use App\Exports\EstatePossessionOtherExport;
+use App\Exports\EstateRequestForEstateExport;
+use App\Exports\EstateUpdateMeterNoExport;
+use App\Http\Controllers\Admin\Estate\Concerns\ExportsEstateGrid;
 use App\Http\Controllers\Controller;
 use App\Support\RedisBackedCache;
 use App\Models\EstateChangeHomeReqDetails;
@@ -37,9 +49,12 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
+use Maatwebsite\Excel\Facades\Excel;
 
 class EstateController extends Controller
 {
+    use ExportsEstateGrid;
+
     /**
      * Per-request memo for {@see estateSelfOtherLinks()}, keyed by user id.
      * The links are an input to the bill cache's key, so they cannot live inside that cache;
@@ -175,6 +190,7 @@ class EstateController extends Controller
 
         return [
             'name' => $r->emp_name ?? 'N/A',
+            'employee_id' => $r->employee_id ?? null,
             'employee_type' => $r->employee_type ?? '—',
             'unit_type' => $r->unit_type ?? '—',
             'unit_sub_type' => $r->unit_sub_type ?? '—',
@@ -367,7 +383,75 @@ class EstateController extends Controller
      */
     public function requestForOthers(EstateOtherRequestDataTable $dataTable)
     {
-        return $dataTable->render('admin.estate.estate_request_for_others');
+        return $dataTable->render('admin.estate.estate_request_for_others', [
+            'billYearOptions' => EstateOtherRequestDataTable::billYearOptions(),
+        ]);
+    }
+
+    /**
+     * Rows + heading line for the Estate Request for Others downloads.
+     *
+     * Runs the DataTable's own listing query and filters, so the export always
+     * carries exactly the rows the on-screen list was showing.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function requestForOthersExportPayload(Request $request): array
+    {
+        $search = trim($this->exportSearchTerm($request));
+        $billYear = trim(static::exportFilterText($request, 'bill_year_filter'));
+        $billDate = trim(static::exportFilterText($request, 'bill_date_filter'));
+
+        $rows = EstateOtherRequestDataTable::listingQuery()
+            ->tap(fn ($query) => EstateOtherRequestDataTable::applyFilters($query, $search, $billYear, $billDate))
+            ->get();
+
+        $filters = ['Bill Year: ' . (preg_match('/^\d{4}$/', $billYear) === 1 ? $billYear : 'All')];
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $billDate) === 1) {
+            $filters[] = 'Bill Date: ' . \Carbon\Carbon::parse($billDate)->format('d-m-Y');
+        }
+        if ($search !== '') {
+            $filters[] = 'Search: "' . $search . '"';
+        }
+
+        return [
+            'rows' => $rows,
+            'cols' => EstateOtherRequestExport::resolveCols($request->input('cols')),
+            'filterLine' => implode('  |  ', $filters),
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /**
+     * Estate Request for Others — branded .xlsx of the currently filtered list.
+     */
+    public function exportRequestForOthers(Request $request)
+    {
+        $payload = $this->requestForOthersExportPayload($request);
+
+        // CSV / PDF: same rows, filters and columns as the Excel download below.
+        if ($response = $this->estateCsvOrPdf($request, EstateOtherRequestExport::class, $payload, 'Estate Request for Others', 'estate-request-for-others')) {
+            return $response;
+        }
+
+        return Excel::download(
+            new EstateOtherRequestExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'estate-request-for-others-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /**
+     * Estate Request for Others — print-ready view of the currently filtered list.
+     * Same header and columns as the Excel download.
+     */
+    public function printRequestForOthers(Request $request)
+    {
+        return view('admin.estate.estate_request_for_others_print', $this->requestForOthersExportPayload($request));
     }
 
     /**
@@ -416,11 +500,130 @@ class EstateController extends Controller
     }
 
     /**
+     * Rows + heading line for the Request For Estate downloads.
+     *
+     * Runs the DataTable's own listing query, so the export inherits the same
+     * row scoping (self-service users only see their own requests) and the same
+     * status filter / search that produced the on-screen list.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function requestForEstateExportPayload(Request $request): array
+    {
+        $rows = EstateRequestForEstateDataTable::listingQuery()
+            ->tap(fn ($query) => EstateRequestForEstateDataTable::applySearch(
+                $query,
+                $this->exportSearchTerm($request)
+            ))
+            ->get();
+
+        $statusFilter = $request->input('status_filter');
+        $statusLabel = match ($statusFilter === null || $statusFilter === '' ? null : (int) $statusFilter) {
+            0 => 'Pending',
+            1 => 'Allotted',
+            3 => 'Returned',
+            default => 'All',
+        };
+
+        $filters = ['Request Status: ' . $statusLabel];
+        if (trim($this->exportSearchTerm($request)) !== '') {
+            $filters[] = 'Search: "' . trim($this->exportSearchTerm($request)) . '"';
+        }
+
+        return [
+            'rows' => $rows,
+            'cols' => EstateRequestForEstateExport::resolveCols($request->input('cols')),
+            'filterLine' => implode('  |  ', $filters),
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /**
+     * Request For Estate — branded .xlsx of the currently filtered list.
+     */
+    public function exportRequestForEstate(Request $request)
+    {
+        $payload = $this->requestForEstateExportPayload($request);
+
+        // CSV / PDF: same rows, filters and columns as the Excel download below.
+        if ($response = $this->estateCsvOrPdf($request, EstateRequestForEstateExport::class, $payload, 'Request For Estate', 'estate-request-for-estate')) {
+            return $response;
+        }
+
+        return Excel::download(
+            new EstateRequestForEstateExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'request-for-estate-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /**
+     * Request For Estate — print-ready view of the currently filtered list.
+     * Same header and columns as the Excel download.
+     */
+    public function printRequestForEstate(Request $request)
+    {
+        return view('admin.estate.request_for_estate_print', $this->requestForEstateExportPayload($request));
+    }
+
+    /**
      * Put In HAC - Authority view: List estate requests not yet in HAC. Authority selects and puts in HAC.
      */
     public function putInHac(EstateRequestPutInHacDataTable $dataTable)
     {
         return $dataTable->render('admin.estate.put_in_hac');
+    }
+
+    /**
+     * Put In HAC — Download (CSV | Excel | PDF) and Print of the queue.
+     *
+     * Rows come from the grid's own query(), which already returns nothing to a
+     * user who may not see the HAC queue, plus the grid's search, so every format
+     * is exactly the list on screen. ?cols= drops columns hidden in the Columns modal.
+     */
+    public function exportPutInHac(Request $request)
+    {
+        $format = $request->query('format', 'excel');
+        $format = is_string($format) ? strtolower($format) : 'excel';
+        if (! in_array($format, ['csv', 'excel', 'pdf', 'print'], true)) {
+            $format = 'excel';
+        }
+
+        $search = trim($this->exportSearchTerm($request));
+        $query = app(EstateRequestPutInHacDataTable::class)->query(new EstateHomeRequestDetails);
+        EstateRequestPutInHacDataTable::applySearch($query, $search);
+        $rows = $query->get();
+
+        $date = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('d-m-Y') : '-';
+        $text = fn ($v) => trim((string) $v) !== '' ? trim((string) $v) : '-';
+        $defs = [
+            'sno' => ['heading' => 'S. No.', 'width' => '5%', 'align' => 'center', 'value' => fn ($row, int $i) => $i + 1],
+            'req_id' => ['heading' => 'Request ID', 'width' => '9%', 'value' => fn ($row) => $text($row->req_id)],
+            'req_date' => ['heading' => 'Request Date', 'width' => '8%', 'align' => 'center', 'value' => fn ($row) => $date($row->req_date)],
+            'name_id' => ['heading' => 'Name & ID', 'width' => '13%', 'value' => fn ($row) => trim($text($row->emp_name) . ' - ' . $text($row->employee_id), ' -')],
+            'designation' => ['heading' => 'Designation', 'width' => '11%', 'value' => fn ($row) => $text($row->emp_designation)],
+            'pay_scale' => ['heading' => 'Current Pay Scale', 'width' => '10%', 'value' => fn ($row) => $text($row->pay_scale)],
+            'doj_pay_scale' => ['heading' => 'DOJ (Current Pay Scale)', 'width' => '8%', 'align' => 'center', 'value' => fn ($row) => $date($row->doj_pay_scale)],
+            'doj_service' => ['heading' => 'DOJ (Service)', 'width' => '8%', 'align' => 'center', 'value' => fn ($row) => $date($row->doj_service)],
+            'doj_academic' => ['heading' => 'DOJ (Academy)', 'width' => '8%', 'align' => 'center', 'value' => fn ($row) => $date($row->doj_academic)],
+            'current_alot' => ['heading' => 'Current Allotment', 'width' => '9%', 'value' => fn ($row) => $text($row->current_alot)],
+            'remarks' => ['heading' => 'Remarks', 'width' => '11%', 'value' => fn ($row) => $text($row->remarks)],
+        ];
+
+        return $this->renderMasterExport(
+            $format,
+            $rows,
+            $this->resolveExportColumns($request, $defs),
+            'Put In HAC',
+            'estate-put-in-hac',
+            $search !== '' ? 'Search: "' . $search . '"' : 'All requests awaiting HAC',
+            'No requests are waiting to be put in HAC.',
+            'landscape'
+        );
     }
 
     /**
@@ -1729,21 +1932,130 @@ class EstateController extends Controller
     }
 
     /**
+     * Rows + heading line for the HAC Approval downloads.
+     *
+     * Runs the DataTable's own listing query, so the export inherits the same
+     * HAC visibility rules and the same type filter / search that produced the
+     * on-screen list.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function hacApprovedExportPayload(Request $request): array
+    {
+        $rows = EstateHacApprovedDataTable::listingQuery()
+            ->tap(fn ($query) => EstateHacApprovedDataTable::applyFilters(
+                $query,
+                $this->exportSearchTerm($request),
+                static::exportFilterText($request, 'type_filter')
+            ))
+            ->get();
+
+        $typeFilter = trim(static::exportFilterText($request, 'type_filter'));
+        $typeLabel = match ($typeFilter) {
+            'change' => 'Change Request',
+            'new' => 'New Request',
+            default => 'All',
+        };
+
+        $filters = ['Request Type: ' . $typeLabel];
+        if (trim($this->exportSearchTerm($request)) !== '') {
+            $filters[] = 'Search: "' . trim($this->exportSearchTerm($request)) . '"';
+        }
+
+        return [
+            'rows' => $rows,
+            'cols' => EstateHacApprovedExport::resolveCols($request->input('cols')),
+            'filterLine' => implode('  |  ', $filters),
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /**
+     * HAC Approval — branded .xlsx of the currently filtered queue.
+     */
+    public function exportHacApproved(Request $request)
+    {
+        $payload = $this->hacApprovedExportPayload($request);
+
+        // CSV / PDF: same rows, filters and columns as the Excel download below.
+        if ($response = $this->estateCsvOrPdf($request, EstateHacApprovedExport::class, $payload, 'HAC Approval', 'estate-hac-approval')) {
+            return $response;
+        }
+
+        return Excel::download(
+            new EstateHacApprovedExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'hac-approval-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /**
+     * HAC Approval — print-ready view of the currently filtered queue.
+     * Same header and columns as the Excel download.
+     */
+    public function printHacApproved(Request $request)
+    {
+        return view('admin.estate.change_request_hac_approved_print', $this->hacApprovedExportPayload($request));
+    }
+
+    /**
      * Raise Change Request - Show form to create new change request.
      * Gate: estate_home_request_details.current_alot must NOT be null (employee must have house allotted).
      * Id = estate_home_request_details.pk.
      */
     public function raiseChangeRequest($id)
     {
-        $id = (int) $id;
+        $payload = $this->raiseChangeRequestPayload((int) $id);
+
+        if (isset($payload['error'])) {
+            return $payload['redirect']->with('error', $payload['error']);
+        }
+
+        return view('admin.estate.raise_change_request', $payload + ['inModal' => false]);
+    }
+
+    /**
+     * Change Request modal body for the Request For Estate listing.
+     * Renders the same partial (and the same payload) as the full page.
+     */
+    public function raiseChangeRequestModal($id)
+    {
+        $payload = $this->raiseChangeRequestPayload((int) $id);
+
+        if (isset($payload['error'])) {
+            return response()->json(['success' => false, 'message' => $payload['error']], 422);
+        }
+
+        return view('admin.estate._raise_change_request_form', $payload + ['inModal' => true]);
+    }
+
+    /**
+     * Shared data for the Raise Change Request form (page + modal).
+     *
+     * Returns either the view data, or ['error' => …, 'redirect' => …] when the
+     * request isn't eligible — so both entry points enforce the same rules.
+     *
+     * @return array<string, mixed>
+     */
+    private function raiseChangeRequestPayload(int $id): array
+    {
         $homeReq = DB::table('estate_home_request_details')->where('pk', $id)->first();
         if (! $homeReq) {
-            return redirect()->route('admin.estate.request-for-estate')->with('error', 'Request not found.');
+            return [
+                'error' => 'Request not found.',
+                'redirect' => redirect()->route('admin.estate.request-for-estate'),
+            ];
         }
         $currentAlot = trim((string) ($homeReq->current_alot ?? ''));
         if ($currentAlot === '') {
-            return redirect()->route('admin.estate.request-details', ['id' => $id])
-                ->with('error', 'Change request is only allowed when the employee already has a house allotted (Current Allotment must be set).');
+            return [
+                'error' => 'Change request is only allowed when the employee already has a house allotted (Current Allotment must be set).',
+                'redirect' => redirect()->route('admin.estate.request-details', ['id' => $id]),
+            ];
         }
 
         // Prevent multiple *pending* change requests for the same house request.
@@ -1754,8 +2066,10 @@ class EstateController extends Controller
             ->where('change_ap_dis_status', 0)
             ->exists();
         if ($hasPendingChange) {
-            return redirect()->route('admin.estate.request-details', ['id' => $id])
-                ->with('error', 'A change request is already pending for this house request. You cannot raise another one until it is decided.');
+            return [
+                'error' => 'A change request is already pending for this house request. You cannot raise another one until it is decided.',
+                'redirect' => redirect()->route('admin.estate.request-details', ['id' => $id]),
+            ];
         }
 
         $eligibilityMap = [61 => 'Type-I', 62 => 'Type-II', 63 => 'Type-III', 64 => 'Type-IV', 65 => 'Type-V', 66 => 'Type-VI', 69 => 'Type-IX', 70 => 'Type-X', 71 => 'Type-XI', 73 => 'Type-XIII'];
@@ -1789,7 +2103,7 @@ class EstateController extends Controller
         $buildings = DB::table('estate_block_master')->orderBy('block_name')->get(['pk', 'block_name']);
         $unitSubTypes = DB::table('estate_unit_sub_type_master')->orderBy('unit_sub_type')->get(['pk', 'unit_sub_type']);
 
-        return view('admin.estate.raise_change_request', [
+        return [
             'detail' => $detail,
             'estateCampuses' => $estateCampuses,
             'unitTypes' => $unitTypes,
@@ -1797,7 +2111,7 @@ class EstateController extends Controller
             'unitSubTypes' => $unitSubTypes,
             'houseOptions' => collect(),
             'formAction' => route('admin.estate.raise-change-request.store'),
-        ]);
+        ];
     }
 
     /**
@@ -1816,15 +2130,27 @@ class EstateController extends Controller
             'remarks' => 'nullable|string|max:500',
         ]);
 
+        // The modal on the listing posts over AJAX; the standalone page posts a
+        // normal form. Answer in whichever shape the caller asked for.
+        $wantsJson = $request->ajax() || $request->wantsJson();
+        $fail = function (string $message, int $homeReqPk) use ($wantsJson) {
+            if ($wantsJson) {
+                return response()->json(['success' => false, 'message' => $message], 422);
+            }
+
+            return $homeReqPk > 0
+                ? redirect()->route('admin.estate.request-details', ['id' => $homeReqPk])->with('error', $message)
+                : redirect()->route('admin.estate.request-for-estate')->with('error', $message);
+        };
+
         $homeReqPk = (int) $validated['estate_home_req_details_pk'];
         $homeReq = DB::table('estate_home_request_details')->where('pk', $homeReqPk)->first();
         if (! $homeReq) {
-            return redirect()->route('admin.estate.request-for-estate')->with('error', 'Request not found.');
+            return $fail('Request not found.', 0);
         }
         $currentAlot = trim((string) ($homeReq->current_alot ?? ''));
         if ($currentAlot === '') {
-            return redirect()->route('admin.estate.request-details', ['id' => $homeReqPk])
-                ->with('error', 'Change request is only allowed when the employee already has a house allotted.');
+            return $fail('Change request is only allowed when the employee already has a house allotted.', $homeReqPk);
         }
 
         // Prevent duplicate *pending* change requests for the same house request.
@@ -1833,8 +2159,7 @@ class EstateController extends Controller
             ->where('change_ap_dis_status', 0)
             ->exists();
         if ($hasPendingChange) {
-            return redirect()->route('admin.estate.request-details', ['id' => $homeReqPk])
-                ->with('error', 'A change request is already pending for this house request. You cannot raise another one until it is decided.');
+            return $fail('A change request is already pending for this house request. You cannot raise another one until it is decided.', $homeReqPk);
         }
 
         $changeReqId = $this->getNextChangeRequestId();
@@ -1860,9 +2185,19 @@ class EstateController extends Controller
         DB::table('estate_change_home_req_details')->insert($insertData);
         DB::table('estate_home_request_details')->where('pk', $homeReqPk)->update(['change_status' => 1]);
 
+        // The listing caches its rows — a raised change request changes the
+        // Change Request Status column, so invalidate it.
+        EstateRequestForEstateDataTable::bumpListingCacheEpoch();
+
+        $message = 'Change request raised successfully. It will appear in HAC Approved for approval.';
+
+        if ($wantsJson) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+
         return redirect()
             ->route('admin.estate.request-details', ['id' => $homeReqPk])
-            ->with('success', 'Change request raised successfully. It will appear in HAC Approved for approval.');
+            ->with('success', $message);
     }
 
     /**
@@ -2180,7 +2515,11 @@ class EstateController extends Controller
      * Request For House - List of house requests (Bootstrap 5 layout).
      * Self-service (HAC Person / Staff etc.): only their own change requests. Estate/Admin: full list.
      */
-    public function requestForHouse()
+    /**
+     * Rows behind Change Request For House — shared by the page, the Excel
+     * download and the printout, so the three cannot drift apart.
+     */
+    private function requestForHouseRows(): \Illuminate\Support\Collection
     {
         $latestPossessionSub = DB::table('estate_possession_details as ep')
             ->select('ep.estate_home_request_details', DB::raw('MAX(ep.pk) as latest_possession_pk'))
@@ -2272,7 +2611,88 @@ class EstateController extends Controller
                 ];
             });
 
-        return view('admin.estate.request_for_house', ['requests' => $requests]);
+        return $requests;
+    }
+
+    /**
+     * Change Request For House — the list page.
+     */
+    public function requestForHouse()
+    {
+        return view('admin.estate.request_for_house', ['requests' => $this->requestForHouseRows()]);
+    }
+
+    /**
+     * Rows + heading line for the Change Request For House downloads.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function requestForHouseExportPayload(Request $request): array
+    {
+        $search = trim($this->exportSearchTerm($request));
+        $rows = $this->requestForHouseRows()->map(fn ($row) => (object) $row)->values();
+
+        // Toolbar filters — exact matches on the values the grid shows.
+        $statusFilter = trim(static::exportFilterText($request, 'status_filter'));
+        $eligibilityFilter = trim(static::exportFilterText($request, 'eligibility_filter'));
+        if ($statusFilter !== '') {
+            $rows = $rows->filter(fn ($row) => strcasecmp(trim((string) ($row->status ?? '')), $statusFilter) === 0)->values();
+        }
+        if ($eligibilityFilter !== '') {
+            $rows = $rows->filter(fn ($row) => strcasecmp(trim((string) ($row->eligibility_type ?? '')), $eligibilityFilter) === 0)->values();
+        }
+
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $rows = $rows->filter(function ($row) use ($needle) {
+                foreach (['request_id', 'request_date', 'name', 'emp_id', 'doj_academy', 'status',
+                    'alloted_house', 'eligibility_type', 'possession_from', 'possession_to'] as $key) {
+                    if (str_contains(mb_strtolower((string) ($row->{$key} ?? '')), $needle)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            })->values();
+        }
+
+        return [
+            'rows' => $rows,
+            'cols' => EstateChangeRequestHouseExport::resolveCols($request->input('cols')),
+            'filterLine' => implode('  |  ', array_filter([
+                $statusFilter !== '' ? 'Status: ' . $statusFilter : null,
+                $eligibilityFilter !== '' ? 'Eligibility Type: ' . $eligibilityFilter : null,
+                $search !== '' ? 'Search: "' . $search . '"' : null,
+            ])) ?: 'All change requests',
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /** Change Request For House — branded .xlsx of the list. */
+    public function downloadRequestForHouse(Request $request)
+    {
+        $payload = $this->requestForHouseExportPayload($request);
+
+        // CSV / PDF: same rows, filters and columns as the Excel download below.
+        if ($response = $this->estateCsvOrPdf($request, EstateChangeRequestHouseExport::class, $payload, 'Change House Request', 'estate-change-house-request')) {
+            return $response;
+        }
+
+        return Excel::download(
+            new EstateChangeRequestHouseExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'change-request-for-house-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /** Change Request For House — print-ready view, same columns as the Excel. */
+    public function printRequestForHouse(Request $request)
+    {
+        return view('admin.estate.request_for_house_print', $this->requestForHouseExportPayload($request));
     }
 
     /**
@@ -2728,6 +3148,45 @@ class EstateController extends Controller
     }
 
     /**
+     * One allotment decision (allot, approve, reject, possession save, house delete) in one transaction.
+     *
+     * Two writers of one house are serialised by the house row lock each path takes. READ COMMITTED
+     * lets the occupancy re-read after that lock see the other writer's commit without share-locking
+     * every scanned possession row; those scans deadlocked writers of different houses (PR #349 F-007).
+     * Locks are taken request row first, then house row. A deadlock that still occurs is retried.
+     *
+     * READ COMMITTED needs row-based logging: with the binary log on in STATEMENT format, MySQL refuses
+     * its writes (error 1665, PR #349 F-008). There SERIALIZABLE runs instead: every read is current
+     * (share-locked), so the occupancy re-read stays correct; writers of different houses can then
+     * deadlock on those share locks, and the retry below takes the loser after the winner commits.
+     */
+    private function runAllotmentTransaction(\Closure $callback)
+    {
+        $isolation = null;
+        if (DB::transactionLevel() === 0 && DB::getDriverName() === 'mysql') {
+            $log = DB::selectOne('SELECT @@log_bin AS log_bin, @@session.binlog_format AS format');
+            $isolation = (int) $log->log_bin === 1 && strtoupper((string) $log->format) === 'STATEMENT'
+                ? 'SERIALIZABLE'
+                : 'READ COMMITTED';
+        }
+        for ($attempt = 1; ; $attempt++) {
+            // SET TRANSACTION covers only the next transaction, so it precedes every attempt. Inside an
+            // outer transaction it is not allowed and the outer one's level applies.
+            if ($isolation !== null) {
+                DB::unprepared("SET TRANSACTION ISOLATION LEVEL {$isolation}");
+            }
+            try {
+                return DB::transaction($callback);
+            } catch (\Illuminate\Database\QueryException $e) {
+                $deadlock = (int) ($e->errorInfo[1] ?? 0) === 1213;
+                if (! $deadlock || $attempt >= 3 || DB::transactionLevel() > 0) {
+                    throw $e;
+                }
+            }
+        }
+    }
+
+    /**
      * Allot house to new request.
      *
      * IMPORTANT:
@@ -2743,8 +3202,19 @@ class EstateController extends Controller
             abort(403, 'You do not have permission to allot estate houses.');
         }
 
+        // One transaction for the whole allotment: a failed write leaves nothing half-allotted.
+        return $this->runAllotmentTransaction(fn () => $this->allotLockedNewRequest($request, $id));
+    }
+
+    /**
+     * Body of allotNewRequest(); must run inside its transaction. The row lock makes a concurrent
+     * allotment of the same request wait, then update the one pending possession instead of adding a second.
+     */
+    private function allotLockedNewRequest(Request $request, $id)
+    {
         $homeReq = EstateHomeRequestDetails::where('hac_status', 1)
             ->where('change_status', 0)
+            ->lockForUpdate()
             ->findOrFail($id);
 
         $request->validate([
@@ -2788,7 +3258,8 @@ class EstateController extends Controller
         }
 
         // Align with Define House: only Vacant and not already used houses can be allotted
-        $houseRow = DB::table('estate_house_master')->where('pk', $estateHouseMasterPk)->first();
+        // Row lock on the house: another allotment of the same house waits here, then sees it taken.
+        $houseRow = DB::table('estate_house_master')->where('pk', $estateHouseMasterPk)->lockForUpdate()->first();
         if ($houseRow) {
             if ((int) ($houseRow->vacant_renovation_status ?? 1) !== 1) {
                 $msg = 'Selected house is Under Renovation in Define House. Only Vacant houses can be allotted.';
@@ -2805,6 +3276,7 @@ class EstateController extends Controller
             if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
                 $activeDetails->where('return_home_status', 0);
             }
+            // Read after the house lock, at runAllotmentTransaction's isolation level: sees the latest commit.
             $isOccupied = $activeDetails->exists();
             if (! $isOccupied) {
                 $activeOther = DB::table('estate_possession_other')
@@ -2903,9 +3375,25 @@ class EstateController extends Controller
             abort(403, 'You do not have permission to approve estate change requests.');
         }
 
-        $record = EstateChangeHomeReqDetails::with('estateHomeRequestDetails')
-            ->where('estate_change_hac_status', 1)
+        // One transaction for the whole decision: a failed write leaves nothing half-allotted.
+        return $this->runAllotmentTransaction(fn () => $this->approveLockedChangeRequest($request, $id));
+    }
+
+    /**
+     * Body of approveChangeRequest(); must run inside its transaction. The row lock makes a
+     * concurrent approval of the same request wait, then see it decided and be refused.
+     */
+    private function approveLockedChangeRequest(Request $request, $id)
+    {
+        $record = EstateChangeHomeReqDetails::where('estate_change_hac_status', 1)
+            ->lockForUpdate()
             ->findOrFail($id);
+
+        // A decided request is final: the greyed Approve icon is not a guard on its own,
+        // and a second approval would allot a second house.
+        if ($refusal = $this->refuseDecidedChangeRequest($request, $record)) {
+            return $refusal;
+        }
 
         $request->validate([
             'estate_house_master_pk' => 'required|integer|exists:estate_house_master,pk',
@@ -2913,7 +3401,8 @@ class EstateController extends Controller
 
         $estateHouseMasterPk = (int) $request->estate_house_master_pk;
         $homeReqPk = $record->estate_home_req_details_pk;
-        $homeReq = $record->estateHomeRequestDetails;
+        // Request row before house row, the order allotNewRequest() locks them in.
+        $homeReq = EstateHomeRequestDetails::lockForUpdate()->find($homeReqPk);
         $employeePk = $homeReq->employee_pk ? (int) $homeReq->employee_pk : null;
 
         // If employee_pk is missing, try to resolve from employee_id via employee_master (canonical pk)
@@ -2946,7 +3435,8 @@ class EstateController extends Controller
         }
 
         // Align with Define House: only Vacant and not already occupied houses can be allotted
-        $houseRow = DB::table('estate_house_master')->where('pk', $estateHouseMasterPk)->first();
+        // Row lock on the house: another allotment of the same house waits here, then sees it taken.
+        $houseRow = DB::table('estate_house_master')->where('pk', $estateHouseMasterPk)->lockForUpdate()->first();
         if ($houseRow) {
             if ((int) ($houseRow->vacant_renovation_status ?? 1) !== 1) {
                 $msg = 'Selected house is Under Renovation in Define House. Only Vacant houses can be allotted.';
@@ -2962,6 +3452,7 @@ class EstateController extends Controller
             if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'return_home_status')) {
                 $activeDetails->where('return_home_status', 0);
             }
+            // Read after the house lock, at runAllotmentTransaction's isolation level: sees the latest commit.
             $isOccupied = $activeDetails->exists();
             if (! $isOccupied) {
                 $activeOther = DB::table('estate_possession_other')
@@ -3041,6 +3532,25 @@ class EstateController extends Controller
     /**
      * Disapprove change request - open modal for reason; save reason in remarks and set change_ap_dis_status = 2.
      */
+    /**
+     * HAC Approval state guard: an approved (1) or rejected (2) change request
+     * cannot be approved or rejected again. Returns the refusal, or null to proceed.
+     */
+    private function refuseDecidedChangeRequest(Request $request, EstateChangeHomeReqDetails $record)
+    {
+        $decision = $record->change_ap_dis_status !== null ? (int) $record->change_ap_dis_status : null;
+        if ($decision !== 1 && $decision !== 2) {
+            return null;
+        }
+
+        $message = 'This change request has already been ' . ($decision === 1 ? 'approved' : 'rejected') . '.';
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => false, 'message' => $message], 409);
+        }
+
+        return redirect()->route('admin.estate.change-request-hac-approved')->with('error', $message);
+    }
+
     public function disapproveChangeRequest(Request $request, $id)
     {
         if (! (hasRole('HAC Person') || hasRole('Estate Admin'))) {
@@ -3051,11 +3561,22 @@ class EstateController extends Controller
             'disapprove_reason' => 'required|string|max:500',
         ]);
 
-        $record = EstateChangeHomeReqDetails::where('estate_change_hac_status', 1)->findOrFail($id);
-        $record->change_ap_dis_status = 2;
-        $record->f_status = 0; // Decision made — no longer "pending approval"
-        $record->remarks = $request->disapprove_reason;
-        $record->save();
+        // Same row lock as approval, so an approve and a reject cannot both pass the decided check.
+        $refusal = $this->runAllotmentTransaction(function () use ($request, $id) {
+            $record = EstateChangeHomeReqDetails::where('estate_change_hac_status', 1)->lockForUpdate()->findOrFail($id);
+            if ($refusal = $this->refuseDecidedChangeRequest($request, $record)) {
+                return $refusal;
+            }
+            $record->change_ap_dis_status = 2;
+            $record->f_status = 0; // Decision made — no longer "pending approval"
+            $record->remarks = $request->disapprove_reason;
+            $record->save();
+
+            return null;
+        });
+        if ($refusal) {
+            return $refusal;
+        }
 
         if ($request->wantsJson()) {
             return response()->json(['success' => true, 'message' => 'Change request disapproved. Remark saved.']);
@@ -3379,15 +3900,65 @@ class EstateController extends Controller
             $preselectedRequester = $request->requester_id;
         }
 
-        return view('admin.estate.estate_possession_view', compact(
-            'requesters', 'campuses', 'unitTypesByCampus', 'record', 'preselectedRequester'
-        ));
+        $payload = compact('requesters', 'campuses', 'unitTypesByCampus', 'record', 'preselectedRequester');
+
+        // The listing's Add / Edit Possession modal asks for the body only.
+        if ($request->boolean('modal')) {
+            return view('admin.estate._possession_view_form', $payload + ['inModal' => true]);
+        }
+
+        return view('admin.estate.estate_possession_view', $payload);
+    }
+
+    /**
+     * A business-rule failure on a form that can be posted from a modal.
+     *
+     * Validation-rule failures already come back as 422 JSON on their own; these
+     * are the hand-rolled guards (duplicate requester, occupied house, …) that
+     * would otherwise redirect and leave an AJAX caller with an HTML page.
+     * Returns null for a normal page post, so the caller keeps its redirect.
+     *
+     * @param  array<string, string>  $errors  field => message, for inline display
+     */
+    private function estateFormFailure(Request $request, string $message, array $errors = []): ?\Illuminate\Http\JsonResponse
+    {
+        if (! ($request->ajax() || $request->wantsJson())) {
+            return null;
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => $message,
+            'errors' => array_map(fn ($m) => [$m], $errors),
+        ], 422);
     }
 
     /**
      * Store Estate Possession (estate_possession_other table).
      */
     public function storePossession(Request $request)
+    {
+        // One transaction, so the house row lock below serialises allotments of the same house.
+        // The NOC upload is stored once and reused by a deadlock retry; if no attempt commits it is deleted (F-013).
+        $nocPath = null;
+        try {
+            return $this->runAllotmentTransaction(function () use ($request, &$nocPath) {
+                return $this->storePossessionLocked($request, $nocPath);
+            });
+        } catch (\Throwable $e) {
+            if ($nocPath !== null) {
+                Storage::disk('public')->delete($nocPath);
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Body of storePossession(); must run inside its transaction.
+     *
+     * @param  string|null  $nocPath  the stored NOC upload, kept across retries of the transaction
+     */
+    private function storePossessionLocked(Request $request, ?string &$nocPath)
     {
         // Special-case: Return House for LBSNAA employees uses estate_possession_details, not estate_possession_other.
         if ($request->get('redirect_to') === 'return-house' && $request->input('employee_type') === 'LBSNAA') {
@@ -3436,7 +4007,7 @@ class EstateController extends Controller
 
             $uploadedDocumentPath = null;
             if ($request->hasFile('noc_document')) {
-                $uploadedDocumentPath = $request->file('noc_document')->store('estate/return-house-docs', 'public');
+                $uploadedDocumentPath = $nocPath ??= $request->file('noc_document')->store('estate/return-house-docs', 'public');
             }
 
             if (!empty($epdUpdate)) {
@@ -3446,7 +4017,8 @@ class EstateController extends Controller
             }
 
             // Persist remarks / document in meta store for compatibility (same as Other flow).
-            $this->persistReturnHouseMeta((int) $epd->pk, $validated['remarks'] ?? null, $uploadedDocumentPath, 'L');
+            // After commit: a rolled-back attempt must not leave a meta entry behind (F-013).
+            DB::afterCommit(fn () => $this->persistReturnHouseMeta((int) $epd->pk, $validated['remarks'] ?? null, $uploadedDocumentPath, 'L'));
 
             $housePk = (int) ($epd->estate_house_master_pk ?? 0);
             if ($housePk > 0) {
@@ -3517,7 +4089,23 @@ class EstateController extends Controller
             'meter_reading_oth1.regex' => 'Secondary meter reading must be numbers only (max 10 digits).',
         ];
 
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), $rules, $messages);
+        // Field names as the form labels them — the modal shows these messages
+        // inline, so "possession date oth" would leak a column name at the user.
+        $attributes = [
+            'estate_other_req_pk' => 'Requester Name',
+            'estate_campus_master_pk' => 'Estate Name',
+            'estate_unit_type_master_pk' => 'Unit Name',
+            'estate_block_master_pk' => 'Building Name',
+            'estate_unit_sub_type_master_pk' => 'Unit Sub-type',
+            'estate_house_master_pk' => 'House Number',
+            'allotment_date' => 'Allotment Date',
+            'possession_date_oth' => 'Possession Date',
+            'meter_reading_oth' => 'Electric Meter Reading I',
+            'meter_reading_oth1' => 'Electric Meter Reading II',
+            'returning_date' => 'Returning Date',
+        ];
+
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), $rules, $messages, $attributes);
         $validator->after(function ($v) use ($request) {
             if ($request->get('redirect_to') === 'return-house') {
                 $returningDate = trim((string) $request->input('returning_date', ''));
@@ -3547,35 +4135,55 @@ class EstateController extends Controller
         // DB columns are INT; hard guard against overflow.
         foreach (['meter_reading_oth', 'meter_reading_oth1'] as $k) {
             if (!empty($validated[$k]) && (int) $validated[$k] > 2147483647) {
+                $tooLarge = 'Electric Meter Reading is too large. Please enter up to 10 digits.';
+                if ($json = $this->estateFormFailure($request, $tooLarge, [$k => $tooLarge])) {
+                    return $json;
+                }
+
                 return redirect()
                     ->back()
                     ->withInput()
-                    ->withErrors([$k => 'Electric Meter Reading is too large. Please enter up to 10 digits.'])
+                    ->withErrors([$k => $tooLarge])
                     ->with('error', 'Please correct the errors and try again.');
             }
         }
 
         if ($request->get('redirect_to') !== 'return-house') {
+            // Requester row before house row: a concurrent save for this requester waits here, then
+            // (runAllotmentTransaction's isolation level) sees the entry it committed.
+            DB::table('estate_other_req')->where('pk', $validated['estate_other_req_pk'])->lockForUpdate()->first();
             $duplicateQuery = EstatePossessionOther::where('estate_other_req_pk', $validated['estate_other_req_pk']);
             if ($request->filled('id')) {
                 $duplicateQuery->where('pk', '!=', (int) $request->id);
             }
             if ($duplicateQuery->exists()) {
+                $dupMsg = 'Selected requester already has a possession entry.';
+                if ($json = $this->estateFormFailure($request, $dupMsg, ['estate_other_req_pk' => $dupMsg])) {
+                    return $json;
+                }
+
                 return redirect()
                     ->back()
                     ->withInput()
-                    ->with('error', 'Selected requester already has a possession entry.');
+                    ->with('error', $dupMsg);
             }
         }
 
+        // Row lock: a concurrent allotment of this house waits, then reads it as used.
         $house = DB::table('estate_house_master')
             ->where('pk', $validated['estate_house_master_pk'])
+            ->lockForUpdate()
             ->first();
         if (!$house) {
+            $missingHouse = 'Selected house not found. Please reselect the house and try again.';
+            if ($json = $this->estateFormFailure($request, $missingHouse, ['estate_house_master_pk' => $missingHouse])) {
+                return $json;
+            }
+
             return redirect()
                 ->back()
                 ->withInput()
-                ->with('error', 'Selected house not found. Please reselect the house and try again.');
+                ->with('error', $missingHouse);
         }
 
         // Always persist the actual house number from master, not the submitted hidden field.
@@ -3589,16 +4197,26 @@ class EstateController extends Controller
             $isSameAsExisting = $request->filled('id') && (int) (EstatePossessionOther::find($request->id)?->estate_house_master_pk ?? 0) === (int) $house->pk;
             if (! $isSameAsExisting) {
                 if ((int) ($house->vacant_renovation_status ?? 1) !== 1) {
+                    $renoMsg = 'Selected house is Under Renovation in Define House. Only Vacant houses can be allotted.';
+                    if ($json = $this->estateFormFailure($request, $renoMsg, ['estate_house_master_pk' => $renoMsg])) {
+                        return $json;
+                    }
+
                     return redirect()
                         ->back()
                         ->withInput()
-                        ->with('error', 'Selected house is Under Renovation in Define House. Only Vacant houses can be allotted.');
+                        ->with('error', $renoMsg);
                 }
                 if ((int) ($house->used_home_status ?? 0) !== 0) {
+                    $occupiedMsg = 'Selected house is already occupied. Please choose a vacant house from the list.';
+                    if ($json = $this->estateFormFailure($request, $occupiedMsg, ['estate_house_master_pk' => $occupiedMsg])) {
+                        return $json;
+                    }
+
                     return redirect()
                         ->back()
                         ->withInput()
-                        ->with('error', 'Selected house is already occupied. Please choose a vacant house from the list.');
+                        ->with('error', $occupiedMsg);
                 }
             }
         }
@@ -3649,7 +4267,7 @@ class EstateController extends Controller
 
         $uploadedDocumentPath = null;
         if ($request->hasFile('noc_document')) {
-            $uploadedDocumentPath = $request->file('noc_document')->store('estate/return-house-docs', 'public');
+            $uploadedDocumentPath = $nocPath ??= $request->file('noc_document')->store('estate/return-house-docs', 'public');
             if ($docColumn) {
                 $data[$docColumn] = $uploadedDocumentPath;
             }
@@ -3688,12 +4306,13 @@ class EstateController extends Controller
             }
 
             // Fallback storage when DB has no columns for remarks/upload_document.
-            $this->persistReturnHouseMeta(
+            // After commit: a rolled-back attempt's $targetPk may not exist (F-013).
+            DB::afterCommit(fn () => $this->persistReturnHouseMeta(
                 $targetPk,
                 $validated['remarks'] ?? null,
                 $uploadedDocumentPath,
                 'O'
-            );
+            ));
 
             foreach (array_unique(array_filter([$previousHousePk, (int) $validated['estate_house_master_pk']])) as $housePk) {
                 $this->refreshHouseUsedStatusFromPossession((int) $housePk);
@@ -3739,6 +4358,12 @@ class EstateController extends Controller
         if ($request->get('redirect_to') === 'return-house') {
             return redirect()->route('admin.estate.return-house')->with('success', $message);
         }
+
+        // The listing's Add / Edit Possession modal stays open until it hears this.
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+
         return redirect()
             ->route('admin.estate.possession-for-others')
             ->with('success', $message);
@@ -4224,21 +4849,9 @@ class EstateController extends Controller
      */
     public function defineHouse()
     {
-        $campuses = DB::table('estate_campus_master')
-            ->orderBy('campus_name')
-            ->get(['pk', 'campus_name']);
-
-        $unitTypes = DB::table('estate_unit_type_master')
-            ->orderBy('unit_type')
-            ->get(['pk', 'unit_type']);
-
-        $unitSubTypes = DB::table('estate_unit_sub_type_master')
-            ->orderBy('unit_sub_type')
-            ->get(['pk', 'unit_sub_type']);
-
-        return view('admin.estate.define_house', compact(
-            'campuses', 'unitTypes', 'unitSubTypes'
-        ));
+        // The form's option lists (campuses, unitTypes, unitSubTypes, blocks), which
+        // also feed the grid's toolbar filters (Estate, Building, Unit Sub Type).
+        return view('admin.estate.define_house', $this->defineHouseFormOptions());
     }
 
     /**
@@ -4459,6 +5072,41 @@ class EstateController extends Controller
     }
 
     /**
+     * Define House toolbar filters — shared by the grid and the downloads so the
+     * two can never disagree. Status follows EstateDefineHouseExport::statusLabel():
+     * renovation flag 0 = Under Renovation; 2 or allotted = Occupied; else Vacant.
+     *
+     * @param  \Illuminate\Database\Query\Builder  $query  aliased h (estate_house_master)
+     */
+    private static function applyDefineHouseFilters($query, Request $request): void
+    {
+        foreach ([
+            'campus_filter' => 'h.estate_campus_master_pk',
+            'block_filter' => 'h.estate_block_master_pk',
+            'unit_sub_type_filter' => 'h.estate_unit_sub_type_master_pk',
+        ] as $param => $column) {
+            $value = $request->input($param);
+            if (is_scalar($value) && ctype_digit((string) $value)) {
+                $query->where($column, (int) $value);
+            }
+        }
+
+        $renovation = 'COALESCE(h.vacant_renovation_status, 1)';
+        $allotted = 'COALESCE(h.used_home_status, 0)';
+        switch (static::exportFilterText($request, 'status_filter')) {
+            case 'renovation':
+                $query->whereRaw("$renovation = 0");
+                break;
+            case 'occupied':
+                $query->whereRaw("$renovation <> 0 AND ($renovation = 2 OR $allotted = 1)");
+                break;
+            case 'vacant':
+                $query->whereRaw("$renovation <> 0 AND $renovation <> 2 AND $allotted <> 1");
+                break;
+        }
+    }
+
+    /**
      * @return array{recordsTotal: int, recordsFiltered: int, data: array<int, array<string, mixed>>}
      */
     private function computeDefineHouseDataTablePayload(Request $request): array
@@ -4488,15 +5136,38 @@ class EstateController extends Controller
                 'h.used_home_status',
                 'h.vacant_renovation_status',
                 'h.remarks'
-            )
-            ->orderBy('h.pk', 'desc');
+            );
+
+        // Sortable headers: DataTables sends order[0][column] as the table's own
+        // column index, so the map is positional and must move with the <thead>.
+        // Anything unmapped (S. No., Status, Action) falls back to newest-first.
+        $sortable = [
+            1 => 'c.campus_name',
+            2 => 'ut.unit_type',
+            3 => 'b.block_name',
+            4 => 'ust.unit_sub_type',
+            5 => 'h.house_no',
+            6 => 'h.meter_one',
+            7 => 'h.water_charge',
+            8 => 'h.electric_charge',
+            9 => 'h.licence_fee',
+        ];
+        $orderCol = (int) data_get($request->get('order'), '0.column', -1);
+        $orderDir = strtolower(static::exportFilterText($request, 'order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+        if (isset($sortable[$orderCol])) {
+            $query->orderBy($sortable[$orderCol], $orderDir);
+        } else {
+            $query->orderBy('h.pk', 'desc');
+        }
 
         $total = $query->count();
+
+        static::applyDefineHouseFilters($query, $request);
 
         if ($request->filled('search.value')) {
             // DataTables search: make it robust for multi-word terms and odd spacing
             // (e.g. double spaces / non-breaking spaces in DB or user input).
-            $rawTerm = (string) data_get($request->get('search'), 'value', '');
+            $rawTerm = static::exportFilterText($request, 'search.value');
             $rawTerm = str_replace("\xC2\xA0", ' ', $rawTerm); // NBSP -> normal space
             $rawTerm = trim(preg_replace('/\s+/u', ' ', $rawTerm));
 
@@ -4549,7 +5220,7 @@ class EstateController extends Controller
     private function defineHouseDataTableCacheFingerprint(Request $request): array
     {
         $hasUnitTypeOnSubType = Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
-        $rawTerm = (string) data_get($request->get('search'), 'value', '');
+        $rawTerm = static::exportFilterText($request, 'search.value');
         $rawTerm = str_replace("\xC2\xA0", ' ', $rawTerm);
         $qKey = trim(preg_replace('/\s+/u', ' ', $rawTerm));
 
@@ -4558,7 +5229,179 @@ class EstateController extends Controller
             'len' => (int) $request->get('length', 10),
             'q' => $qKey,
             'ut' => $hasUnitTypeOnSubType ? 1 : 0,
+            // The payload is now ordered by the clicked header, so the sort has
+            // to be part of the key or a re-sort serves the previous order.
+            'oc' => (int) data_get($request->get('order'), '0.column', -1),
+            'od' => strtolower(static::exportFilterText($request, 'order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc',
+            // Toolbar filters (applyDefineHouseFilters) — part of the key, or a
+            // filtered request would be answered from the unfiltered cache entry.
+            'f' => [
+                static::exportFilterText($request, 'campus_filter'),
+                static::exportFilterText($request, 'block_filter'),
+                static::exportFilterText($request, 'unit_sub_type_filter'),
+                static::exportFilterText($request, 'status_filter'),
+            ],
         ];
+    }
+
+    /**
+     * The option lists every Define House form needs.
+     *
+     * Buildings are deliberately NOT scoped to a campus: getDefineHouseBlocks()
+     * returns the full list whatever campus is passed, so the form renders them
+     * once instead of fetching the same rows again on every campus change.
+     *
+     * @return array<string, \Illuminate\Support\Collection>
+     */
+    private function defineHouseFormOptions(): array
+    {
+        return [
+            'campuses' => DB::table('estate_campus_master')->orderBy('campus_name')->get(['pk', 'campus_name']),
+            'unitTypes' => DB::table('estate_unit_type_master')->orderBy('unit_type')->get(['pk', 'unit_type']),
+            'unitSubTypes' => DB::table('estate_unit_sub_type_master')->orderBy('unit_sub_type')->get(['pk', 'unit_sub_type']),
+            'blocks' => DB::table('estate_block_master')->orderBy('block_name')->get(['pk', 'block_name']),
+        ];
+    }
+
+    /**
+     * Define House — full-page Add wizard (Basic Details → House Details).
+     */
+    public function createDefineHouse()
+    {
+        return view('admin.estate.define_house_form', array_merge($this->defineHouseFormOptions(), [
+            'house' => null,
+        ]));
+    }
+
+    /**
+     * Define House — full-page Edit wizard. Same view as Add, so the two look
+     * alike; only the loaded record and the submit target differ.
+     */
+    public function editDefineHouse($id)
+    {
+        $hasUnitTypeOnSubType = Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
+
+        $house = DB::table('estate_house_master as h')
+            ->leftJoin('estate_unit_sub_type_master as ust', 'h.estate_unit_sub_type_master_pk', '=', 'ust.pk')
+            ->where('h.pk', (int) $id)
+            ->select(
+                'h.pk',
+                'h.estate_campus_master_pk',
+                'h.estate_block_master_pk',
+                'h.estate_unit_sub_type_master_pk',
+                'h.estate_unit_master_pk',
+                ($hasUnitTypeOnSubType
+                    ? 'ust.estate_unit_type_master_pk as resolved_unit_type_pk'
+                    : 'h.estate_unit_master_pk as resolved_unit_type_pk'),
+                'h.house_no',
+                'h.meter_one',
+                'h.meter_two',
+                'h.water_charge',
+                'h.electric_charge',
+                'h.licence_fee',
+                'h.vacant_renovation_status',
+                'h.used_home_status',
+                'h.remarks'
+            )
+            ->first();
+
+        if (! $house) {
+            return redirect()->route('admin.estate.define-house')->with('error', 'House not found.');
+        }
+
+        return view('admin.estate.define_house_form', array_merge($this->defineHouseFormOptions(), [
+            'house' => $house,
+        ]));
+    }
+
+    /**
+     * Rows + heading line for the Define House downloads.
+     *
+     * Runs the grid's own payload builder with the paging removed, so the export
+     * carries exactly the rows the table showed for that search and sort.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function defineHouseExportPayload(Request $request): array
+    {
+        $search = trim($this->exportSearchTerm($request));
+
+        // The grid's builder reads DataTables' own request shape, so hand it one
+        // rather than duplicating the query with a second set of rules.
+        $gridRequest = Request::create($request->fullUrl(), 'GET', [
+            'start' => 0,
+            'length' => -1,
+            'search' => ['value' => $search],
+            'order' => $request->input('order', []),
+            'campus_filter' => $request->input('campus_filter'),
+            'block_filter' => $request->input('block_filter'),
+            'unit_sub_type_filter' => $request->input('unit_sub_type_filter'),
+            'status_filter' => $request->input('status_filter'),
+        ]);
+
+        $payload = $this->computeDefineHouseDataTablePayload($gridRequest);
+
+        $filters = [];
+        $named = [
+            'Estate' => ['campus_filter', 'estate_campus_master', 'campus_name'],
+            'Building' => ['block_filter', 'estate_block_master', 'block_name'],
+            'Unit Sub Type' => ['unit_sub_type_filter', 'estate_unit_sub_type_master', 'unit_sub_type'],
+        ];
+        foreach ($named as $label => [$param, $table, $col]) {
+            $v = $request->input($param);
+            if (is_scalar($v) && ctype_digit((string) $v)) {
+                $filters[] = $label . ': ' . (DB::table($table)->where('pk', (int) $v)->value($col) ?? $v);
+            }
+        }
+        $statusLabels = ['vacant' => 'Vacant', 'occupied' => 'Occupied', 'renovation' => 'Under Renovation'];
+        if (isset($statusLabels[static::exportFilterText($request, 'status_filter')])) {
+            $filters[] = 'Status: ' . $statusLabels[static::exportFilterText($request, 'status_filter')];
+        }
+        if ($search !== '') {
+            $filters[] = 'Search: "' . $search . '"';
+        }
+        if (! $filters) {
+            $filters[] = 'All houses';
+        }
+
+        return [
+            'rows' => collect($payload['data'])->map(fn ($row) => (object) $row),
+            'cols' => EstateDefineHouseExport::resolveCols($request->input('cols')),
+            'filterLine' => implode('  |  ', $filters),
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /**
+     * Define House — branded .xlsx of the currently searched list.
+     */
+    public function exportDefineHouse(Request $request)
+    {
+        $payload = $this->defineHouseExportPayload($request);
+
+        // CSV / PDF: same rows, filters and columns as the Excel download below.
+        if ($response = $this->estateCsvOrPdf($request, EstateDefineHouseExport::class, $payload, 'Define House', 'estate-define-house')) {
+            return $response;
+        }
+
+        return Excel::download(
+            new EstateDefineHouseExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'define-house-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /**
+     * Define House — print-ready view of the currently searched list.
+     * Same header and columns as the Excel download.
+     */
+    public function printDefineHouse(Request $request)
+    {
+        return view('admin.estate.define_house_print', $this->defineHouseExportPayload($request));
     }
 
     /**
@@ -4728,7 +5571,14 @@ class EstateController extends Controller
      */
     public function destroyDefineHouse(Request $request, $id)
     {
-        $house = EstateHouse::find($id);
+        // One transaction: the house stays locked from the occupied check to the delete.
+        return $this->runAllotmentTransaction(fn () => $this->destroyLockedDefineHouse($request, $id));
+    }
+
+    /** Body of destroyDefineHouse(); must run inside its transaction. */
+    private function destroyLockedDefineHouse(Request $request, $id)
+    {
+        $house = EstateHouse::lockForUpdate()->find($id);
         if (! $house) {
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => 'House not found.'], 404);
@@ -5110,7 +5960,89 @@ class EstateController extends Controller
      */
     public function possessionDetails(EstatePossessionDetailsDataTable $dataTable)
     {
-        return $dataTable->render('admin.estate.possession_details');
+        return $dataTable->render('admin.estate.possession_details', [
+            // Estate Name filter options for the toolbar, reused by the
+            // Update Meter Reading modal.
+            'estateCampuses' => DB::table('estate_campus_master')
+                ->orderBy('campus_name')
+                ->get(['pk', 'campus_name']),
+            'estateUnitTypes' => DB::table('estate_unit_type_master')
+                ->orderBy('unit_type')
+                ->get(['pk', 'unit_type']),
+        ]);
+    }
+
+    /**
+     * Rows + heading line for the Possession Details downloads.
+     *
+     * Runs the DataTable's own listing query, so the export inherits the same
+     * RBAC scope and the same Estate / Allotment date / search filters that
+     * produced the on-screen list.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function possessionDetailsExportPayload(Request $request): array
+    {
+        $rows = EstatePossessionDetailsDataTable::listingQuery()
+            ->tap(fn ($query) => EstatePossessionDetailsDataTable::applyFilters(
+                $query,
+                $this->exportSearchTerm($request),
+                static::exportFilterText($request, 'estate_filter'),
+                static::exportFilterText($request, 'allotment_date_filter')
+            ))
+            ->get();
+
+        $estateFilter = trim(static::exportFilterText($request, 'estate_filter'));
+        $estateLabel = $estateFilter !== ''
+            ? (DB::table('estate_campus_master')->where('pk', (int) $estateFilter)->value('campus_name') ?: 'All')
+            : 'All';
+
+        $filters = ['Estate: ' . $estateLabel];
+        if (trim(static::exportFilterText($request, 'allotment_date_filter')) !== '') {
+            $filters[] = 'Allotment date: ' . trim(static::exportFilterText($request, 'allotment_date_filter'));
+        }
+        if (trim($this->exportSearchTerm($request)) !== '') {
+            $filters[] = 'Search: "' . trim($this->exportSearchTerm($request)) . '"';
+        }
+
+        return [
+            'rows' => $rows,
+            'cols' => EstatePossessionDetailsExport::resolveCols($request->input('cols')),
+            'filterLine' => implode('  |  ', $filters),
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /**
+     * Possession Details — branded .xlsx of the currently filtered list.
+     */
+    public function exportPossessionDetails(Request $request)
+    {
+        $payload = $this->possessionDetailsExportPayload($request);
+
+        // CSV / PDF: same rows, filters and columns as the Excel download below.
+        if ($response = $this->estateCsvOrPdf($request, EstatePossessionDetailsExport::class, $payload, 'Possession Details', 'estate-possession-details')) {
+            return $response;
+        }
+
+        return Excel::download(
+            new EstatePossessionDetailsExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'possession-details-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /**
+     * Possession Details — print-ready view of the currently filtered list.
+     * Same header and columns as the Excel download.
+     */
+    public function printPossessionDetails(Request $request)
+    {
+        return view('admin.estate.possession_details_print', $this->possessionDetailsExportPayload($request));
     }
 
     /**
@@ -5254,13 +6186,20 @@ class EstateController extends Controller
 
         $isEdit = $request->filled('requester_id');
 
-        return view('admin.estate.possession_details_form', compact(
+        $payload = compact(
             'requesters',
             'campuses',
             'unitTypesByCampus',
             'preselectedRequester',
             'isEdit'
-        ));
+        );
+
+        // The listing's Add / Edit Possession modal asks for the body only.
+        if ($request->boolean('modal')) {
+            return view('admin.estate._possession_details_form', $payload + ['inModal' => true]);
+        }
+
+        return view('admin.estate.possession_details_form', $payload);
     }
 
 
@@ -5268,6 +6207,13 @@ class EstateController extends Controller
      * Possession Details (LBSNAA) - Store form into estate_possession_details.
      */
     public function storePossessionDetails(Request $request)
+    {
+        // One transaction, so the house row lock below serialises allotments of the same house.
+        return $this->runAllotmentTransaction(fn () => $this->storePossessionDetailsLocked($request));
+    }
+
+    /** Body of storePossessionDetails(); must run inside its transaction. */
+    private function storePossessionDetailsLocked(Request $request)
     {
         $messages = [
             'electric_meter_reading_primary.regex' => 'Primary meter reading must be numbers only (max 10 digits).',
@@ -5323,7 +6269,9 @@ class EstateController extends Controller
         // electric_meter_reading_2 column = secondary (second meter, if any)
         $electricReading2 = $secondary !== '' ? (int) $secondary : null;
 
+        // Request row before house row, the order allotNewRequest() locks them in.
         $homeReq = EstateHomeRequestDetails::where('hac_status', 1)
+            ->lockForUpdate()
             ->findOrFail((int) $validated['estate_home_request_details_pk']);
 
         // Use latest possession (same row as in listing: orderBy epd.pk desc)
@@ -5409,6 +6357,8 @@ class EstateController extends Controller
             ->where('estate_campus_master_pk', (int) $validated['estate_campus_master_pk'])
             ->where('estate_block_master_pk', (int) $validated['estate_block_master_pk'])
             ->where('estate_unit_sub_type_master_pk', (int) $validated['estate_unit_sub_type_master_pk'])
+            // Row lock: a concurrent allotment of this house waits, then reads it as used.
+            ->lockForUpdate()
             ->first();
 
         if (! $house) {
@@ -5528,7 +6478,81 @@ class EstateController extends Controller
      */
     public function possessionForOthers(EstatePossessionOtherDataTable $dataTable)
     {
-        return $dataTable->render('admin.estate.estate_possession_for_others');
+        return $dataTable->render('admin.estate.estate_possession_for_others', [
+            // Bill Year filter options: years on record for Others' bills.
+            'billYearOptions' => EstateOtherRequestDataTable::billYearOptions(),
+        ]);
+    }
+
+    /**
+     * Rows + heading line for the Estate Possession for Others downloads.
+     *
+     * Runs the DataTable's own listing query and filters, so the export always
+     * carries exactly the rows the on-screen list was showing.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function possessionForOthersExportPayload(Request $request): array
+    {
+        $search = trim($this->exportSearchTerm($request));
+        $billYear = trim(static::exportFilterText($request, 'bill_year_filter'));
+        $billDate = trim(static::exportFilterText($request, 'bill_date_filter'));
+
+        $rows = EstatePossessionOtherDataTable::listingQuery()
+            ->tap(fn ($query) => EstatePossessionOtherDataTable::applyFilters(
+                $query,
+                $search,
+                $billYear,
+                $billDate
+            ))
+            ->get();
+
+        $filters = ['Bill Year: ' . (preg_match('/^\d{4}$/', $billYear) === 1 ? $billYear : 'All')];
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $billDate) === 1) {
+            $filters[] = 'Bill Date: ' . \Carbon\Carbon::parse($billDate)->format('d-m-Y');
+        }
+        if ($search !== '') {
+            $filters[] = 'Search: "' . $search . '"';
+        }
+
+        return [
+            'rows' => $rows,
+            'cols' => EstatePossessionOtherExport::resolveCols($request->input('cols')),
+            'filterLine' => implode('  |  ', $filters),
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /**
+     * Estate Possession for Others — branded .xlsx of the currently filtered list.
+     */
+    public function exportPossessionForOthers(Request $request)
+    {
+        $payload = $this->possessionForOthersExportPayload($request);
+
+        // CSV / PDF: same rows, filters and columns as the Excel download below.
+        if ($response = $this->estateCsvOrPdf($request, EstatePossessionOtherExport::class, $payload, 'Estate Possession for Others', 'estate-possession-for-others')) {
+            return $response;
+        }
+
+        return Excel::download(
+            new EstatePossessionOtherExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'estate-possession-for-others-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /**
+     * Estate Possession for Others — print-ready view of the currently filtered list.
+     * Same header and columns as the Excel download.
+     */
+    public function printPossessionForOthers(Request $request)
+    {
+        return view('admin.estate.estate_possession_for_others_print', $this->possessionForOthersExportPayload($request));
     }
 
     /**
@@ -5734,6 +6758,55 @@ class EstateController extends Controller
             ->all();
 
         return $dataTable->render('admin.estate.return_house', compact('requesters', 'campuses', 'unitTypesByCampus'));
+    }
+
+    /**
+     * Rows + heading line for the Return House downloads.
+     *
+     * Reuses the grid's own query builder and search, so the export holds exactly
+     * the grid's rows — including the non-privileged employee restriction (F-012).
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function returnHouseExportPayload(Request $request): array
+    {
+        $table = app(EstateReturnHouseDataTable::class);
+        $search = $table->searchTerm();
+        $rows = $table->exportRows();
+
+        return [
+            'rows' => $rows,
+            'cols' => EstateReturnHouseExport::resolveCols($request->input('cols')),
+            'filterLine' => $search !== '' ? 'Search: "' . $search . '"' : 'All returned houses',
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /** Return House — branded .xlsx of the list. */
+    public function downloadReturnHouse(Request $request)
+    {
+        $payload = $this->returnHouseExportPayload($request);
+
+        // CSV / PDF: same rows, filters and columns as the Excel download below.
+        if ($response = $this->estateCsvOrPdf($request, EstateReturnHouseExport::class, $payload, 'Return House', 'estate-return-house')) {
+            return $response;
+        }
+
+        return Excel::download(
+            new EstateReturnHouseExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'return-house-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /** Return House — print-ready view, same columns as the Excel download. */
+    public function printReturnHouse(Request $request)
+    {
+        return view('admin.estate.return_house_print', $this->returnHouseExportPayload($request));
     }
 
     /**
@@ -6135,10 +7208,17 @@ class EstateController extends Controller
             }
         }
 
-        return view('admin.estate.update_meter_reading_of_other', compact(
+        $payload = compact(
             'campuses', 'unitTypes', 'unitTypesByCampus', 'billMonths', 'unitSubTypes',
             'prefill', 'selectedPossessions', 'possessionPks'
-        ));
+        );
+
+        // The listing's Update Meter Reading modal asks for the body only.
+        if (request()->boolean('modal')) {
+            return view('admin.estate._update_meter_reading_of_other_form', $payload + ['inModal' => true]);
+        }
+
+        return view('admin.estate.update_meter_reading_of_other', $payload);
     }
 
     /**
@@ -6253,9 +7333,15 @@ class EstateController extends Controller
             }
         }
 
-        return view('admin.estate.update_meter_reading', compact(
-            'campuses', 'unitTypes', 'billMonths', 'unitSubTypes', 'prefill'
-        ));
+        $payload = compact('campuses', 'unitTypes', 'billMonths', 'unitSubTypes', 'prefill');
+
+        // The Possession Details listing's Update Meter Reading modal asks for the
+        // body only (filter + readings grid).
+        if (request()->boolean('modal')) {
+            return view('admin.estate._update_meter_reading_form', $payload + ['inModal' => true]);
+        }
+
+        return view('admin.estate.update_meter_reading', $payload);
     }
 
     /** Estate listing cache version token ki key ({@see estateCacheVersion()}). */
@@ -7004,6 +8090,15 @@ class EstateController extends Controller
         });
 
         if ($validator->fails()) {
+            // The modal posts over AJAX and renders errors inline.
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors()->first(),
+                    'errors' => $validator->errors()->toArray(),
+                ], 422);
+            }
+
             return redirect()
                 ->back()
                 ->withInput()
@@ -7156,10 +8251,15 @@ class EstateController extends Controller
                     ->where('emrd.pk', $resolvePk)
                     ->value('epd.return_home_status');
                 if ($rh !== null && (int) $rh !== 0) {
+                    $returnedMsg = 'Meter reading cannot be updated for houses that have been returned.';
+                    if ($request->ajax() || $request->wantsJson()) {
+                        return response()->json(['success' => false, 'message' => $returnedMsg], 422);
+                    }
+
                     return redirect()
                         ->back()
                         ->withInput()
-                        ->with('error', 'Meter reading cannot be updated for houses that have been returned.');
+                        ->with('error', $returnedMsg);
                 }
             }
 
@@ -7561,9 +8661,15 @@ class EstateController extends Controller
         // Naya bill turant bill lists me dikhe — cached payload chhod do.
         $this->bumpEstateCacheVersion();
 
+        $successMsg = 'Meter readings updated successfully.';
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => $successMsg]);
+        }
+
         return redirect()
             ->route('admin.estate.update-meter-no', $meterNoQuery)
-            ->with('success', 'Meter readings updated successfully.');
+            ->with('success', $successMsg);
     }
 
     /**
@@ -7573,7 +8679,104 @@ class EstateController extends Controller
     {
         $this->authorizeEstateMasterMeterAndReports();
 
-        return view('admin.estate.update_meter_no');
+        // Bill Year options come from the readings that actually exist.
+        $billYears = EstateMonthReadingDetails::query()
+            ->whereNotNull('bill_year')
+            ->distinct()
+            ->orderByDesc('bill_year')
+            ->pluck('bill_year')
+            ->map(fn ($y) => (string) $y)
+            ->filter()
+            ->values();
+
+        if ($billYears->isEmpty()) {
+            $billYears = collect([(string) now()->year]);
+        }
+
+        return view('admin.estate.update_meter_no', compact('billYears'));
+    }
+
+    /**
+     * Rows + heading line for the Update Meter Details downloads.
+     *
+     * Reuses getUpdateMeterNoList()'s own payload builder in "show all" mode, so
+     * the export inherits the same visibility rules, month filter and search
+     * that produced the on-screen list.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function updateMeterNoExportPayload(Request $request): array
+    {
+        // Same request shape the DataTable sends, but unpaginated and without `draw`
+        // so the builder returns every matching row.
+        $listRequest = Request::create(
+            route('admin.estate.update-meter-no.list'),
+            'GET',
+            array_filter([
+                'draw' => 1,
+                'start' => 0,
+                'length' => -1,
+                'bill_year' => static::exportFilterText($request, 'bill_year'),
+                'bill_month' => static::exportFilterText($request, 'bill_month'),
+                'search' => ['value' => $this->exportSearchTerm($request)],
+            ], fn ($v) => $v !== null && $v !== '')
+        );
+        $listRequest->setUserResolver($request->getUserResolver());
+
+        $payload = $this->getUpdateMeterNoList($listRequest)->getData(true);
+        $rows = collect($payload['data'] ?? [])->map(fn ($row) => (object) $row);
+
+        $monthNum = (int) $request->input('bill_month', 0);
+        $filters = [];
+        $filters[] = 'Bill Year: ' . (static::exportFilterText($request, 'bill_year') ?: 'All');
+        $filters[] = 'Bill Month: ' . ($monthNum >= 1 && $monthNum <= 12
+            ? date('F', mktime(0, 0, 0, $monthNum, 1))
+            : 'All');
+        if (trim($this->exportSearchTerm($request)) !== '') {
+            $filters[] = 'Search: "' . trim($this->exportSearchTerm($request)) . '"';
+        }
+
+        return [
+            'rows' => $rows,
+            'cols' => EstateUpdateMeterNoExport::resolveCols($request->input('cols')),
+            'filterLine' => implode('  |  ', $filters),
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /**
+     * Update Meter Details — branded .xlsx of the currently filtered list.
+     */
+    public function exportUpdateMeterNo(Request $request)
+    {
+        $this->authorizeEstateMasterMeterAndReports();
+        $payload = $this->updateMeterNoExportPayload($request);
+
+        // CSV / PDF: same rows, filters and columns as the Excel download below.
+        if ($response = $this->estateCsvOrPdf($request, EstateUpdateMeterNoExport::class, $payload, 'Update Meter Details', 'estate-update-meter-details')) {
+            return $response;
+        }
+
+        return Excel::download(
+            new EstateUpdateMeterNoExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'update-meter-details-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /**
+     * Update Meter Details — print-ready view of the currently filtered list.
+     * Same header and columns as the Excel download.
+     */
+    public function printUpdateMeterNo(Request $request)
+    {
+        $this->authorizeEstateMasterMeterAndReports();
+
+        return view('admin.estate.update_meter_no_print', $this->updateMeterNoExportPayload($request));
     }
 
     /**
@@ -7743,6 +8946,7 @@ class EstateController extends Controller
             'emrd.last_month_elec_red2',
             'emrd.curr_month_elec_red2',
             'ehrd.emp_name',
+            'ehrd.employee_id',
             'etm.category_type_name as employee_type',
             'ut.unit_type',
             'ust.unit_sub_type',
@@ -7778,6 +8982,7 @@ class EstateController extends Controller
             'emro.last_month_elec_red2',
             'emro.curr_month_elec_red2',
             'eor.emp_name',
+            DB::raw('NULL as employee_id'),
             'eor.designation as employee_type',
             'out.unit_type',
             'oust.unit_sub_type',
@@ -7913,10 +9118,10 @@ class EstateController extends Controller
         if (! $showAllRows && $length <= 0) {
             $length = 10;
         }
-        $searchValue = trim((string) data_get($request->all(), 'search.value', ''));
+        $searchValue = trim(static::exportFilterText($request, 'search.value'));
 
-        $billMonth = $request->get('bill_month');
-        $billYear = $request->get('bill_year');
+        $billMonth = static::exportFilterText($request, 'bill_month');
+        $billYear = static::exportFilterText($request, 'bill_year');
         $filterByMonth = $billMonth && $billYear;
         if ($filterByMonth) {
             $billYear = (string) $billYear;
@@ -7958,7 +9163,7 @@ class EstateController extends Controller
         }
 
         $orderCol = (int) data_get($request->all(), 'order.0.column', 0);
-        $orderDir = strtolower((string) data_get($request->all(), 'order.0.dir', 'desc')) === 'desc' ? 'desc' : 'asc';
+        $orderDir = strtolower(static::exportFilterText($request, 'order.0.dir', 'desc')) === 'desc' ? 'desc' : 'asc';
 
         $cacheKey = 'estate_umn:v1:' . md5(json_encode([
             'dt' => $isDataTables ? 1 : 0,
@@ -8875,6 +10080,14 @@ class EstateController extends Controller
         });
 
         if ($validator->fails()) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $validator->errors()->first(),
+                    'errors' => $validator->errors()->toArray(),
+                ], 422);
+            }
+
             return redirect()
                 ->back()
                 ->withInput()
@@ -8968,10 +10181,15 @@ class EstateController extends Controller
                         ->where('return_home_status', '<>', 0)
                         ->exists();
                     if ($possReturned) {
+                        $returnedMsg = 'Meter reading cannot be updated for houses that have been returned.';
+                        if ($json = $this->estateFormFailure($request, $returnedMsg)) {
+                            return $json;
+                        }
+
                         return redirect()
                             ->back()
                             ->withInput()
-                            ->with('error', 'Meter reading cannot be updated for houses that have been returned.');
+                            ->with('error', $returnedMsg);
                     }
                 }
 
@@ -9656,6 +10874,7 @@ class EstateController extends Controller
             'ehm.estate_unit_sub_type_master_pk as unit_sub_type_pk',
             'ehrd.emp_name',
             'ehrd.employee_id',
+            'ehrd.req_date',
             DB::raw("COALESCE(NULLIF(TRIM(d_emp.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), '')) as emp_designation"),
             'eust.unit_sub_type',
             'ehm.water_charge as ehm_water_charge',
@@ -9712,6 +10931,7 @@ class EstateController extends Controller
             $b->meter_two_is_new = isset($meterChangeMap[$mcKey]) && $meterChangeMap[$mcKey]['m2'];
 
             $b->bill_no = $this->resolveBillNumber($b->bill_no ?? null, $b->pk ?? null);
+            $b->req_date_formatted = ! empty($b->req_date) ? \Carbon\Carbon::parse($b->req_date)->format('d-m-Y') : '—';
             $b->from_date_formatted = $b->from_date ? \Carbon\Carbon::parse($b->from_date)->format('d-m-Y') : '—';
             $b->to_date_formatted = $b->to_date ? \Carbon\Carbon::parse($b->to_date)->format('d-m-Y') : '—';
             $b->house_display = $b->unit_sub_type && $b->house_no ? $b->unit_sub_type . '-(' . $b->house_no . ')' : ($b->house_no ?? '—');
@@ -9905,7 +11125,7 @@ class EstateController extends Controller
             $billMonth = $currentYm;
         }
         $unitSubTypePk = $request->get('unit_sub_type_pk');
-        $searchRaw = trim((string) $request->get('search', ''));
+        $searchRaw = trim(static::exportFilterText($request, 'search'));
         $bills = collect();
 
         // Search: Estate role only (not Home ?scope=self). Admin / Super Admin use self-service bill view without global search.
@@ -10011,10 +11231,29 @@ class EstateController extends Controller
         $estateBillIsPersonalView = $this->isEstateAuthorityPersonalScope($request)
             || ! (isEstateAuthority());
 
+        // The Bill Month filter is a select of the periods that actually have
+        // readings (newest first) — value is the `Y-m` this action parses.
+        $billMonthOptions = [];
+        foreach (
+            EstateMonthReadingDetails::select('bill_year', 'bill_month')
+                ->whereNotNull('bill_year')->whereNotNull('bill_month')
+                ->groupBy('bill_year', 'bill_month')
+                ->orderByRaw('CAST(bill_year AS UNSIGNED) DESC, CAST(bill_month AS UNSIGNED) DESC')
+                ->limit(24)->get() as $row
+        ) {
+            [$m, $y] = $this->meterReadingParseUiMonthYear($row->bill_month ?? null, $row->bill_year ?? null);
+            if ($m === null || $y === null) {
+                continue;
+            }
+            $billMonthOptions[sprintf('%04d-%02d', $y, $m)] = date('F Y', mktime(0, 0, 0, $m, 1, $y));
+        }
+        krsort($billMonthOptions);
+
         return view('admin.estate.generate_estate_bill', compact(
             'unitSubTypes',
             'bills',
             'billMonth',
+            'billMonthOptions',
             'unitSubTypePk',
             'search',
             'showUnitSubTypeFilter',
@@ -10172,7 +11411,7 @@ class EstateController extends Controller
     {
         $this->authorizeEstateMasterMeterAndReports();
 
-        $employeeCategory = trim((string) $request->get('employee_category', 'LBSNAA'));
+        $employeeCategory = trim(static::exportFilterText($request, 'employee_category', 'LBSNAA'));
         $month = $request->get('month');
         $year = is_string($request->get('year')) && trim($request->get('year')) !== '' ? trim($request->get('year')) : null;
 
@@ -10302,7 +11541,7 @@ class EstateController extends Controller
         $year = $request->get('year');
         $employeeTypePk = $request->get('employee_type_pk');
         $employeePk = $request->get('employee_pk');
-        $employeeCategory = trim((string) $request->get('employee_category', 'LBSNAA'));
+        $employeeCategory = trim(static::exportFilterText($request, 'employee_category', 'LBSNAA'));
         $bill = null;
         $billIsOther = false; // resolved bill regular (l) hai ya Other/contract (o) — meter-change lookup type ke liye.
 
@@ -11168,7 +12407,129 @@ class EstateController extends Controller
                 ->orderBy('b.block_name')
                 ->get();
         }
-        return view('admin.estate.list_meter_reading', compact('billMonths', 'blocks'));
+        // The grid's Bill Month filter is rendered server-side from the periods
+        // that actually have readings, newest first — value is the `Y-m` the
+        // data endpoint parses, label is what the user reads.
+        $billMonthOptions = [];
+        foreach ($billMonths as $row) {
+            [$m, $y] = $this->meterReadingParseUiMonthYear($row->bill_month ?? null, $row->bill_year ?? null);
+            if ($m === null || $y === null) {
+                continue;
+            }
+            $billMonthOptions[sprintf('%04d-%02d', $y, $m)] = date('F Y', mktime(0, 0, 0, $m, 1, $y));
+        }
+        krsort($billMonthOptions);
+
+        return view('admin.estate.list_meter_reading', compact('billMonths', 'billMonthOptions', 'blocks'));
+    }
+
+    /**
+     * Rows + heading line for the List Meter Reading downloads.
+     *
+     * Runs the grid's own payload builder with the paging removed, so the export
+     * carries exactly the rows the table showed for those filters and search.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function listMeterReadingExportPayload(Request $request): array
+    {
+        $this->authorizeEstateMasterMeterAndReports();
+
+        $billMonth = trim(static::exportFilterText($request, 'bill_month', date('Y-m')));
+        $blockId = $request->input('block_id', 'all');
+        $employeeType = trim(static::exportFilterText($request, 'employee_type', 'LBSNAA'));
+        $search = trim($this->exportSearchTerm($request));
+
+        $parts = explode('-', $billMonth);
+        $billYearStr = (isset($parts[0]) && is_numeric($parts[0])) ? (string) ((int) $parts[0]) : (string) date('Y');
+        $monthNum = (isset($parts[1]) && is_numeric($parts[1])) ? (int) $parts[1] : (int) date('n');
+        if ($monthNum < 1 || $monthNum > 12) {
+            $monthNum = (int) date('n');
+        }
+
+        $canSeeAll = (isEstateAuthority() || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST'));
+        $restrictedEmployeeIdsSorted = null;
+        if (! $canSeeAll) {
+            $ids = Auth::check()
+                ? array_values(array_filter(array_map('intval', getEmployeeIdsForUser(Auth::user()->user_id ?? Auth::user()->pk ?? null))))
+                : [];
+            sort($ids, SORT_NUMERIC);
+            $restrictedEmployeeIdsSorted = $ids;
+        }
+
+        // Same builder the grid uses, with the page window opened wide enough to
+        // hold the whole filtered month.
+        $payload = $this->computeListMeterReadingDataPayload(
+            $billMonth,
+            $blockId,
+            $employeeType,
+            true,
+            0,
+            100000,
+            $search,
+            $billYearStr,
+            date('F', mktime(0, 0, 0, $monthNum, 1)),
+            date('M', mktime(0, 0, 0, $monthNum, 1)),
+            (string) $monthNum,
+            str_pad((string) $monthNum, 2, '0', STR_PAD_LEFT),
+            0,
+            'asc',
+            $restrictedEmployeeIdsSorted,
+            \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk')
+        );
+
+        $blockLabel = 'All';
+        if ($blockId !== null && $blockId !== '' && $blockId !== 'all') {
+            $blockLabel = DB::table('estate_block_master')->where('pk', (int) $blockId)->value('block_name') ?: 'All';
+        }
+
+        $filters = [
+            'Bill Month: ' . date('F Y', mktime(0, 0, 0, $monthNum, 1, (int) $billYearStr)),
+            'Employee Type: ' . ($employeeType !== '' ? $employeeType : 'LBSNAA'),
+            'Building: ' . $blockLabel,
+        ];
+        if ($search !== '') {
+            $filters[] = 'Search: "' . $search . '"';
+        }
+
+        return [
+            'rows' => collect($payload['data'])->map(fn ($row) => (object) $row),
+            'cols' => EstateListMeterReadingExport::resolveCols($request->input('cols')),
+            'filterLine' => implode('  |  ', $filters),
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /**
+     * List Meter Reading — branded .xlsx of the currently filtered list.
+     */
+    public function exportListMeterReading(Request $request)
+    {
+        $payload = $this->listMeterReadingExportPayload($request);
+
+        // CSV / PDF: same rows, filters and columns as the Excel download below.
+        if ($response = $this->estateCsvOrPdf($request, EstateListMeterReadingExport::class, $payload, 'List Meter Reading', 'estate-list-meter-reading')) {
+            return $response;
+        }
+
+        return Excel::download(
+            new EstateListMeterReadingExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'list-meter-reading-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /**
+     * List Meter Reading — print-ready view of the currently filtered list.
+     * Same header and columns as the Excel download.
+     */
+    public function printListMeterReading(Request $request)
+    {
+        return view('admin.estate.list_meter_reading_print', $this->listMeterReadingExportPayload($request));
     }
 
     /**
@@ -11194,7 +12555,7 @@ class EstateController extends Controller
             : ['t' => 'emp', 'ids' => $restrictedEmployeeIdsSorted];
 
         if (! $isDataTables) {
-            return 'estate_lmr:v4:lg:' . md5(json_encode([
+            return 'estate_lmr:v5:lg:' . md5(json_encode([
                 $normalizedBillMonth,
                 $blockIdNormalized,
                 $employeeTypeFingerprint,
@@ -11203,7 +12564,7 @@ class EstateController extends Controller
             ]));
         }
 
-        return 'estate_lmr:v4:dt:' . md5(json_encode([
+        return 'estate_lmr:v5:dt:' . md5(json_encode([
             $normalizedBillMonth,
             $blockIdNormalized,
             $employeeTypeFingerprint,
@@ -11320,6 +12681,10 @@ class EstateController extends Controller
                         'emro.last_month_elec_red',
                         'emro.last_month_elec_red2',
                         'eor.emp_name',
+                        // Name & ID: the linked employee_master.emp_id (absent on some databases).
+                        Schema::hasColumn('estate_other_req', 'employee_master_emp_id')
+                            ? 'eor.employee_master_emp_id as employee_id'
+                            : DB::raw('NULL as employee_id'),
                         'eor.designation as emp_designation',
                         'eor.section',
                         'ut.unit_type',
@@ -11340,6 +12705,7 @@ class EstateController extends Controller
                     $data[] = [
                         'sno' => $sno++,
                         'name' => $r->emp_name ?? 'N/A',
+                        'employee_id' => trim((string) ($r->employee_id ?? '')),
                         'designation' => $designationOther !== '' ? $designationOther : 'N/A',
                         'section' => $r->section ?? 'N/A',
                         'unit_type' => $r->unit_type ?? 'N/A',
@@ -11465,6 +12831,7 @@ class EstateController extends Controller
                     'emrd.last_month_elec_red',
                     'emrd.last_month_elec_red2',
                     'ehrd.emp_name',
+                    'ehrd.employee_id',
                     DB::raw("COALESCE(NULLIF(TRIM(d_lmr.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), '')) as emp_designation"),
                     // Section: department is often unset on employee_master; fall back like bill/return-house UIs.
                     DB::raw("COALESCE(NULLIF(TRIM(dm.department_name), ''), NULLIF(TRIM(d_lmr.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), ''), NULLIF(TRIM(ehrd.remarks), '')) as section"),
@@ -11486,6 +12853,7 @@ class EstateController extends Controller
                 $data[] = [
                     'sno' => $sno++,
                     'name' => $r->emp_name ?? 'N/A',
+                    'employee_id' => trim((string) ($r->employee_id ?? '')),
                     'designation' => $designationLbsnaa !== '' ? $designationLbsnaa : 'N/A',
                     'section' => $r->section ?? 'N/A',
                     'unit_type' => $r->unit_type ?? 'N/A',
@@ -11516,6 +12884,7 @@ class EstateController extends Controller
                 'emrd.last_month_elec_red',
                 'emrd.last_month_elec_red2',
                 'ehrd.emp_name',
+                'ehrd.employee_id',
                 DB::raw("COALESCE(NULLIF(TRIM(d_lmr.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), '')) as emp_designation"),
                 DB::raw("COALESCE(NULLIF(TRIM(dm.department_name), ''), NULLIF(TRIM(d_lmr.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), ''), NULLIF(TRIM(ehrd.remarks), '')) as section"),
                 'ut.unit_type',
@@ -11551,6 +12920,10 @@ class EstateController extends Controller
                     'emro.last_month_elec_red',
                     'emro.last_month_elec_red2',
                     'eor.emp_name',
+                    // Name & ID: the linked employee_master.emp_id (absent on some databases).
+                    Schema::hasColumn('estate_other_req', 'employee_master_emp_id')
+                        ? 'eor.employee_master_emp_id as employee_id'
+                        : DB::raw('NULL as employee_id'),
                     'eor.designation',
                     'eor.section',
                     'ut.unit_type',
@@ -11581,6 +12954,7 @@ class EstateController extends Controller
                 $data[] = [
                     'sno' => $sno++,
                     'name' => $r->emp_name ?? 'N/A',
+                    'employee_id' => trim((string) ($r->employee_id ?? '')),
                     'designation' => $designationLegacyOth !== '' ? $designationLegacyOth : 'N/A',
                     'section' => $r->section ?? 'N/A',
                     'unit_type' => $r->unit_type ?? 'N/A',
@@ -11600,6 +12974,7 @@ class EstateController extends Controller
                 $data[] = [
                     'sno' => $sno++,
                     'name' => $r->emp_name ?? 'N/A',
+                    'employee_id' => trim((string) ($r->employee_id ?? '')),
                     'designation' => $designationLegacyLbsnaa !== '' ? $designationLegacyLbsnaa : 'N/A',
                     'section' => $r->section ?? 'N/A',
                     'unit_type' => $r->unit_type ?? 'N/A',
@@ -11627,9 +13002,9 @@ class EstateController extends Controller
         @ini_set('max_execution_time', '120');
         @set_time_limit(120);
 
-        $billMonth = $request->get('bill_month');
-        $blockId = $request->get('block_id');
-        $employeeType = trim((string) $request->get('employee_type', 'LBSNAA'));
+        $billMonth = static::exportFilterText($request, 'bill_month');
+        $blockId = static::exportFilterText($request, 'block_id');
+        $employeeType = trim(static::exportFilterText($request, 'employee_type', 'LBSNAA'));
         $isDataTables = $request->has('draw');
         $draw = (int) $request->get('draw', 0);
         $start = max(0, (int) $request->get('start', 0));
@@ -11637,7 +13012,7 @@ class EstateController extends Controller
         if ($length <= 0) {
             $length = 10;
         }
-        $searchValue = (string) data_get($request->all(), 'search.value', '');
+        $searchValue = static::exportFilterText($request, 'search.value');
         $searchValue = trim($searchValue);
 
         if (!$billMonth) {
@@ -11682,7 +13057,7 @@ class EstateController extends Controller
         $normalizedBillMonth = $billYearStr . '-' . $billMonthNumPadded;
         $employeeTypeFingerprint = strtolower(preg_replace('/\s+/', ' ', $employeeType));
         $orderCol = $isDataTables ? (int) data_get($request->all(), 'order.0.column', 0) : 0;
-        $orderDir = $isDataTables && strtolower((string) data_get($request->all(), 'order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+        $orderDir = $isDataTables && strtolower(static::exportFilterText($request, 'order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
 
         $reqLenForKey = (int) $request->get('length', 10);
         if ($reqLenForKey <= 0) {
@@ -12114,7 +13489,7 @@ class EstateController extends Controller
 
         $billMonth = $request->get('bill_month');
         // Employee Type filter (optional): all | lbsnaa | other.
-        $employeeTypeFilter = strtolower(trim((string) $request->get('employee_type', 'all')));
+        $employeeTypeFilter = strtolower(trim(static::exportFilterText($request, 'employee_type', 'all')));
         if (! in_array($employeeTypeFilter, ['all', 'lbsnaa', 'other'], true)) {
             $employeeTypeFilter = 'all';
         }
@@ -12128,7 +13503,7 @@ class EstateController extends Controller
         if (! $fetchAllRows && $length <= 0) {
             $length = 10;
         }
-        $searchValue = trim((string) data_get($request->all(), 'search.value', ''));
+        $searchValue = trim(static::exportFilterText($request, 'search.value'));
 
         if (! $billMonth || ! is_string($billMonth)) {
             if ($isDataTables) {
@@ -12172,7 +13547,7 @@ class EstateController extends Controller
         }
 
         $orderCol = $isDataTables ? (int) data_get($request->all(), 'order.0.column', 0) : 0;
-        $orderDir = $isDataTables && strtolower((string) data_get($request->all(), 'order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+        $orderDir = $isDataTables && strtolower(static::exportFilterText($request, 'order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
 
         $normalizedBillMonth = $billYearStr . '-' . $billMonthNumPadded;
         $employeeIdsSorted = array_values($employeeIds);
@@ -12266,7 +13641,117 @@ class EstateController extends Controller
      */
     public function generateEstateBillForOther()
     {
-        return view('admin.estate.generate_estate_bill_for_other');
+        // The Bill Month filter is a select of the periods that actually have
+        // other/contract readings (newest first) — value is the `Y-m` the data
+        // endpoint parses, label is what the user reads.
+        $billMonthOptions = [];
+        foreach (
+            DB::table('estate_month_reading_details_other')
+                ->select('bill_year', 'bill_month')
+                ->whereNotNull('bill_year')->whereNotNull('bill_month')
+                ->groupBy('bill_year', 'bill_month')
+                ->orderByRaw('CAST(bill_year AS UNSIGNED) DESC')
+                ->limit(24)->get() as $row
+        ) {
+            [$m, $y] = $this->meterReadingParseUiMonthYear($row->bill_month ?? null, $row->bill_year ?? null);
+            if ($m === null || $y === null) {
+                continue;
+            }
+            $billMonthOptions[sprintf('%04d-%02d', $y, $m)] = date('F Y', mktime(0, 0, 0, $m, 1, $y));
+        }
+        krsort($billMonthOptions);
+
+        return view('admin.estate.generate_estate_bill_for_other', compact('billMonthOptions'));
+    }
+
+    /**
+     * Rows + heading line for the Generate Estate Bill for Other downloads.
+     *
+     * Runs the grid's own row builder, then applies the same free-text search the
+     * client-side DataTable applies, so the export carries exactly the rows the
+     * table was showing.
+     *
+     * @return array{rows: \Illuminate\Support\Collection, cols: string[], filterLine: string, generatedAt: string}
+     */
+    private function generateBillForOtherExportPayload(Request $request): array
+    {
+        $billMonth = trim(static::exportFilterText($request, 'bill_month', date('Y-m')));
+        $search = trim($this->exportSearchTerm($request));
+
+        $parts = explode('-', $billMonth);
+        $billYearStr = (isset($parts[0]) && is_numeric($parts[0])) ? (string) ((int) $parts[0]) : (string) date('Y');
+        $monthNum = (isset($parts[1]) && is_numeric($parts[1])) ? (int) $parts[1] : (int) date('n');
+        if ($monthNum < 1 || $monthNum > 12) {
+            $monthNum = (int) date('n');
+        }
+        $billMonthStr = date('F', mktime(0, 0, 0, $monthNum, 1));
+
+        $rows = collect($this->computeGenerateEstateBillForOtherDataRows(
+            $billMonthStr,
+            $billYearStr,
+            Schema::hasColumn('estate_possession_other', 'return_home_status')
+        ));
+
+        // The grid searches client-side across every rendered cell; mirror that
+        // here rather than inventing a narrower server-side match.
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $rows = $rows->filter(function (array $row) use ($needle) {
+                foreach (['name', 'request_no', 'section', 'house_no', 'from_date', 'to_date', 'meter_no',
+                    'prev_reading', 'curr_reading', 'unit_consumed', 'total_charge', 'licence_fee',
+                    'water_charges', 'grand_total'] as $key) {
+                    if (str_contains(mb_strtolower((string) ($row[$key] ?? '')), $needle)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            })->values();
+        }
+
+        $filters = ['Bill Month: ' . date('F Y', mktime(0, 0, 0, $monthNum, 1, (int) $billYearStr))];
+        if ($search !== '') {
+            $filters[] = 'Search: "' . $search . '"';
+        }
+
+        return [
+            'rows' => $rows->map(fn (array $row) => (object) $row)->values(),
+            'cols' => EstateGenerateBillForOtherExport::resolveCols($request->input('cols')),
+            'filterLine' => implode('  |  ', $filters),
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ];
+    }
+
+    /**
+     * Generate Estate Bill for Other — branded .xlsx of the currently filtered list.
+     */
+    public function exportGenerateEstateBillForOther(Request $request)
+    {
+        $payload = $this->generateBillForOtherExportPayload($request);
+
+        // CSV / PDF: same rows, filters and columns as the Excel download below.
+        if ($response = $this->estateCsvOrPdf($request, EstateGenerateBillForOtherExport::class, $payload, 'View Estate Bill for Other', 'estate-bill-for-other')) {
+            return $response;
+        }
+
+        return Excel::download(
+            new EstateGenerateBillForOtherExport(
+                $payload['rows'],
+                $payload['filterLine'],
+                $payload['generatedAt'],
+                $payload['cols']
+            ),
+            'estate-bill-for-other-' . now()->format('Y-m-d_H-i-s') . '.xlsx'
+        );
+    }
+
+    /**
+     * Generate Estate Bill for Other — print-ready view of the currently filtered
+     * list. Same header and columns as the Excel download.
+     */
+    public function printGenerateEstateBillForOther(Request $request)
+    {
+        return view('admin.estate.generate_estate_bill_for_other_print', $this->generateBillForOtherExportPayload($request));
     }
 
     /**
@@ -12314,6 +13799,7 @@ class EstateController extends Controller
                 'ehm.water_charge as ehm_water_charge',
                 'ehm.licence_fee as ehm_licence_fee',
                 'eor.emp_name',
+                'eor.request_no_oth',
                 'eor.section',
                 'b.block_name as building_name',
             ])
@@ -12363,10 +13849,19 @@ class EstateController extends Controller
                 'bill_month' => $r->bill_month ?? $billMonthStr,
                 'bill_year' => $r->bill_year ?? $billYearStr,
                 'name' => $r->emp_name ?? 'N/A',
+                // Contract staff have no employee_id; the request number is the
+                // only identifier they carry. Auto-generated "oth-req-N" values
+                // are internal keys, not IDs, so they stay out of the UI.
+                'request_no' => preg_match('/^oth-req-\d+$/i', trim((string) ($r->request_no_oth ?? '')))
+                    ? ''
+                    : trim((string) ($r->request_no_oth ?? '')),
                 'section' => $r->section ?? '—',
                 'house_no' => $r->house_no ?? '—',
                 'from_date' => $r->from_date ? \Carbon\Carbon::parse($r->from_date)->format('d-m-Y') : '—',
                 'to_date' => $r->to_date ? \Carbon\Carbon::parse($r->to_date)->format('d-m-Y') : '—',
+                // Sortable twins: the grid shows d-m-Y, which string-sorts wrong.
+                'from_date_sort' => $r->from_date ? \Carbon\Carbon::parse($r->from_date)->format('Y-m-d') : '',
+                'to_date_sort' => $r->to_date ? \Carbon\Carbon::parse($r->to_date)->format('Y-m-d') : '',
                 'meter_no' => trim(($r->meter_one ?? '') . ($showMeterTwo ? "\n" . (int) ($r->meter_two ?? 0) : '')),
                 'prev_reading' => ($meterOneIsNew ? '—' : (string) $prev) . ($showMeterTwo ? "\n" . ($meterTwoIsNew ? '—' : (string) $prev2) : ''),
                 'curr_reading' => (string) $curr . ($showMeterTwo ? "\n" . (string) $curr2 : ''),
@@ -12527,7 +14022,7 @@ class EstateController extends Controller
             ]);
         }
 
-        $employeeTypeFilter = strtolower(trim((string) $request->get('employee_type', 'all')));
+        $employeeTypeFilter = strtolower(trim(static::exportFilterText($request, 'employee_type', 'all')));
         if (! in_array($employeeTypeFilter, ['all', 'lbsnaa', 'other'], true)) {
             $employeeTypeFilter = 'all';
         }

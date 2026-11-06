@@ -268,6 +268,11 @@ final class FeedbackReportCache
      * The lock is held for microseconds, so waiters retry every 10 ms instead of Laravel's
      * default 250 ms. If it cannot be taken within 10 s the write still runs, unlocked, and the
      * timeout is reported: an invalidation must never be dropped.
+     *
+     * A failed acquire attempt counts as "not yet" and is retried, not thrown. On Windows the
+     * file lock is a file its releaser deletes; until every handle on it closes, opening it
+     * throws "Unable to create lockable file", and Lock::block() let that escape, so bust()
+     * reported it and skipped the bump. Only acquiring is retried: the callback runs once.
      */
     private static function withGenerationLock(Repository $store, Closure $callback): void
     {
@@ -278,13 +283,33 @@ final class FeedbackReportCache
             return;
         }
 
-        try {
-            $backing->lock(self::GENERATION_LOCK_KEY, 5)
-                ->betweenBlockedAttemptsSleepFor(10)
-                ->block(10, $callback);
-        } catch (LockTimeoutException $e) {
-            report($e);
-            $callback();
+        $lock = $backing->lock(self::GENERATION_LOCK_KEY, 5);
+        $deadline = microtime(true) + 10;
+        while (true) {
+            try {
+                $acquired = $lock->get();
+            } catch (Throwable $e) {
+                $acquired = false;
+            }
+
+            if ($acquired) {
+                try {
+                    $callback();
+                } finally {
+                    $lock->release();
+                }
+
+                return;
+            }
+
+            if (microtime(true) >= $deadline) {
+                report(new LockTimeoutException('Feedback report cache generation lock not acquired within 10 s.'));
+                $callback();
+
+                return;
+            }
+
+            usleep(10000);
         }
     }
 

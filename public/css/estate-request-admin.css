@@ -1,0 +1,1360 @@
+/*
+ * Request For Estate — page-scoped styling.
+ *
+ * Everything here is namespaced under .rfe-page so it cannot leak into the other
+ * ~350 admin views. The toolbar / table / footer chrome itself comes from the
+ * shared programme-dt-* layer in custom.css (docs/new-design-index-page.md); this
+ * file only adds what that layer has no opinion on: the export buttons above the
+ * card, the status tones, and the stacked row-action buttons.
+ */
+
+/* ── Request Status filter ────────────────────────────────────────────────
+   custom.css only themes Choices.js inside .programme-dt-filter-select; this is
+   a native <select>, so give it the same 40px / 8px geometry by hand. */
+.rfe-page .programme-dt-filter-select .form-select {
+    min-height: var(--ds-control-h, 2.5rem);
+    padding: 0.5rem 2rem 0.5rem 0.875rem;
+    font-size: 0.9375rem;
+    color: #344054;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    box-shadow: none;
+    background-color: var(--ds-surface, #fff);
+}
+
+.rfe-page .programme-dt-filter-select .form-select:focus {
+    border-color: var(--ds-primary, #004a93);
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+}
+
+/* ── Download / Print, above the card ─────────────────────────────────────── */
+.rfe-page .rfe-export-btn {
+    height: var(--ds-control-h, 2.5rem);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-2, 0.5rem);
+    padding: 0 1.1rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--ds-primary, #004a93);
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: var(--ds-surface, #fff);
+    white-space: nowrap;
+}
+
+.rfe-page .rfe-export-btn:hover,
+.rfe-page .rfe-export-btn:focus-visible {
+    background: #f2f7fc;
+    border-color: var(--ds-primary, #004a93);
+    color: var(--ds-primary, #004a93);
+}
+
+.rfe-page .rfe-export-btn i {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.rfe-page .rfe-export-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* ── Name & ID cell ───────────────────────────────────────────────────────── */
+.rfe-page .rfe-name {
+    color: var(--ds-ink, #101828);
+    font-weight: 500;
+}
+
+.rfe-page .rfe-emp-id,
+.rfe-page .rfe-muted {
+    color: var(--ds-ink-muted, #667085);
+}
+
+/* Seven columns plus a labelled action cluster do not fit at 1rem cell padding
+   inside the ~960px content area, and a clipped Delete button is worse than
+   slightly tighter cells. */
+.rfe-page .programme-dt-table thead th,
+.rfe-page .programme-dt-table tbody td {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+}
+
+/* The admin theme force-uppercases every DataTables header
+   (styles.css: `table.dataTable thead th`), which .programme-dt-table does not
+   counter — so Yajra-backed pages shout while the Laravel-paginated ones (Subject
+   Master, …) render title case. This page follows the design's title case. */
+.rfe-page .programme-dt-table thead th {
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* The shared .programme-dt-table rule makes the 2nd column the "title" column;
+   here that is Request ID, and Name & ID is the one that should wrap. */
+.rfe-page .programme-dt-table tbody td:nth-child(2) {
+    white-space: nowrap;
+    max-width: none;
+}
+
+/* Name & ID is the widest column: most names fit on one line, long ones wrap
+   rather than squeezing to a 3-line sliver. */
+.rfe-page .programme-dt-table th.rfe-col-name,
+.rfe-page .programme-dt-table td.rfe-col-name {
+    min-width: 190px;
+    white-space: normal;
+    line-height: 1.45;
+}
+
+/* ── Status pill tones ────────────────────────────────────────────────────── */
+.rfe-page .rfe-status {
+    display: inline-block;
+}
+
+.rfe-page .rfe-status--allotted {
+    background: #ecfdf3;
+    color: #027a48;
+}
+
+.rfe-page .rfe-status--pending {
+    background: #fffaeb;
+    color: #b54708;
+}
+
+.rfe-page .rfe-status--returned {
+    background: #eff8ff;
+    color: #175cd3;
+}
+
+.rfe-page .rfe-status--rejected {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+.rfe-page .rfe-status--neutral {
+    background: var(--ds-surface-2, #f2f4f7);
+    color: #475467;
+}
+
+/* ── Change Request Status (plain text, not a pill) ───────────────────────── */
+.rfe-page .rfe-change-status {
+    font-weight: 500;
+}
+
+.rfe-page .rfe-change-status--pending { color: #b54708; }
+.rfe-page .rfe-change-status--approved { color: #027a48; }
+.rfe-page .rfe-change-status--disapproved { color: #b42318; }
+
+/* ── Row actions: stacked icon + caption ──────────────────────────────────── */
+/* Sized so the four standard actions fit on one line; the extra Possession /
+   Return buttons some rows carry wrap to a second line rather than overflow. */
+.rfe-page .programme-dt-table th.rfe-col-action,
+.rfe-page .programme-dt-table td.rfe-col-action {
+    min-width: 190px;
+}
+
+.rfe-page .rfe-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.55rem 0.35rem;
+}
+
+.rfe-page .rfe-action {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+    width: 42px;
+    padding: 0;
+    text-align: center;
+    text-decoration: none;
+    line-height: 1.15;
+    background: none;
+    border: 0;
+}
+
+.rfe-page .rfe-action i {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.rfe-page .rfe-action-label {
+    font-size: 0.625rem;
+    font-weight: 500;
+    color: inherit;
+    /* Breaks at the space only — "Change Request" stacks as two whole words. */
+    hyphens: none;
+}
+
+.rfe-page a.rfe-action:hover .rfe-action-label,
+.rfe-page a.rfe-action:focus-visible .rfe-action-label {
+    text-decoration: underline;
+}
+
+.rfe-page .rfe-action--view,
+.rfe-page .rfe-action--edit { color: var(--ds-primary, #004a93); }
+
+.rfe-page .rfe-action--change { color: #f79009; }
+
+.rfe-page .rfe-action--delete { color: #d92d20; }
+
+.rfe-page .rfe-action--possession { color: #027a48; }
+
+.rfe-page .rfe-action--return { color: #b54708; }
+
+/* Unavailable actions stay in place, greyed out, so the column keeps its shape. */
+.rfe-page .rfe-action--disabled {
+    color: #d0d5dd;
+    cursor: not-allowed;
+    pointer-events: auto;
+}
+
+.rfe-page .rfe-action--disabled .rfe-action-label {
+    text-decoration: none;
+}
+
+@media (max-width: 991.98px) {
+    .rfe-page .rfe-actions {
+        gap: 0.6rem;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   View Request page (admin/estate/request-details/{id})
+   A read-only record: label above value, four to a row, grouped into cards.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Identity banner — the record you are looking at, called out above the detail. */
+.rfe-view-page .rfe-view-banner {
+    padding: var(--ds-space-3) var(--ds-space-4);
+    background: #eef2ff;
+    border: 1px solid #dbe3ff;
+    border-radius: var(--ds-radius-2, 8px);
+}
+
+.rfe-view-page .rfe-view-banner-title {
+    margin: 0 0 var(--ds-space-2);
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--ds-primary, #004a93);
+}
+
+.rfe-view-page .rfe-view-banner-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--ds-space-2) var(--ds-space-4);
+    max-width: 640px;
+}
+
+/* Field grid — four columns on desktop, collapsing with the viewport. */
+.rfe-view-page .rfe-view-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--ds-space-4) var(--ds-space-3);
+}
+
+@media (max-width: 1199.98px) {
+    .rfe-view-page .rfe-view-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 767.98px) {
+    .rfe-view-page .rfe-view-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 479.98px) {
+    .rfe-view-page .rfe-view-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.rfe-view-page .rfe-view-field,
+.rfe-view-page .rfe-view-banner-meta > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.rfe-view-page .rfe-view-label {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--ds-ink-muted, #667085);
+    line-height: 1.3;
+}
+
+.rfe-view-page .rfe-view-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ds-ink, #1f2937);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.rfe-view-page .rfe-view-section-title {
+    margin: 0 0 var(--ds-space-4);
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: var(--ds-ink, #1f2937);
+}
+
+/* Empty state for a section with nothing recorded yet. */
+.rfe-view-page .rfe-view-empty {
+    padding: var(--ds-space-4) var(--ds-space-3) var(--ds-space-3);
+    text-align: center;
+    border-top: 1px solid var(--ds-line, #e5e7eb);
+}
+
+.rfe-view-page .rfe-view-empty-text {
+    margin-bottom: var(--ds-space-4);
+    font-size: 0.875rem;
+    color: var(--ds-ink-muted, #667085);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Put In HAC (admin/estate/put-in-hac)
+   A selection queue: same programme-dt chrome, plus the bits a bulk action
+   needs — a checkbox column and a live selection count.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.pih-page .pih-hint {
+    font-size: 0.875rem;
+    color: var(--ds-ink-muted, #667085);
+    max-width: 64ch;
+}
+
+.pih-page .pih-selected-count {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ds-ink-muted, #667085);
+    white-space: nowrap;
+}
+
+/* Checkbox column — centred, and never squeezed by the 12 data columns. */
+.pih-page .programme-dt-table th.pih-col-select,
+.pih-page .programme-dt-table td.pih-col-select {
+    width: 72px;
+    text-align: center;
+}
+
+.pih-page .pih-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pih-page .pih-check .form-check-input {
+    width: 1.125rem;
+    height: 1.125rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.pih-page .pih-check .form-check-input:checked {
+    background-color: var(--ds-primary, #004a93);
+    border-color: var(--ds-primary, #004a93);
+}
+
+/* Name is the column worth reading; the rest stay on one line. */
+.pih-page .programme-dt-table th.pih-col-name,
+.pih-page .programme-dt-table td.pih-col-name {
+    min-width: 200px;
+    white-space: normal;
+    line-height: 1.45;
+}
+
+/* 13 columns do not fit the content area — the panel scrolls horizontally, so
+   keep the cells from wrapping into unreadable slivers. */
+.pih-page .programme-dt-table tbody td {
+    white-space: nowrap;
+}
+
+.pih-page .programme-dt-table thead th {
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* View + Put in HAC row actions. */
+.pih-page .programme-dt-table th.pih-col-action,
+.pih-page .programme-dt-table td.pih-col-action {
+    min-width: 120px;
+}
+
+/* The request ids being confirmed, so the user can see what will move. */
+.pih-confirm-ids {
+    font-weight: 600;
+    color: var(--ds-ink);
+    overflow-wrap: anywhere;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   HAC Approval (admin/estate/change-request-hac-approved)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Request Type pills — amber for a change request, blue for a new one. */
+.hac-page .rfe-status--change-request {
+    background: #fffaeb;
+    color: #b54708;
+}
+
+.hac-page .rfe-status--new-request {
+    background: #eff8ff;
+    color: #175cd3;
+}
+
+/* Approve / Reject tones for the row actions. */
+.hac-page .rfe-action--approve { color: #12b76a; }
+.hac-page .rfe-action--reject { color: #f04438; }
+
+/* Status pill (Pending / Approved / Rejected) — one line, never squeezed. */
+.hac-page .programme-dt-table th.hac-col-status,
+.hac-page .programme-dt-table td.hac-col-status {
+    min-width: 110px;
+    white-space: nowrap;
+}
+
+/* Four labelled actions on one row; a fifth would wrap rather than overflow. */
+.hac-page .programme-dt-table th.hac-col-action,
+.hac-page .programme-dt-table td.hac-col-action {
+    min-width: 215px;
+}
+
+.hac-page .programme-dt-table th.hac-col-name,
+.hac-page .programme-dt-table td.hac-col-name {
+    min-width: 190px;
+    white-space: normal;
+    line-height: 1.45;
+}
+
+/* Same cell padding as Request For Estate — seven columns plus a labelled
+   action cluster do not fit at 1rem. */
+.hac-page .programme-dt-table thead th,
+.hac-page .programme-dt-table tbody td {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+}
+
+.hac-page .programme-dt-table thead th {
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* Allotment Details: five dropdowns share one row on wide screens, two per row
+   below that — never five slivers. */
+.hac-page .hac-allot-grid .form-select {
+    min-width: 0;
+}
+
+@media (min-width: 992px) {
+    .hac-page .hac-allot-grid > [class*="col-"] {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Possession listings — Possession Details (LBSNAA) and Possession for Others
+   Thirteen columns plus row selection: the widest listings in the module. Both
+   screens are the same grid over different tables, so .pd-page and .epo-page
+   share every rule here (docs/new-design-index-page.md §7).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Selection column */
+.pd-page .programme-dt-table th.pd-col-select,
+.epo-page .programme-dt-table th.pd-col-select,
+.pd-page .programme-dt-table td.pd-col-select,
+.epo-page .programme-dt-table td.pd-col-select {
+    width: 48px;
+    text-align: center;
+}
+
+.pd-page .pd-check,
+.epo-page .pd-check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pd-page .pd-check .form-check-input,
+.epo-page .pd-check .form-check-input {
+    width: 1.05rem;
+    height: 1.05rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.pd-page .pd-check .form-check-input:checked,
+.epo-page .pd-check .form-check-input:checked {
+    background-color: var(--ds-primary, #004a93);
+    border-color: var(--ds-primary, #004a93);
+}
+
+/* Name & ID wraps; the rest stay on one line and the panel scrolls. */
+.pd-page .programme-dt-table th.pd-col-name,
+.epo-page .programme-dt-table th.pd-col-name,
+.pd-page .programme-dt-table td.pd-col-name,
+.epo-page .programme-dt-table td.pd-col-name {
+    min-width: 170px;
+    white-space: normal;
+    line-height: 1.45;
+}
+
+.pd-page .programme-dt-table th.pd-col-action,
+.epo-page .programme-dt-table th.pd-col-action,
+.pd-page .programme-dt-table td.pd-col-action,
+.epo-page .programme-dt-table td.pd-col-action {
+    min-width: 110px;
+}
+
+.pd-page .programme-dt-table tbody td,
+.epo-page .programme-dt-table tbody td {
+    white-space: nowrap;
+}
+
+.pd-page .programme-dt-table thead th,
+.epo-page .programme-dt-table thead th,
+.pd-page .programme-dt-table tbody td,
+.epo-page .programme-dt-table tbody td {
+    padding-left: 0.625rem !important;
+    padding-right: 0.625rem !important;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+/* Bulk delete — appears in the toolbar only while rows are selected. */
+.pd-page .pd-btn-bulk-delete,
+.epo-page .pd-btn-bulk-delete {
+    height: var(--ds-control-h, 2.5rem);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-2, 0.5rem);
+    padding: 0 1rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #912018;
+    border: 1px solid #fda29b;
+    border-radius: 8px;
+    background: var(--ds-surface, #fff);
+    white-space: nowrap;
+}
+
+.pd-page .pd-btn-bulk-delete:hover,
+.epo-page .pd-btn-bulk-delete:hover {
+    background: #fff5f5;
+    border-color: #f97066;
+    color: #7a271a;
+}
+
+/* The Allotment date filter is a native date input in a 180px slot. */
+.pd-page .programme-dt-filter-select .form-control[type="date"],
+.epo-page .programme-dt-filter-select .form-control[type="date"] {
+    min-height: var(--ds-control-h, 2.5rem);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9375rem;
+    color: #344054;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    box-shadow: none;
+    background-color: var(--ds-surface, #fff);
+}
+
+.pd-page .programme-dt-filter-select .form-control[type="date"]:focus,
+.epo-page .programme-dt-filter-select .form-control[type="date"]:focus {
+    border-color: var(--ds-primary, #004a93);
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+}
+
+/* Collapsed search: an icon button that reveals the DataTables filter slot. */
+.pd-page .pd-search-toggle,
+.epo-page .pd-search-toggle {
+    width: var(--ds-control-h, 2.5rem);
+    height: var(--ds-control-h, 2.5rem);
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: var(--ds-surface, #fff);
+    color: #475467;
+}
+
+.pd-page .pd-search-toggle:hover,
+.epo-page .pd-search-toggle:hover,
+.pd-page .pd-search-toggle[aria-expanded="true"],
+.epo-page .pd-search-toggle[aria-expanded="true"] {
+    background: #f2f7fc;
+    border-color: var(--ds-primary, #004a93);
+    color: var(--ds-primary, #004a93);
+}
+
+.pd-page .programme-dt-search,
+.epo-page .programme-dt-search {
+    width: 240px;
+}
+
+/* Sortable headers paint their caret at the cell's right edge, so the two
+   narrowest labels on this page need a floor or the caret sits on the text. */
+.epo-page .programme-dt-table th.epo-col-sno,
+.epo-page .programme-dt-table td.epo-col-sno {
+    min-width: 78px;
+}
+
+.epo-page .programme-dt-table th.epo-col-req,
+.epo-page .programme-dt-table td.epo-col-req {
+    min-width: 120px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Update Meter Details (admin/estate/update-meter-no)
+   Fifteen narrow meter columns — the widest table in the module.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.umn-page .programme-dt-table thead th,
+.umn-page .programme-dt-table tbody td {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.8125rem;
+}
+
+.umn-page .programme-dt-table tbody td {
+    white-space: nowrap;
+}
+
+/* Name & ID is the only column worth wrapping. */
+.umn-page .programme-dt-table tbody td:nth-child(2) {
+    min-width: 150px;
+    white-space: normal;
+    line-height: 1.4;
+}
+
+/* The meter columns share the header's two-line wrap so the table stays narrow. */
+.umn-page .programme-dt-table thead th {
+    white-space: normal;
+    min-width: 62px;
+}
+
+.umn-page .pd-search-toggle {
+    width: var(--ds-control-h, 2.5rem);
+    height: var(--ds-control-h, 2.5rem);
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: var(--ds-surface, #fff);
+    color: #475467;
+}
+
+.umn-page .pd-search-toggle:hover,
+.umn-page .pd-search-toggle[aria-expanded="true"] {
+    background: #f2f7fc;
+    border-color: var(--ds-primary, #004a93);
+    color: var(--ds-primary, #004a93);
+}
+
+.umn-page .programme-dt-search {
+    width: 240px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Update Meter Reading (filter + readings grid, page and modal)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Opened for specific possession rows: who the meters below belong to. */
+.umr-form .umr-selected {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ds-space-1) var(--ds-space-2);
+    padding: var(--ds-space-2) var(--ds-space-3);
+    font-size: 0.875rem;
+    color: var(--ds-ink);
+    background: var(--ds-surface-2);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius);
+}
+
+.umr-form .umr-selected__label {
+    font-weight: 600;
+}
+
+.umr-form .umr-selected__item {
+    padding: 0.125rem var(--ds-space-2);
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius);
+}
+
+.umr-form .umr-selected__id {
+    color: var(--ds-ink-muted);
+}
+
+/* "Allotment Details" over the grid — the modal's only sub-heading. */
+.umr-form .umr-section-title {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ds-ink, #1f2937);
+}
+
+/* The Others grid keeps its checkbox column narrow and its inputs readable. */
+.umr-form .umr-grid .other-pair-cb {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+.umr-form .umr-grid .curr-reading {
+    min-width: 110px;
+}
+
+.umr-form .umr-grid-wrap {
+    max-height: 46vh;
+    overflow: auto;
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-radius: var(--ds-radius-2, 8px);
+}
+
+/* The grid can be long; keep the header in view while entering readings. */
+.umr-form .umr-grid thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    white-space: normal;
+    min-width: 84px;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.umr-form .umr-grid td {
+    font-size: 0.8125rem;
+    padding: 0.5rem !important;
+}
+
+.umr-form .umr-grid .form-control {
+    min-height: 2rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
+}
+
+.umr-form .umr-grid .new-meter-no,
+.umr-form .umr-grid .new-meter-reading {
+    min-width: 110px;
+}
+
+.umr-form .umr-grid .unit-cell {
+    font-weight: 600;
+    color: var(--ds-ink, #1f2937);
+}
+
+/* Stacked dual-meter rows keep their divider inside the new cell padding. */
+.umr-form .umr-grid .other-dual-seg[data-slot="1"] {
+    border-bottom: 1px solid var(--ds-line, #e5e7eb);
+}
+
+.umr-page .card,
+.ds-modal .umr-form .form-control,
+.ds-modal .umr-form .form-select {
+    /* fields inherit the .ds-modal control styling */
+}
+
+/* Select2 widgets inside the Update Meter Reading dialog: match .ds-modal controls. */
+.ds-modal .umr-form .select2-container--default .select2-selection--single {
+    min-height: var(--ds-control-h, 2.5rem);
+    display: flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #d0d5dd;
+    border-radius: var(--ds-radius-1, 4px);
+}
+
+.ds-modal .umr-form .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 1.5;
+    padding-left: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--ds-ink, #1f2937);
+}
+
+.ds-modal .umr-form .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 100%;
+}
+
+/* ══ Estate Request for Others (.eor-page) ══════════════════════════════════
+   Same chrome as Request For Estate; only the toolbar's date filter and the
+   two-action column need geometry of their own. */
+
+/* The DOJ filter is a native <input type="date">, not a <select>, so it needs
+   the same 40px / 8px pill geometry spelled out for .form-control. */
+.eor-page .programme-dt-filter-select .form-control[type="date"] {
+    min-height: var(--ds-control-h, 2.5rem);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9375rem;
+    color: #344054;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    box-shadow: none;
+    background-color: var(--ds-surface, #fff);
+}
+
+.eor-page .programme-dt-filter-select .form-control[type="date"]:focus {
+    border-color: var(--ds-primary, #004384);
+    box-shadow: 0 0 0 3px rgba(0, 67, 132, 0.12);
+}
+
+/* Two filters + Remove Filter + Columns + a 300px search do not fit one row at
+   the shared 180px filter width once the admin sidebar is open — the reset
+   button drops to a second line. Trim the filters and the search instead, so
+   the toolbar keeps the design's single row. */
+@media (min-width: 992px) {
+    .eor-page .programme-dt-filter-select {
+        width: 150px;
+    }
+
+    .eor-page .programme-dt-search {
+        width: 220px;
+    }
+}
+
+/* ── Add / Edit Other Estate Request modal (.eor-modal) ────────────────────
+   A four-field, single-column form — narrower than the shared .ds-modal default
+   so it reads as one column instead of a half-empty dialog. */
+.eor-modal .modal-dialog {
+    max-width: 460px;
+}
+
+/* The design sets the asterisk tight against the label text. */
+.eor-modal .form-label .ds-req {
+    margin-left: 1px;
+}
+
+/* A native <input type="date"> ignores `placeholder` and always paints
+   "dd-mm-yyyy". While .is-empty is set (see the page's syncDojPlaceholder), the
+   value text is hidden and this overlay stands in for the placeholder — the
+   browser's own calendar button stays visible and clickable. */
+.eor-date-field {
+    position: relative;
+}
+
+.eor-date-field .eor-date-placeholder {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 0.75rem;
+    transform: translateY(-50%);
+    font-size: 0.875rem;
+    color: #98a2b3;
+    pointer-events: none;
+}
+
+.eor-date-field input[type="date"].is-empty:not(:focus) {
+    color: transparent;
+}
+
+.eor-date-field input[type="date"].is-empty:not(:focus) + .eor-date-placeholder {
+    display: block;
+}
+
+/* Only Edit + Delete here, so the action column is narrower than the
+   Request For Estate one it inherits from. */
+.eor-page .programme-dt-table th.rfe-col-action,
+.eor-page .programme-dt-table td.rfe-col-action {
+    min-width: 120px;
+}
+
+/* Request ID is a short slug — keep it from eating the row's width. Keyed on the
+   column's own class, not nth-child: hiding a column from the Columns modal
+   renumbers the cells. */
+.eor-page .programme-dt-table th.eor-col-req,
+.eor-page .programme-dt-table td.eor-col-req {
+    width: 170px;
+    white-space: nowrap;
+}
+
+/* Emp ID is a short code (SOC00237) — one line, never wrapped. */
+.eor-page .programme-dt-table th.eor-col-empid,
+.eor-page .programme-dt-table td.eor-col-empid {
+    min-width: 110px;
+    white-space: nowrap;
+}
+
+/* "DOJ in Academy" is the longest heading on the page; without a floor the sort
+   caret overlaps the last word. */
+.eor-page .programme-dt-table th.eor-col-doj,
+.eor-page .programme-dt-table td.eor-col-doj {
+    min-width: 150px;
+    white-space: nowrap;
+}
+
+/* Section is free text and runs long ("COACH AND MEDICAL CENTRE") — let it wrap
+   instead of pushing the Action column off the panel. */
+.eor-page .programme-dt-table th.eor-col-section,
+.eor-page .programme-dt-table td.eor-col-section {
+    min-width: 160px;
+    white-space: normal;
+    line-height: 1.45;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Estate Reports — Pending Meter Reading, House Status, Estate Bill Report -
+   Grid View, Estate Migration Report (.er-report on the page root)
+   Behaviour: public/js/estate-report-grid.js.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.er-report .programme-dt-table thead th {
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.er-report .programme-dt-table tbody td {
+    white-space: nowrap;
+}
+
+/* Sortable headers paint their caret at the right edge; keep it off the label. */
+.er-report .programme-dt-table thead th.sorting,
+.er-report .programme-dt-table thead th.sorting_asc,
+.er-report .programme-dt-table thead th.sorting_desc {
+    padding-right: 1.75rem !important;
+    white-space: nowrap;
+}
+
+/* Filters and the Columns + search group wrap as whole groups, never piecemeal. */
+.er-report .programme-dt-toolbar {
+    flex-wrap: wrap;
+}
+
+@media (min-width: 576px) {
+    .er-report .programme-dt-toolbar > .ms-lg-auto,
+    .er-report .programme-dt-toolbar > .ms-xl-auto {
+        flex-wrap: nowrap !important;
+    }
+}
+
+.er-report .programme-dt-search {
+    width: 240px;
+}
+
+/* Long free text (names, departments) wraps instead of widening the table. */
+.er-report .programme-dt-table td.er-col-wrap {
+    min-width: 170px;
+    max-width: 320px;
+    white-space: normal;
+    line-height: 1.45;
+}
+
+/* Money / readings: right-aligned, digits line up. */
+.er-report .programme-dt-table .er-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.er-report .programme-dt-table td.er-total {
+    font-weight: 700;
+    color: var(--ds-ink, #1f2937);
+}
+
+/* Long grids keep the header in view while scrolling (ds-table-sticky). */
+.er-report .er-scroll {
+    max-height: 70vh;
+    overflow: auto;
+}
+
+.er-report .er-scroll .ds-table-sticky > thead > tr > th {
+    box-shadow: inset 0 -1px 0 var(--ds-line, #e5e7eb);
+}
+
+/* Native month / date / select controls in the 180px toolbar filter slot. */
+.er-report .programme-dt-filter-select .form-control,
+.er-report .programme-dt-filter-select .form-select {
+    min-height: var(--ds-control-h, 2.5rem);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9375rem;
+    color: #344054;
+    border: 1px solid #d0d5dd;
+    border-radius: var(--ds-radius, 4px);
+    box-shadow: none;
+    background-color: var(--ds-surface, #fff);
+}
+
+.er-report .programme-dt-filter-select .form-select {
+    padding-right: 2rem;
+}
+
+.er-report .programme-dt-filter-select .form-control:focus,
+.er-report .programme-dt-filter-select .form-select:focus {
+    border-color: var(--ds-primary, #004384);
+    box-shadow: var(--ds-focus-ring);
+}
+
+/* A visible label over each filter (WCAG 3.3.2 — a placeholder is not a label). */
+.er-report .er-filter-label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--ds-ink-muted, #667085);
+}
+
+.er-report .er-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--ds-space-3, 1rem);
+}
+
+.er-report .er-filters .programme-dt-btn-reset {
+    min-height: var(--ds-control-h, 2.5rem);
+}
+
+/* Export buttons above the card (§1) — same look as the Columns button. */
+.er-report .er-export .btn i {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.er-report .er-export .btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* ── Status badges ───────────────────────────────────────────────────────── */
+.er-report .er-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.3;
+    white-space: nowrap;
+    border-radius: var(--ds-radius, 4px);
+}
+
+/* A dot as well as the colour, so the state is not carried by colour alone. */
+.er-report .er-badge::before {
+    content: "";
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.er-report .er-badge--lbsnaa   { color: #175cd3; background: #eff8ff; }
+.er-report .er-badge--other    { color: #5925dc; background: #f4f3ff; }
+.er-report .er-badge--pending  { color: #b54708; background: #fffaeb; }
+.er-report .er-badge--occupied { color: #027a48; background: #ecfdf3; }
+.er-report .er-badge--vacant   { color: #175cd3; background: #eff8ff; }
+.er-report .er-badge--renovation { color: #b54708; background: #fffaeb; }
+.er-report .er-badge--exited   { color: #475467; background: #f2f4f7; }
+.er-report .er-badge--neutral  { color: #475467; background: #f2f4f7; }
+
+/* ── KPI tiles (ds-stat-card) ────────────────────────────────────────────── */
+.er-report .er-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--ds-space-3, 1rem);
+}
+
+@media (max-width: 991.98px) {
+    .er-report .er-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 479.98px) {
+    .er-report .er-stats { grid-template-columns: minmax(0, 1fr); }
+}
+
+.er-report .ds-stat-card .ds-stat-value {
+    font-variant-numeric: tabular-nums;
+}
+
+.er-report .er-stat--occupied { border-left-color: #12b76a; }
+.er-report .er-stat--vacant { border-left-color: #2e90fa; }
+.er-report .er-stat--renovation { border-left-color: #f79009; }
+.er-report .er-stat--other { border-left-color: #7a5af8; }
+
+/* Status pills used as a client-side filter (House Status). */
+/* Inactive pills only — the active one keeps the shared pill's white-on-navy. */
+.er-report .er-status-tabs .nav-link:not(.active) {
+    color: #475467;
+}
+
+.er-report .er-status-tabs .nav-link .er-tab-count {
+    margin-left: 0.35rem;
+    font-weight: 500;
+    opacity: 0.8;
+}
+
+/* ── Loading / empty / error / idle row ──────────────────────────────────── */
+.er-report .er-state-row > td {
+    padding: 0 !important;
+    white-space: normal !important;
+}
+
+.er-report .er-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ds-space-2, 0.5rem);
+    padding: var(--ds-space-5, 2rem) var(--ds-space-3, 1rem);
+    font-size: 0.875rem;
+    color: var(--ds-ink-muted, #667085);
+    text-align: center;
+}
+
+.er-report .er-state .bi {
+    font-size: 1.25rem;
+}
+
+.er-report .er-state--error {
+    color: #b42318;
+}
+
+/* Summary line ("12 readings pending for July 2026"). */
+.er-report .er-summary {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--ds-ink-muted, #667085);
+}
+
+.er-report .er-summary strong {
+    color: var(--ds-ink, #1f2937);
+}
+
+/* Row action link (Pending Meter Reading → Enter Reading). */
+.er-report .er-row-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ds-primary, #004384);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.er-report .er-row-action:hover,
+.er-report .er-row-action:focus-visible {
+    text-decoration: underline;
+}
+
+@media (max-width: 767.98px) {
+    .er-report .er-filters > * {
+        flex: 1 1 100%;
+    }
+
+    .er-report .er-filters .programme-dt-filter-select {
+        width: 100%;
+    }
+
+    .er-report .er-scroll {
+        max-height: none;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Estate — shared controls (every Estate screen)
+   Prefixed estate-* rather than scoped to a page root, because they are used
+   by many pages; the prefix alone keeps them from touching other modules.
+   Tokens only (docs/design.md, Layer A).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Download (dropdown) + Print, above the card — partials/export_actions ── */
+.estate-export-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    min-height: var(--ds-control-h);
+    padding: 0 var(--ds-space-3);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--ds-primary);
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius);
+    white-space: nowrap;
+}
+
+/* Hover / open / keyboard focus invert to solid navy — unmistakable, and white on
+   #004384 is 9.6:1. */
+.estate-export-btn:hover,
+.estate-export-btn.show,
+.estate-export-btn:focus-visible {
+    color: var(--ds-surface);
+    background: var(--ds-primary);
+    border-color: var(--ds-primary);
+}
+
+.estate-export-btn:focus-visible {
+    box-shadow: var(--ds-focus-ring);
+}
+
+.estate-export-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.estate-export-btn i {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.estate-export-menu {
+    min-width: 10rem;
+    padding: var(--ds-space-1);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius);
+    box-shadow: var(--ds-shadow-lg);
+}
+
+.estate-export-menu .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    padding: var(--ds-space-2) var(--ds-space-3);
+    font-size: 0.875rem;
+    color: var(--ds-ink);
+    border-radius: var(--ds-radius);
+}
+
+.estate-export-menu .dropdown-item:hover,
+.estate-export-menu .dropdown-item:focus-visible {
+    color: var(--ds-primary);
+    background: var(--ds-surface-2);
+}
+
+.estate-export-menu .dropdown-item i {
+    font-size: 1rem;
+    color: var(--ds-ink-muted);
+}
+
+/* ── Name + ID in one cell: name on top, ID beneath (Figma "Name / ID") ───── */
+.estate-name-id {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+    line-height: 1.35;
+}
+
+.estate-name-id__name {
+    font-weight: 500;
+    color: var(--ds-ink);
+    white-space: normal;
+}
+
+.estate-name-id__id {
+    font-size: 0.8125rem;
+    color: var(--ds-ink-muted);
+}
+
+/* ── Hyperlink action (Return House → View) ──────────────────────────────── */
+.estate-link {
+    padding: 0;
+    font-weight: 500;
+    color: var(--ds-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+.estate-link:hover {
+    color: var(--ds-secondary);
+    text-decoration-thickness: 2px;
+}
+
+.estate-link:focus-visible {
+    outline: 0;
+    border-radius: var(--ds-radius);
+    box-shadow: var(--ds-focus-ring);
+}
+
+/* Disabled row action (e.g. Approve / Reject on an already-approved request). */
+.estate-action-disabled,
+.estate-action-disabled:hover {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+    text-decoration: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Estate — responsive filter toolbar (every Estate screen)
+   Only Estate pages load this file, so these rules stay inside the module.
+   Toolbar = filter group (label, .programme-dt-filter-select pills, Remove
+   Filter) + action group (.ms-lg-auto: Columns + search).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* The two groups wrap as whole groups. Without this, a narrow card (laptop
+   with the sidebar open) squeezes the filter group to one pill wide and every
+   control lands on its own row. */
+.programme-dt-toolbar {
+    flex-wrap: wrap;
+}
+
+.programme-dt-toolbar > .ms-lg-auto,
+.programme-dt-toolbar > .ms-xl-auto {
+    flex-wrap: nowrap !important;
+}
+
+/* Phones: filters in a two-column grid instead of one full-width pill per row;
+   the label, Remove Filter and any link span the row. Columns + search share
+   one row, the search taking the rest of it. */
+@media (max-width: 767.98px) {
+    .programme-dt-toolbar > div:not(.ms-lg-auto):not(.ms-xl-auto):not(.visually-hidden),
+    .programme-dt-toolbar .er-filters {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--ds-space-2);
+        width: 100%;
+    }
+
+    .programme-dt-toolbar > div:not(.ms-lg-auto):not(.ms-xl-auto) > :not(.programme-dt-filter-select),
+    .programme-dt-toolbar .er-filters > :not(.programme-dt-filter-select) {
+        grid-column: 1 / -1;
+    }
+
+    .programme-dt-toolbar .programme-dt-filter-select {
+        width: auto;
+        min-width: 0;
+    }
+
+    /* A screen with a single filter gives it the whole row. */
+    .programme-dt-toolbar .programme-dt-filter-select:only-of-type {
+        grid-column: 1 / -1;
+    }
+
+    .programme-dt-toolbar .programme-dt-btn-reset {
+        width: 100%;
+    }
+
+}
+
+/* Below lg the toolbar stacks its groups (flex-column) and custom.css makes the
+   search 100% wide; with Columns beside it that would push past the card, so
+   the search takes whatever the row has left instead. */
+@media (max-width: 991.98px) {
+    .programme-dt-toolbar > .ms-lg-auto,
+    .programme-dt-toolbar > .ms-xl-auto {
+        width: 100%;
+    }
+
+    .programme-dt-toolbar > .ms-lg-auto .programme-dt-search,
+    .programme-dt-toolbar > .ms-xl-auto .programme-dt-search {
+        flex: 1 1 auto;
+        width: auto !important;
+        min-width: 0;
+    }
+
+    .programme-dt-toolbar .programme-dt-search .dataTables_filter,
+    .programme-dt-toolbar .programme-dt-search .dataTables_filter label,
+    .programme-dt-toolbar .programme-dt-search input {
+        width: 100% !important;
+    }
+}
