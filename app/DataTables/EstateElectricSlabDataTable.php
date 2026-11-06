@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\DataTables\Concerns\AppliesHeaderSort;
 use App\Models\EstateElectricSlab;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Yajra\DataTables\EloquentDataTable;
@@ -11,6 +12,8 @@ use Yajra\DataTables\Services\DataTable;
 
 class EstateElectricSlabDataTable extends DataTable
 {
+    use AppliesHeaderSort;
+
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
@@ -18,7 +21,6 @@ class EstateElectricSlabDataTable extends DataTable
             ->addColumn('unit_range', function ($row) {
                 return e($row->start_unit_range . '-' . $row->end_unit_range);
             })
-            ->orderColumn('unit_range', 'start_unit_range $1')
             ->filterColumn('unit_range', function ($query, $keyword) {
                 $query->where(function ($q) use ($keyword) {
                     $q->where('start_unit_range', 'like', "%{$keyword}%")
@@ -31,9 +33,11 @@ class EstateElectricSlabDataTable extends DataTable
             ->addColumn('merge_with_house', function ($row) {
                 return $row->unitType ? e($row->unitType->unit_type) : '-';
             })
-            // Sortable via the joined alias rather than the relation, so the
-            // header arrow the design shows actually does something.
-            ->orderColumn('merge_with_house', 'unit_type_name $1')
+            // Merge with House sorts via the joined alias rather than the relation.
+            ->order(fn ($query) => $this->applyHeaderSort($query, 'estate_electric_slab.pk', [
+                'unit_range' => 'start_unit_range',
+                'merge_with_house' => 'unit_type_name',
+            ]))
             ->filterColumn('merge_with_house', function ($query, $keyword) {
                 $query->where('ut.unit_type', 'like', "%{$keyword}%");
             })

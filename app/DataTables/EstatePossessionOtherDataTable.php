@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\DataTables\Concerns\AppliesHeaderSort;
 use App\DataTables\Concerns\RendersEstateRowActions;
 use App\Models\EstatePossessionOther;
 use App\Support\RedisBackedCache;
@@ -19,6 +20,7 @@ use Yajra\DataTables\Services\DataTable;
 
 class EstatePossessionOtherDataTable extends DataTable
 {
+    use AppliesHeaderSort;
     use RendersEstateRowActions;
 
     /**
@@ -188,17 +190,19 @@ class EstatePossessionOtherDataTable extends DataTable
                     static::filterText('bill_date_filter')
                 );
             })
-            ->orderColumn('DT_RowIndex', fn ($query, $order) => $query->orderBy('estate_possession_other.pk', $order))
-            ->orderColumn('request_id', fn ($query, $order) => $query->orderBy('eor.request_no_oth', $order))
-            ->orderColumn('name', fn ($query, $order) => $query->orderBy('eor.emp_name', $order))
-            ->orderColumn('section_name', fn ($query, $order) => $query->orderBy('eor.section', $order))
-            ->orderColumn('estate_name', fn ($query, $order) => $query->orderBy('ec.campus_name', $order))
-            ->orderColumn('unit_type', fn ($query, $order) => $query->orderBy('eut.unit_type', $order))
-            ->orderColumn('building_name', fn ($query, $order) => $query->orderBy('eb.block_name', $order))
-            ->orderColumn('unit_sub_type', fn ($query, $order) => $query->orderBy('eust.unit_sub_type', $order))
-            ->orderColumn('house_no', fn ($query, $order) => $query->orderBy('estate_possession_other.house_no', $order))
-            ->orderColumn('allotment_date', fn ($query, $order) => $query->orderBy('estate_possession_other.allotment_date', $order))
-            ->orderColumn('possession_date_oth', fn ($query, $order) => $query->orderBy('estate_possession_other.possession_date_oth', $order))
+            ->order(fn ($query) => $this->applyHeaderSort($query, 'estate_possession_other.pk', [
+                'DT_RowIndex' => 'estate_possession_other.pk',
+                'request_id' => 'eor.request_no_oth',
+                'name' => 'eor.emp_name',
+                'section_name' => 'eor.section',
+                'estate_name' => 'ec.campus_name',
+                'unit_type' => 'eut.unit_type',
+                'building_name' => 'eb.block_name',
+                'unit_sub_type' => 'eust.unit_sub_type',
+                'house_no' => 'estate_possession_other.house_no',
+                'allotment_date' => 'estate_possession_other.allotment_date',
+                'possession_date_oth' => 'estate_possession_other.possession_date_oth',
+            ]))
             ->addColumn('actions', function ($row) use ($canMutate) {
                 $editUrl = route('admin.estate.possession-view', ['id' => $row->pk]);
 

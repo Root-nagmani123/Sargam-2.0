@@ -227,6 +227,25 @@ class EstateExportScopeAndInputTest extends TestCase
         }
     }
 
+    /** A typed % or _ is a literal character, not a LIKE wildcard that matches every row. */
+    public function test_return_house_search_treats_like_wildcards_literally(): void
+    {
+        $actor = $this->as($this->staffWithRole('Estate Admin'), self::AUTHORITY_ROLES);
+        $count = function (string $search) use ($actor) {
+            $this->app->forgetInstance('datatables.request');
+
+            return (int) $actor->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
+                ->getJson(route('admin.estate.return-house', ['draw' => 1, 'start' => 0, 'length' => 10, 'search' => ['value' => $search]]))
+                ->assertOk()->json('recordsFiltered');
+        };
+
+        $all = $count('');
+        $this->assertGreaterThan(0, $all, 'control: there are returned houses');
+        foreach (['%', '_'] as $wildcard) {
+            $this->assertLessThan($all, $count($wildcard), "\"{$wildcard}\" no longer matches every row");
+        }
+    }
+
     /** The grid's column sort works, and Download/Print list the rows in that same order. */
     public function test_return_house_sort_applies_to_the_grid_and_its_exports(): void
     {

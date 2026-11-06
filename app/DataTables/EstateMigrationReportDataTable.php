@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\DataTables\Concerns\AppliesHeaderSort;
 use App\Models\EstateMigrationReport;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Yajra\DataTables\EloquentDataTable;
@@ -11,6 +12,8 @@ use Yajra\DataTables\Services\DataTable;
 
 class EstateMigrationReportDataTable extends DataTable
 {
+    use AppliesHeaderSort;
+
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
@@ -28,6 +31,7 @@ class EstateMigrationReportDataTable extends DataTable
             ->editColumn('occupancy_status', fn ($row) => $row->occupancy_status ?? '—')
             ->editColumn('stay_period_text', fn ($row) => $row->stay_period_text ?? '—')
             ->setRowId('id')
+            ->order(fn ($query) => $this->applyHeaderSort($query, 'id'))
             ->filter(function ($query) {
                 $req = request();
                 if ($req->filled('filter_allotment_year')) {

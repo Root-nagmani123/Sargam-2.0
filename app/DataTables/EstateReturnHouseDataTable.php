@@ -326,7 +326,7 @@ class EstateReturnHouseDataTable extends DataTable
             })
             // Manual global search on underlying columns (cannot use aliases in WHERE).
             ->when($searchValue !== '', function ($q) use ($searchValue, $metaPks) {
-                $like = '%' . $searchValue . '%';
+                $like = '%' . addcslashes($searchValue, '%_\\') . '%'; // % and _ typed by the user match literally
                 $q->where(function ($sub) use ($like, $metaPks) {
                     foreach (['epd.allotment_date', 'epd.possession_date', 'epd.current_meter_reading_date'] as $date) {
                         self::orDateLike($sub, $date, $like);
@@ -387,7 +387,7 @@ class EstateReturnHouseDataTable extends DataTable
             })
             // Manual global search for "Other Employee" branch.
             ->when($searchValue !== '', function ($q) use ($searchValue, $metaPks) {
-                $like = '%' . $searchValue . '%';
+                $like = '%' . addcslashes($searchValue, '%_\\') . '%'; // % and _ typed by the user match literally
                 $q->where(function ($sub) use ($like, $metaPks) {
                     foreach (['epo.allotment_date', 'epo.possession_date_oth', 'epo.current_meter_reading_date'] as $date) {
                         self::orDateLike($sub, $date, $like);

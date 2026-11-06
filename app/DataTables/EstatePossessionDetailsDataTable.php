@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\DataTables\Concerns\AppliesHeaderSort;
 use App\DataTables\Concerns\RendersEstateRowActions;
 use App\Models\EstateHomeRequestDetails;
 use App\Support\RedisBackedCache;
@@ -18,6 +19,7 @@ use Yajra\DataTables\Services\DataTable;
 
 class EstatePossessionDetailsDataTable extends DataTable
 {
+    use AppliesHeaderSort;
     use RendersEstateRowActions;
 
     /**
@@ -181,7 +183,8 @@ class EstatePossessionDetailsDataTable extends DataTable
         $hideAuthorityMutations = request('scope') === 'self' && $isEstateAuthority;
 
         $dataTable = (new EloquentDataTable($query))
-            ->addIndexColumn();
+            ->addIndexColumn()
+            ->order(fn ($query) => $this->applyHeaderSort($query, 'epd.pk'));
 
         if ($isEstateAuthority && ! $hideAuthorityMutations) {
             $dataTable->addColumn('checkbox', function ($row) {
