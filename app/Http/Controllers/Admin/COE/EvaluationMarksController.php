@@ -57,7 +57,7 @@ class EvaluationMarksController extends Controller
             // course, subjectComp, otCode, marksSource, faculty, booklet, attendance, assessMarks, examMarks, facultyRemarks, approval
             ['FC101', 'Law — Ethics & Integrity', 'UC01', 'Faculty',    'Cecil Obrien',   'PA-MT-1842', 'Present', '-',    42.00, '',                                 'Pending Review'],
             ['FC101', 'Law — Ethics & Integrity', 'UC02', '',           'GYAAN',          'PA-MT-1818', 'Present', '-',    23.00, '',                                 'Pending Review'],
-            ['FC101', 'Law — Ethics & Integrity', 'UC03', 'Faculty',    'Janice Bailey',  'PA-MT-1835', 'Present', '-',    54.00, 'Strong analytical response',       'Pending Review'],
+            ['FC101', 'Law — Ethics & Integrity', 'UC03', 'Faculty',    'Janice Bailey',  'PA-MT-1835', 'Present', '-',    34.00, 'Strong analytical response',       'Pending Review'],
             ['FC101', 'Law — Ethics & Integrity', 'UC04', '',           'Sargam 2.0',     'PA-MT-1807', 'Absent',  'Not applicable', 'Not applicable', 'Attendance sheet verified', 'Pending Review'],
             ['FC101', 'Law — Ethics & Integrity', 'UC05', '',           'Sargam 2.0',     'PA-MT-1829', 'Present', '-',    40.00, '',                                 'Pending Review'],
             ['FC101', 'Law — Ethics & Integrity', 'UC06', 'Faculty',    'Traci Stevenson','PA-MT-1811', 'Present', '-',    24.00, '',                                 'Pending Review'],
