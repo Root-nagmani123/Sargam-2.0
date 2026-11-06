@@ -214,6 +214,11 @@ return [
             'route' => 'admin.coe.cc-examination-drive.index',
             'params' => [],
         ],
+        // Faculty: drive approved by the CC, question paper creation is open.
+        'ExaminationDriveApproved' => [
+            'route' => 'admin.coe.faculty-question-paper.index',
+            'params' => [],
+        ],
     ],
 
     // COE Result Compilation "Notify for Pending": the faculty's Result Entry sheet for that course.

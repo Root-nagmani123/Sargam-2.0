@@ -20,9 +20,27 @@ class ExaminationDriveFacultyDataTable extends ExaminationDriveDataTable
      * Faculty never see a Draft drive: Active tab = Active, Archived tab = Closed.
      * The parent query already splits the tabs on Closed / not Closed.
      */
+    /** Status filter values (?status_filter=) => label, matching ExaminationDrive::progress(). */
+    public const STATUS_FILTERS = [
+        'faculty' => 'Pending at Faculty',
+        'cc' => 'Pending at CC',
+        'approved' => 'Approved by CC',
+        'rejected' => 'Rejected by CC',
+    ];
+
     public function query(ExaminationDrive $model): Builder
     {
-        return parent::query($model)->where('status', '!=', ExaminationDrive::STATUS_DRAFT);
+        $query = parent::query($model)->where('status', '!=', ExaminationDrive::STATUS_DRAFT);
+
+        match (request()->query('status_filter')) {
+            'faculty' => $query->whereNull('cc_status'),
+            'cc' => $query->where('cc_status', ExaminationDrive::CC_PENDING),
+            'approved' => $query->where('cc_status', ExaminationDrive::CC_APPROVED),
+            'rejected' => $query->where('cc_status', ExaminationDrive::CC_REJECTED),
+            default => null,
+        };
+
+        return $query;
     }
 
     public function dataTable(Builder $query): EloquentDataTable
@@ -81,6 +99,12 @@ class ExaminationDriveFacultyDataTable extends ExaminationDriveDataTable
     protected function actionsCell(ExaminationDrive $row): string
     {
         $url = route('admin.coe.faculty-examination-drive.setup', $row->id);
+
+        // Approved by the CC: faculty can only look at the setup now.
+        if ($row->cc_status === ExaminationDrive::CC_APPROVED) {
+            return '<a href="' . $url . '" class="edc-setup-link is-done" title="Approved by the Course Coordinator - view only">'
+                . '<i class="bi bi-eye" aria-hidden="true"></i><span>View<br>Setup</span></a>';
+        }
 
         if ($this->setupCompleted($row)) {
             return '<a href="' . $url . '" class="edc-setup-link is-done" title="Setup completed - open to view or edit">'

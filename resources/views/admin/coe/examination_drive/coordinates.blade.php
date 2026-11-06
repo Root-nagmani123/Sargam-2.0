@@ -61,7 +61,7 @@
 
     // Rows for the client-side CSV download.
     $csvRows = collect($drive['component_rows'])->map(fn ($row) => [
-        'component' => $row['component'], 'max' => $row['max_marks'], 'pass' => $row['passing_marks'],
+        'subject' => $row['subject'], 'component' => $row['component'], 'max' => $row['max_marks'], 'pass' => $row['passing_marks'],
         'source' => $row['source'], 'people' => $peopleFor($row), 'codes' => (object) array_map($codeText, $row['faculty_codes']),
         'uniq' => (object) array_map($codeText, $row['faculty_unique_codes']),
         'weightage' => $row['weightage'],
@@ -112,6 +112,7 @@
                 <table class="edc-coord-table" id="edcCoordTable">
                     <thead>
                         <tr>
+                            <th>Subject</th>
                             <th>Components</th>
                             <th>Max Marks</th>
                             <th>Passing Marks</th>
@@ -127,6 +128,7 @@
                         @forelse ($drive['component_rows'] as $i => $row)
                             @php($people = $peopleFor($row))
                             <tr class="edc-main" data-row="{{ $i }}">
+                                <td>{{ $row['subject'] }}</td>
                                 <td>{{ $row['component'] }}</td>
                                 <td>{{ $row['max_marks'] }}</td>
                                 <td>{{ $row['passing_marks'] }}</td>
@@ -156,7 +158,7 @@
                             </tr>
                             @if (count($people) > 1)
                                 <tr class="edc-detail d-none" id="edcDetail{{ $i }}">
-                                    <td colspan="9">
+                                    <td colspan="10">
                                         <table class="edc-sub-table">
                                             <thead>
                                                 <tr>
@@ -187,7 +189,7 @@
                             @endif
                         @empty
                             <tr class="edc-main">
-                                <td colspan="9" class="text-center coe-muted py-4">No components mapped to this drive yet.</td>
+                                <td colspan="10" class="text-center coe-muted py-4">No components mapped to this drive yet.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -232,10 +234,10 @@ $(function () {
     $('#edcDownload').on('click', function () {
         var rows = {!! json_encode($csvRows, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!};
         var cell = function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
-        var lines = [['Component', 'Max Marks', 'Passing Marks', 'Source', 'Faculty / Subcoordinator', 'OT Roll Number', 'Unique Participant Codes', 'Weightage %', 'Exam Date', 'Exam Mode'].map(cell).join(',')];
+        var lines = [['Subject', 'Component', 'Max Marks', 'Passing Marks', 'Source', 'Faculty / Subcoordinator', 'OT Roll Number', 'Unique Participant Codes', 'Weightage %', 'Exam Date', 'Exam Mode'].map(cell).join(',')];
         rows.forEach(function (r) {
             (r.people.length ? r.people : ['']).forEach(function (p) {
-                lines.push([r.component, r.max, r.pass, r.source, p, (r.codes || {})[p] || '', (r.uniq || {})[p] || '', r.weightage, r.date, r.type].map(cell).join(','));
+                lines.push([r.subject, r.component, r.max, r.pass, r.source, p, (r.codes || {})[p] || '', (r.uniq || {})[p] || '', r.weightage, r.date, r.type].map(cell).join(','));
             });
         });
         var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });

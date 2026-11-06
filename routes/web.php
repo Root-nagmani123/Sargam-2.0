@@ -2191,6 +2191,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->whereNumber('id')->name('venue-allocation.show');
     Route::get('examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'index'])
         ->name('examination-drive.index');
+    Route::get('examination-drive/export/{format}', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'export'])
+        ->whereIn('format', ['csv', 'excel', 'pdf', 'print'])->name('examination-drive.export');
     Route::post('examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'store'])
         ->name('examination-drive.store');
     Route::put('examination-drive/{id}', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'update'])
@@ -2209,6 +2211,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->whereNumber('id')->name('examination-drive.coordinates');
     Route::get('faculty-examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'facultyIndex'])
         ->name('faculty-examination-drive.index');
+    Route::get('faculty-examination-drive/export/{format}', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'facultyExport'])
+        ->whereIn('format', ['csv', 'excel', 'pdf', 'print'])->name('faculty-examination-drive.export');
     Route::get('coe-examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'coeIndex'])
         ->name('coe-examination-drive.index');
     Route::get('cc-examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'ccIndex'])

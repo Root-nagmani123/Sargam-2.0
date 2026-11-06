@@ -22,7 +22,8 @@
 .fedc-info-value    { font-size:17px;font-weight:600;color:var(--ds-ink);overflow-wrap:anywhere; }
 @media (max-width: 991.98px) { .fedc-info-bar { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 /* Component mapping table */
-.fedc-map-table     { width:100%;border-collapse:separate;border-spacing:0;min-width:1280px;table-layout:fixed; }
+.fedc-map-table     { width:100%;border-collapse:separate;border-spacing:0;min-width:1380px;table-layout:fixed; }
+.fedc-map-table .fedc-subject { font-size:14px;font-weight:600;color:var(--ds-ink);overflow-wrap:anywhere; }
 .fedc-map-table thead th { padding:10px 8px;background:var(--ds-surface-2);font-size:14px;font-weight:500;line-height:1.2;
                       color:var(--ds-ink);white-space:normal;vertical-align:middle; }
 .fedc-map-table thead th:first-child { padding-left:14px; }
@@ -175,27 +176,38 @@
         </div>
     @endif
 
+    {{-- Faculty locks (ExaminationDriveController::facultyLockMessage; the server enforces them too). --}}
+    @if ($readOnly)
+        <div class="alert alert-success"><i class="bi bi-lock me-1" aria-hidden="true"></i>This drive has been <strong>approved by the Course Coordinator</strong>. The setup is view only.</div>
+    @elseif ($keepSubmitted)
+        <div class="alert alert-info"><i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>This drive is <strong>pending at the Course Coordinator</strong>. You can still correct values, but submitted components cannot be removed.</div>
+    @endif
+
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
+            {{-- Approved: every input, picker and button in the table is disabled. --}}
+            <fieldset @disabled($readOnly)>
             <div class="table-responsive">
                 <table class="fedc-map-table" id="fedcMapTable">
                     <thead>
                         <tr>
-                            <th style="width:13%" data-sort="component">Components<i class="bi bi-chevron-expand"></i></th>
+                            <th style="width:8%">Subject</th>
+                            <th style="width:12%" data-sort="component">Components<i class="bi bi-chevron-expand"></i></th>
                             <th style="width:7%"  data-sort="max">Max Marks<i class="bi bi-chevron-expand"></i></th>
                             <th style="width:8%"  data-sort="pass">Passing Marks<i class="bi bi-chevron-expand"></i></th>
-                            <th style="width:9%">Evaluation Through</th>
-                            <th style="width:12%">Faculty</th>
+                            <th style="width:8%">Evaluation Through</th>
+                            <th style="width:11%">Faculty</th>
                             <th style="width:8%"  data-sort="weightage">Weightage %<i class="bi bi-chevron-expand"></i></th>
-                            <th style="width:14%">Exam Range</th>
-                            <th style="width:10%">Exam Mode</th>
-                            <th style="width:10%">Exam Type</th>
-                            <th style="width:9%" class="text-end">Action</th>
+                            <th style="width:13%">Exam Range</th>
+                            <th style="width:9%">Exam Mode</th>
+                            <th style="width:9%">Exam Type</th>
+                            <th style="width:7%" class="text-end">Action</th>
                         </tr>
                     </thead>
                     <tbody id="fedcMapBody">
                         @foreach ($drive['component_rows'] as $row)
                         <tr class="fedc-map-row">
+                            <td class="fedc-subject">{{ $row['subject'] }}</td>
                             <td>
                                 <select class="form-select fedc-sel-component">
                                     @foreach ($components as $c)
@@ -266,12 +278,17 @@
                             </td>
                             <td>
                                 <div class="fedc-actions">
+                                    {{-- A submitted component stays while the drive is pending at the CC. --}}
+                                    @unless ($readOnly || $keepSubmitted)
                                     <button type="button" class="fedc-row-del fedc-row-del-btn" aria-label="Remove row">
                                         <i class="bi bi-dash" aria-hidden="true"></i>
                                     </button>
+                                    @endunless
+                                    @unless ($readOnly)
                                     <button type="button" class="fedc-row-add fedc-row-add-btn" aria-label="Add row">
                                         <i class="bi bi-plus" aria-hidden="true"></i>
                                     </button>
+                                    @endunless
                                 </div>
                             </td>
                         </tr>
@@ -279,6 +296,7 @@
                     </tbody>
                     <tfoot>
                         <tr class="fedc-total-row">
+                            <td></td>
                             <td class="text-end pe-2">Total Max Marks:</td>
                             <td class="ps-2"><span id="fedcTotalMax">{{ $num(array_sum(array_column($drive['component_rows'], 'max_marks'))) }}</span>@if ($limits['subject_max'] !== null) / {{ $num($limits['subject_max']) }}@endif</td>
                             <td colspan="3" class="text-end pe-4">Total Weightage:</td>
@@ -288,11 +306,14 @@
                     </tfoot>
                 </table>
             </div>
+            </fieldset>
 
             <div class="fedc-footer">
                 <a href="{{ route('admin.coe.faculty-examination-drive.index') }}"
-                   class="btn coe-btn coe-btn-cancel">Cancel</a>
+                   class="btn coe-btn coe-btn-cancel">{{ $readOnly ? 'Back' : 'Cancel' }}</a>
+                @unless ($readOnly)
                 <button type="button" class="btn coe-btn coe-btn-primary" id="fedcSaveBtn" @disabled($missingMaster)>Save</button>
+                @endunless
             </div>
         </div>
     </div>
@@ -395,6 +416,7 @@ $(function () {
     var SUBJECT_MAX  = @json($limits['subject_max']);
     var PASS_FIXED   = @json($passFixed);
     var SUBJECT_PK   = @json($subjectPk);
+    var SUBJECT_NAME = @json($subjectTabs[$subjectPk] ?? '');
 
     /* ── Total Weightage live update ──────────────────────────────────── */
     function sum(sel) {
@@ -453,6 +475,7 @@ $(function () {
 
     function buildRow() {
         return '<tr class="fedc-map-row">' +
+            '<td class="fedc-subject">' + $('<div>').text(SUBJECT_NAME).html() + '</td>' +
             '<td><select class="form-select fedc-sel-component"><option value="">Component</option>' + componentOptions('') + '</select></td>' +
             '<td><input type="number" class="form-control fedc-max-marks" min="0" step="0.01" value=""></td>' +
             '<td><input type="number" class="form-control fedc-pass-marks" readonly title="From Service Passing Marks" value="' + (PASS_FIXED === null ? '' : PASS_FIXED) + '"></td>' +

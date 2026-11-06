@@ -6,6 +6,7 @@ use App\DataTables\ExaminationDriveCcDataTable;
 use App\DataTables\ExaminationDriveCoeDataTable;
 use App\DataTables\ExaminationDriveDataTable;
 use App\DataTables\ExaminationDriveFacultyDataTable;
+use App\Http\Controllers\Concerns\ExportsMasterGrid;
 use App\Http\Controllers\Controller;
 use App\Models\COE\ParticipantCode;
 use App\Models\COE\RollNumberAllocation;
@@ -40,6 +41,8 @@ use Illuminate\Validation\Rule;
  */
 class ExaminationDriveController extends Controller
 {
+    use ExportsMasterGrid;
+
     public const SCOPES       = ['active', 'archived'];
     public const SOURCES      = ['Faculty', 'Sargam', 'Sargam 2.0'];
     public const EXAM_MODES   = ['Online', 'Offline', 'Offline & Online'];
@@ -53,11 +56,15 @@ class ExaminationDriveController extends Controller
 
         return $dataTable->render('admin.coe.examination_drive.index', [
             'scope'     => $scope,
-            'courses'   => $this->courseNames(),
+            // Active tab: running courses; Archived tab: archived ones (CourseMaster scopes).
+            'courses'   => $this->courseNames($scope),
             'services'  => $this->serviceOptions(),
             'terms'     => $this->termNames(),
             'phases'    => $this->phaseValues(),
             'examTypes' => $this->examTypeNames(),
+            // Create / Edit modal: only active types and terms can be chosen.
+            'activeTerms'     => $this->termNames(true),
+            'activeExamTypes' => $this->examTypeNames(true),
             'statuses'  => ExaminationDrive::STATUSES,
             'subjects'  => $this->subjectNames(),
             'faculty'   => $this->facultyNames(),
@@ -72,15 +79,19 @@ class ExaminationDriveController extends Controller
             'course'           => ['required', 'string', Rule::exists('course_master', 'course_name')],
             // service_master pk, not name: short names repeat (IDES, ITS).
             'service'          => ['required', 'integer', Rule::exists('service_master', 'pk')->where('active_inactive', 1)],
-            'exam_type'        => ['required', 'string', Rule::exists('examination_type_master', 'exam_type_name')],
-            'term'             => ['required', 'string', Rule::exists('term_master', 'term_name')],
+            // Only active types / terms can be picked for a new drive.
+            'exam_type'        => ['required', 'string', Rule::exists('examination_type_master', 'exam_type_name')->where('active_inactive', 1)],
+            'term'             => ['required', 'string', Rule::exists('term_master', 'term_name')->where('active_inactive', 1)],
             'academic_session' => ['required', 'string', 'max:10'],
             'status'           => ['required', Rule::in(ExaminationDrive::STATUSES)],
             'start_date'       => ['required', 'date'],
             'end_date'         => ['required', 'date', 'after_or_equal:start_date'],
-            'mappings'              => ['array'],
+            // At least one complete Subject + Faculty row (store and update).
+            'mappings'              => ['required', 'array', $this->needsSubjectFaculty()],
             'mappings.*.subject'    => ['required_with:mappings.*.faculty', 'nullable', 'string', 'max:150'],
             'mappings.*.faculty'    => ['required_with:mappings.*.subject', 'nullable', 'string', 'max:150'],
+        ], [
+            'mappings.required' => 'Add at least one Subject and Faculty in Subject and Faculty Mapping.',
         ]);
 
         $examTypePk = ExaminationTypeMaster::where('exam_type_name', $data['exam_type'])->value('pk');
@@ -141,24 +152,36 @@ class ExaminationDriveController extends Controller
     {
         $drive = ExaminationDrive::findOrFail($id);
         abort_if($drive->status === ExaminationDrive::STATUS_CLOSED, 422, 'A closed drive cannot be edited.');
+        abort_if($drive->cc_status === ExaminationDrive::CC_APPROVED, 422, 'This drive has been approved by the Course Coordinator and cannot be edited.');
+        abort_if($drive->cc_status === ExaminationDrive::CC_PENDING, 422, 'This drive is pending at the Course Coordinator and cannot be edited.');
 
         // Who already knew about the drive, to notify only what changes.
         $wasDraft = $drive->status === ExaminationDrive::STATUS_DRAFT;
         $before = $this->facultySubjects($drive->id);
 
+        // The drive's current type / term stay valid even if since deactivated; a new choice must be active.
+        $keepType = ExaminationTypeMaster::where('pk', $drive->examination_type_master_pk)->value('exam_type_name');
+        $keepTerm = TermMaster::where('pk', $drive->term_master_pk)->value('term_name');
+        $activeOrCurrent = fn (string $table, string $column, ?string $current) => Rule::exists($table, $column)
+            ->where(fn ($q) => $q->where('active_inactive', 1)->when($current !== null, fn ($q) => $q->orWhere($column, $current)));
+
         $data = $request->validate([
+            'drive_name'       => ['required', 'string', 'max:150'],
             'course'           => ['required', 'string', Rule::exists('course_master', 'course_name')],
             // service_master pk, not name: short names repeat (IDES, ITS).
             'service'          => ['required', 'integer', Rule::exists('service_master', 'pk')->where('active_inactive', 1)],
-            'exam_type'        => ['required', 'string', Rule::exists('examination_type_master', 'exam_type_name')],
-            'term'             => ['required', 'string', Rule::exists('term_master', 'term_name')],
+            'exam_type'        => ['required', 'string', $activeOrCurrent('examination_type_master', 'exam_type_name', $keepType)],
+            'term'             => ['required', 'string', $activeOrCurrent('term_master', 'term_name', $keepTerm)],
             'academic_session' => ['required', 'string', 'max:10'],
             'status'           => ['required', Rule::in(ExaminationDrive::STATUSES)],
             'start_date'       => ['required', 'date'],
             'end_date'         => ['required', 'date', 'after_or_equal:start_date'],
-            'mappings'              => ['array'],
+            // At least one complete Subject + Faculty row (store and update).
+            'mappings'              => ['required', 'array', $this->needsSubjectFaculty()],
             'mappings.*.subject'    => ['required_with:mappings.*.faculty', 'nullable', 'string', 'max:150'],
             'mappings.*.faculty'    => ['required_with:mappings.*.subject', 'nullable', 'string', 'max:150'],
+        ], [
+            'mappings.required' => 'Add at least one Subject and Faculty in Subject and Faculty Mapping.',
         ]);
 
         $examTypePk = ExaminationTypeMaster::where('exam_type_name', $data['exam_type'])->value('pk');
@@ -168,6 +191,7 @@ class ExaminationDriveController extends Controller
 
         DB::transaction(function () use ($drive, $data, $examTypePk, $termPk, $coursePk, $statusCode) {
             $drive->update([
+                'drive_name'                 => $data['drive_name'],
                 'examination_type_master_pk' => $examTypePk,
                 'term_master_pk'             => $termPk,
                 'course_master_pk'           => $coursePk,
@@ -272,9 +296,94 @@ class ExaminationDriveController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $drive = ExaminationDrive::findOrFail($id);
+        abort_if($drive->cc_status === ExaminationDrive::CC_PENDING, 422, 'This drive is pending at the Course Coordinator and cannot be deleted.');
         $drive->delete();
 
         return response()->json(['message' => 'Examination drive deleted.']);
+    }
+
+    /**
+     * CSV / Excel / PDF / Print of the drive list as shown on screen, in Sargam's
+     * master export format (ExportsMasterGrid). Uses the grid's own query, so the
+     * tab (scope) and the Course / Term / Type filters (course_filter, term_filter,
+     * type_filter) give the same rows; ?q= is the search box, ?cols= the visible columns.
+     */
+    public function export(Request $request, ExaminationDriveDataTable $dataTable, string $format)
+    {
+        return $this->exportDrives($request, $dataTable->query(new ExaminationDrive()), $format, 'Examination Drive Configuration', 'ExaminationDrives');
+    }
+
+    /** Faculty list export: the faculty grid's own query (no Draft drives, its Status filter). */
+    public function facultyExport(Request $request, ExaminationDriveFacultyDataTable $dataTable, string $format)
+    {
+        // The faculty grid has no Service column, so neither does its export.
+        return $this->exportDrives($request, $dataTable->query(new ExaminationDrive()), $format, 'Examination Drive (Faculty)', 'ExaminationDrivesFaculty', ['service']);
+    }
+
+    /** One drive-list export (Sargam master format, landscape) for whichever grid query it is given. */
+    private function exportDrives(Request $request, \Illuminate\Database\Eloquent\Builder $query, string $format, string $title, string $slug, array $without = [])
+    {
+        $format = strtolower($format);
+        abort_unless(in_array($format, self::$exportFormats, true), 404);
+
+        $term = trim((string) $request->query('q', ''));
+        if ($term !== '') {
+            $like = '%' . $term . '%';
+            $query->where(fn ($q) => $q->where('drive_name', 'like', $like)
+                ->orWhereHas('course', fn ($c) => $c->where('course_name', 'like', $like))
+                ->orWhereHas('term', fn ($c) => $c->where('term_name', 'like', $like))
+                ->orWhereHas('examinationType', fn ($c) => $c->where('exam_type_name', 'like', $like)));
+        }
+
+        $date = fn ($d) => optional($d)->format('d-m-Y') ?? '';
+        $columns = [
+            'sno' => ['heading' => 'S. No.', 'width' => '4%', 'align' => 'center', 'value' => fn ($row, int $i) => $i + 1],
+            'name' => ['heading' => 'Drive Name', 'width' => '10%', 'value' => fn ($row) => filled($row->drive_name)
+                ? $row->drive_name : ($row->examinationType->exam_type_name ?? 'Examination') . ' Drive — ' . $row->academic_session],
+            'exam_type' => ['heading' => 'Examination Type', 'width' => '9%', 'value' => fn ($row) => $row->examinationType->exam_type_name ?? '-'],
+            'term' => ['heading' => 'Term', 'width' => '7%', 'value' => fn ($row) => $row->term->term_name ?? '-'],
+            'course' => ['heading' => 'Course', 'width' => '13%', 'value' => fn ($row) => $row->course->course_name ?? '-'],
+            'service' => ['heading' => 'Service', 'width' => '6%', 'value' => fn ($row) => $row->service->service_short_name ?? '-'],
+            'session' => ['heading' => 'Academic Session', 'width' => '6%', 'align' => 'center', 'value' => fn ($row) => $row->academic_session],
+            'faculty' => ['heading' => 'Faculty', 'width' => '13%', 'value' => fn ($row) => implode(', ', $row->driveFacultyNames()) ?: '-'],
+            'sub_coords' => ['heading' => 'Sub-Coordinates', 'width' => '6%', 'align' => 'center', 'value' => fn ($row) => count($row->subCoordinatorNames()) ?: '-'],
+            'components' => ['heading' => 'Components', 'width' => '6%', 'align' => 'center', 'value' => fn ($row) => $row->component_maps_count ?: '-'],
+            'start' => ['heading' => 'Start Date', 'width' => '7%', 'align' => 'center', 'value' => fn ($row) => $date($row->start_date)],
+            'end' => ['heading' => 'End Date', 'width' => '7%', 'align' => 'center', 'value' => fn ($row) => $date($row->end_date)],
+            'status' => ['heading' => 'Status', 'width' => '6%', 'align' => 'center', 'value' => fn ($row) => $row->progress()[0]],
+        ];
+
+        $filters = array_values(array_filter([
+            $request->query('scope') === 'archived' ? 'Archived drives' : 'Active drives',
+            filled($request->query('course_filter')) ? 'Course: ' . $request->query('course_filter') : null,
+            filled($request->query('term_filter')) ? 'Term: ' . $request->query('term_filter') : null,
+            filled($request->query('type_filter')) ? 'Examination Type: ' . $request->query('type_filter') : null,
+            filled($request->query('status_filter')) ? 'Status: ' . (ExaminationDriveFacultyDataTable::STATUS_FILTERS[$request->query('status_filter')] ?? '') : null,
+            $term !== '' ? 'Search: ' . $term : null,
+        ]));
+
+        return $this->renderMasterExport(
+            $format,
+            $query->get(),
+            $this->resolveExportColumns($request, array_diff_key($columns, array_flip($without))),
+            $title,
+            $slug,
+            implode('  |  ', $filters),
+            'No examination drives to export',
+            'landscape'
+        );
+    }
+
+    /** Validation rule: the Subject and Faculty Mapping has at least one row with both filled. */
+    private function needsSubjectFaculty(): \Closure
+    {
+        return function (string $attribute, $rows, \Closure $fail) {
+            $complete = collect(is_array($rows) ? $rows : [])
+                ->contains(fn ($row) => is_array($row) && filled($row['subject'] ?? null) && filled($row['faculty'] ?? null));
+            if (! $complete) {
+                $fail('Add at least one Subject and Faculty in Subject and Faculty Mapping.');
+            }
+        };
     }
 
     /** Subject/Faculty mapping rows for the Edit modal. */
@@ -342,6 +451,20 @@ class ExaminationDriveController extends Controller
         $subjectPk = (int) $data['subject_master_pk'];
         if (! array_key_exists($subjectPk, $this->accessibleSubjects($drive))) {
             return response()->json(['message' => 'You are not mapped to this subject on the drive.'], 403);
+        }
+        if ($locked = $this->facultyLockMessage($drive)) {
+            return response()->json(['message' => $locked], 422);
+        }
+        // Pending at CC: what was submitted stays; faculty may correct it, not remove it.
+        if ($this->isMappedFaculty($drive) && $drive->cc_status === ExaminationDrive::CC_PENDING) {
+            $kept = collect($data['rows'] ?? [])->pluck('component')->all();
+            $removed = $drive->componentMaps->where('subject_master_pk', $subjectPk)
+                ->map(fn ($m) => $m->component->component_name ?? null)->filter()
+                ->reject(fn ($name) => in_array($name, $kept, true));
+            if ($removed->isNotEmpty()) {
+                return response()->json(['message' => 'This drive is pending at the Course Coordinator, so submitted components cannot be removed: '
+                    . $removed->implode(', ') . '.'], 422);
+            }
         }
 
         $rows = collect($data['rows'] ?? [])->map(function (array $row) {
@@ -437,8 +560,15 @@ class ExaminationDriveController extends Controller
             }
         });
 
-        // A mapped faculty's save sends the drive to the course's CC; an admin's does not.
-        $notice = $this->isMappedFaculty($drive) ? $this->sendToCoordinator($drive) : '';
+        // A mapped faculty's save sends the drive to the course's CC only once every
+        // mapped subject is set up; until then it stays Pending at Faculty. An admin's save never sends it.
+        $notice = '';
+        if ($this->isMappedFaculty($drive)) {
+            [$done, $total] = $this->subjectsSetUp($drive);
+            $notice = $done === $total
+                ? $this->sendToCoordinator($drive)
+                : "{$done} of {$total} subjects are set up. The drive goes to the Course Coordinator once all faculty complete their setup.";
+        }
 
         return response()->json(['message' => trim('Component mapping saved. ' . $notice)]);
     }
@@ -548,6 +678,9 @@ class ExaminationDriveController extends Controller
         if (! array_key_exists((int) $data['subject_master_pk'], $this->accessibleSubjects($drive))) {
             return response()->json(['message' => 'You are not mapped to this subject on the drive.'], 403);
         }
+        if ($locked = $this->facultyLockMessage($drive)) {
+            return response()->json(['message' => $locked], 422);
+        }
 
         $subNames = $this->cleanNames($data['sub_faculty'] ?? []);
         $unknown = $this->unknownFacultyNames(array_merge([$data['faculty'] ?? ''], $subNames));
@@ -653,7 +786,46 @@ class ExaminationDriveController extends Controller
             'modified_date'       => now(),
         ]);
 
-        return response()->json(['message' => 'Examination drive approved.']);
+        $notice = $this->notifyFacultyApproved($drive);
+
+        return response()->json(['message' => trim('Examination drive approved. ' . $notice)]);
+    }
+
+    /**
+     * Tell every faculty mapped on the drive that the Course Coordinator approved it
+     * and the question paper can now be created; the notification opens My Question
+     * Paper (config/notifications.php exam_drive.ExaminationDriveApproved). Faculty
+     * without a linked login (faculty_master.employee_master_pk) cannot be reached.
+     * A failure is logged, never fails the approval.
+     */
+    private function notifyFacultyApproved(ExaminationDrive $drive): string
+    {
+        $facultySubjects = $this->facultySubjects($drive->id);
+        $userIds = FacultyMaster::whereIn('pk', array_keys($facultySubjects))
+            ->whereIn('employee_master_pk', DB::table('user_credentials')->select('user_id'))
+            ->pluck('employee_master_pk', 'pk');
+
+        $name = filled($drive->drive_name) ? $drive->drive_name : 'Examination Drive #' . $drive->id;
+        $dates = optional($drive->start_date)->format('d-m-Y') . ' to ' . optional($drive->end_date)->format('d-m-Y');
+        $sent = 0;
+        try {
+            $service = app(NotificationService::class);
+            foreach ($userIds as $facultyPk => $userId) {
+                $service->create(
+                    (int) $userId, 'exam_drive', 'ExaminationDriveApproved', $drive->id, 'Examination Drive Approved',
+                    "{$name} has been approved by the Course Coordinator (exam dates {$dates}). "
+                        . 'You can now create the question paper for ' . implode(', ', $facultySubjects[$facultyPk]) . '.'
+                );
+                $sent++;
+            }
+        } catch (\Throwable $e) {
+            Log::error('Examination drive approval notification failed', ['drive_id' => $drive->id, 'error' => $e->getMessage()]);
+        }
+
+        $missing = count($facultySubjects) - $userIds->count();
+
+        return trim(($sent ? "{$sent} faculty notified." : '')
+            . ($missing ? " {$missing} faculty could not be notified (no login linked)." : ''));
     }
 
     /** CC rejects a pending drive; faculty can change their setup and save it again. */
@@ -693,6 +865,17 @@ class ExaminationDriveController extends Controller
         return $drive;
     }
 
+    /**
+     * Why a mapped faculty may not change the drive's setup any more, or null.
+     * Approved by the Course Coordinator = final for faculty (admins are not affected).
+     */
+    private function facultyLockMessage(ExaminationDrive $drive): ?string
+    {
+        return $this->isMappedFaculty($drive) && $drive->cc_status === ExaminationDrive::CC_APPROVED
+            ? 'This drive has been approved by the Course Coordinator and can no longer be edited.'
+            : null;
+    }
+
     /** Whether the logged-in user is a faculty mapped on the drive. */
     private function isMappedFaculty(ExaminationDrive $drive): bool
     {
@@ -703,6 +886,20 @@ class ExaminationDriveController extends Controller
         $facultyPks = FacultyMaster::where('employee_master_pk', $user->user_id)->pluck('pk')->all();
 
         return $drive->facultyMaps->whereIn('faculty_master_pk', $facultyPks)->isNotEmpty();
+    }
+
+    /**
+     * How many of the drive's mapped subjects have component rows saved, of how many.
+     *
+     * @return array{0: int, 1: int}
+     */
+    private function subjectsSetUp(ExaminationDrive $drive): array
+    {
+        $subjects = $drive->facultyMaps->pluck('subject_master_pk')->unique();
+        $saved = ExaminationDriveComponentMap::where('examination_drive_id', $drive->id)
+            ->whereIn('subject_master_pk', $subjects)->distinct()->pluck('subject_master_pk');
+
+        return [$saved->count(), $subjects->count()];
     }
 
     /**
@@ -774,6 +971,9 @@ class ExaminationDriveController extends Controller
             'rollNumbers' => $this->courseRollNumbers($drive),
             'uniqueCodes' => $this->courseUniqueCodes($drive),
             'limits'      => $this->marksLimits($drive, $subjectPk),
+            // Approved: read-only; pending at CC: submitted rows cannot be removed (faculty only).
+            'readOnly'    => $this->facultyLockMessage($drive) !== null,
+            'keepSubmitted' => $this->isMappedFaculty($drive) && $drive->cc_status === ExaminationDrive::CC_PENDING,
             'subjectTabs' => $this->accessibleSubjects($drive),
             'subjectPk'   => $subjectPk,
         ]);
@@ -936,7 +1136,7 @@ class ExaminationDriveController extends Controller
         return ExaminationDrive::with([
             'examinationType', 'term', 'course', 'service',
             'facultyMaps.faculty', 'facultyMaps.subject',
-            'componentMaps.component', 'componentMaps.faculty',
+            'componentMaps.component', 'componentMaps.faculty', 'componentMaps.subject',
         ])->findOrFail($id);
     }
 
@@ -980,6 +1180,7 @@ class ExaminationDriveController extends Controller
             'archived'   => $drive->status === ExaminationDrive::STATUS_CLOSED,
             'component_rows' => $maps->map(fn ($map) => [
                 'component'      => $map->component->component_name ?? '-',
+                'subject'        => trim((string) ($map->subject->subject_name ?? '')) ?: '-',
                 'max_marks'      => $map->max_marks,
                 'passing_marks'  => $map->passing_marks,
                 'source'         => $map->source ?: self::SOURCES[0],
@@ -1001,9 +1202,17 @@ class ExaminationDriveController extends Controller
     }
 
     /** @return Collection<int, array> */
-    private function courseNames(): array
+    /** Course names; for a drive-list tab, only that tab's courses (CourseMaster::activeRunning / archived). */
+    private function courseNames(?string $scope = null): array
     {
-        return CourseMaster::orderBy('course_name')->pluck('course_name')->filter()->unique()->values()->all();
+        $query = CourseMaster::query();
+        if ($scope === 'archived') {
+            $query->archived();
+        } elseif ($scope === 'active') {
+            $query->activeRunning();
+        }
+
+        return $query->orderBy('course_name')->pluck('course_name')->filter()->unique()->values()->all();
     }
 
     /** Real subject_master names for the Subject/Faculty mapping selects. */
@@ -1055,14 +1264,16 @@ class ExaminationDriveController extends Controller
             ->all();
     }
 
-    private function termNames(): array
+    private function termNames(bool $activeOnly = false): array
     {
-        return TermMaster::orderBy('term_name')->pluck('term_name')->filter()->unique()->values()->all();
+        return TermMaster::when($activeOnly, fn ($q) => $q->where('active_inactive', 1))
+            ->orderBy('term_name')->pluck('term_name')->filter()->unique()->values()->all();
     }
 
-    private function examTypeNames(): array
+    private function examTypeNames(bool $activeOnly = false): array
     {
-        return ExaminationTypeMaster::orderBy('exam_type_name')->pluck('exam_type_name')->filter()->unique()->values()->all();
+        return ExaminationTypeMaster::when($activeOnly, fn ($q) => $q->where('active_inactive', 1))
+            ->orderBy('exam_type_name')->pluck('exam_type_name')->filter()->unique()->values()->all();
     }
 
     private function phaseValues(): array

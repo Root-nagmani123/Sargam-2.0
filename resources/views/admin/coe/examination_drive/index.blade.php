@@ -44,13 +44,29 @@
                class="coe-tab {{ $isArchived ? 'is-active' : '' }}"
                @if ($isArchived) aria-current="page" @endif>Archived</a>
         </nav>
+        {{-- Sargam's master export (docs/new-design-index-page.md §1): CSV / Excel / PDF and a
+             server-rendered branded Print (landscape), from ExaminationDriveController::export.
+             edcSyncExportLinks() stamps the tab, filters, search and visible columns on. --}}
         <div class="d-flex flex-wrap gap-2 coe-secondary-actions">
-            <button type="button" id="edcDownloadBtn" class="btn programme-dt-btn-columns" title="Download">
-                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-            </button>
-            <button type="button" id="edcPrintBtn" class="btn programme-dt-btn-columns" title="Print">
+            <div class="dropdown">
+                <button type="button" id="edcDownloadToggle"
+                        class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                        data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                    <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="edcDownloadToggle">
+                    <li><a class="dropdown-item edc-export-link" href="{{ route('admin.coe.examination-drive.export', ['format' => 'csv']) }}">
+                        <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i> CSV</a></li>
+                    <li><a class="dropdown-item edc-export-link" href="{{ route('admin.coe.examination-drive.export', ['format' => 'excel']) }}">
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Excel (.xlsx)</a></li>
+                    <li><a class="dropdown-item edc-export-link" href="{{ route('admin.coe.examination-drive.export', ['format' => 'pdf']) }}">
+                        <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF</a></li>
+                </ul>
+            </div>
+            <a href="{{ route('admin.coe.examination-drive.export', ['format' => 'print']) }}" target="_blank" rel="noopener"
+               class="btn programme-dt-btn-columns border-0 text-primary edc-export-link" title="Print">
                 <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
-            </button>
+            </a>
         </div>
     </div>
 
@@ -144,7 +160,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body coe-modal-body">
-                    {{-- Drive Name (create only) --}}
+                    {{-- Drive Name (create and edit) --}}
                     <div id="edcDriveNameRow" class="row g-3 mb-3">
                         <div class="col-12">
                             <label class="coe-form-label" for="edcDriveName">Drive Name<span class="coe-req">*</span></label>
@@ -175,14 +191,14 @@
                             <label class="coe-form-label" for="edcExamType">Examination Type<span class="coe-req">*</span></label>
                             <select id="edcExamType" name="exam_type" class="form-select coe-control">
                                 <option value="">Select Examination Type</option>
-                                @foreach ($examTypes as $et)<option value="{{ $et }}">{{ $et }}</option>@endforeach
+                                @foreach ($activeExamTypes as $et)<option value="{{ $et }}">{{ $et }}</option>@endforeach
                             </select>
                         </div>
                         <div class="col-sm-6">
                             <label class="coe-form-label" for="edcTerm">Term<span class="coe-req">*</span></label>
                             <select id="edcTerm" name="term" class="form-select coe-control">
                                 <option value="">Select Term</option>
-                                @foreach ($terms as $t)<option value="{{ $t }}">{{ $t }}</option>@endforeach
+                                @foreach ($activeTerms as $t)<option value="{{ $t }}">{{ $t }}</option>@endforeach
                             </select>
                         </div>
                     </div>
@@ -302,14 +318,29 @@ $(function () {
         ],
         filters: { '#edcFilterCourse': COL.course, '#edcFilterTerm': COL.term, '#edcFilterType': COL.type },
         reset: '#edcResetFilters',
-        download: '#edcDownloadBtn',
-        print: '#edcPrintBtn',
         searchToggle: '#edcSearchToggle',
         searchSlot: '#edcDtSearch',
         colvisGrid: '#edcColumnToggleGrid',
         colvisKey: 'coeExaminationDrive:hiddenColumns:v2',
         empty: { title: 'No Examination Drives', zeroTitle: 'No Records Found', text: 'Create the first examination drive to get started.' }
     });
+
+    /* ── Export links follow the grid: tab, Course / Term / Type filters, search, visible columns ── */
+    var EXPORT_KEYS = ['sno', 'name', 'exam_type', 'term', 'course', 'service', 'session', 'faculty', 'sub_coords', 'components', 'start', 'end', 'status', ''];
+    function edcSyncExportLinks() {
+        var keys = [], all = EXPORT_KEYS.filter(Boolean).length;
+        dt.columns().every(function () { var k = EXPORT_KEYS[this.index()]; if (k && this.visible()) { keys.push(k); } });
+        var set = { scope: @json($scope), course_filter: $('#edcFilterCourse').val(), term_filter: $('#edcFilterTerm').val(),
+                    type_filter: $('#edcFilterType').val(), q: dt.search() };
+        $('.edc-export-link').each(function () {
+            var parts = this.href.split('?'), params = new URLSearchParams();
+            Object.keys(set).forEach(function (k) { if (set[k]) { params.set(k, set[k]); } });
+            if (keys.length && keys.length !== all) { params.set('cols', keys.join(',')); }
+            this.href = parts[0] + '?' + params.toString();
+        });
+    }
+    dt.on('draw column-visibility.dt', edcSyncExportLinks);
+    edcSyncExportLinks();
 
     /* ── Delete ───────────────────────────────────────────────────────── */
     CoeGrid.confirmDelete({
@@ -437,14 +468,26 @@ $(function () {
         var isEdit  = !!$row;
         $('#edcFormModalLabel').text(isEdit ? 'Edit Examination Drive' : 'Create Examination Drive');
         $('#edcFormSubmit').text('Save');
-        $('#edcDriveNameRow').toggleClass('d-none', isEdit);
+        $('#edcDriveNameRow').removeClass('d-none');
+        // Options added for a previous Edit are not offered on the next Create / Edit.
+        $modal.find('option.edc-kept').remove();
         clearErrors();
         $mapBody.empty();
 
+        // A drive keeps its own course / type / term even if it is no longer in the
+        // (active / tab-scoped) list, so Edit still shows and saves it.
+        function keepOption($sel, value) {
+            if (value && !$sel.find('option').filter(function () { return this.value === value; }).length) {
+                $sel.append($('<option class="edc-kept">').val(value).text(value));
+            }
+            $sel.val(value || '').trigger('change.select2');
+        }
+
         if (isEdit) {
-            $type.val($row.attr('data-edc-type') || '').trigger('change.select2');
-            $term.val($row.attr('data-edc-term') || '').trigger('change.select2');
-            $course.val($row.attr('data-edc-course') || '').trigger('change.select2');
+            $('#edcDriveName').val($row.attr('data-edc-name') || '');
+            keepOption($type, $row.attr('data-edc-type'));
+            keepOption($term, $row.attr('data-edc-term'));
+            keepOption($course, $row.attr('data-edc-course'));
             $service.val($row.attr('data-edc-service') || '').trigger('change.select2');
             $('#edcSession').val($row.attr('data-edc-session') || '');
             $status.val($row.attr('data-edc-status') || 'Draft').trigger('change.select2');
@@ -482,9 +525,7 @@ $(function () {
         e.preventDefault();
         var ok = true;
         var isEdit = !!$editingRow;
-        if (!isEdit) {
-            ok = fieldError($('#edcDriveName'), $.trim($('#edcDriveName').val()) ? '' : 'Enter the drive name.') && ok;
-        }
+        ok = fieldError($('#edcDriveName'), $.trim($('#edcDriveName').val()) ? '' : 'Enter the drive name.') && ok;
         ok = fieldError($course, $course.val() ? '' : 'Select a course.') && ok;
         ok = fieldError($service, $service.val() ? '' : 'Select a service.') && ok;
         ok = fieldError($type,   $type.val()   ? '' : 'Select the examination type.') && ok;
@@ -502,6 +543,16 @@ $(function () {
             });
         });
 
+        // At least one complete Subject + Faculty row; no row with only one of the two.
+        var half = mappings.filter(function (m) { return (m.subject === '') !== (m.faculty === ''); }).length;
+        var full = mappings.filter(function (m) { return m.subject !== '' && m.faculty !== ''; }).length;
+        if (half || !full) {
+            Swal.fire({ icon: 'warning', title: 'Subject and Faculty Mapping',
+                text: half ? 'Select both the Subject and the Faculty in every mapping row.'
+                           : 'Add at least one Subject and Faculty in Subject and Faculty Mapping.' });
+            return;
+        }
+
         var payload = {
             course: $course.val(),
             service: $service.val(),
@@ -513,7 +564,7 @@ $(function () {
             end_date: $('#edcEndDate').val(),
             mappings: mappings
         };
-        if (!isEdit) { payload.drive_name = $.trim($('#edcDriveName').val()); }
+        payload.drive_name = $.trim($('#edcDriveName').val());
 
         var url = isEdit
             ? '{{ url("admin/coe/examination-drive") }}/' + $editingRow.attr('data-coe-id')
