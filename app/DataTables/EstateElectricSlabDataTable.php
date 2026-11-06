@@ -84,6 +84,9 @@ class EstateElectricSlabDataTable extends DataTable
                 'responsive' => false,
                 'autoWidth' => false,
                 'ordering' => true,
+                // Keep header sorting on the server (whole list, not just the loaded page);
+                // datatable-global-ui.js turns it off for server-side tables without this.
+                'sargamServerOrder' => true,
                 'searching' => true,
                 'order' => [[1, 'asc']],
             ]);

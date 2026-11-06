@@ -6,6 +6,7 @@ use App\DataTables\EstateElectricSlabDataTable;
 use App\DataTables\EstateMigrationReportDataTable;
 use App\DataTables\EstatePossessionDetailsDataTable;
 use App\DataTables\EstatePossessionOtherDataTable;
+use App\DataTables\EstateReturnHouseDataTable;
 use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
 use Tests\TestCase;
 
@@ -24,6 +25,22 @@ class EstateGridHeaderSortTest extends TestCase
         'define-electric-slab.index' => [EstateElectricSlabDataTable::class, 'unit_range'],
         'reports.migration-report' => [EstateMigrationReportDataTable::class, 'campus_name'],
     ];
+
+    /**
+     * Without sargamServerOrder, datatable-global-ui.js switches a server-side grid's ordering
+     * off and sorts only the loaded page in the browser, so the fixes above never reach the user
+     * (and Return House's Download/Print cannot carry the sort).
+     */
+    public function test_the_estate_grids_keep_header_sorting_on_the_server(): void
+    {
+        $this->as($this->staffWithRole('Estate Admin'), ['Estate Admin', 'Super Admin', 'HAC Person', 'Estate']);
+
+        foreach ([EstatePossessionDetailsDataTable::class, EstatePossessionOtherDataTable::class,
+            EstateElectricSlabDataTable::class, EstateReturnHouseDataTable::class] as $table) {
+            $this->assertTrue(app($table)->html()->getAttributes()['sargamServerOrder'] ?? false,
+                class_basename($table).' sets sargamServerOrder');
+        }
+    }
 
     public function test_a_header_click_reverses_the_estate_grids(): void
     {

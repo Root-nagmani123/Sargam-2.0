@@ -480,6 +480,9 @@ class EstateReturnHouseDataTable extends DataTable
                 'responsive' => false,
                 'autoWidth' => false,
                 'ordering' => true,
+                // Keep header sorting on the server (whole list, not just the loaded page), so
+                // Download/Print can carry it; datatable-global-ui.js turns it off without this.
+                'sargamServerOrder' => true,
                 'searching' => true,
                 // Default sort by Return Date (desc). Column index is 0-based.
                 'order' => [[11, 'desc']],
