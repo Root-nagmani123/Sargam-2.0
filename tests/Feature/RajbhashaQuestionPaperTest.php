@@ -8,6 +8,7 @@ use App\Models\ExaminationDriveFacultyMap;
 use App\Models\ExaminationTypeMaster;
 use App\Models\FacultyMaster;
 use App\Models\QuestionPaper;
+use App\Models\QuestionPaperLog;
 use App\Models\SubjectMaster;
 use App\Models\TermMaster;
 use App\Models\User;
@@ -168,6 +169,23 @@ class RajbhashaQuestionPaperTest extends TestCase
             ->assertOk()
             ->assertSee('<div id="qpaperEditor"><p>Q1 Define governance.</p></div>', false)
             ->assertSee('var STARTS_FROM_COPY = true', false);
+    }
+
+    public function test_covering_the_paper_on_the_translate_page_is_logged(): void
+    {
+        $url = route('admin.coe.my-question-paper.hidden', $this->paper->id);
+
+        $this->actingAs($this->rajbhasha)->get(route('admin.coe.my-question-paper.translate', $this->paper->id))
+            ->assertOk()
+            ->assertSee('var HIDDEN_URL = "'.str_replace('/', '\/', $url).'"', false);
+
+        $this->actingAs($this->rajbhasha)->post($url, ['reason' => 'left'])->assertNoContent();
+        $log = QuestionPaperLog::latest('id')->first();
+        $this->assertSame([$this->paper->id, 'Rajbhasha', 'Translation', 'Paper Hidden', 'Window left'],
+            [$log->question_paper_id, $log->role, $log->module, $log->action, $log->detail]);
+
+        $this->actingAs($this->rajbhasha)->postJson($url, ['reason' => 'anything'])->assertUnprocessable();
+        $this->actingAs($this->outsider)->post($url, ['reason' => 'left'])->assertForbidden();
     }
 
     public function test_translate_then_edit_then_delete_the_translation(): void

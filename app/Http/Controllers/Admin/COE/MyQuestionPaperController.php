@@ -8,6 +8,7 @@ use App\Services\COE\QuestionPaperLogger;
 use App\Services\COE\RajbhashaPaperService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 /**
  * COE → Question Paper Management → My Question Paper (Rajbhasha).
@@ -102,8 +103,20 @@ class MyQuestionPaperController extends Controller
             'templates' => FacultyQuestionPaperController::TEMPLATES,
             'listUrl' => route('admin.coe.my-question-paper.index'),
             'saveUrl' => route('admin.coe.my-question-paper.translation.store', $paper),
+            'hiddenUrl' => route('admin.coe.my-question-paper.hidden', $paper),
             'watermark' => $this->paperStamp($request),
         ]);
+    }
+
+    /** The editor covered the paper (window left / PrintScreen) - logged, as on the faculty's editor. */
+    public function hidden(Request $request, int $paper): Response
+    {
+        $reason = $request->validate(['reason' => 'required|in:'.implode(',', array_keys(QuestionPaperLogger::HIDDEN_REASONS))])['reason'];
+        $qp = $this->papers->find($paper);
+        $this->log->record(QuestionPaperLogger::ROLE_RAJBHASHA, QuestionPaperLogger::MODULE_TRANSLATION, QuestionPaperLogger::HIDDEN,
+            $qp, QuestionPaperLogger::HIDDEN_REASONS[$reason]);
+
+        return response()->noContent();
     }
 
     /** Upload Paper on Translate Question Paper → Translated (not yet sent). */

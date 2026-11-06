@@ -365,6 +365,16 @@ class QuestionPaperService
         });
     }
 
+    /** The faculty's paper once they have added it, or null (a new paper has no row yet). */
+    public function paperFor(int $facultyPk, int $paperId): ?QuestionPaper
+    {
+        try {
+            return $this->ownPaper($facultyPk, $paperId);
+        } catch (ModelNotFoundException) {
+            return null;
+        }
+    }
+
     /**
      * The faculty's added paper behind a list id.
      *

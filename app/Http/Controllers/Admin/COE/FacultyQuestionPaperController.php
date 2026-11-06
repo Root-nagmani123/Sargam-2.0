@@ -9,6 +9,7 @@ use App\Services\COE\QuestionPaperLogger;
 use App\Services\COE\QuestionPaperService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 /**
  * COE → Question Paper Management → My Question Paper, as the FACULTY sees it
@@ -91,8 +92,29 @@ class FacultyQuestionPaperController extends Controller
             'templates' => self::TEMPLATES,
             'listUrl' => route('admin.coe.faculty-question-paper.index'),
             'saveUrl' => route('admin.coe.faculty-question-paper.upload', $paper),
+            'hiddenUrl' => route('admin.coe.faculty-question-paper.hidden', $paper),
             'watermark' => $this->paperStamp($request),
         ]);
+    }
+
+    /**
+     * The editor covered the paper (window left / PrintScreen) - logged, since a
+     * capture tool outside the browser takes its shot just before. A new paper
+     * has no row yet, so its code goes in the detail.
+     */
+    public function hidden(Request $request, int $paper): Response
+    {
+        $reason = $request->validate(['reason' => 'required|in:'.implode(',', array_keys(QuestionPaperLogger::HIDDEN_REASONS))])['reason'];
+        $facultyPk = $this->facultyPk();
+        $row = $this->papers->findForFaculty($facultyPk, $paper);
+        abort_if($row === null, 404);
+
+        $qp = $this->papers->paperFor($facultyPk, $paper);
+        $detail = QuestionPaperLogger::HIDDEN_REASONS[$reason];
+        $this->log->record(QuestionPaperLogger::ROLE_FACULTY, QuestionPaperLogger::MODULE_PAPER, QuestionPaperLogger::HIDDEN,
+            $qp, $qp ? $detail : $row['code'].' · '.$detail);
+
+        return response()->noContent();
     }
 
     /**

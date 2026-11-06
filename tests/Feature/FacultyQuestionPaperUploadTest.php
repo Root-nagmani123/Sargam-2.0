@@ -8,6 +8,7 @@ use App\Models\ExaminationDriveFacultyMap;
 use App\Models\ExaminationTypeMaster;
 use App\Models\FacultyMaster;
 use App\Models\QuestionPaper;
+use App\Models\QuestionPaperLog;
 use App\Models\SubjectMaster;
 use App\Models\TermMaster;
 use App\Models\User;
@@ -138,6 +139,26 @@ class FacultyQuestionPaperUploadTest extends TestCase
             '/var WATERMARK = ".*? \\\\u00b7 ID '.$this->faculty->getAuthIdentifier().' \\\\u00b7 /u',
             $html
         );
+        $this->assertStringContainsString('var HIDDEN_URL = "'.str_replace('/', '\/', route('admin.coe.faculty-question-paper.hidden', $this->map->id)).'"', $html);
+    }
+
+    public function test_covering_the_paper_is_logged_for_a_new_and_an_added_paper(): void
+    {
+        $url = route('admin.coe.faculty-question-paper.hidden', $this->map->id);
+
+        // A new paper has no row yet: its code goes in the detail.
+        $this->actingAs($this->faculty)->post($url, ['reason' => 'left'])->assertNoContent();
+        $log = QuestionPaperLog::latest('id')->first();
+        $this->assertSame([null, 'Paper Hidden', 'Faculty'], [$log->question_paper_id, $log->action, $log->role]);
+        $this->assertStringEndsWith(' · Window left', $log->detail);
+
+        $this->write()->assertOk();
+        $this->actingAs($this->faculty)->post($url, ['reason' => 'printscreen'])->assertNoContent();
+        $log = QuestionPaperLog::latest('id')->first();
+        $this->assertSame([$this->paper()->id, 'PrintScreen key'], [$log->question_paper_id, $log->detail]);
+
+        $this->actingAs($this->faculty)->postJson($url, ['reason' => 'anything'])->assertUnprocessable();
+        $this->actingAs($this->nonFaculty())->post($url, ['reason' => 'left'])->assertForbidden();
     }
 
     public function test_editor_paper_is_stored_as_v1_and_goes_straight_to_rajbhasha(): void
