@@ -223,6 +223,36 @@ class ProtocolRequestWorkflowTest extends TestCase
         $this->assertArrayNotHasKey($deleted, $onEdit->all());
     }
 
+    /**
+     * F-028: when the next PR-<id + 1> is already taken (PR-1001 again once the highest id is
+     * 1000), a submission through the form still gets a new, unique number. The collision is set
+     * up by renumbering a row rather than inserting id 1000, which would move the table's
+     * AUTO_INCREMENT for good on a non-disposable database.
+     */
+    public function test_a_submission_gets_a_new_number_when_the_next_one_is_taken(): void
+    {
+        $owner = $this->plainEmployee();
+        $last = $this->seedRequest($owner);
+        $taken = 'PR-' . ($last->id + 1);
+        $last->update(['request_number' => $taken]);
+
+        $this->actingAs($owner)->post(route('protocol.requests.store'), [
+            'types' => ['ticket'],
+            'purpose' => 'Official',
+            'escort_required' => 'no',
+            'guests' => [['guest_name' => 'Numbering Guest', 'sex' => 'Male', 'mobile_no' => '9876543210']],
+            'ticket' => ['journeys' => [[
+                'origin' => 'Delhi', 'destination' => 'Dehradun', 'ticket_type' => 'Rail',
+                'date_of_journey' => now()->addDay()->toDateString(),
+                'train_flight_bus_name' => 'Shatabdi', 'train_flight_bus_no' => '12017',
+            ]]],
+        ])->assertSessionHasNoErrors()->assertSessionMissing('error');
+
+        $created = ProtocolRequest::where('id', '>', $last->id)->sole();
+        $this->assertNotSame($taken, $created->request_number);
+        $this->assertSame(1, ProtocolRequest::withTrashed()->where('request_number', $created->request_number)->count());
+    }
+
     private function seedVehicle(string $name, int $status, $deletedAt = null): int
     {
         $unique = uniqid('T', true);

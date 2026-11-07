@@ -312,6 +312,14 @@ class ProtocolRequest extends Model
         $last = static::withTrashed()->orderByDesc('id')->lockForUpdate()->first();
         $next = $last ? $last->id + 1 : 1001;
 
+        // The empty-table seed and id + 1 are two sequences that meet (PR-1001 again at id 1000), and
+        // request_number is unique; when the number is taken, continue after the highest one issued (PR #348 F-028)
+        $taken = static::withTrashed()->where('request_number', 'PR-' . $next)->lockForUpdate()->value('id');
+        if ($taken !== null) {
+            $next = 1 + (int) static::withTrashed()->lockForUpdate()
+                ->max(DB::raw('CAST(SUBSTRING(request_number, 4) AS UNSIGNED)'));
+        }
+
         return 'PR-' . $next;
     }
 
