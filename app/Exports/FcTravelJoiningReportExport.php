@@ -18,8 +18,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class FcTravelJoiningReportExport implements FromView, WithStyles, WithEvents, WithTitle
 {
-    // 11 while the Activity slot and Require academy vehicle columns are hidden (was 13).
-    public const COL_COUNT = 11;
+    public const COL_COUNT = 13;
 
     /** Rows before the table column-header row (titles + blank spacer). */
     protected int $headerRows = 6;
@@ -59,12 +58,11 @@ class FcTravelJoiningReportExport implements FromView, WithStyles, WithEvents, W
                 'code'             => (string) ($r->roll_no ?? ''),
                 'mobile'           => (string) ($r->mobile_no ?? ''),
                 'arrival_date'     => $r->joining_date ? \Carbon\Carbon::parse($r->joining_date)->format('Y-m-d') : '',
-                // 'slot'          => (string) ($r->slot_label ?? ''), // Activity slot hidden for now
+                'slot'             => (string) ($r->slot_label ?? ''),
                 'mode'             => (string) ($r->mode_of_journey ?? ''),
                 'vehicle_no'       => (string) ($r->journey_vehicle_no ?? ''),
                 'dehradun_time'    => (string) ($r->arrival_time_dehradun ?? ''),
-                // Require academy vehicle hidden for now:
-                // 'require_vehicle'  => StudentTravelPlanMaster::interpretRequiresAcademyVehicle($r->require_academy_vehicle ?? null) ? 'Yes' : 'No',
+                'require_vehicle'  => StudentTravelPlanMaster::interpretRequiresAcademyVehicle($r->require_academy_vehicle ?? null) ? 'Yes' : 'No',
                 'service'          => (string) ($r->service_code ?? ''),
                 'submitted'        => StudentTravelPlanMaster::interpretIsSubmitted($r->is_submitted ?? null) ? 'Yes' : 'Draft',
             ];
@@ -116,9 +114,9 @@ class FcTravelJoiningReportExport implements FromView, WithStyles, WithEvents, W
             ]);
         }
 
-        // S.No.(A), arrival date(F), mode(G), submitted(K).
+        // S.No.(A), arrival date(F), mode(H), require vehicle(K), submitted(M).
         // These are column LETTERS, so they move whenever a column is added or removed.
-        $centerCols = ['A', 'F', 'G', 'K'];
+        $centerCols = ['A', 'F', 'H', 'K', 'M'];
         foreach ($centerCols as $col) {
             if ($lastRow >= $dataStart) {
                 $sheet->getStyle("{$col}{$dataStart}:{$col}{$lastRow}")
@@ -128,7 +126,7 @@ class FcTravelJoiningReportExport implements FromView, WithStyles, WithEvents, W
 
         $sheet->getStyle("A{$dataRowStart}:{$lastCol}{$lastRow}")->getFont()->setSize(10);
 
-        $widths = [6, 16, 22, 12, 14, 13, 16, 24, 24, 12, 10];
+        $widths = [6, 16, 22, 12, 14, 13, 20, 16, 24, 24, 26, 12, 10];
         foreach ($widths as $i => $w) {
             $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i + 1))->setWidth($w);
         }

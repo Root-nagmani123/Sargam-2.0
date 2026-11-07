@@ -841,6 +841,9 @@ class DynamicFormService
 
         // Group fields by target_table
         $tableData = [];
+        // Columns of typed text fields the trainee may clear: an empty value is what they
+        // submitted, so it must overwrite the stored one (see the keep-existing guard below).
+        $clearable = [];
         foreach ($fields as $field) {
             // Skip fields with _skip target (like confirm fields)
             if ($field->target_column === '_skip') {
@@ -887,12 +890,15 @@ class DynamicFormService
                     }
 
                     $tableData[$targetTable][$field->target_column] = $value;
+                    if (in_array($field->field_type, ['text', 'textarea'], true)) {
+                        $clearable[$targetTable][$field->target_column] = true;
+                    }
                 }
             }
         }
 
         // Save to each target table
-        DB::transaction(function () use ($tableData, $userId, $step, $markStepComplete) {
+        DB::transaction(function () use ($tableData, $clearable, $userId, $step, $markStepComplete) {
             $form = $step->form;
 
             foreach ($tableData as $table => $data) {
@@ -904,6 +910,12 @@ class DynamicFormService
                 if ($existing) {
                     foreach ($data as $col => $val) {
                         if (in_array($col, [$uCol, 'updated_at', 'created_at'], true)) {
+                            continue;
+                        }
+                        // Keep the stored value when an empty one arrives (e.g. a dropdown whose
+                        // options had not loaded) — except for typed text fields, where empty
+                        // means the trainee cleared it.
+                        if (isset($clearable[$table][$col])) {
                             continue;
                         }
                         if (($val === null || $val === '') && filled($existing->{$col} ?? null)) {
@@ -1243,6 +1255,17 @@ class DynamicFormService
 
         $rules = $field->validation_rules
             ?: ($field->is_required ? 'required' : 'nullable');
+
+        // The "Required" checkbox drives the red star, so when an admin unticks it the
+        // field must also stop being required server-side — a leftover plain `required`
+        // in the rules text otherwise rejects an empty value the form shows as optional.
+        // Only the bare token is swapped; required_if/with/... conditions are kept.
+        if (! $field->is_required && is_string($rules)) {
+            $rules = implode('|', array_map(
+                static fn ($rule) => trim($rule) === 'required' ? 'nullable' : $rule,
+                explode('|', $rules)
+            ));
+        }
 
         if ($field instanceof FcFormGroupField) {
             $rules = $this->normalizeLanguageMasterExistsInRules($rules, $field);
