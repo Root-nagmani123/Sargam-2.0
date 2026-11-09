@@ -25,6 +25,9 @@ class ProtocolConcurrentDecisionTest extends TestCase
 
     private ?ProtocolRequest $request = null;
 
+    /** Further committed requests a test creates, removed in tearDown like $request */
+    private array $alsoCreated = [];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -46,8 +49,7 @@ class ProtocolConcurrentDecisionTest extends TestCase
         }
         DB::disconnect('protocol_second_session');
 
-        if ($this->request) {
-            $request = $this->request;
+        foreach (array_filter([$this->request, ...$this->alsoCreated]) as $request) {
             $request->logs()->delete();
             TicketJourney::where('ticket_id', $request->requestable_id)->delete();
             TicketRequest::whereKey($request->requestable_id)->delete();
@@ -103,5 +105,35 @@ class ProtocolConcurrentDecisionTest extends TestCase
 
         $this->assertSame(ProtocolRequest::STATUS_APPROVED, $this->request->fresh()->status);
         $this->assertSame(['A'], $this->request->logs()->where('action', 'approved')->pluck('remarks')->all());
+    }
+
+    /**
+     * PR #348 F-029: once PR-<last id + 1> is taken (every submission past id 1000), numbering a
+     * new request must not lock other requests, so a decision on an older one does not wait for it.
+     */
+    public function test_numbering_a_request_does_not_lock_other_requests(): void
+    {
+        $owner = $this->employeeLogin();
+        $this->request = $this->seedRequest($owner);
+        $last = $this->seedRequest($owner);
+        $this->alsoCreated[] = $last;
+        $taken = 'PR-' . ($last->id + 1);
+        $last->update(['request_number' => $taken]);
+
+        // Session A is mid-submission: its number is drawn and the transaction is still open
+        DB::beginTransaction();
+        $number = ProtocolRequest::generateRequestNumber();
+
+        // Session B decides the older request: lockStatus()'s locking read must not wait for A
+        $sessionB = DB::connection('protocol_second_session');
+        $sessionB->statement('SET SESSION innodb_lock_wait_timeout = 1');
+        $sessionB->beginTransaction();
+        $status = $sessionB->table('protocol_requests')->where('id', $this->request->id)->lockForUpdate()->value('status');
+        $sessionB->rollBack();
+        DB::rollBack();
+
+        $this->assertSame(ProtocolRequest::STATUS_PENDING, $status);
+        $this->assertNotSame($taken, $number);
+        $this->assertSame(0, ProtocolRequest::withTrashed()->where('request_number', $number)->count());
     }
 }
