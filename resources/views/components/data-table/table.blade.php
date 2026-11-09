@@ -4,8 +4,9 @@
     'ajaxRoute' => '',
     'id' => 'data-table',
     'buttons' => [],
-    'tableClass' => 'table table-bordered',
-    'theadClass' => 'table-default-primary',
+    'tabs' => [],
+    'tableClass' => 'table table-hover align-middle mb-0 w-100 programme-dt-table',
+    'theadClass' => '',
     'tableCaption' => null,
     'datatableLanguage' => null,
     // When false, disables DataTables Responsive (no +/- control column); use scroll instead.
@@ -18,9 +19,9 @@
 {{-- DataTables Bootstrap 5 CSS is loaded in admin pre_header; avoid bootstrap4 here (breaks layout with BS5). --}}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
 
+{{-- Filters --}}
+@if(!empty($filters))
 <div class="mb-3">
-    {{-- Filters --}}
-    @if(!empty($filters))
         <form id="{{ $id }}-filters" class="row g-2">
             <input type="hidden" name="lead_type" id="{{ $id }}-lead-type">
             <input type="hidden" name="sub_type"  id="{{ $id }}-sub-type">
@@ -39,8 +40,8 @@
                 <button type="button" class="btn btn-secondary" id="{{ $id }}-reset-btn">Reset</button>
             </div>
         </form>
-    @endif
 </div>
+@endif
 
 {{-- Buttons --}}
 @if(!empty($buttons))
@@ -51,7 +52,8 @@
     </div>
 @endif
 
-
+{{-- Tabs: render them yourself with id="tabs" (see protocol::partials.type-tabs); the script below reads #tabs --}}
+{{-- 
 
 <div class="row my-2">
     <div class="col-3">
@@ -91,7 +93,7 @@
 </div>  
 
 
-
+ --}}
 
 <table class="{{ $tableClass }}" id="{{ $id }}">
     @if (! empty($tableCaption))
@@ -177,9 +179,6 @@
             serverSide: true,
             autoWidth: false,
             responsive: @json($dtUseResponsive),
-            dom: "<'row mb-3'<'col-md-6'l><'col-md-6'f>>" +
-                 "<'row'<'col-12'tr>>" +
-                 "<'row mt-3'<'col-md-5'i><'col-md-7'p>>",
             initComplete: function () {
                 try {
                     $(this.api().table().container()).addClass('dt-length-style-pill');
@@ -210,7 +209,8 @@
                     d.sub_type  = $('#{{ $id }}-sub-type').val();
                     // date filter
                     d.from_date = $('#from_date').val();
-                    d.to_date   = $('#to_date').val();  
+                    d.to_date   = $('#to_date').val();
+                    d.type = $('#tabs .nav-link.active').data('type');
                 }
             },
             drawCallback: function (settings) {
@@ -266,6 +266,12 @@
             $('.sub-button-group[data-parent="' + filter + '"]').removeClass('d-none');
 
             // table.draw();
+        });
+
+        $('#tabs').on('click', '.nav-link', function () {
+            $('#tabs .nav-link').removeClass('active');
+            $(this).addClass('active');
+            table.draw();
         });
 
         // SUB BUTTON CLICK

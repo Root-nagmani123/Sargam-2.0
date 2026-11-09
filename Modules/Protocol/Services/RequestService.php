@@ -1,0 +1,184 @@
+<?php
+namespace Modules\Protocol\Services;
+
+use Yajra\DataTables\Facades\DataTables;
+use Illuminate\Http\Request;
+use Modules\Protocol\Entities\ProtocolRequest;
+use Auth;
+
+class RequestService
+{
+    public function pageData(): array
+    {
+        return [
+            'columns' => $this->columns(),
+            'filters' => [],
+            'categories' => [],
+            'groups' => [],
+            'parent_menus' => [],
+            'tabs' => $this->activateRequestedTab($this->tabs()),
+        ];
+    }
+
+    # @ Open the tab named in ?type= (dashboard cards link here with it)
+    private function activateRequestedTab(array $tabs): array
+    {
+        $requested = request('type');
+        if (! collect($tabs)->contains('type', $requested)) {
+            return $tabs;
+        }
+
+        return array_map(fn ($tab) => array_merge($tab, ['active' => $tab['type'] === $requested]), $tabs);
+    }
+
+    private function tabs(): array
+    {
+        return [
+            [
+                'type' => 'all',
+                'label' => 'All',
+                'count' => $this->getCounts('all'),
+                'active' => true,
+            ],
+            [
+                'type' => 'guesthouse',
+                'label' => 'Guest House',
+                'count' => $this->getCounts('guesthouse'),
+                'active' => false,
+            ],
+            [
+                'type' => 'vehicle',
+                'label' => 'Vehicle',
+                'count' => $this->getCounts('vehicle'),
+                'active' => false,
+            ],
+            [
+                'type' => 'ticket',
+                'label' => 'Ticket',
+                'count' => $this->getCounts('ticket'),
+                'active' => false,
+            ],
+        ];
+
+    }
+
+    private function getCounts(string $type): int
+    {
+        $query = ProtocolRequest::query();
+
+        switch ($type) {
+            case 'guesthouse':
+                $query->where('request_type', 'guesthouse');
+                break;
+            case 'vehicle':
+                $query->where('request_type', 'vehicle');
+                break;
+            case 'ticket':
+                $query->where('request_type', 'ticket');
+                break;
+            case 'all':
+            default:
+                // no filter
+                break;
+        }
+
+        return $query->forUser(Auth::id())->count();
+    }
+
+    public function columns(): array
+    {
+        return [
+            ['title' => 'Sr No.', 'data' => 'DT_RowIndex', 'orderable' => false, 'searchable' => false],
+            ['title' => 'Request ID', 'data' => 'request_id'],
+            ['title' => 'Type', 'data' => 'request_type'],
+            ['title' => 'Details', 'data' => 'details'],
+            ['title' => 'Raised On', 'data' => 'created_at'],
+            ['title' => 'Status', 'data' => 'status'],
+            ['title' => 'Action', 'data' => 'action', 'orderable' => false, 'searchable' => false],
+        ];
+    }
+
+    # @ Base Query
+    protected function baseQuery(Request $request)
+    {
+        $query = ProtocolRequest::with(['requestable', 'batch', 'logs'])->forUser(Auth::id());
+        return $query;
+    }
+
+
+    protected function applyTabFilters(Request $request)
+    {
+        $query = $this->baseQuery($request);
+
+        switch ($request->type) {
+            case 'guesthouse':
+                $query->where('request_type', 'guesthouse');
+                break;
+            case 'vehicle':
+                $query->where('request_type', 'vehicle');
+                break;
+            case 'ticket':
+                $query->where('request_type', 'ticket');
+                break;
+            case 'all':
+            default:
+                // no filter
+                break;
+        }
+
+        return $query;
+    }
+
+    public function getDatatable(Request $request)
+    {
+        return DataTables::eloquent($this->applyTabFilters($request))
+            ->addColumn('request_id', fn($e) => $e->request_number ?: '-')
+            ->addColumn('request_type', fn($e) => view('protocol::components.type-pill', ['type' => $e->request_type])->render())
+            ->addColumn('details', fn($e) => $e->current_stage)
+            ->addColumn('created_at', fn($e) => $e->created_at->format('d-m-Y') ?: '-')
+            ->addColumn('status', fn($e) => view('protocol::components.status-badge', ['status' => $e->status])->render())
+            ->addColumn('action', function ($row) {
+                return $this->actionButtons($row);
+            })
+            ->rawColumns(['request_type', 'status', 'action'])
+            ->addIndexColumn()
+            ->make(true);
+    }
+
+    private function actionButtons($data)
+    {
+        $editUrl = route('protocol.requests.show', $data->id);
+        $btn = '<div class="pr-act-group" role="group" aria-label="Row actions">'
+            . '<a href="' . $editUrl . '" class="pr-act pr-act--view">'
+            . '<span class="pr-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span>'
+            . '<span class="pr-act__label">View</span></a>';
+
+        if($data->status == 'pending') {
+            $btn .= '<a href="' . route('protocol.requests.edit', $data->id) . '" class="pr-act pr-act--edit">'
+                . '<span class="pr-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>'
+                . '<span class="pr-act__label">Edit</span></a>';
+        }
+
+        return $btn . '</div>';
+    }
+
+    public function getAll()
+    {
+        return [];
+    }
+
+    public function store(array $data)
+    {
+        // handled in controller store()
+    }
+
+    public function update($id, array $data)
+    {
+        // handled in controller update()
+    }
+
+    public function delete($id)
+    {
+        // handled in controller destroy()
+    }
+}
