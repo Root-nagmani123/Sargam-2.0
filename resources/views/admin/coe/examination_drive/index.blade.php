@@ -101,6 +101,14 @@
                             @foreach ($examTypes as $et)<option value="{{ $et }}">{{ $et }}</option>@endforeach
                         </select>
                     </div>
+                    <div class="programme-dt-filter-select">
+                        <select id="edcFilterStatus" class="form-select" aria-label="Status">
+                            <option value="">Status</option>
+                            @foreach (\App\DataTables\ExaminationDriveDataTable::STATUS_FILTERS as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <button type="button" id="edcResetFilters" class="btn programme-dt-btn-reset">Remove Filter</button>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
@@ -226,6 +234,8 @@
                             <label class="coe-form-label" for="edcEndDate">End Date<span class="coe-req">*</span></label>
                             <input type="date" id="edcEndDate" name="end_date" class="form-control coe-control">
                         </div>
+                        {{-- Filled by edcApplyCourseRange(): the drive must sit inside the course dates. --}}
+                        <div class="col-12 mt-1"><small id="edcCourseRange" class="text-muted"></small></div>
                     </div>
 
                     {{-- Subject / Faculty mapping --}}
@@ -283,6 +293,8 @@ $(function () {
     var SUBJECTS = @json($subjects);
     var FACULTY  = @json($faculty);
     var STATUSES = @json($statuses);
+    // Course name => [start, end] (Y-m-d): the drive's Start / End Date must sit inside it.
+    var COURSE_DATES = @json($courseDates);
 
     /* COL indexes — keep in step with <thead> AND with the DataTable class's getColumns() */
     var COL = { sno:0, name:1, type:2, term:3, course:4, service:5, session:6, faculty:7, sub:8, comp:9, start:10, end:11, status:12, action:13 };
@@ -299,7 +311,9 @@ $(function () {
         exclude: [COL.action],
         serverSide: true,
         processing: true,
-        ajax: { url: @json(route('admin.coe.examination-drive.index')), data: function (d) { d.scope = @json($scope); } },
+        // The Status filter goes to the server (status_filter), like the scope tab.
+        ajax: { url: @json(route('admin.coe.examination-drive.index')),
+                data: function (d) { d.scope = @json($scope); d.status_filter = $('#edcFilterStatus').val() || ''; } },
         columns: [
             { data: 'DT_RowIndex', name: 'DT_RowIndex' },
             { data: 'name', name: 'name' },
@@ -331,7 +345,7 @@ $(function () {
         var keys = [], all = EXPORT_KEYS.filter(Boolean).length;
         dt.columns().every(function () { var k = EXPORT_KEYS[this.index()]; if (k && this.visible()) { keys.push(k); } });
         var set = { scope: @json($scope), course_filter: $('#edcFilterCourse').val(), term_filter: $('#edcFilterTerm').val(),
-                    type_filter: $('#edcFilterType').val(), q: dt.search() };
+                    type_filter: $('#edcFilterType').val(), status_filter: $('#edcFilterStatus').val(), q: dt.search() };
         $('.edc-export-link').each(function () {
             var parts = this.href.split('?'), params = new URLSearchParams();
             Object.keys(set).forEach(function (k) { if (set[k]) { params.set(k, set[k]); } });
@@ -340,6 +354,8 @@ $(function () {
         });
     }
     dt.on('draw column-visibility.dt', edcSyncExportLinks);
+    $('#edcFilterStatus').on('change', function () { dt.ajax.reload(); });
+    $('#edcResetFilters').on('click', function () { $('#edcFilterStatus').val(''); dt.ajax.reload(); });
     edcSyncExportLinks();
 
     /* ── Delete ───────────────────────────────────────────────────────── */
@@ -514,8 +530,29 @@ $(function () {
             appendMapRow('', '');
         }
 
+        edcApplyCourseRange();
         bootstrap.Modal.getOrCreateInstance($modal[0]).show();
     }
+
+    /* Start / End Date calendars only offer the selected course's dates. */
+    function edcCourseRange() { return COURSE_DATES[$course.val()] || [null, null]; }
+    function edcShow(d) { if (!d) { return '…'; } var p = d.split('-'); return p[2] + '-' + p[1] + '-' + p[0]; }
+    function edcApplyCourseRange() {
+        var r = edcCourseRange();
+        $('#edcStartDate, #edcEndDate').attr('min', r[0] || null).attr('max', r[1] || null);
+        $('#edcCourseRange').text($course.val() && (r[0] || r[1]) ? 'Course runs ' + edcShow(r[0]) + ' to ' + edcShow(r[1]) + '. The drive dates must be within it.' : '');
+    }
+    // Choosing a course fills Start / End Date with the course's dates (they can then be
+    // narrowed). On Edit, only when the drive's dates fall outside the newly chosen course.
+    $course.on('change', function () {
+        edcApplyCourseRange();
+        var r = edcCourseRange(), sd = $('#edcStartDate').val(), ed = $('#edcEndDate').val();
+        var outside = !sd || !ed || (r[0] && sd < r[0]) || (r[1] && ed > r[1]);
+        if (!$editingRow || outside) {
+            if (r[0]) { $('#edcStartDate').val(r[0]); }
+            if (r[1]) { $('#edcEndDate').val(r[1]); }
+        }
+    });
 
     $('#edcCreateBtn').on('click', function () { openForm(null); });
     $table.on('click', '.coe-act--edit', function () { openForm($(this).closest('tr')); });
@@ -533,6 +570,10 @@ $(function () {
         ok = fieldError($('#edcSession'), $.trim($('#edcSession').val()) ? '' : 'Enter the academic session.') && ok;
         ok = fieldError($('#edcStartDate'), $('#edcStartDate').val() ? '' : 'Select the start date.') && ok;
         ok = fieldError($('#edcEndDate'),   $('#edcEndDate').val()   ? '' : 'Select the end date.') && ok;
+        // Same limit the server applies: the drive sits inside the course dates.
+        var cr = edcCourseRange(), sd = $('#edcStartDate').val(), ed = $('#edcEndDate').val();
+        if (sd && cr[0] && sd < cr[0]) { ok = fieldError($('#edcStartDate'), 'Must be on or after the course start (' + edcShow(cr[0]) + ').') && ok; }
+        if (ed && cr[1] && ed > cr[1]) { ok = fieldError($('#edcEndDate'), 'Must be on or before the course end (' + edcShow(cr[1]) + ').') && ok; }
         if (!ok) { return; }
 
         var mappings = [];

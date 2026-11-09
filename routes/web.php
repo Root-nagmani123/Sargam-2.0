@@ -2217,6 +2217,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('coe-examination-drive.index');
     Route::get('cc-examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'ccIndex'])
         ->name('cc-examination-drive.index');
+    Route::get('cc-examination-drive/{id}/details', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'ccDetails'])
+        ->whereNumber('id')->name('cc-examination-drive.details');
     Route::put('cc-examination-drive/{id}/approve', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'ccApprove'])
         ->whereNumber('id')->name('cc-examination-drive.approve');
     Route::put('cc-examination-drive/{id}/reject', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'ccReject'])

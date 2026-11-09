@@ -20,7 +20,7 @@ class ExaminationDriveFacultyDataTable extends ExaminationDriveDataTable
      * Faculty never see a Draft drive: Active tab = Active, Archived tab = Closed.
      * The parent query already splits the tabs on Closed / not Closed.
      */
-    /** Status filter values (?status_filter=) => label, matching ExaminationDrive::progress(). */
+    /** Status filter options for the faculty list (no Draft: faculty never see one). Applied by the parent query. */
     public const STATUS_FILTERS = [
         'faculty' => 'Pending at Faculty',
         'cc' => 'Pending at CC',
@@ -28,17 +28,22 @@ class ExaminationDriveFacultyDataTable extends ExaminationDriveDataTable
         'rejected' => 'Rejected by CC',
     ];
 
+    /**
+     * A faculty user sees only the drives they are mapped on (Subject -> Faculty);
+     * Super Admin and other roles see every drive. The CC and COE grids, which
+     * extend this one, turn it off: a CC sees their courses' drives either way.
+     */
+    protected bool $onlyOwnDrives = true;
+
     public function query(ExaminationDrive $model): Builder
     {
         $query = parent::query($model)->where('status', '!=', ExaminationDrive::STATUS_DRAFT);
 
-        match (request()->query('status_filter')) {
-            'faculty' => $query->whereNull('cc_status'),
-            'cc' => $query->where('cc_status', ExaminationDrive::CC_PENDING),
-            'approved' => $query->where('cc_status', ExaminationDrive::CC_APPROVED),
-            'rejected' => $query->where('cc_status', ExaminationDrive::CC_REJECTED),
-            default => null,
-        };
+        $user = auth()->user();
+        if ($this->onlyOwnDrives && $user && $user->hasRole('Faculty') && ! $user->hasRole('Super Admin')) {
+            $facultyPks = \App\Models\FacultyMaster::where('employee_master_pk', $user->user_id)->pluck('pk')->all();
+            $query->whereHas('facultyMaps', fn ($q) => $q->whereIn('faculty_master_pk', $facultyPks ?: [0]));
+        }
 
         return $query;
     }

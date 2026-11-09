@@ -9,6 +9,14 @@
 <style>
 .coe-page .coe-act--reject { color:#e5141a; }
 .ccdc-readonly-date { background:var(--ds-surface-2); }
+.ccdc-info        { display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 18px;
+                    background:var(--ds-surface-2);border:1px solid var(--ds-line);border-radius:8px;padding:12px 14px; }
+.ccdc-info dt     { font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ds-ink-muted);margin:0; }
+.ccdc-info dd     { font-size:13px;color:var(--ds-ink);margin:2px 0 0; }
+.ccdc-sec-title   { font-size:13px;font-weight:700;color:var(--ds-ink);margin:16px 0 6px; }
+.ccdc-mini        { width:100%;border-collapse:collapse;font-size:12px; }
+.ccdc-mini th     { background:var(--ds-surface-2);font-weight:700;color:var(--ds-ink-muted);padding:6px 8px;border-bottom:1px solid var(--ds-line);white-space:nowrap; }
+.ccdc-mini td     { padding:6px 8px;border-bottom:1px solid var(--ds-line);vertical-align:top; }
 </style>
 @endpush
 
@@ -139,14 +147,17 @@
 </div>
 {{-- ── Approve: Exam Drive Date Confirmation ─────────────────────────────── --}}
 <div class="modal fade" id="ccdcApproveModal" tabindex="-1" aria-labelledby="ccdcApproveLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content coe-modal border-0 shadow">
-            <form id="ccdcApproveForm" novalidate>
+            <form id="ccdcApproveForm" novalidate class="d-flex flex-column" style="min-height:0">
                 <div class="modal-header coe-modal-header coe-modal-header--rule">
                     <h5 class="modal-title" id="ccdcApproveLabel">Exam Drive Date Confirmation</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body coe-modal-body">
+                    {{-- Drive details, Subject -> Faculty and components (ccDetails), filled on open --}}
+                    <div id="ccdcDetails" class="mb-3"><div class="text-muted small">Loading drive details…</div></div>
+                    <div class="ccdc-sec-title mt-0">Date Confirmation</div>
                     <div class="row g-3">
                         <div class="col-sm-6">
                             <label class="coe-form-label" for="ccdcStart">Start Date<span class="coe-req">*</span></label>
@@ -222,11 +233,36 @@ $(function () {
     var $table = $('#ccdcTable');
     var $modal = $('#ccdcApproveModal');
     var driveId = null;
+    var courseRange = ['', ''];
 
     function fail(xhr, fallback) {
         var r = xhr.responseJSON || {};
         var msg = r.errors ? Object.values(r.errors)[0][0] : (r.message || fallback);
         Swal.fire({ icon: 'error', title: 'Error', text: msg });
+    }
+
+    function esc(v) { return $('<div>').text(v == null || v === '' ? '-' : v).html(); }
+    var DETAILS_URL = @json(route('admin.coe.cc-examination-drive.details', ['id' => '__ID__']));
+
+    /* Full drive details in the Approve window: info, Subject -> Faculty, components. */
+    function loadDetails(id) {
+        var $box = $('#ccdcDetails').html('<div class="text-muted small">Loading drive details…</div>');
+        $.getJSON(DETAILS_URL.replace('__ID__', id)).done(function (d) {
+            var info = [['Drive Name', d.name], ['Course', d.course], ['Service', d.service], ['Examination Type', d.exam_type],
+                        ['Term', d.term], ['Academic Session', d.session], ['Drive Dates', (d.start_date || '-') + ' – ' + (d.end_date || '-')], ['Status', d.status]];
+            var html = '<dl class="ccdc-info mb-0">' + info.map(function (i) { return '<div><dt>' + i[0] + '</dt><dd>' + esc(i[1]) + '</dd></div>'; }).join('') + '</dl>';
+            html += '<div class="ccdc-sec-title">Subject &amp; Faculty</div><div class="table-responsive"><table class="ccdc-mini"><thead><tr><th>#</th><th>Subject</th><th>Faculty</th></tr></thead><tbody>' +
+                (d.mapping.length ? d.mapping.map(function (m, i) { return '<tr><td>' + (i + 1) + '</td><td>' + esc(m.subject) + '</td><td>' + esc(m.faculty) + '</td></tr>'; }).join('')
+                                  : '<tr><td colspan="3" class="text-muted">No subject mapped.</td></tr>') + '</tbody></table></div>';
+            html += '<div class="ccdc-sec-title">Components</div><div class="table-responsive"><table class="ccdc-mini"><thead><tr><th>#</th><th>Subject</th><th>Component</th><th>Max Marks</th><th>Passing Marks</th><th>Weightage</th><th>Exam Range</th><th>Mode</th><th>Exam Type</th><th>Faculty</th></tr></thead><tbody>' +
+                (d.components.length ? d.components.map(function (c, i) {
+                    return '<tr><td>' + (i + 1) + '</td><td>' + esc(c.subject) + '</td><td>' + esc(c.component) + '</td><td>' + esc(c.max_marks) + '</td><td>' + esc(c.passing_marks) +
+                        '</td><td>' + esc(c.weightage) + '</td><td class="text-nowrap">' + esc(c.exam_date) + '</td><td>' + esc(c.exam_mode) + '</td><td>' + esc(c.exam_type) + '</td><td>' + esc(c.faculty) + '</td></tr>';
+                }).join('') : '<tr><td colspan="10" class="text-muted">No components set up.</td></tr>') + '</tbody></table></div>';
+            $box.html(html);
+        }).fail(function (xhr) {
+            $box.html('<div class="text-danger small">' + esc((xhr.responseJSON && xhr.responseJSON.message) || 'Could not load the drive details.') + '</div>');
+        });
     }
 
     /* Approve: confirm the drive dates and the proposed exam dates. */
@@ -237,6 +273,10 @@ $(function () {
         $('#ccdcEnd').val($tr.attr('data-cc-end') || '');
         $('#ccdcProposedStart').val($tr.attr('data-cc-proposed-start') || '');
         $('#ccdcProposedEnd').val($tr.attr('data-cc-proposed-end') || '');
+        // The confirmed dates must sit inside the course dates (ccApprove checks it too).
+        courseRange = [$tr.attr('data-cc-course-start') || '', $tr.attr('data-cc-course-end') || ''];
+        $('#ccdcProposedStart, #ccdcProposedEnd').attr('min', courseRange[0] || null).attr('max', courseRange[1] || null);
+        loadDetails(driveId);
         bootstrap.Modal.getOrCreateInstance($modal[0]).show();
     });
 
@@ -249,6 +289,12 @@ $(function () {
         }
         if (end < start) {
             Swal.fire({ icon: 'warning', title: 'Check the dates', text: 'The proposed end exam date cannot be before the start.' });
+            return;
+        }
+        if ((courseRange[0] && start < courseRange[0]) || (courseRange[1] && end > courseRange[1])) {
+            var show = function (d) { var p = d.split('-'); return p[2] + '-' + p[1] + '-' + p[0]; };
+            Swal.fire({ icon: 'warning', title: 'Check the dates',
+                text: 'The proposed exam dates must be within the course dates (' + show(courseRange[0]) + ' to ' + show(courseRange[1]) + ').' });
             return;
         }
         var $btn = $('#ccdcApproveSubmit').prop('disabled', true);

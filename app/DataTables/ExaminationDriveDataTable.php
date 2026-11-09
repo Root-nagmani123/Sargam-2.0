@@ -18,6 +18,15 @@ use Yajra\DataTables\Services\DataTable;
  */
 class ExaminationDriveDataTable extends DataTable
 {
+    /** Status filter values (?status_filter=) => label, matching ExaminationDrive::progress(). */
+    public const STATUS_FILTERS = [
+        'draft' => 'Draft',
+        'faculty' => 'Pending at Faculty',
+        'cc' => 'Pending at CC',
+        'approved' => 'Approved by CC',
+        'rejected' => 'Rejected by CC',
+    ];
+
     public function dataTable(Builder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
@@ -86,6 +95,16 @@ class ExaminationDriveDataTable extends DataTable
         if ($phase = request()->query('phase_filter')) {
             $query->where('phase', $phase);
         }
+
+        // Status filter (?status_filter=), matching ExaminationDrive::progress().
+        match (request()->query('status_filter')) {
+            'draft' => $query->where('status', ExaminationDrive::STATUS_DRAFT),
+            'faculty' => $query->where('status', '!=', ExaminationDrive::STATUS_DRAFT)->whereNull('cc_status'),
+            'cc' => $query->where('status', '!=', ExaminationDrive::STATUS_DRAFT)->where('cc_status', ExaminationDrive::CC_PENDING),
+            'approved' => $query->where('status', '!=', ExaminationDrive::STATUS_DRAFT)->where('cc_status', ExaminationDrive::CC_APPROVED),
+            'rejected' => $query->where('status', '!=', ExaminationDrive::STATUS_DRAFT)->where('cc_status', ExaminationDrive::CC_REJECTED),
+            default => null,
+        };
 
         return $query->orderByDesc('id');
     }
@@ -171,7 +190,7 @@ class ExaminationDriveDataTable extends DataTable
         $canEdit = $row->status !== ExaminationDrive::STATUS_CLOSED;
         // Shown but disabled (update() / destroy() refuse them too):
         //   Pending at CC - no Edit, no Delete while the Coordinator reviews it;
-        //   Approved by CC - no Edit.
+        //   Approved by CC - no Edit, no Delete.
         $approved = $row->cc_status === ExaminationDrive::CC_APPROVED;
         $pending = $row->cc_status === ExaminationDrive::CC_PENDING;
         $editLock = $approved ? 'Approved by the Course Coordinator - cannot be edited'
@@ -187,7 +206,8 @@ class ExaminationDriveDataTable extends DataTable
         }
 
         $html .= '<button type="button" class="coe-act coe-act--del"'
-            . ($pending ? ' disabled title="Pending at the Course Coordinator - cannot be deleted"' : '')
+            . ($pending ? ' disabled title="Pending at the Course Coordinator - cannot be deleted"'
+                : ($approved ? ' disabled title="Approved by the Course Coordinator - cannot be deleted"' : ''))
             . '><span class="coe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span><span class="coe-act__label">Delete</span></button>'
             . '</div>';
 

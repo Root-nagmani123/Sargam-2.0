@@ -12,7 +12,7 @@
 /* Toolbar */
 .fedc-toolbar       { display:flex;justify-content:flex-end;gap:12px;margin-bottom:18px; }
 .fedc-tool-btn      { display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border:0;border-radius:8px;
-                      background:#fff;color:var(--ds-brand);font-size:15px;font-weight:500;box-shadow:0 1px 2px rgba(16,24,40,.06); }
+                      background:#fff;color:var(--ds-primary);font-size:15px;font-weight:500;box-shadow:0 1px 2px rgba(16,24,40,.06); }
 .fedc-tool-btn:hover{ background:var(--ds-surface-2); }
 /* Info bar */
 .fedc-info-bar      { background:#fff;border-radius:12px;padding:24px 30px;margin-bottom:22px;
@@ -45,10 +45,11 @@
 .fedc-fac-open-btn  { display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:40px;
                       padding:6px 12px;border:1px solid var(--ds-line);border-radius:6px;background:#fff;
                       color:var(--ds-ink);font-size:13px;line-height:1.25;text-align:left; }
-.fedc-fac-open-btn:hover:not(:disabled) { border-color:var(--ds-brand); }
+.fedc-fac-open-btn:hover:not(:disabled) { border-color:var(--ds-primary); }
 .fedc-fac-open-btn::after { content:'';flex-shrink:0;width:10px;height:10px;margin-left:auto;
                       background:no-repeat center/10px url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e"); }
 .fedc-fac-open-btn:disabled { background:var(--ds-surface-2);color:var(--ds-ink);cursor:not-allowed; }
+.fedc-fac-open-btn.is-invalid { border-color:#dc3545; }
 .fedc-fac-text      { display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; }
 .fedc-fac-placeholder { color:var(--ds-ink); }
 /* Row buttons: red minus on every row, blue plus only on the last */
@@ -72,7 +73,7 @@
 .fedc-af-tabs  { display:flex;border:1px solid var(--ds-line);border-radius:8px;overflow:hidden;margin-bottom:18px; }
 .fedc-af-tab   { flex:1;padding:9px 0;text-align:center;font-size:13px;font-weight:600;cursor:pointer;
                  color:var(--ds-ink-muted);background:var(--ds-surface-2); }
-.fedc-af-tab.is-active { background:var(--ds-brand);color:#fff; }
+.fedc-af-tab.is-active { background:var(--ds-primary);color:#fff; }
 /* Single Faculty list */
 .fedc-fac-search input { width:100%;padding:8px 12px;border:1px solid var(--ds-line);border-radius:6px;
                           font-size:13px;margin-bottom:10px; }
@@ -89,15 +90,15 @@
 .fedc-rn-ranges  { display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px; }
 .fedc-rn-range   { background:var(--ds-surface-2);border:1px solid var(--ds-line);border-radius:16px;
                    padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer;color:var(--ds-ink-muted); }
-.fedc-rn-range:hover,.fedc-rn-range.is-active { background:var(--ds-brand);color:#fff;border-color:var(--ds-brand); }
+.fedc-rn-range:hover,.fedc-rn-range.is-active { background:var(--ds-primary);color:#fff;border-color:var(--ds-primary); }
 .fedc-rn-list    { max-height:260px;overflow-y:auto;border:1px solid var(--ds-line);border-radius:6px; }
 .fedc-rn-item    { display:flex;align-items:center;gap:10px;padding:8px 12px;font-size:13px;
                    border-bottom:1px solid var(--ds-line); }
 .fedc-rn-item:last-child { border-bottom:none; }
 .fedc-multi-uniq { width:100%;text-align:left;font-size:12px;padding:4px 8px;border:1px solid var(--ds-line);border-radius:6px;
                    background:#fff;color:var(--ds-ink); }
-.fedc-multi-uniq.has-codes { border-color:var(--ds-brand);color:var(--ds-brand);font-weight:600; }
-.fedc-rn-item input[type=checkbox] { width:16px;height:16px;accent-color:var(--ds-brand);flex-shrink:0; }
+.fedc-multi-uniq.has-codes { border-color:var(--ds-primary);color:var(--ds-primary);font-weight:600; }
+.fedc-rn-item input[type=checkbox] { width:16px;height:16px;accent-color:var(--ds-primary);flex-shrink:0; }
 </style>
 @endpush
 
@@ -399,6 +400,7 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('admin_assets/libs/select2/dist/js/select2.min.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
 <script>
 $(function () {
@@ -416,6 +418,9 @@ $(function () {
     var SUBJECT_MAX  = @json($limits['subject_max']);
     var PASS_FIXED   = @json($passFixed);
     var SUBJECT_PK   = @json($subjectPk);
+    // Drive dates [start, end] (Y-m-d): the bounds of every component's exam range.
+    var DRIVE_RANGE  = @json($driveRange);
+    function fpDate(iso) { var p = iso.split('-'); return new Date(p[0], p[1] - 1, p[2]); }
     var SUBJECT_NAME = @json($subjectTabs[$subjectPk] ?? '');
 
     /* ── Total Weightage live update ──────────────────────────────────── */
@@ -430,6 +435,8 @@ $(function () {
         $('#fedcTotalMax').text(max).toggleClass('is-over', SUBJECT_MAX !== null && max > SUBJECT_MAX);
     }
     $('#fedcMapBody').on('input', '.fedc-weightage, .fedc-max-marks', recalcTotal);
+    // A field flagged by the save check clears as soon as it is filled in.
+    $('#fedcMapBody').on('change input', 'select, input', function () { $(this).removeClass('is-invalid'); });
     recalcTotal();
 
     /* ── Build a new component row ────────────────────────────────────── */
@@ -461,6 +468,9 @@ $(function () {
             mode: 'range',
             dateFormat: 'd/m/Y',
             locale: { rangeSeparator: ' - ' },
+            // The exam range must sit inside the drive's dates (the server checks it too).
+            minDate: DRIVE_RANGE[0] ? fpDate(DRIVE_RANGE[0]) : null,
+            maxDate: DRIVE_RANGE[1] ? fpDate(DRIVE_RANGE[1]) : null,
             defaultDate: [$el.attr('data-start'), $el.attr('data-end')].filter(Boolean),
             parseDate: function (str) { var p = str.split('-'); return p.length === 3 ? new Date(p[0], p[1] - 1, p[2]) : undefined; },
             onClose: function (dates, str, fp) {
@@ -483,7 +493,9 @@ $(function () {
             '<td><button type="button" class="fedc-fac-open-btn" data-faculty="" data-sub="[]" data-codes="{}" data-uniq="{}">' +
             '<span class="fedc-fac-text"><span class="fedc-fac-placeholder">Click to add Faculty &amp; Sub coordinates.</span></span></button></td>' +
             '<td><input type="number" class="form-control fedc-weightage" min="0" max="100" step="0.01" value="0"></td>' +
-            '<td><input type="text" class="form-control fedc-exam-range" readonly placeholder="dd/mm/yyyy - dd/mm/yyyy"></td>' +
+            // A new component's exam range starts as the whole drive (narrowed in the picker).
+            '<td><input type="text" class="form-control fedc-exam-range" readonly placeholder="dd/mm/yyyy - dd/mm/yyyy"' +
+                ' data-start="' + (DRIVE_RANGE[0] || '') + '" data-end="' + (DRIVE_RANGE[1] || '') + '"></td>' +
             '<td><select class="form-select fedc-sel-mode">' + modeOptions(EXAM_MODES[0]) + '</select></td>' +
             '<td><select class="form-select fedc-sel-type">' + typeOptions('') + '</select></td>' +
             '<td><div class="fedc-actions">' +
@@ -527,6 +539,28 @@ $(function () {
 
     /* ── Save ─────────────────────────────────────────────────────────── */
     $('#fedcSaveBtn').on('click', function () {
+        // Every component row complete (the server checks the same): the first gap is
+        // highlighted and named.
+        var missing = null;
+        $('#fedcMapBody .fedc-map-row').each(function () {
+            var $r = $(this), comp = $r.find('.fedc-sel-component').val();
+            var checks = [
+                [$r.find('.fedc-sel-component'), !comp, 'Select the Component'],
+                [$r.find('.fedc-max-marks'), $.trim($r.find('.fedc-max-marks').val()) === '', 'Enter the Max Marks'],
+                [$r.find('.fedc-fac-open-btn'), $r.find('.fedc-source').val() === 'Faculty' && !$r.find('.fedc-fac-open-btn').data('faculty'), 'Assign the Faculty'],
+                [$r.find('.fedc-weightage'), $.trim($r.find('.fedc-weightage').val()) === '', 'Enter the Weightage'],
+                [$r.find('.fedc-exam-range').next('input').length ? $r.find('.fedc-exam-range').next('input') : $r.find('.fedc-exam-range'),
+                    !$r.find('.fedc-exam-range').attr('data-start'), 'Select the Exam Range'],
+                [$r.find('.fedc-sel-mode'), !$r.find('.fedc-sel-mode').val(), 'Select the Exam Mode'],
+                [$r.find('.fedc-sel-type'), !$r.find('.fedc-sel-type').val(), 'Select the Exam Type']
+            ];
+            checks.forEach(function (c) { c[0].toggleClass('is-invalid', c[1]); if (c[1] && !missing) { missing = c[2] + (comp ? ' for ' + comp : '') + '.'; } });
+        });
+        if (missing) {
+            Swal.fire({ icon: 'warning', title: 'Complete every component', text: missing });
+            return;
+        }
+
         // Same limits the server enforces, checked first for a quicker message.
         var weight = sum('.fedc-weightage'), max = sum('.fedc-max-marks');
         if (weight > 100) {
@@ -596,6 +630,7 @@ $(function () {
             $tr.find('.fedc-multi-fac').val(name);
             setMultiCodes($tr, currentUniq[name] || []);
             $multi.append($tr);
+            initMultiFaculty($tr);
         });
 
         bootstrap.Modal.getOrCreateInstance($assignModal[0]).show();
@@ -675,13 +710,18 @@ $(function () {
        saved straight away; a new row has nothing to update yet and waits for Save. */
     var SAVED_COMPONENTS = @json(collect($drive['component_rows'])->pluck('component')->values());
 
-    function persistRowFaculty($btn, names, announce) {
+    /* Short non-blocking confirmation in the corner. */
+    function fedcToast(text) {
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: text, timer: 3000, showConfirmButton: false });
+    }
+
+    // done: optional confirmation text (e.g. roll numbers assigned) instead of the default "Saved".
+    function persistRowFaculty($btn, names, announce, done) {
         var component = $btn.closest('.fedc-map-row').find('.fedc-sel-component').val();
         if (SAVED_COMPONENTS.indexOf(component) === -1) {
-            // The single tab goes on to open the roll-number modal; no second overlay.
-            if (!announce) { return; }
-            Swal.fire({ icon: 'info', title: 'Not saved yet',
-                text: 'This is a new row. Click Save at the bottom to store it with its faculty.' });
+            // A new row: the faculty / roll numbers / codes stay on the row and are stored
+            // with it when Save is clicked, so there is nothing to send now.
+            if (done) { fedcToast(done + ' They will be saved when you click Save.'); }
             return;
         }
         $.ajax({
@@ -692,7 +732,9 @@ $(function () {
                     codes: $.isEmptyObject($btn.data('codes') || {}) ? '' : $btn.data('codes'),
                     unique_codes: $.isEmptyObject($btn.data('uniq') || {}) ? '' : $btn.data('uniq') }
         }).done(function () {
-            if (announce) {
+            if (done) {
+                fedcToast(done + ' Saved.');
+            } else if (announce) {
                 Swal.fire({ icon: 'success', title: 'Saved', text: names.length + ' faculty assigned to ' + component + '.', timer: 1800, showConfirmButton: false });
             }
         }).fail(function (xhr) {
@@ -705,6 +747,7 @@ $(function () {
     function setRowFaculty($btn, names, codes, uniq) {
         // A list not given = keep the existing codes of any name that stays.
         function keep(source) { var kept = {}; names.forEach(function (n) { if (source[n]) { kept[n] = source[n]; } }); return kept; }
+        $btn.removeClass('is-invalid');
         $btn.data('faculty', names[0] || '').data('sub', names.slice(1))
             .data('codes', keep(codes || $btn.data('codes') || {}))
             .data('uniq', keep(uniq || $btn.data('uniq') || {}));
@@ -721,7 +764,7 @@ $(function () {
     function buildMultiRow() {
         return '<tr class="fedc-multi-row">' +
             '<td><select class="form-select form-select-sm fedc-multi-fac"><option value="">Faculty</option>' +
-            FACULTY.map(function (f) { return '<option>' + f + '</option>'; }).join('') + '</select></td>' +
+            FACULTY.map(function (f) { return '<option value="' + esc(f) + '">' + esc(f) + '</option>'; }).join('') + '</select></td>' +
             '<td><button type="button" class="fedc-multi-uniq">Select codes</button></td>' +
             '<td><button type="button" class="fedc-row-del fedc-multi-del me-1"><i class="bi bi-dash"></i></button>' +
             '<button type="button" class="fedc-row-add fedc-multi-add"><i class="bi bi-plus"></i></button></td></tr>';
@@ -730,8 +773,23 @@ $(function () {
         if ($('#fedcMultiBody .fedc-multi-row').length > 1) { $(this).closest('.fedc-multi-row').remove(); }
     });
     $('#fedcMultiBody').on('click', '.fedc-multi-add', function () {
-        $(this).closest('.fedc-multi-row').after(buildMultiRow());
+        var $tr = $(buildMultiRow());
+        $(this).closest('.fedc-multi-row').after($tr);
+        initMultiFaculty($tr);
     });
+
+    /* Searchable faculty picker on a Multi row (select2 inside the Assign Faculty window).
+       A name already picked on another row is disabled, so each faculty appears once;
+       changing the faculty clears that row's codes (they belonged to the previous name). */
+    function initMultiFaculty($tr) {
+        var $sel = $tr.find('.fedc-multi-fac');
+        if (!$.fn.select2) { return; }
+        $sel.select2({ dropdownParent: $assignModal, width: '100%', placeholder: 'Search faculty', allowClear: true });
+        $sel.on('select2:opening', function () {
+            var taken = $('#fedcMultiBody .fedc-multi-fac').not($sel).map(function () { return $(this).val(); }).get().filter(Boolean);
+            $sel.find('option').each(function () { this.disabled = this.value !== '' && taken.indexOf(this.value) !== -1; });
+        }).on('change', function () { setMultiCodes($tr, []); });
+    }
 
     /* A Multi row's Unique Participant Codes live on the row until Assign Faculty. */
     function setMultiCodes($tr, picked) {
@@ -753,7 +811,13 @@ $(function () {
             items: UNIQUE_CODES.map(function (c) { return { value: c, label: '<strong>' + esc(c) + '</strong>' }; }),
             picked: $tr.data('uniq') || [],
             empty: 'No Unique Participant Codes have been generated for this drive\'s course yet (COE › Master Data › Unique Participant Code).',
-            onAssign: function (picked) { setMultiCodes($tr, picked); },
+            onAssign: function (picked) {
+                setMultiCodes($tr, picked);
+                // Unique codes are applied to the row with Assign Faculty.
+                fedcToast(picked.length
+                    ? picked.length + ' unique code' + (picked.length === 1 ? '' : 's') + ' selected for ' + name + '. Click Assign Faculty to apply.'
+                    : 'Unique codes cleared for ' + name + '.');
+            },
             onClose: function () { bootstrap.Modal.getOrCreateInstance($assignModal[0]).show(); }
         });
     });
@@ -822,7 +886,10 @@ $(function () {
                 if (picked.length) { codes[name] = picked; } else { delete codes[name]; }
                 var names = [$btn.data('faculty')].concat($btn.data('sub') || []).filter(Boolean);
                 setRowFaculty($btn, names, codes);
-                persistRowFaculty($btn, names, true);
+                var component = $btn.closest('.fedc-map-row').find('.fedc-sel-component').val();
+                persistRowFaculty($btn, names, true, picked.length
+                    ? picked.length + ' roll number' + (picked.length === 1 ? '' : 's') + ' assigned to ' + name + (component ? ' for ' + component : '') + '.'
+                    : 'Roll numbers cleared for ' + name + '.');
             }
         });
     }

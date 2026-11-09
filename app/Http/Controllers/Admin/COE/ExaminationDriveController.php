@@ -65,6 +65,8 @@ class ExaminationDriveController extends Controller
             // Create / Edit modal: only active types and terms can be chosen.
             'activeTerms'     => $this->termNames(true),
             'activeExamTypes' => $this->examTypeNames(true),
+            // Start / End Date limits per course in the Create / Edit modal.
+            'courseDates' => $this->courseDatesByName(),
             'statuses'  => ExaminationDrive::STATUSES,
             'subjects'  => $this->subjectNames(),
             'faculty'   => $this->facultyNames(),
@@ -97,6 +99,7 @@ class ExaminationDriveController extends Controller
         $examTypePk = ExaminationTypeMaster::where('exam_type_name', $data['exam_type'])->value('pk');
         $termPk     = TermMaster::where('term_name', $data['term'])->value('pk');
         $coursePk   = CourseMaster::where('course_name', $data['course'])->value('pk');
+        $this->assertWithinCourse((int) $coursePk, $data['start_date'], $data['end_date'], 'start_date', 'Drive dates');
         $statusCode = array_search($data['status'], ExaminationDrive::STATUSES, true);
 
         $drive = DB::transaction(function () use ($data, $examTypePk, $termPk, $coursePk, $statusCode) {
@@ -187,6 +190,7 @@ class ExaminationDriveController extends Controller
         $examTypePk = ExaminationTypeMaster::where('exam_type_name', $data['exam_type'])->value('pk');
         $termPk     = TermMaster::where('term_name', $data['term'])->value('pk');
         $coursePk   = CourseMaster::where('course_name', $data['course'])->value('pk');
+        $this->assertWithinCourse((int) $coursePk, $data['start_date'], $data['end_date'], 'start_date', 'Drive dates');
         $statusCode = array_search($data['status'], ExaminationDrive::STATUSES, true);
 
         DB::transaction(function () use ($drive, $data, $examTypePk, $termPk, $coursePk, $statusCode) {
@@ -297,6 +301,7 @@ class ExaminationDriveController extends Controller
     {
         $drive = ExaminationDrive::findOrFail($id);
         abort_if($drive->cc_status === ExaminationDrive::CC_PENDING, 422, 'This drive is pending at the Course Coordinator and cannot be deleted.');
+        abort_if($drive->cc_status === ExaminationDrive::CC_APPROVED, 422, 'This drive has been approved by the Course Coordinator and cannot be deleted.');
         $drive->delete();
 
         return response()->json(['message' => 'Examination drive deleted.']);
@@ -358,7 +363,7 @@ class ExaminationDriveController extends Controller
             filled($request->query('course_filter')) ? 'Course: ' . $request->query('course_filter') : null,
             filled($request->query('term_filter')) ? 'Term: ' . $request->query('term_filter') : null,
             filled($request->query('type_filter')) ? 'Examination Type: ' . $request->query('type_filter') : null,
-            filled($request->query('status_filter')) ? 'Status: ' . (ExaminationDriveFacultyDataTable::STATUS_FILTERS[$request->query('status_filter')] ?? '') : null,
+            filled($request->query('status_filter')) ? 'Status: ' . (ExaminationDriveDataTable::STATUS_FILTERS[$request->query('status_filter')] ?? '') : null,
             $term !== '' ? 'Search: ' . $term : null,
         ]));
 
@@ -384,6 +389,46 @@ class ExaminationDriveController extends Controller
                 $fail('Add at least one Subject and Faculty in Subject and Faculty Mapping.');
             }
         };
+    }
+
+    /**
+     * A course's dates as [start, end] (Y-m-d or null): course_master.start_year
+     * holds the start date (despite its name; CourseController reads it so) and
+     * end_date the end.
+     *
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function courseDateRange(int $coursePk): array
+    {
+        $course = CourseMaster::where('pk', $coursePk)->first(['start_year', 'end_date']);
+        $date = fn ($v) => $v ? \Carbon\Carbon::parse($v)->toDateString() : null;
+
+        return [$date($course->start_year ?? null), $date($course->end_date ?? null)];
+    }
+
+    /** 422 on $field unless $start..$end sits inside the course's dates (a missing course date is not checked). */
+    private function assertWithinCourse(int $coursePk, string $start, string $end, string $field, string $what): void
+    {
+        [$from, $to] = $this->courseDateRange($coursePk);
+        $start = \Carbon\Carbon::parse($start)->toDateString();
+        $end = \Carbon\Carbon::parse($end)->toDateString();
+
+        if (($from && $start < $from) || ($to && $end > $to)) {
+            $show = fn (?string $d) => $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '…';
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                $field => "{$what} must be within the course dates ({$show($from)} to {$show($to)}).",
+            ]);
+        }
+    }
+
+    /** Course name => [start, end] for the Create / Edit modal's date limits. */
+    private function courseDatesByName(): array
+    {
+        return CourseMaster::get(['course_name', 'start_year', 'end_date'])
+            ->mapWithKeys(fn ($c) => [$c->course_name => [
+                $c->start_year ? \Carbon\Carbon::parse($c->start_year)->toDateString() : null,
+                $c->end_date ? \Carbon\Carbon::parse($c->end_date)->toDateString() : null,
+            ]])->all();
     }
 
     /** Subject/Faculty mapping rows for the Edit modal. */
@@ -431,12 +476,15 @@ class ExaminationDriveController extends Controller
             // Ignored: every row's passing marks come from Service Passing Marks.
             'rows.*.passing_marks'  => ['nullable', 'numeric', 'min:0'],
             'rows.*.source'         => ['required', 'string', Rule::in(self::SOURCES)],
-            'rows.*.faculty'        => ['nullable', 'string', 'max:150'],
+            // A Faculty-evaluated component needs its faculty.
+            'rows.*.faculty'        => ['required_if:rows.*.source,Faculty', 'nullable', 'string', 'max:150'],
             'rows.*.weightage'      => ['required', 'numeric', 'min:0', 'max:100'],
-            'rows.*.exam_date'      => ['nullable', 'date'],
-            'rows.*.exam_end_date'  => ['nullable', 'date', 'after_or_equal:rows.*.exam_date'],
-            'rows.*.exam_mode'      => ['nullable', 'string', Rule::in(self::EXAM_MODES)],
-            'rows.*.exam_type'      => ['nullable', 'string', Rule::in(self::COMPONENT_EXAM_TYPES)],
+            // Required when the page sends them (faculty setup sends all four; the admin
+            // Map Faculty page sends no Exam Type / range end, which keep their stored values).
+            'rows.*.exam_date'      => ['sometimes', 'required', 'date'],
+            'rows.*.exam_end_date'  => ['sometimes', 'required', 'date', 'after_or_equal:rows.*.exam_date'],
+            'rows.*.exam_mode'      => ['sometimes', 'required', 'string', Rule::in(self::EXAM_MODES)],
+            'rows.*.exam_type'      => ['sometimes', 'required', 'string', Rule::in(self::COMPONENT_EXAM_TYPES)],
             // JSON-encoded string, not an array: jQuery drops an empty array from the
             // request, so "[]" (cleared) would be indistinguishable from "not sent".
             'rows.*.sub_faculty'    => ['nullable', 'string', 'json'],
@@ -446,6 +494,11 @@ class ExaminationDriveController extends Controller
             'rows.*.unique_codes'   => ['nullable', 'string', 'json'],
         ], [
             'rows.*.exam_end_date.after_or_equal' => 'An exam range cannot end before it starts.',
+            'rows.*.faculty.required_if' => 'Assign the faculty for every component evaluated through Faculty.',
+            'rows.*.exam_date.required' => 'Select the Exam Range for every component.',
+            'rows.*.exam_end_date.required' => 'Select the Exam Range for every component.',
+            'rows.*.exam_mode.required' => 'Select the Exam Mode for every component.',
+            'rows.*.exam_type.required' => 'Select the Exam Type for every component.',
         ]);
 
         $subjectPk = (int) $data['subject_master_pk'];
@@ -454,6 +507,17 @@ class ExaminationDriveController extends Controller
         }
         if ($locked = $this->facultyLockMessage($drive)) {
             return response()->json(['message' => $locked], 422);
+        }
+        // Each component's exam range must sit inside the drive's dates.
+        $from = optional($drive->start_date)->toDateString();
+        $to = optional($drive->end_date)->toDateString();
+        foreach ($data['rows'] ?? [] as $row) {
+            $start = $row['exam_date'] ?? null;
+            $end = $row['exam_end_date'] ?? $start;
+            if ($start && (($from && $start < $from) || ($to && $end > $to))) {
+                return response()->json(['message' => "The exam range of {$row['component']} must be within the drive dates ("
+                    . $drive->start_date->format('d-m-Y') . ' to ' . $drive->end_date->format('d-m-Y') . ').'], 422);
+            }
         }
         // Pending at CC: what was submitted stays; faculty may correct it, not remove it.
         if ($this->isMappedFaculty($drive) && $drive->cc_status === ExaminationDrive::CC_PENDING) {
@@ -771,6 +835,7 @@ class ExaminationDriveController extends Controller
         ], [
             'proposed_end_date.after_or_equal' => 'The proposed end exam date cannot be before the proposed start exam date.',
         ]);
+        $this->assertWithinCourse((int) $drive->course_master_pk, $data['proposed_start_date'], $data['proposed_end_date'], 'proposed_start_date', 'The proposed exam dates');
 
         // The CC's confirmed dates become the drive's dates everywhere (COE,
         // admin and faculty lists); proposed_* keep a record of what they set.
@@ -851,6 +916,50 @@ class ExaminationDriveController extends Controller
     }
 
     /** The drive, if the logged-in user is the CC of its course (or Super Admin) and it is pending at CC. */
+    /**
+     * Full drive details for the CC's Approve window: drive info, Subject -> Faculty
+     * mapping and every component set up by the faculty. Only the CC of the
+     * drive's course (or Super Admin) may read it.
+     */
+    public function ccDetails(int $id): JsonResponse
+    {
+        $drive = ExaminationDrive::with(['facultyMaps.subject', 'facultyMaps.faculty'])->findOrFail($id);
+        $user = auth()->user();
+        abort_unless(
+            $user && ($user->hasRole('Super Admin') || app(CourseCoordinatorService::class)->isCoordinatorOf($user, (int) $drive->course_master_pk)),
+            403, 'You are not the Course Coordinator of this drive\'s course.'
+        );
+
+        $view = $this->driveViewModel($drive);
+
+        return response()->json([
+            'name'       => $view['name'],
+            'course'     => $view['course'],
+            'service'    => $view['service_name'] ?: $view['service'],
+            'exam_type'  => $view['exam_type'],
+            'term'       => $view['term'],
+            'session'    => $view['session'],
+            'start_date' => $view['start_date'],
+            'end_date'   => $view['end_date'],
+            'status'     => $view['status'],
+            'mapping'    => $drive->facultyMaps->map(fn ($map) => [
+                'subject' => trim((string) ($map->subject->subject_name ?? '')) ?: '-',
+                'faculty' => trim((string) ($map->faculty->full_name ?? '')) ?: '-',
+            ])->values(),
+            'components' => collect($view['component_rows'])->map(fn ($row) => [
+                'subject'       => $row['subject'],
+                'component'     => $row['component'],
+                'max_marks'     => $row['max_marks'],
+                'passing_marks' => $row['passing_marks'],
+                'weightage'     => $row['weightage'],
+                'exam_date'     => $row['exam_date'] . ' – ' . $row['exam_end_date'],
+                'exam_mode'     => $row['exam_mode'],
+                'exam_type'     => $row['exam_type'] ?: '-',
+                'faculty'       => implode(', ', $row['sub_coordinators']) ?: $row['faculty'],
+            ])->values(),
+        ]);
+    }
+
     private function pendingDriveForCoordinator(int $id): ExaminationDrive
     {
         $drive = ExaminationDrive::findOrFail($id);
@@ -969,6 +1078,8 @@ class ExaminationDriveController extends Controller
             // Select Roll Number / Select Unique Codes list the course's generated
             // roll numbers and Unique Participant Codes (COE › Roll Numbers / Unique Participant Code).
             'rollNumbers' => $this->courseRollNumbers($drive),
+            // Exam Range picker limits: the drive's own dates.
+            'driveRange'  => [optional($drive->start_date)->toDateString(), optional($drive->end_date)->toDateString()],
             'uniqueCodes' => $this->courseUniqueCodes($drive),
             'limits'      => $this->marksLimits($drive, $subjectPk),
             // Approved: read-only; pending at CC: submitted rows cannot be removed (faculty only).
