@@ -1510,11 +1510,17 @@ class ReportController extends Controller
                     ->where('sm.form_id', $scopedForm->id)
                     ->select(
                         'sm.user_id',
+                        // Name from the trainee's own records only. The dynamic form leaves
+                        // full_name empty and stores first/middle/last on s1, so those parts
+                        // come before any fallback. user_credentials is NOT used: uc is joined
+                        // on uc.pk = sm.user_id, and for a trainee still on a roster id that pk
+                        // belongs to a different person, which printed a stranger's name here.
+                        // The last resort is the login username, resolved roster-safe below.
                         DB::raw("COALESCE(
                             NULLIF(TRIM(sm.full_name),''),
                             NULLIF(TRIM(s1.full_name),''),
-                            NULLIF(TRIM(CONCAT(uc.first_name,' ',uc.last_name)),''),
-                            NULLIF(TRIM(uc.user_name),''),
+                            NULLIF(TRIM(CONCAT_WS(' ', NULLIF(TRIM(s1.first_name),''), NULLIF(TRIM(s1.middle_name),''), NULLIF(TRIM(s1.last_name),''))),''),
+                            NULLIF(TRIM(".fc_report_login_username_sql('student_masters', 'sm')."),''),
                             '—'
                         ) as full_name"),
                         DB::raw("{$serviceExpr} as service_code"),
@@ -2954,6 +2960,9 @@ class ReportController extends Controller
 
         $studentsQuery = DB::table('student_masters as sm');
         fc_report_apply_tracker_user_resolution($studentsQuery, 'student_masters', 'sm');
+        // fc_report_login_username_sql() checks s1.mobile_no / s1.email against the roster,
+        // so s1 must be joined — without it this query failed with "Unknown column s1.mobile_no".
+        fc_report_join_student_master_firsts($studentsQuery, 'student_masters', 'sm');
 
         $studentsQuery->where('sm.form_id', $scopedForm->id)
             ->select('sm.user_id')
