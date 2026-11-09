@@ -47,6 +47,15 @@ class QuestionPaperLogger
 
     public const PRINTED = 'Printed';
 
+    /** The editor covered the paper: the window was left or PrintScreen pressed - a possible screen capture. */
+    public const HIDDEN = 'Paper Hidden';
+
+    /** Why the editor covered the paper (its report) → the log's detail. */
+    public const HIDDEN_REASONS = [
+        'left' => 'Window left',
+        'printscreen' => 'PrintScreen key',
+    ];
+
     /** Action → badge colour key (coe-log-badge--*), in the Status filter's order. */
     public const ACTIONS = [
         self::VIEWED => 'blue',
@@ -57,6 +66,7 @@ class QuestionPaperLogger
         self::FROZEN => 'teal',
         self::UNFROZEN => 'red',
         self::PRINTED => 'amber',
+        self::HIDDEN => 'red',
         self::DELETED => 'red',
     ];
 

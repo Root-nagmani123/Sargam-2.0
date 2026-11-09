@@ -7,10 +7,15 @@ use App\Models\ExaminationDrive;
 use App\Models\ExaminationDriveFacultyMap;
 use App\Models\ExaminationTypeMaster;
 use App\Models\FacultyMaster;
+use App\Models\Notification;
 use App\Models\QuestionPaper;
+use App\Models\QuestionPaperLog;
 use App\Models\SubjectMaster;
 use App\Models\TermMaster;
 use App\Models\User;
+use App\Services\COE\QuestionPaperNotifier;
+use App\Services\COE\RajbhashaPaperService;
+use App\Services\NotificationService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Log\Events\MessageLogged;
@@ -138,6 +143,56 @@ class FacultyQuestionPaperUploadTest extends TestCase
             '/var WATERMARK = ".*? \\\\u00b7 ID '.$this->faculty->getAuthIdentifier().' \\\\u00b7 /u',
             $html
         );
+        $this->assertStringContainsString('var HIDDEN_URL = "'.str_replace('/', '\/', route('admin.coe.faculty-question-paper.hidden', $this->map->id)).'"', $html);
+    }
+
+    public function test_covering_the_paper_is_logged_for_a_new_and_an_added_paper(): void
+    {
+        $url = route('admin.coe.faculty-question-paper.hidden', $this->map->id);
+
+        // A new paper has no row yet: its code goes in the detail.
+        $this->actingAs($this->faculty)->post($url, ['reason' => 'left'])->assertNoContent();
+        $log = QuestionPaperLog::latest('id')->first();
+        $this->assertSame([null, 'Paper Hidden', 'Faculty'], [$log->question_paper_id, $log->action, $log->role]);
+        $this->assertStringEndsWith(' · Window left', $log->detail);
+
+        $this->write()->assertOk();
+        $this->actingAs($this->faculty)->post($url, ['reason' => 'printscreen'])->assertNoContent();
+        $log = QuestionPaperLog::latest('id')->first();
+        $this->assertSame([$this->paper()->id, 'PrintScreen key'], [$log->question_paper_id, $log->detail]);
+
+        $this->actingAs($this->faculty)->postJson($url, ['reason' => 'anything'])->assertUnprocessable();
+        $this->actingAs($this->nonFaculty())->post($url, ['reason' => 'left'])->assertForbidden();
+    }
+
+    public function test_upload_rings_rajbhashas_bell_new_then_updated(): void
+    {
+        $rajbhasha = $this->nonFaculty();
+        $rajbhasha->givePermissionTo(RajbhashaPaperService::PERMISSION);   // rolled back with the test
+
+        $this->write()->assertOk();
+        $this->upload(['paper_html' => '<p>Q1 Explain the Constitution (revised).</p>'])->assertOk();
+
+        $this->assertSame([
+            ['RajbhashaQuestionPaper', 'Question Paper for Translation', 'A question paper for '.$this->paper()->paper_name.' ('.$this->code().') has been submitted for Hindi translation.'],
+            ['RajbhashaQuestionPaper', 'Question Paper Updated', 'The question paper for '.$this->paper()->paper_name.' ('.$this->code().') has been updated (V2) and is ready for Hindi translation.'],
+        ], Notification::where('receiver_user_id', $rajbhasha->user_id)
+            ->where('type', QuestionPaperNotifier::TYPE)->where('reference_pk', $this->paper()->id)
+            ->orderBy('pk')->get()->map(fn ($n) => [$n->module_name, $n->title, $n->message])->all());
+
+        // The faculty is not told of their own upload.
+        $this->assertFalse(Notification::where('receiver_user_id', $this->faculty->user_id)
+            ->where('type', QuestionPaperNotifier::TYPE)->exists());
+    }
+
+    public function test_a_failed_notification_never_blocks_the_upload(): void
+    {
+        $this->nonFaculty()->givePermissionTo(RajbhashaPaperService::PERMISSION);   // someone to notify
+        $this->mock(NotificationService::class)
+            ->shouldReceive('createMultiple')->once()->andThrow(new \RuntimeException('bell down'));
+
+        $this->write()->assertOk()->assertJson(['message' => 'Question paper uploaded and sent for translation.']);
+        $this->assertSame(QuestionPaper::STATUS_PENDING_RAJBHASHA, $this->paper()->status);
     }
 
     public function test_editor_paper_is_stored_as_v1_and_goes_straight_to_rajbhasha(): void

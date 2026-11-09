@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\COE\FreezeQuestionPaperRequest;
 use App\Http\Requests\Admin\COE\UploadQuestionPaperRequest;
 use App\Services\COE\QuestionPaperLogger;
+use App\Services\COE\QuestionPaperNotifier;
 use App\Services\COE\QuestionPaperService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 /**
  * COE → Question Paper Management → My Question Paper, as the FACULTY sees it
@@ -51,6 +53,7 @@ class FacultyQuestionPaperController extends Controller
     public function __construct(
         private QuestionPaperService $papers,
         private QuestionPaperLogger $log,
+        private QuestionPaperNotifier $notify,
     ) {
     }
 
@@ -91,8 +94,29 @@ class FacultyQuestionPaperController extends Controller
             'templates' => self::TEMPLATES,
             'listUrl' => route('admin.coe.faculty-question-paper.index'),
             'saveUrl' => route('admin.coe.faculty-question-paper.upload', $paper),
+            'hiddenUrl' => route('admin.coe.faculty-question-paper.hidden', $paper),
             'watermark' => $this->paperStamp($request),
         ]);
+    }
+
+    /**
+     * The editor covered the paper (window left / PrintScreen) - logged, since a
+     * capture tool outside the browser takes its shot just before. A new paper
+     * has no row yet, so its code goes in the detail.
+     */
+    public function hidden(Request $request, int $paper): Response
+    {
+        $reason = $request->validate(['reason' => 'required|in:'.implode(',', array_keys(QuestionPaperLogger::HIDDEN_REASONS))])['reason'];
+        $facultyPk = $this->facultyPk();
+        $row = $this->papers->findForFaculty($facultyPk, $paper);
+        abort_if($row === null, 404);
+
+        $qp = $this->papers->paperFor($facultyPk, $paper);
+        $detail = QuestionPaperLogger::HIDDEN_REASONS[$reason];
+        $this->log->record(QuestionPaperLogger::ROLE_FACULTY, QuestionPaperLogger::MODULE_PAPER, QuestionPaperLogger::HIDDEN,
+            $qp, $qp ? $detail : $row['code'].' · '.$detail);
+
+        return response()->noContent();
     }
 
     /**
@@ -104,6 +128,7 @@ class FacultyQuestionPaperController extends Controller
         $qp = $this->papers->saveOriginalPaper($this->facultyPk(), $paper, $request->input('paper_html'));
         $this->log->record(QuestionPaperLogger::ROLE_FACULTY, QuestionPaperLogger::MODULE_PAPER,
             $qp->version > 1 ? QuestionPaperLogger::UPDATED : QuestionPaperLogger::CREATED, $qp, 'V'.$qp->version);
+        $this->notify->sentForTranslation($qp);
 
         return response()->json(['message' => $qp->version > 1
             ? 'Question paper updated (V'.$qp->version.') and sent to Rajbhasha for translation.'
@@ -123,6 +148,7 @@ class FacultyQuestionPaperController extends Controller
     {
         $qp = $this->papers->freeze($this->facultyPk(), $paper, $request->input('otp'));
         $this->log->record(QuestionPaperLogger::ROLE_FACULTY, QuestionPaperLogger::MODULE_PAPER, QuestionPaperLogger::FROZEN, $qp, 'V'.$qp->version);
+        $this->notify->published($qp);
 
         return response()->json(['message' => 'Question paper verified and published.']);
     }

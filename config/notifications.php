@@ -229,6 +229,22 @@ return [
         ],
     ],
 
+    // COE question papers (App\Services\COE\QuestionPaperNotifier): each receiver's own list.
+    'coe_question_paper' => [
+        'FacultyQuestionPaper' => [
+            'route' => 'admin.coe.faculty-question-paper.index',
+            'params' => [],
+        ],
+        'RajbhashaQuestionPaper' => [
+            'route' => 'admin.coe.my-question-paper.index',
+            'params' => [],
+        ],
+        'CoeQuestionPaper' => [
+            'route' => 'admin.coe.question-paper.index',
+            'params' => [],
+        ],
+    ],
+
     // Default fallback route
     'default' => [
         'route' => 'admin.dashboard',

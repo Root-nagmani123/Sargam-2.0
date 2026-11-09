@@ -2021,6 +2021,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
             ->whereNumber('paper')->name('my-question-paper.translate');
         Route::post('my-question-paper/{paper}/translation', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'storeTranslation'])
             ->whereNumber('paper')->name('my-question-paper.translation.store');
+        Route::post('my-question-paper/{paper}/hidden', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'hidden'])
+            ->whereNumber('paper')->middleware('throttle:60,1')->name('my-question-paper.hidden');
         Route::delete('my-question-paper/{paper}/translation', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'destroyTranslation'])
             ->whereNumber('paper')->name('my-question-paper.translation.destroy');
         Route::post('my-question-paper/{paper}/send-for-approval', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'sendForApproval'])
@@ -2055,6 +2057,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
             ->whereNumber('paper')->name('faculty-question-paper.create');
         Route::post('faculty-question-paper/{paper}/upload', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'upload'])
             ->whereNumber('paper')->name('faculty-question-paper.upload');
+        Route::post('faculty-question-paper/{paper}/hidden', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'hidden'])
+            ->whereNumber('paper')->middleware('throttle:60,1')->name('faculty-question-paper.hidden');
         Route::get('faculty-question-paper/{paper}/original', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'original'])
             ->whereNumber('paper')->name('faculty-question-paper.original');
         Route::get('faculty-question-paper/{paper}/translated', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'translated'])

@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin\COE;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\COE\UploadTranslationRequest;
 use App\Services\COE\QuestionPaperLogger;
+use App\Services\COE\QuestionPaperNotifier;
 use App\Services\COE\RajbhashaPaperService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 /**
  * COE → Question Paper Management → My Question Paper (Rajbhasha).
@@ -41,6 +43,7 @@ class MyQuestionPaperController extends Controller
     public function __construct(
         private RajbhashaPaperService $papers,
         private QuestionPaperLogger $log,
+        private QuestionPaperNotifier $notify,
     ) {
     }
 
@@ -102,8 +105,20 @@ class MyQuestionPaperController extends Controller
             'templates' => FacultyQuestionPaperController::TEMPLATES,
             'listUrl' => route('admin.coe.my-question-paper.index'),
             'saveUrl' => route('admin.coe.my-question-paper.translation.store', $paper),
+            'hiddenUrl' => route('admin.coe.my-question-paper.hidden', $paper),
             'watermark' => $this->paperStamp($request),
         ]);
+    }
+
+    /** The editor covered the paper (window left / PrintScreen) - logged, as on the faculty's editor. */
+    public function hidden(Request $request, int $paper): Response
+    {
+        $reason = $request->validate(['reason' => 'required|in:'.implode(',', array_keys(QuestionPaperLogger::HIDDEN_REASONS))])['reason'];
+        $qp = $this->papers->find($paper);
+        $this->log->record(QuestionPaperLogger::ROLE_RAJBHASHA, QuestionPaperLogger::MODULE_TRANSLATION, QuestionPaperLogger::HIDDEN,
+            $qp, QuestionPaperLogger::HIDDEN_REASONS[$reason]);
+
+        return response()->noContent();
     }
 
     /** Upload Paper on Translate Question Paper → Translated (not yet sent). */
@@ -133,6 +148,7 @@ class MyQuestionPaperController extends Controller
     {
         $qp = $this->papers->sendForApproval($paper);
         $this->log->record(QuestionPaperLogger::ROLE_RAJBHASHA, QuestionPaperLogger::MODULE_TRANSLATION, QuestionPaperLogger::SENT, $qp, 'of V'.$qp->version);
+        $this->notify->translationReady($qp);
 
         return response()->json(['message' => 'Translated question paper sent for approval.']);
     }

@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin\COE;
 
 use App\Http\Controllers\Controller;
+use App\Models\QuestionPaper;
 use App\Services\COE\AdminPaperService;
 use App\Services\COE\QuestionPaperLogger;
+use App\Services\COE\QuestionPaperNotifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -42,6 +44,7 @@ class QuestionPaperListController extends Controller
     public function __construct(
         private AdminPaperService $papers,
         private QuestionPaperLogger $log,
+        private QuestionPaperNotifier $notify,
     ) {
     }
 
@@ -89,6 +92,7 @@ class QuestionPaperListController extends Controller
     {
         $qp = $this->papers->unfreeze($paper);
         $this->log->record(QuestionPaperLogger::ROLE_COE, QuestionPaperLogger::MODULE_PAPER, QuestionPaperLogger::UNFROZEN, $qp, 'V'.$qp->version);
+        $this->notify->reopened($qp);
 
         return response()->json(['message' => 'Question paper unfrozen. It is back with the faculty for verification.']);
     }
@@ -98,6 +102,10 @@ class QuestionPaperListController extends Controller
     {
         $this->papers->delete($paper);
         $this->log->record(QuestionPaperLogger::ROLE_COE, QuestionPaperLogger::MODULE_PAPER, QuestionPaperLogger::DELETED, $paper);
+        // Soft-deleted, so still there to tell the faculty and Rajbhasha which paper went.
+        if ($deleted = QuestionPaper::withTrashed()->find($paper)) {
+            $this->notify->deleted($deleted);
+        }
 
         return response()->json(['message' => 'Question paper deleted.']);
     }
