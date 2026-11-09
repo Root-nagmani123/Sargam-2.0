@@ -7,10 +7,13 @@ use App\Models\ExaminationDrive;
 use App\Models\ExaminationDriveFacultyMap;
 use App\Models\ExaminationTypeMaster;
 use App\Models\FacultyMaster;
+use App\Models\Notification;
 use App\Models\QuestionPaper;
 use App\Models\SubjectMaster;
 use App\Models\TermMaster;
 use App\Models\User;
+use App\Services\COE\QuestionPaperNotifier;
+use App\Services\COE\RajbhashaPaperService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -186,6 +189,31 @@ class AdminQuestionPaperTest extends TestCase
         $this->actingAs($this->admin)->postJson(route('admin.coe.question-paper.unfreeze', $paper->id))->assertStatus(422);
     }
 
+    public function test_unfreeze_and_delete_ring_the_faculty_and_rajbhasha(): void
+    {
+        $rajbhasha = $this->outsider;
+        $rajbhasha->givePermissionTo(RajbhashaPaperService::PERMISSION);   // rolled back with the test
+        $paper = $this->paperFor(3);
+
+        $this->actingAs($this->admin)->postJson(route('admin.coe.question-paper.unfreeze', $paper->id))->assertOk();
+        $this->actingAs($this->admin)->deleteJson(route('admin.coe.question-paper.destroy', $paper->id))->assertOk();
+
+        $subject = $paper->paper_name.' ('.$paper->paper_code.')';
+        $expected = fn (string $module) => [
+            [$module, 'Question Paper Reopened', 'The published question paper for '.$subject.' has been reopened and is pending verification.'],
+            [$module, 'Question Paper Deleted', 'The question paper for '.$subject.' has been deleted. Contact COE if this was unexpected.'],
+        ];
+        $this->assertSame($expected(QuestionPaperNotifier::MODULE_RAJBHASHA), $this->bell($rajbhasha->user_id, $paper->id));
+
+        // The faculty, when their login is linked (employee_master_pk = user_credentials.user_id).
+        $facultyUserId = (int) FacultyMaster::whereKey($this->facultyPk)->value('employee_master_pk');
+        if (User::where('user_id', $facultyUserId)->exists()) {
+            $this->assertSame($expected(QuestionPaperNotifier::MODULE_FACULTY), $this->bell($facultyUserId, $paper->id));
+        }
+        // The admin is not told of their own action.
+        $this->assertSame([], $this->bell($this->admin->user_id, $paper->id));
+    }
+
     public function test_delete_removes_the_paper_and_files_and_the_faculty_starts_over(): void
     {
         $paper = $this->paperFor(3);
@@ -230,6 +258,14 @@ class AdminQuestionPaperTest extends TestCase
             'version' => 1,
             'status' => $status,
         ]);
+    }
+
+    /** [module, title, message] of the question paper bell notifications user $userId got for $paperId. */
+    private function bell(int $userId, int $paperId): array
+    {
+        return Notification::where('receiver_user_id', $userId)
+            ->where('type', QuestionPaperNotifier::TYPE)->where('reference_pk', $paperId)
+            ->orderBy('pk')->get()->map(fn ($n) => [$n->module_name, $n->title, $n->message])->all();
     }
 
     /** The badge key on the list row of subject $i (the page lists every drive, not just this one). */

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\COE\FreezeQuestionPaperRequest;
 use App\Http\Requests\Admin\COE\UploadQuestionPaperRequest;
 use App\Services\COE\QuestionPaperLogger;
+use App\Services\COE\QuestionPaperNotifier;
 use App\Services\COE\QuestionPaperService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -52,6 +53,7 @@ class FacultyQuestionPaperController extends Controller
     public function __construct(
         private QuestionPaperService $papers,
         private QuestionPaperLogger $log,
+        private QuestionPaperNotifier $notify,
     ) {
     }
 
@@ -126,6 +128,7 @@ class FacultyQuestionPaperController extends Controller
         $qp = $this->papers->saveOriginalPaper($this->facultyPk(), $paper, $request->input('paper_html'));
         $this->log->record(QuestionPaperLogger::ROLE_FACULTY, QuestionPaperLogger::MODULE_PAPER,
             $qp->version > 1 ? QuestionPaperLogger::UPDATED : QuestionPaperLogger::CREATED, $qp, 'V'.$qp->version);
+        $this->notify->sentForTranslation($qp);
 
         return response()->json(['message' => $qp->version > 1
             ? 'Question paper updated (V'.$qp->version.') and sent to Rajbhasha for translation.'
@@ -145,6 +148,7 @@ class FacultyQuestionPaperController extends Controller
     {
         $qp = $this->papers->freeze($this->facultyPk(), $paper, $request->input('otp'));
         $this->log->record(QuestionPaperLogger::ROLE_FACULTY, QuestionPaperLogger::MODULE_PAPER, QuestionPaperLogger::FROZEN, $qp, 'V'.$qp->version);
+        $this->notify->published($qp);
 
         return response()->json(['message' => 'Question paper verified and published.']);
     }

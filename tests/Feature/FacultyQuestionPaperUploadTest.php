@@ -7,11 +7,15 @@ use App\Models\ExaminationDrive;
 use App\Models\ExaminationDriveFacultyMap;
 use App\Models\ExaminationTypeMaster;
 use App\Models\FacultyMaster;
+use App\Models\Notification;
 use App\Models\QuestionPaper;
 use App\Models\QuestionPaperLog;
 use App\Models\SubjectMaster;
 use App\Models\TermMaster;
 use App\Models\User;
+use App\Services\COE\QuestionPaperNotifier;
+use App\Services\COE\RajbhashaPaperService;
+use App\Services\NotificationService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Log\Events\MessageLogged;
@@ -159,6 +163,36 @@ class FacultyQuestionPaperUploadTest extends TestCase
 
         $this->actingAs($this->faculty)->postJson($url, ['reason' => 'anything'])->assertUnprocessable();
         $this->actingAs($this->nonFaculty())->post($url, ['reason' => 'left'])->assertForbidden();
+    }
+
+    public function test_upload_rings_rajbhashas_bell_new_then_updated(): void
+    {
+        $rajbhasha = $this->nonFaculty();
+        $rajbhasha->givePermissionTo(RajbhashaPaperService::PERMISSION);   // rolled back with the test
+
+        $this->write()->assertOk();
+        $this->upload(['paper_html' => '<p>Q1 Explain the Constitution (revised).</p>'])->assertOk();
+
+        $this->assertSame([
+            ['RajbhashaQuestionPaper', 'Question Paper for Translation', 'A question paper for '.$this->paper()->paper_name.' ('.$this->code().') has been submitted for Hindi translation.'],
+            ['RajbhashaQuestionPaper', 'Question Paper Updated', 'The question paper for '.$this->paper()->paper_name.' ('.$this->code().') has been updated (V2) and is ready for Hindi translation.'],
+        ], Notification::where('receiver_user_id', $rajbhasha->user_id)
+            ->where('type', QuestionPaperNotifier::TYPE)->where('reference_pk', $this->paper()->id)
+            ->orderBy('pk')->get()->map(fn ($n) => [$n->module_name, $n->title, $n->message])->all());
+
+        // The faculty is not told of their own upload.
+        $this->assertFalse(Notification::where('receiver_user_id', $this->faculty->user_id)
+            ->where('type', QuestionPaperNotifier::TYPE)->exists());
+    }
+
+    public function test_a_failed_notification_never_blocks_the_upload(): void
+    {
+        $this->nonFaculty()->givePermissionTo(RajbhashaPaperService::PERMISSION);   // someone to notify
+        $this->mock(NotificationService::class)
+            ->shouldReceive('createMultiple')->once()->andThrow(new \RuntimeException('bell down'));
+
+        $this->write()->assertOk()->assertJson(['message' => 'Question paper uploaded and sent for translation.']);
+        $this->assertSame(QuestionPaper::STATUS_PENDING_RAJBHASHA, $this->paper()->status);
     }
 
     public function test_editor_paper_is_stored_as_v1_and_goes_straight_to_rajbhasha(): void
