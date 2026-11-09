@@ -2452,6 +2452,47 @@ if (! function_exists('fc_ini_size_to_bytes')) {
     }
 }
 
+if (! function_exists('fc_word_count')) {
+    /**
+     * Words in a free-text answer: runs of non-whitespace, Unicode-aware (Hindi counts).
+     * The min_words / max_words rules and the live counter on the form (same regex in JS)
+     * both use this definition, so the number a trainee sees is the number that is checked.
+     */
+    function fc_word_count(?string $text): int
+    {
+        $text = trim((string) $text);
+
+        return $text === '' ? 0 : count(preg_split('/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY));
+    }
+}
+
+if (! function_exists('fc_text_length_limits')) {
+    /**
+     * Word and character limits read from a field's validation rules, for the live counter.
+     * `min:` / `max:` are characters (Laravel's meaning for strings); `min_words:` /
+     * `max_words:` are words. Missing limits are null.
+     *
+     * @return array{min_words: ?int, max_words: ?int, min_chars: ?int, max_chars: ?int}
+     */
+    function fc_text_length_limits(?string $rules): array
+    {
+        $out = ['min_words' => null, 'max_words' => null, 'min_chars' => null, 'max_chars' => null];
+
+        foreach (explode('|', (string) $rules) as $rule) {
+            if (preg_match('/^\s*(min_words|max_words|min|max):(\d+)\s*$/', $rule, $m)) {
+                $key = match ($m[1]) {
+                    'min' => 'min_chars',
+                    'max' => 'max_chars',
+                    default => $m[1],
+                };
+                $out[$key] = (int) $m[2];
+            }
+        }
+
+        return $out;
+    }
+}
+
 if (! function_exists('fc_file_upload_hint')) {
     /**
      * Human-readable upload hint from Laravel validation_rules (e.g. "nullable|file|mimes:pdf,jpg|max:10240").
