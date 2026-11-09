@@ -457,6 +457,10 @@ function init() {
             data: $form.serialize(),
             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
             success: function(res) {
+                if (!res || res.success !== true) {
+                    $error.removeClass('d-none').text((res && res.message) || 'The possession details were not saved. Please try again.');
+                    return;
+                }
                 if (inModal) {
                     // The listing decides what to refresh.
                     document.dispatchEvent(new CustomEvent('pd:possession-saved', {
@@ -467,7 +471,9 @@ function init() {
                 window.location.href = (res && res.redirect) ? res.redirect : listUrl;
             },
             error: function(xhr) {
-                if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                // A refusal sends errors: [] (truthy) plus a message; only field errors take this path.
+                var fieldErrors = xhr.responseJSON && xhr.responseJSON.errors;
+                if (xhr.status === 422 && fieldErrors && Object.keys(fieldErrors).length) {
                     $.each(xhr.responseJSON.errors, function(key, msgs) {
                         var msg = Array.isArray(msgs) ? msgs[0] : msgs;
                         var $err = $form.find('.field-error[data-field="' + key + '"]');

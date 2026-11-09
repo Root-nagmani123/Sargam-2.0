@@ -215,6 +215,12 @@ $(document).ready(function() {
         });
     }
 
+    // Reload only after the dependents are reset: a direct change handler would
+    // run first and send the previous Building / Sub Type.
+    function reloadAfterCascade() {
+        if ($('#bill_month').val()) $('#loadMeterReadingsBtn').trigger('click');
+    }
+
     $(document).on('change.umr', '#estate_name', function() {
         const campusId = getSelVal(this);
         var elB = document.getElementById('building'), elSub = document.getElementById('unit_sub_type');
@@ -224,6 +230,7 @@ $(document).ready(function() {
         $('#unit_sub_type').html('<option value="">All</option>');
         if (elB) tsBuilding = initTs(elB, 'Select Building');
         if (elSub) tsUnitSub = initTs(elSub, 'All');
+        reloadAfterCascade();
         if (!campusId) return;
         $.get(blocksUrl, { campus_id: campusId }, function(res) {
             if (res.status && res.data) {
@@ -243,6 +250,7 @@ $(document).ready(function() {
         var elSub = document.getElementById('unit_sub_type');
         if (tsUnitSub) { try { $('#unit_sub_type').select2('destroy'); } catch (e) {} tsUnitSub = null; }
         $('#unit_sub_type').html('<option value="">All</option>');
+        reloadAfterCascade();
         if (!campusId || !blockId) {
             if (elSub) tsUnitSub = initTs(elSub, 'All');
             return;
@@ -665,7 +673,8 @@ $(document).ready(function() {
 
     /* ---------- Dialog wiring ---------- */
     // Filters drive the grid directly; the page's Load Data button is hidden.
-    $('#bill_month, #estate_name, #unit_name, #building, #unit_sub_type').on('change', function() {
+    // Estate and Building reload from their cascade handlers (reloadAfterCascade).
+    $('#bill_month, #unit_name, #unit_sub_type').on('change', function() {
         if ($('#bill_month').val()) $('#loadMeterReadingsBtn').trigger('click');
     });
 

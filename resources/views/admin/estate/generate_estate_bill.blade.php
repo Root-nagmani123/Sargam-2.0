@@ -564,9 +564,11 @@
         var form = document.querySelector('.geb-page .programme-dt-toolbar');
 
         // No Show button in the design — changing a filter reloads the list.
+        // jQuery .on, not addEventListener: Select2 fires change via jQuery trigger,
+        // which never reaches native listeners.
         ['bill_month', 'unit_sub_type_pk'].forEach(function (id) {
             var el = document.getElementById(id);
-            if (el && form) el.addEventListener('change', function () { form.submit(); });
+            if (el && form) $(el).on('change', function () { form.submit(); });
         });
 
         // Search: the icon reveals the input; Enter submits the same GET form.

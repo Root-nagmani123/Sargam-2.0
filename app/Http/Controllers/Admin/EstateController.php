@@ -6215,6 +6215,10 @@ class EstateController extends Controller
     /** Body of storePossessionDetails(); must run inside its transaction. */
     private function storePossessionDetailsLocked(Request $request)
     {
+        // AJAX callers get 422 JSON with the reason, never a redirect their success handler reads as saved.
+        $refuse = fn (string $message) => $this->estateFormFailure($request, $message)
+            ?? redirect()->back()->withInput()->with('error', $message);
+
         $messages = [
             'electric_meter_reading_primary.regex' => 'Primary meter reading must be numbers only (max 10 digits).',
             'electric_meter_reading_secondary.regex' => 'Secondary meter reading must be numbers only (max 10 digits).',
@@ -6281,10 +6285,7 @@ class EstateController extends Controller
             ->first();
 
         if (! $existingPossession) {
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', 'Requester is not allotted yet. Please allot first from HAC Approved.');
+            return $refuse('Requester is not allotted yet. Please allot first from HAC Approved.');
         }
 
         // Date editability:
@@ -6318,10 +6319,7 @@ class EstateController extends Controller
         $isEstateAuthority = $user && (isEstateAuthority());
         $hasFinalReading = $existingPossession && (int) ($existingPossession->electric_meter_reading ?? 0) > 0;
         if (! $isEstateAuthority && $hasFinalReading) {
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', 'You already have a possession record for this request. You can create a new possession only after returning the current house.');
+            return $refuse('You already have a possession record for this request. You can create a new possession only after returning the current house.');
         }
 
         $employeePk = $homeReq->employee_pk ? (int) $homeReq->employee_pk : null;
@@ -6346,10 +6344,7 @@ class EstateController extends Controller
         }
 
         if (! $employeePk) {
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', 'Employee could not be resolved for selected requester.');
+            return $refuse('Employee could not be resolved for selected requester.');
         }
 
         $house = DB::table('estate_house_master')
@@ -6362,10 +6357,7 @@ class EstateController extends Controller
             ->first();
 
         if (! $house) {
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', 'Selected house does not match selected Estate/Building/Unit Sub Type.');
+            return $refuse('Selected house does not match selected Estate/Building/Unit Sub Type.');
         }
 
         // Skip eligibility check when selected house is the requester's existing allotted house
@@ -6374,23 +6366,14 @@ class EstateController extends Controller
         if (! $isSameAsExistingPossession) {
             // Align with Define House: only Vacant and not already used houses can be allotted
             if ((int) ($house->vacant_renovation_status ?? 1) !== 1) {
-                return redirect()
-                    ->back()
-                    ->withInput()
-                    ->with('error', 'Selected house is Under Renovation in Define House. Only Vacant houses can be allotted.');
+                return $refuse('Selected house is Under Renovation in Define House. Only Vacant houses can be allotted.');
             }
             if ((int) ($house->used_home_status ?? 0) !== 0) {
-                return redirect()
-                    ->back()
-                    ->withInput()
-                    ->with('error', 'Selected house is already occupied. Please choose a vacant house from the list.');
+                return $refuse('Selected house is already occupied. Please choose a vacant house from the list.');
             }
             $eligibleHousePks = $this->getEligibleHousePksByEmployeePk($employeePk);
             if ($eligibleHousePks->isNotEmpty() && ! $eligibleHousePks->contains((int) $house->pk)) {
-                return redirect()
-                    ->back()
-                    ->withInput()
-                    ->with('error', 'Selected house is not eligible for this requester.');
+                return $refuse('Selected house is not eligible for this requester.');
             }
         }
 
@@ -6409,10 +6392,7 @@ class EstateController extends Controller
             ->values();
 
         if ($occupiedHousePks->contains((int) $house->pk) && (! $existingPossession || (int) $existingPossession->estate_house_master_pk !== (int) $house->pk)) {
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', 'Selected house is already occupied.');
+            return $refuse('Selected house is already occupied.');
         }
 
         $payload = [
@@ -7425,14 +7405,18 @@ class EstateController extends Controller
      */
     private function bumpEstateCacheVersion(): void
     {
-        try {
-            [, , $repository] = $this->resolveUpdateMeterReadingCacheConfig();
-            $repository->forever(self::ESTATE_CACHE_VERSION_KEY, $this->estateCacheVersion() + 1);
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('Estate: cache version bump failed, list TTL tak purana data dikha sakti hai.', [
-                'message' => $e->getMessage(),
-            ]);
-        }
+        // After commit: a bump inside an open transaction lets a concurrent list read the
+        // pre-commit rows and cache them under the new version. No transaction = runs now.
+        DB::afterCommit(function () {
+            try {
+                [, , $repository] = $this->resolveUpdateMeterReadingCacheConfig();
+                $repository->forever(self::ESTATE_CACHE_VERSION_KEY, $this->estateCacheVersion() + 1);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Estate: cache version bump failed, list TTL tak purana data dikha sakti hai.', [
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        });
     }
 
     /**
@@ -9536,6 +9520,11 @@ class EstateController extends Controller
                 ? array_map('intval', $possessionPksParamEarly)
                 : array_map('intval', array_filter(explode(',', (string) $possessionPksParamEarly)));
             $possessionIdsScoped = array_values(array_unique(array_filter($possessionIdsScoped, fn ($id) => $id > 0)));
+        }
+        if ($possessionIdsScoped !== []) {
+            // The selection is authoritative: the form prefills location from the FIRST
+            // possession, which would drop selected possessions in other blocks.
+            $campusId = $blockId = $unitTypeId = $unitSubTypeId = null;
         }
         $possessionIdsForKey = $possessionIdsScoped;
         sort($possessionIdsForKey, SORT_NUMERIC);

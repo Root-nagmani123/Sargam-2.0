@@ -437,12 +437,16 @@
             });
         }
 
-        function syncSelectionUi() {
-            // Off-page rows live in the DataTable's node cache, not the DOM, so a
-            // DOM-only count would hide "Print Selected" the moment the user
-            // pages away from their selection.
-            var $all = dt ? $(dt.rows().nodes()).find('.bill-row-check')
+        // Off-page rows live in the DataTable's node cache, not the DOM, so this
+        // reaches through the API; search-filtered rows are left out so Select
+        // All, the count and Print Selected only ever see what the search shows.
+        function rowChecks() {
+            return dt ? $(dt.rows({ search: 'applied' }).nodes()).find('.bill-row-check')
                 : $('#billForOtherTable .bill-row-check');
+        }
+
+        function syncSelectionUi() {
+            var $all = rowChecks();
             var checked = $all.filter(':checked').length;
             var allChecked = $all.length > 0 && $all.length === checked;
             $('#billForOtherCheckAll').prop('checked', allChecked);
@@ -451,13 +455,7 @@
         }
 
         function setAllChecked(checked) {
-            // Off-page rows live in the DataTable's node cache, not the DOM, so
-            // select-all has to reach through the API to cover every page.
-            if (dt) {
-                $(dt.rows().nodes()).find('.bill-row-check').prop('checked', checked);
-            } else {
-                $('#billForOtherTable .bill-row-check').prop('checked', checked);
-            }
+            rowChecks().prop('checked', checked);
             syncSelectionUi();
         }
 
@@ -509,9 +507,7 @@
         // for the ticked rows, not the grid.
         $('#geboPrintSelected').on('click', function () {
             var pks = [];
-            var $rows = dt ? $(dt.rows().nodes()).find('.bill-row-check:checked')
-                : $('#billForOtherTable .bill-row-check:checked');
-            $rows.each(function () {
+            rowChecks().filter(':checked').each(function () {
                 var pk = ($(this).data('pk') || '').toString().trim();
                 if (pk) pks.push(pk);
             });

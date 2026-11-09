@@ -136,7 +136,11 @@
             rows.push(cols.map(function (c) {
                 if (serial && c.label === serial) return String(n);
                 var cell = dt.cell(rowNode, c.idx).node();
-                return cell ? $(cell).text().replace(/\s+/g, ' ').trim() : '';
+                if (!cell) return '';
+                // .text() drops <br>, gluing stacked values (dual-meter 1234<br>5678 → 12345678).
+                var $c = $(cell).clone();
+                $c.find('br').replaceWith(' / ');
+                return $c.text().replace(/\s+/g, ' ').trim();
             }));
         });
         return { headers: cols.map(function (c) { return c.label; }), rows: rows };
