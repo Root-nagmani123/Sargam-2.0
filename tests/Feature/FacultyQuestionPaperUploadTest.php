@@ -174,8 +174,8 @@ class FacultyQuestionPaperUploadTest extends TestCase
         $this->upload(['paper_html' => '<p>Q1 Explain the Constitution (revised).</p>'])->assertOk();
 
         $this->assertSame([
-            ['RajbhashaQuestionPaper', 'Question Paper for Translation', 'A question paper for '.$this->paper()->paper_name.' ('.$this->code().') has been submitted for Hindi translation.'],
-            ['RajbhashaQuestionPaper', 'Question Paper Updated', 'The question paper for '.$this->paper()->paper_name.' ('.$this->code().') has been updated (V2) and is ready for Hindi translation.'],
+            ['RajbhashaQuestionPaper', 'Question Paper for Translation', 'A question paper for '.$this->paper()->paper_name.' ('.$this->code().') has been submitted for translation.'],
+            ['RajbhashaQuestionPaper', 'Question Paper Updated', 'The question paper for '.$this->paper()->paper_name.' ('.$this->code().') has been updated (V2) and is ready for translation.'],
         ], Notification::where('receiver_user_id', $rajbhasha->user_id)
             ->where('type', QuestionPaperNotifier::TYPE)->where('reference_pk', $this->paper()->id)
             ->orderBy('pk')->get()->map(fn ($n) => [$n->module_name, $n->title, $n->message])->all());

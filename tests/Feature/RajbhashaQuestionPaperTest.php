@@ -306,8 +306,8 @@ class RajbhashaQuestionPaperTest extends TestCase
 
         $this->rajbhashaAction('translation.store', ['paper_html' => self::HINDI])->assertOk();
         $this->rajbhashaAction('send-for-approval')->assertOk();
-        $this->assertSame([[QuestionPaperNotifier::MODULE_FACULTY, 'Hindi Translation Ready',
-            'The Hindi translation for Test Subject ('.$this->paper->paper_code.') is ready. Review it and freeze it when final.']],
+        $this->assertSame([[QuestionPaperNotifier::MODULE_FACULTY, 'Translation Paper Ready',
+            'The translation for Test Subject ('.$this->paper->paper_code.') is ready. Please review it and freeze it when final.']],
             $this->bell($this->faculty));
 
         $otp = $this->sendFacultyOtp();

@@ -45,10 +45,10 @@ class QuestionPaperNotifier
     {
         if ($paper->version > 1) {
             $title = 'Question Paper Updated';
-            $message = 'The question paper for '.$this->subject($paper).' has been updated (V'.$paper->version.') and is ready for Hindi translation.';
+            $message = 'The question paper for '.$this->subject($paper).' has been updated (V'.$paper->version.') and is ready for translation.';
         } else {
             $title = 'Question Paper for Translation';
-            $message = 'A question paper for '.$this->subject($paper).' has been submitted for Hindi translation.';
+            $message = 'A question paper for '.$this->subject($paper).' has been submitted for translation.';
         }
         $this->send($paper, self::MODULE_RAJBHASHA, $this->rajbhashaUserIds(), $title, $message);
     }
@@ -56,8 +56,8 @@ class QuestionPaperNotifier
     /** N-029 / N-030 (one moment: sent for approval is Pending Verification) → the faculty. */
     public function translationReady(QuestionPaper $paper): void
     {
-        $this->send($paper, self::MODULE_FACULTY, $this->facultyUserIds($paper), 'Hindi Translation Ready',
-            'The Hindi translation for '.$this->subject($paper).' is ready. Review it and freeze it when final.');
+        $this->send($paper, self::MODULE_FACULTY, $this->facultyUserIds($paper), 'Translation Paper Ready',
+            'The translation for '.$this->subject($paper).' is ready. Please review it and freeze it when final.');
     }
 
     /** N-032: the faculty froze and published it → COE (the faculty already sees the confirmation). */
@@ -80,7 +80,7 @@ class QuestionPaperNotifier
     public function deleted(QuestionPaper $paper): void
     {
         $title = 'Question Paper Deleted';
-        $message = 'The question paper for '.$this->subject($paper).' has been deleted. Contact COE if this was unexpected.';
+        $message = 'The question paper for '.$this->subject($paper).' has been deleted. Please contact COE if this was unexpected.';
         $this->send($paper, self::MODULE_FACULTY, $this->facultyUserIds($paper), $title, $message);
         $this->send($paper, self::MODULE_RAJBHASHA, $this->rajbhashaUserIds(), $title, $message);
     }
