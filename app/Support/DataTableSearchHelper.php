@@ -35,6 +35,27 @@ class DataTableSearchHelper
     }
 
     /**
+     * Words of a DataTables 1.13 client-side ("smart") search: split on spaces, a
+     * "double-quoted phrase" stays one word (as _fnFilterCreateSearch() does). With
+     * haystackMatchesAllTokens() over a row's rendered cells, an export of a client-side
+     * grid keeps exactly the rows the screen shows.
+     *
+     * @return string[]
+     */
+    public static function clientSearchWords(string $search): array
+    {
+        preg_match_all('/["\x{201C}][^"\x{201D}]+["\x{201D}]|[^ ]+/u', self::normalizeRaw($search), $matches);
+
+        return array_values(array_filter(array_map(function (string $word) {
+            if (preg_match('/^"(.*)"$/us', $word, $m) || preg_match('/^\x{201C}(.*)\x{201D}$/us', $word, $m)) {
+                $word = $m[1];
+            }
+
+            return mb_strtolower(preg_replace('/"/', '', $word, 1));
+        }, $matches[0]), 'strlen'));
+    }
+
+    /**
      * Escape a token for SQL LIKE (adds % wildcards).
      */
     public static function likePattern(string $token): string

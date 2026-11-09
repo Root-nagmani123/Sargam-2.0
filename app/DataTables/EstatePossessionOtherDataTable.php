@@ -190,19 +190,7 @@ class EstatePossessionOtherDataTable extends DataTable
                     static::filterText('bill_date_filter')
                 );
             })
-            ->order(fn ($query) => $this->applyHeaderSort($query, 'estate_possession_other.pk', [
-                'DT_RowIndex' => 'estate_possession_other.pk',
-                'request_id' => 'eor.request_no_oth',
-                'name' => 'eor.emp_name',
-                'section_name' => 'eor.section',
-                'estate_name' => 'ec.campus_name',
-                'unit_type' => 'eut.unit_type',
-                'building_name' => 'eb.block_name',
-                'unit_sub_type' => 'eust.unit_sub_type',
-                'house_no' => 'estate_possession_other.house_no',
-                'allotment_date' => 'estate_possession_other.allotment_date',
-                'possession_date_oth' => 'estate_possession_other.possession_date_oth',
-            ]))
+            ->order(fn ($query) => $this->sortQuery($query))
             ->addColumn('actions', function ($row) use ($canMutate) {
                 $editUrl = route('admin.estate.possession-view', ['id' => $row->pk]);
 
@@ -395,6 +383,24 @@ class EstatePossessionOtherDataTable extends DataTable
                 ->when(Schema::hasColumn('estate_other_req', 'employee_master_emp_id'),
                     fn ($q) => $q->orWhere('eor.employee_master_emp_id', 'like', $searchLike));
         });
+    }
+
+    /** Header sort, shared by the grid and its Download / Print, so both list rows in the same order. */
+    public function sortQuery($query): void
+    {
+        $this->applyHeaderSort($query, 'estate_possession_other.pk', [
+            'DT_RowIndex' => 'estate_possession_other.pk',
+            'request_id' => 'eor.request_no_oth',
+            'name' => 'eor.emp_name',
+            'section_name' => 'eor.section',
+            'estate_name' => 'ec.campus_name',
+            'unit_type' => 'eut.unit_type',
+            'building_name' => 'eb.block_name',
+            'unit_sub_type' => 'eust.unit_sub_type',
+            'house_no' => 'estate_possession_other.house_no',
+            'allotment_date' => 'estate_possession_other.allotment_date',
+            'possession_date_oth' => 'estate_possession_other.possession_date_oth',
+        ]);
     }
 
     public function html(): HtmlBuilder

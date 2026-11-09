@@ -412,6 +412,8 @@ $(document).ready(function() {
     var table = $('#defineHouseTable').DataTable({
         processing: true,
         serverSide: true,
+        // Sort the whole list on the server (getDefineHouseData), not only the loaded page.
+        sargamServerOrder: true,
         autoWidth: false,
         responsive: false,
         ajax: {

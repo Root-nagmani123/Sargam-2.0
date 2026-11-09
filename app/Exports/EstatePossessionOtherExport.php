@@ -76,7 +76,8 @@ class EstatePossessionOtherExport extends DefaultValueBinder implements FromArra
             'unit_sub_type' => ['heading' => 'Unit Sub Type', 'center' => false, 'width' => 8,
                 'value' => fn ($row) => $row->unit_sub_type_name ?: '-'],
             'house_no' => ['heading' => 'House Number', 'center' => true, 'width' => 8,
-                'value' => fn ($row) => $row->house_no ?: ($row->house_no_display ?: '-')],
+                // As the grid's valueOrDash(house_no ?? house_no_display): an empty house_no is a dash, not the house master's number.
+                'value' => fn ($row) => in_array($v = trim((string) ($row->house_no ?? $row->house_no_display ?? '')), ['', '-'], true) ? '-' : $v],
             'allotment_date' => ['heading' => 'Allotment Date', 'center' => true, 'width' => 9,
                 'value' => fn ($row) => $row->allotment_date ? Carbon::parse($row->allotment_date)->format('d-m-Y') : '-'],
             'possession_date' => ['heading' => 'Possession Date', 'center' => true, 'width' => 9,

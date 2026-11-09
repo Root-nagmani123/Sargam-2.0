@@ -376,6 +376,8 @@
             var unitType = $('#esUnitTypeFilter').val();
             if (unitType) params.unit_type_filter = unitType;
             if (dt && dt.search()) params.search = dt.search();
+            // The grid's sort, read back by the export as the grid's own column index.
+            if (dt) params.order = dt.order().map(function (o) { return { column: o[0], dir: o[1] }; });
             var cols = ES_EXPORT_KEYS.filter(function (key, i) {
                 return key && (!dt || dt.column(i).visible());
             });

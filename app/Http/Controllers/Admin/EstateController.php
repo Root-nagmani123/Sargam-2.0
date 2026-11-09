@@ -24,6 +24,7 @@ use App\Exports\EstateRequestForEstateExport;
 use App\Exports\EstateUpdateMeterNoExport;
 use App\Http\Controllers\Admin\Estate\Concerns\ExportsEstateGrid;
 use App\Http\Controllers\Controller;
+use App\Support\DataTableSearchHelper;
 use App\Support\RedisBackedCache;
 use App\Models\EstateChangeHomeReqDetails;
 use App\Models\EstateMonthReadingDetailsOther;
@@ -404,6 +405,7 @@ class EstateController extends Controller
 
         $rows = EstateOtherRequestDataTable::listingQuery()
             ->tap(fn ($query) => EstateOtherRequestDataTable::applyFilters($query, $search, $billYear, $billDate))
+            ->tap(fn ($query) => app(EstateOtherRequestDataTable::class)->sortQuery($query))
             ->get();
 
         $filters = ['Bill Year: ' . (preg_match('/^\d{4}$/', $billYear) === 1 ? $billYear : 'All')];
@@ -1948,6 +1950,7 @@ class EstateController extends Controller
                 $this->exportSearchTerm($request),
                 static::exportFilterText($request, 'type_filter')
             ))
+            ->tap(fn ($query) => app(EstateHacApprovedDataTable::class)->sortQuery($query))
             ->get();
 
         $typeFilter = trim(static::exportFilterText($request, 'type_filter'));
@@ -2642,18 +2645,15 @@ class EstateController extends Controller
             $rows = $rows->filter(fn ($row) => strcasecmp(trim((string) ($row->eligibility_type ?? '')), $eligibilityFilter) === 0)->values();
         }
 
-        if ($search !== '') {
-            $needle = mb_strtolower($search);
-            $rows = $rows->filter(function ($row) use ($needle) {
-                foreach (['request_id', 'request_date', 'name', 'emp_id', 'doj_academy', 'status',
-                    'alloted_house', 'eligibility_type', 'possession_from', 'possession_to'] as $key) {
-                    if (str_contains(mb_strtolower((string) ($row->{$key} ?? '')), $needle)) {
-                        return true;
-                    }
-                }
-
-                return false;
-            })->values();
+        // The grid searches in the browser: every word, anywhere in the row's cells as rendered
+        // by request_for_house.blade.php (S. No. and Action are not searchable).
+        $words = DataTableSearchHelper::clientSearchWords($search);
+        if ($words !== []) {
+            $rows = $rows->filter(fn ($row) => DataTableSearchHelper::haystackMatchesAllTokens(implode('  ', [
+                $row->request_id ?? '—', $row->request_date ?? '—', ($row->name ?? '') . ' ' . ($row->emp_id ?? ''),
+                $row->doj_academy ?? '—', trim((string) ($row->status ?? '')), $row->alloted_house ?? '—',
+                $row->eligibility_type ?? '—', $row->possession_from ?? '—', $row->possession_to ?? '—',
+            ]), $words))->values();
         }
 
         return [
@@ -5155,7 +5155,8 @@ class EstateController extends Controller
         $orderCol = (int) data_get($request->get('order'), '0.column', -1);
         $orderDir = strtolower(static::exportFilterText($request, 'order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
         if (isset($sortable[$orderCol])) {
-            $query->orderBy($sortable[$orderCol], $orderDir);
+            // pk tie-break: equal values (same campus, same charge) page stably.
+            $query->orderBy($sortable[$orderCol], $orderDir)->orderBy('h.pk', $orderDir);
         } else {
             $query->orderBy('h.pk', 'desc');
         }
@@ -5990,6 +5991,7 @@ class EstateController extends Controller
                 static::exportFilterText($request, 'estate_filter'),
                 static::exportFilterText($request, 'allotment_date_filter')
             ))
+            ->tap(fn ($query) => app(EstatePossessionDetailsDataTable::class)->sortQuery($query))
             ->get();
 
         $estateFilter = trim(static::exportFilterText($request, 'estate_filter'));
@@ -6485,6 +6487,7 @@ class EstateController extends Controller
                 $billYear,
                 $billDate
             ))
+            ->tap(fn ($query) => app(EstatePossessionOtherDataTable::class)->sortQuery($query))
             ->get();
 
         $filters = ['Bill Year: ' . (preg_match('/^\d{4}$/', $billYear) === 1 ? $billYear : 'All')];
@@ -13683,19 +13686,22 @@ class EstateController extends Controller
 
         // The grid searches client-side across every rendered cell; mirror that
         // here rather than inventing a narrower server-side match.
-        if ($search !== '') {
-            $needle = mb_strtolower($search);
-            $rows = $rows->filter(function (array $row) use ($needle) {
-                foreach (['name', 'request_no', 'section', 'house_no', 'from_date', 'to_date', 'meter_no',
-                    'prev_reading', 'curr_reading', 'unit_consumed', 'total_charge', 'licence_fee',
-                    'water_charges', 'grand_total'] as $key) {
-                    if (str_contains(mb_strtolower((string) ($row[$key] ?? '')), $needle)) {
-                        return true;
-                    }
-                }
-
-                return false;
-            })->values();
+        $words = DataTableSearchHelper::clientSearchWords($search);
+        if ($words !== []) {
+            // As rowHtml() renders them: JS || fallbacks, '₹ 1,620.00' money, one meter per line.
+            $or = fn ($v) => ($v === null || $v === '' || $v === 0 || $v === '0') ? '—' : (string) $v;
+            $money = fn ($v) => is_numeric($v) ? '₹ ' . number_format((float) $v, 2) : '—';
+            $lines = fn ($v) => (string) ($v ?? '') === '' ? '—' : str_replace("\n", ' ', (string) $v);
+            $rows = $rows->filter(fn (array $row) => DataTableSearchHelper::haystackMatchesAllTokens(implode('  ', [
+                (string) ($row['sno'] ?? ''),
+                $or($row['name'] ?? null) . (($row['request_no'] ?? '') !== '' ? '- ' . $row['request_no'] : ''),
+                $or($row['section'] ?? null), $or($row['house_no'] ?? null),
+                $or($row['from_date'] ?? null), $or($row['to_date'] ?? null),
+                $lines($row['meter_no'] ?? null), $lines($row['prev_reading'] ?? null), $lines($row['curr_reading'] ?? null),
+                isset($row['unit_consumed']) ? (string) $row['unit_consumed'] : '—',
+                $money($row['total_charge'] ?? null), $money($row['licence_fee'] ?? null),
+                $money($row['water_charges'] ?? null), $money($row['grand_total'] ?? null),
+            ]), $words))->values();
         }
 
         $filters = ['Bill Month: ' . date('F Y', mktime(0, 0, 0, $monthNum, 1, (int) $billYearStr))];

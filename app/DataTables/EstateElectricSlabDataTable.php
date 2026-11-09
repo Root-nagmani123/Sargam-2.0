@@ -34,10 +34,7 @@ class EstateElectricSlabDataTable extends DataTable
                 return $row->unitType ? e($row->unitType->unit_type) : '-';
             })
             // Merge with House sorts via the joined alias rather than the relation.
-            ->order(fn ($query) => $this->applyHeaderSort($query, 'estate_electric_slab.pk', [
-                'unit_range' => 'start_unit_range',
-                'merge_with_house' => 'unit_type_name',
-            ]))
+            ->order(fn ($query) => $this->sortQuery($query))
             ->filterColumn('merge_with_house', function ($query, $keyword) {
                 $query->where('ut.unit_type', 'like', "%{$keyword}%");
             })
@@ -62,6 +59,15 @@ class EstateElectricSlabDataTable extends DataTable
             ->when(is_string($unitType = request('unit_type_filter')) && ctype_digit($unitType), fn ($q) => $q
                 ->where('estate_electric_slab.estate_unit_type_master_pk', (int) request('unit_type_filter')))
             ->orderBy('start_unit_range');
+    }
+
+    /** Header sort, shared by the grid and its Download / Print, so both list rows in the same order. */
+    public function sortQuery($query): void
+    {
+        $this->applyHeaderSort($query, 'estate_electric_slab.pk', [
+            'unit_range' => 'start_unit_range',
+            'merge_with_house' => 'unit_type_name',
+        ]);
     }
 
     public function html(): HtmlBuilder

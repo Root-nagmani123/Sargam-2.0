@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\DataTables\Concerns\AppliesHeaderSort;
 use App\DataTables\Concerns\RendersEstateRowActions;
 use App\Models\EligibilityCriterion;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
@@ -12,6 +13,7 @@ use Yajra\DataTables\Services\DataTable;
 
 class EligibilityCriteriaDataTable extends DataTable
 {
+    use AppliesHeaderSort;
     use RendersEstateRowActions;
 
     public function dataTable(QueryBuilder $query): EloquentDataTable
@@ -33,21 +35,18 @@ class EligibilityCriteriaDataTable extends DataTable
 
                 return $label ? e($label) : '-';
             })
-            ->orderColumn('pay_scale', 'salary_grade_master_pk $1')
             ->filterColumn('pay_scale', function ($query, $keyword) {
                 $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $keyword) . '%';
                 $query->whereHas('salaryGrade', function ($q) use ($like) {
                     $q->where('salary_grade', 'like', $like);
                 });
             })
-            ->orderColumn('unit_type', 'estate_unit_type_master_pk $1')
             ->filterColumn('unit_type', function ($query, $keyword) {
                 $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $keyword) . '%';
                 $query->whereHas('unitType', function ($q) use ($like) {
                     $q->where('unit_type', 'like', $like);
                 });
             })
-            ->orderColumn('unit_sub_type', 'estate_unit_sub_type_master_pk $1')
             ->filterColumn('unit_sub_type', function ($query, $keyword) {
                 $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $keyword) . '%';
                 $query->whereHas('unitSubType', function ($q) use ($like) {
@@ -76,6 +75,12 @@ class EligibilityCriteriaDataTable extends DataTable
                     ])
                     . '</div>';
             })
+            // query() ends in orderByDesc(pk); a plain orderColumn was appended after it and changed nothing.
+            ->order(fn ($query) => $this->applyHeaderSort($query, 'pk', [
+                'pay_scale' => 'salary_grade_master_pk',
+                'unit_type' => 'estate_unit_type_master_pk',
+                'unit_sub_type' => 'estate_unit_sub_type_master_pk',
+            ]))
             ->rawColumns(['pay_scale', 'unit_type', 'unit_sub_type', 'actions'])
             ->setRowId('pk');
     }

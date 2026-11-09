@@ -195,6 +195,10 @@ a.dropdown-item:focus-visible {
 
 /* --- Card ------------------------------------------------------- */
 .ds-card {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-card);
+    box-shadow: var(--ds-shadow-sm);
     overflow: hidden;
 }
 .ds-card > .ds-card-header,

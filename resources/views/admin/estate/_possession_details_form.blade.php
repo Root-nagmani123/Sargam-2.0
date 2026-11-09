@@ -284,6 +284,9 @@ function init() {
         var unitTypeId = $f('estate_unit_type_master_pk').val();
         if (!campusId) return;
         $.get(blocksUrl, { campus_id: campusId, unit_type_id: unitTypeId || '' }, function(res) {
+            // Fill from scratch: the cascade can run twice (requester + init), and a late reply for an old campus must not land.
+            if ($f('estate_campus_master_pk').val() !== campusId) return;
+            $f('estate_block_master_pk').html('<option value="">Select Building</option>');
             if (res.status && res.data) {
                 $.each(res.data, function(i, b) {
                     var sel = (preferred.blockPk && String(preferred.blockPk) === String(b.pk)) ? 'selected' : '';
@@ -300,6 +303,8 @@ function init() {
         var unitTypeId = $f('estate_unit_type_master_pk').val();
         if (!campusId || !blockId) return;
         $.get(unitSubTypesUrl, { campus_id: campusId, block_id: blockId, unit_type_id: unitTypeId || '' }, function(res) {
+            if ($f('estate_block_master_pk').val() !== blockId) return;
+            $f('estate_unit_sub_type_master_pk').html('<option value="">Select Sub-type</option>');
             if (res.status && res.data) {
                 $.each(res.data, function(i, u) {
                     var sel = (preferred.unitSubTypePk && String(preferred.unitSubTypePk) === String(u.pk)) ? 'selected' : '';
@@ -324,6 +329,8 @@ function init() {
             employee_pk: selectedRequesterEmployeePk() || '',
             include_house_pk: selectedRequesterPrefill().housePk || ''
         }, function(res) {
+            if ($f('estate_unit_sub_type_master_pk').val() !== unitSubId) return;
+            $f('estate_house_master_pk').html('<option value="">Select House</option>');
             if (res.status && res.data) {
                 $.each(res.data, function(i, h) {
                     var sel = (preferred.housePk && String(preferred.housePk) === String(h.pk)) ? 'selected' : '';

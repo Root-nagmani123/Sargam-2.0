@@ -86,7 +86,7 @@ class EstateRequestForEstateExport extends DefaultValueBinder implements FromArr
                 'center' => false,
                 'width' => 32,
                 'value' => function ($row) {
-                    $name = trim((string) ($row->emp_name ?? ''));
+                    $name = EstateRequestForEstateDataTable::resolvedName($row);
                     $id = trim((string) ($row->employee_id ?? ''));
                     if ($name === '' && $id === '') {
                         return '-';

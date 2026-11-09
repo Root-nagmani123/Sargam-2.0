@@ -112,10 +112,10 @@ class EstateElectricSlabController extends Controller
         $search = trim($this->exportSearchTerm($request));
         $unitType = static::exportFilterText($request, 'unit_type_filter');
 
-        $rows = EstateElectricSlab::with('unitType')
-            // Same "Merge with House" filter as the grid.
-            ->when(ctype_digit($unitType), fn ($q) => $q->where('estate_unit_type_master_pk', (int) $unitType))
-            ->orderBy('start_unit_range')
+        // The grid's own query (same "Merge with House" filter) and its header sort.
+        $grid = app(EstateElectricSlabDataTable::class);
+        $rows = $grid->query(new EstateElectricSlab)
+            ->tap(fn ($query) => $grid->sortQuery($query))
             ->get();
 
         if ($search !== '') {

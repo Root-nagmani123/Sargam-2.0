@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\DataTables\Concerns\AppliesHeaderSort;
 use App\DataTables\Concerns\RendersEstateRowActions;
 use App\Models\EstateHomeRequestDetails;
 use App\Support\DataTableRedisCache;
@@ -15,6 +16,7 @@ use Yajra\DataTables\Services\DataTable;
 
 class EstateRequestPutInHacDataTable extends DataTable
 {
+    use AppliesHeaderSort;
     use RendersEstateRowActions;
 
     public const LISTING_CACHE_EPOCH_KEY = 'estate_pih_list_epoch';
@@ -139,6 +141,15 @@ class EstateRequestPutInHacDataTable extends DataTable
             ->filter(function ($query) {
                 static::applySearch($query, (string) request()->input('search.value', ''));
             }, false)
+            // query() ends in orderBy(pk desc), which Yajra's own header order only appended to.
+            ->order(fn ($query) => $this->applyHeaderSort($query, 'estate_home_request_details.pk', [
+                'req_id' => 'estate_home_request_details.req_id',
+                'req_date' => 'estate_home_request_details.req_date',
+                'emp_name' => 'estate_home_request_details.emp_name',
+                'emp_designation' => 'estate_home_request_details.emp_designation',
+                'pay_scale' => 'estate_home_request_details.pay_scale',
+                'current_alot' => 'estate_home_request_details.current_alot',
+            ]))
             ->setRowId('pk');
     }
 

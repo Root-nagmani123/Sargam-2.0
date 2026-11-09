@@ -181,7 +181,7 @@
                                 </div>
 
                                 <div>
-                                    <label class="ds-form-label">Meter Number 02<span class="ds-req">*</span></label>
+                                    <label class="ds-form-label">Meter Number 02</label>
                                     <input type="text" class="form-control dhf-meter-two"
                                         name="meter_two[0]" placeholder="Meter Number 02" maxlength="30"
                                         inputmode="numeric" pattern="[0-9]*" autocomplete="off"
@@ -246,6 +246,13 @@
        design-system components (design.md Layer C, defined in sargam-app.css);
        what is left here is specific to this form and uses --ds-* tokens only
        (design.md usage rule 2). */
+    /* This wizard sits flat on the page; the base .ds-card surface is for other screens. */
+    .dhf-page > form > .ds-card {
+        background: none;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
     .dhf-page .form-control,
     .dhf-page .form-select {
         min-height: var(--ds-control-h);

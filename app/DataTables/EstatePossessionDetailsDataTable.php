@@ -184,7 +184,7 @@ class EstatePossessionDetailsDataTable extends DataTable
 
         $dataTable = (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->order(fn ($query) => $this->applyHeaderSort($query, 'epd.pk'));
+            ->order(fn ($query) => $this->sortQuery($query));
 
         if ($isEstateAuthority && ! $hideAuthorityMutations) {
             $dataTable->addColumn('checkbox', function ($row) {
@@ -361,6 +361,12 @@ class EstatePossessionDetailsDataTable extends DataTable
         }
 
         return $query->orderBy('epd.pk', 'desc');
+    }
+
+    /** Header sort, shared by the grid and its Download / Print, so both list rows in the same order. */
+    public function sortQuery($query): void
+    {
+        $this->applyHeaderSort($query, 'epd.pk');
     }
 
     public function html(): HtmlBuilder

@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\DataTables\Concerns\AppliesHeaderSort;
 use App\DataTables\Concerns\RendersEstateRowActions;
 use App\Models\EstateHacApprovedRow;
 use App\Support\DataTableRedisCache;
@@ -20,6 +21,7 @@ use Yajra\DataTables\Services\DataTable;
  */
 class EstateHacApprovedDataTable extends DataTable
 {
+    use AppliesHeaderSort;
     use RendersEstateRowActions;
 
     public const LISTING_CACHE_EPOCH_KEY = 'estate_hacap_list_epoch';
@@ -199,19 +201,8 @@ class EstateHacApprovedDataTable extends DataTable
                     (string) request()->input('type_filter', '')
                 );
             }, false)
-            ->orderColumn('request_date', fn ($query, $order) => $query->reorder()
-                ->orderBy('request_date', $order)
-                ->orderBy('pk', $order))
-            ->orderColumn('request_type', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(request_type, "")) ' . $order))
-            ->orderColumn('request_id', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(request_id, "")) ' . $order))
-            ->orderColumn('name_id', fn ($query, $order) => $query->reorder()
-                ->orderByRaw('LOWER(COALESCE(emp_name, "")) ' . $order)
-                ->orderByRaw('LOWER(COALESCE(employee_id, "")) ' . $order))
-            ->orderColumn('emp_designation', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(emp_designation, "")) ' . $order))
-            ->orderColumn('pay_scale', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(pay_scale, "")) ' . $order))
-            ->orderColumn('status', fn ($query, $order) => $query->reorder()
-                ->orderByRaw('COALESCE(change_ap_dis_status, 0) ' . $order)
-                ->orderBy('pk', $order))
+            // One ORDER BY in place of query()'s default; Download / Print reuse it.
+            ->order(fn ($query) => $this->sortQuery($query))
             ->setRowId('pk');
     }
 
@@ -338,6 +329,20 @@ class EstateHacApprovedDataTable extends DataTable
         }
 
         return $q;
+    }
+
+    /** Header sort, shared by the grid and its Download / Print, so both list rows in the same order. */
+    public function sortQuery($query): void
+    {
+        $ci = fn (string $column) => DB::raw('LOWER(COALESCE(' . $column . ', ""))');
+        $this->applyHeaderSort($query, 'pk', [
+            'request_type' => $ci('request_type'),
+            'request_id' => $ci('request_id'),
+            'name_id' => [$ci('emp_name'), $ci('employee_id')],
+            'emp_designation' => $ci('emp_designation'),
+            'pay_scale' => $ci('pay_scale'),
+            'status' => DB::raw('COALESCE(change_ap_dis_status, 0)'),
+        ]);
     }
 
     public function html(): HtmlBuilder

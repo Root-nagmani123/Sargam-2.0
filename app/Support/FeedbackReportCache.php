@@ -285,11 +285,13 @@ final class FeedbackReportCache
 
         $lock = $backing->lock(self::GENERATION_LOCK_KEY, 5);
         $deadline = microtime(true) + 10;
+        $lastError = null;
         while (true) {
             try {
                 $acquired = $lock->get();
             } catch (Throwable $e) {
                 $acquired = false;
+                $lastError = $e;
             }
 
             if ($acquired) {
@@ -303,7 +305,8 @@ final class FeedbackReportCache
             }
 
             if (microtime(true) >= $deadline) {
-                report(new LockTimeoutException('Feedback report cache generation lock not acquired within 10 s.'));
+                // Carry the last acquire error, so a broken lock store is not reported as plain contention.
+                report(new LockTimeoutException('Feedback report cache generation lock not acquired within 10 s.', 0, $lastError));
                 $callback();
 
                 return;

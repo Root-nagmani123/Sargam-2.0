@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\DataTables\Concerns\AppliesHeaderSort;
 use App\DataTables\Concerns\RendersEstateRowActions;
 use App\Models\EstateOtherRequest;
 use Carbon\Carbon;
@@ -16,6 +17,7 @@ use Yajra\DataTables\Services\DataTable;
 
 class EstateOtherRequestDataTable extends DataTable
 {
+    use AppliesHeaderSort;
     use RendersEstateRowActions;
 
     public function dataTable(QueryBuilder $query): EloquentDataTable
@@ -67,13 +69,8 @@ class EstateOtherRequestDataTable extends DataTable
                     (string) request()->input('bill_date_filter', '')
                 );
             }, false)
-            ->orderColumn('DT_RowIndex', 'estate_other_req.pk $1')
-            ->orderColumn('request_no_oth', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(estate_other_req.request_no_oth, "")) ' . $order))
-            ->orderColumn('emp_name', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(estate_other_req.emp_name, "")) ' . $order))
-            ->orderColumn('section', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(estate_other_req.section, "")) ' . $order))
-            ->orderColumn('doj_acad', fn ($query, $order) => $query->reorder()
-                ->orderBy('estate_other_req.doj_acad', $order)
-                ->orderBy('estate_other_req.pk', $order))
+            // One ORDER BY in place of listingQuery()'s orderByDesc(pk); Download / Print reuse it.
+            ->order(fn ($query) => $this->sortQuery($query))
             ->setRowId('pk');
     }
 
@@ -192,6 +189,19 @@ class EstateOtherRequestDataTable extends DataTable
         }
 
         return Carbon::parse($value)->format('d-m-Y');
+    }
+
+    /** Header sort, shared by the grid and its Download / Print, so both list rows in the same order. */
+    public function sortQuery($query): void
+    {
+        $ci = fn (string $column) => DB::raw('LOWER(COALESCE(estate_other_req.' . $column . ', ""))');
+        $this->applyHeaderSort($query, 'estate_other_req.pk', [
+            'DT_RowIndex' => 'estate_other_req.pk',
+            'request_no_oth' => $ci('request_no_oth'),
+            'emp_name' => $ci('emp_name'),
+            'section' => $ci('section'),
+            'doj_acad' => 'estate_other_req.doj_acad',
+        ]);
     }
 
     public function html(): HtmlBuilder

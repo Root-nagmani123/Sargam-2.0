@@ -89,42 +89,7 @@ class EstateRequestForEstateDataTable extends DataTable
                 $d = $row->req_date;
                 return $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '—';
             })
-            ->editColumn('name_id', function ($row) {
-                $name = trim((string) ($row->emp_name ?? ''));
-                $id = trim((string) ($row->employee_id ?? ''));
-
-                // Defensive fix: some legacy/self-service rows may have empty emp_name even though employee_pk is set.
-                // In that case, try to resolve the name from employee_master on the fly so listing shows proper name.
-                if ($name === '' && (int) ($row->employee_pk ?? 0) > 0) {
-                    static $empNameCache = [];
-                    $empPk = (int) $row->employee_pk;
-                    if (! array_key_exists($empPk, $empNameCache)) {
-                        $empPkCol = Schema::hasColumn('employee_master', 'pk_old') ? 'pk_old' : 'pk';
-                        $empQuery = DB::table('employee_master');
-                        $empQuery->where('pk', $empPk);
-                        if (Schema::hasColumn('employee_master', 'pk_old')) {
-                            $empQuery->orWhere('pk_old', $empPk);
-                        }
-                        $empRow = $empQuery
-                            ->select('first_name', 'middle_name', 'last_name')
-                            ->first();
-                        $resolved = '';
-                        if ($empRow) {
-                            $resolved = trim(
-                                (string) ($empRow->first_name ?? '') . ' ' .
-                                (string) ($empRow->middle_name ?? '') . ' ' .
-                                (string) ($empRow->last_name ?? '')
-                            );
-                        }
-                        $empNameCache[$empPk] = $resolved;
-                    }
-                    if ($empNameCache[$empPk] !== '') {
-                        $name = $empNameCache[$empPk];
-                    }
-                }
-
-                return self::nameWithId($name, $id);
-            })
+            ->editColumn('name_id', fn ($row) => self::nameWithId(self::resolvedName($row), trim((string) ($row->employee_id ?? ''))))
             ->editColumn('doj_academic', function ($row) {
                 $d = $row->doj_academic;
                 return $d ? \Carbon\Carbon::parse($d)->format('d-m-Y') : '—';
@@ -445,6 +410,44 @@ class EstateRequestForEstateDataTable extends DataTable
 
         return $query->orderByDesc('estate_home_request_details.req_date')
             ->orderByDesc('estate_home_request_details.pk');
+    }
+
+    /**
+     * emp_name, or for legacy/self-service rows saved without one, the name from employee_master.
+     * Shared with the Download / Print, so the export names the same person as the grid.
+     */
+    public static function resolvedName(object $row): string
+    {
+        $name = trim((string) ($row->emp_name ?? ''));
+        if ($name === '' && (int) ($row->employee_pk ?? 0) > 0) {
+            static $empNameCache = [];
+            $empPk = (int) $row->employee_pk;
+            if (! array_key_exists($empPk, $empNameCache)) {
+                $empPkCol = Schema::hasColumn('employee_master', 'pk_old') ? 'pk_old' : 'pk';
+                $empQuery = DB::table('employee_master');
+                $empQuery->where('pk', $empPk);
+                if (Schema::hasColumn('employee_master', 'pk_old')) {
+                    $empQuery->orWhere('pk_old', $empPk);
+                }
+                $empRow = $empQuery
+                    ->select('first_name', 'middle_name', 'last_name')
+                    ->first();
+                $resolved = '';
+                if ($empRow) {
+                    $resolved = trim(
+                        (string) ($empRow->first_name ?? '') . ' ' .
+                        (string) ($empRow->middle_name ?? '') . ' ' .
+                        (string) ($empRow->last_name ?? '')
+                    );
+                }
+                $empNameCache[$empPk] = $resolved;
+            }
+            if ($empNameCache[$empPk] !== '') {
+                $name = $empNameCache[$empPk];
+            }
+        }
+
+        return $name;
     }
 
     public function html(): HtmlBuilder

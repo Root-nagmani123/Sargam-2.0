@@ -509,8 +509,10 @@ class EstateReturnHouseDataTable extends DataTable
             Column::make('allotment_date')->title('Allotment Date'),
             Column::make('possession_date_oth')->title('Possession Date'),
             Column::make('returning_date')->title('Return Date'),
-            Column::make('upload_document')->title('Upload Documents'),
-            Column::make('remarks')->title('Remarks'),
+            // Not sortable: the grid shows the meta-file value when the DB one is empty, so SQL
+            // order on these would not match what is on screen.
+            Column::make('upload_document')->title('Upload Documents')->orderable(false),
+            Column::make('remarks')->title('Remarks')->orderable(false),
         ];
     }
 
