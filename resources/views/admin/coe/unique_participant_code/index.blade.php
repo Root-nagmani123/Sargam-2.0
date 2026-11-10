@@ -517,8 +517,18 @@ $(function () {
         send(ROUTES.generate, { course_batch: $genCourse.val(), prefix: prefix, count_start: start })
             .done(function (res) {
                 bootstrap.Modal.getOrCreateInstance($genModal[0]).hide();
-                Swal.fire({ icon: 'success', title: 'Generated', text: res.message })
-                    .then(function () { window.location.reload(); });
+                var text = res.message + (res.scope === 'archived' ? ' The course is archived, so the codes are listed under the Archived tab.' : '');
+                Swal.fire({ icon: 'success', title: 'Generated', text: text })
+                    .then(function () {
+                        if (res.redirect) {
+                            var url = new URL(res.redirect, window.location.origin);
+                            var menu = new URLSearchParams(window.location.search).get('menu');
+                            if (menu) { url.searchParams.set('menu', menu); }
+                            window.location.assign(url.toString());
+                        } else {
+                            window.location.reload();
+                        }
+                    });
             })
             .fail(showError)
             .always(function () { $btn.prop('disabled', false); });

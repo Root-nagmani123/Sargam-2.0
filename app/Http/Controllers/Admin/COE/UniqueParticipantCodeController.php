@@ -48,7 +48,7 @@ class UniqueParticipantCodeController extends Controller
             'scope' => $scope,
             'rows' => $rows,
             'courses' => $rows->pluck('course_name')->unique()->sort(SORT_NATURAL | SORT_FLAG_CASE)->values(),
-            'cohorts' => $this->cohorts(),
+            'cohorts' => $this->cohorts($scope),
         ]);
     }
 
@@ -160,9 +160,16 @@ class UniqueParticipantCodeController extends Controller
         $first = reset($codes);
         $last = end($codes);
 
+        // The tab the codes appear under, so the page can reload onto it.
+        $scope = DB::table('course_master as cm')->where('cm.pk', $courseId)
+            ->where(fn ($q) => $this->whereCourseInScope($q, 'active', 'cm'))
+            ->exists() ? 'active' : 'archived';
+
         return response()->json([
             'message' => count($codes) . " code(s) generated, {$first} to {$last}.",
             'written' => count($codes),
+            'scope' => $scope,
+            'redirect' => route('admin.coe.unique-participant-code.index', ['scope' => $scope]),
         ]);
     }
 
@@ -268,8 +275,6 @@ class UniqueParticipantCodeController extends Controller
     /** @return Collection<int, array<string, mixed>> */
     private function rows(string $scope): Collection
     {
-        $today = now()->toDateString();
-
         return DB::table('coe_participant_codes as pc')
             ->join('student_master as sm', 'sm.pk', '=', 'pc.student_master_pk')
             ->join('course_master as cm', 'cm.pk', '=', 'pc.course_master_pk')
@@ -279,11 +284,7 @@ class UniqueParticipantCodeController extends Controller
                     ->groupBy('user_id')->select('user_id', DB::raw('min(user_name) as user_name')),
                 'uc', 'uc.user_id', '=', 'sm.pk'
             )
-            ->when($scope === 'active', fn ($q) => $q->where('cm.active_inactive', 1)
-                ->where(fn ($w) => $w->whereNull('cm.end_date')->orWhere('cm.end_date', '>=', $today)))
-            ->when($scope === 'archived', fn ($q) => $q->where(fn ($w) => $w
-                ->where('cm.active_inactive', '!=', 1)->orWhereNull('cm.active_inactive')
-                ->orWhere('cm.end_date', '<', $today)))
+            ->where(fn ($q) => $this->whereCourseInScope($q, $scope, 'cm'))
             ->orderBy('cm.course_name')
             ->orderBy('pc.batch')
             ->orderBy('pc.unique_code')
@@ -301,17 +302,40 @@ class UniqueParticipantCodeController extends Controller
     }
 
     /**
-     * The Generate picker: every course + batch with participants, with its head count.
+     * The Generate picker: every course + batch with participants in the tab's scope, with its head count.
      *
      * @return Collection<int, array{key: string, label: string, count: int}>
      */
-    private function cohorts(): Collection
+    private function cohorts(string $scope): Collection
     {
-        return CourseParticipants::cohorts()->map(fn ($r) => [
-            'key' => $r->course_master_pk . ':' . $r->batch,
-            'label' => $r->course_name . ' — ' . $r->batch,
-            'count' => $r->n,
-        ]);
+        $inScope = DB::table('course_master as cm')
+            ->where(fn ($q) => $this->whereCourseInScope($q, $scope, 'cm'))
+            ->pluck('cm.pk')
+            ->map(fn ($pk) => (int) $pk)
+            ->flip();
+
+        return CourseParticipants::cohorts()
+            ->filter(fn ($r) => $inScope->has($r->course_master_pk))
+            ->values()
+            ->map(fn ($r) => [
+                'key' => $r->course_master_pk . ':' . $r->batch,
+                'label' => $r->course_name . ' — ' . $r->batch,
+                'count' => $r->n,
+            ]);
+    }
+
+    /** Active: active and not past its end date. Archived: everything else. */
+    private function whereCourseInScope($query, string $scope, string $alias): void
+    {
+        $today = now()->toDateString();
+
+        if ($scope === 'active') {
+            $query->where("{$alias}.active_inactive", 1)
+                ->where(fn ($w) => $w->whereNull("{$alias}.end_date")->orWhere("{$alias}.end_date", '>=', $today));
+        } else {
+            $query->where("{$alias}.active_inactive", '!=', 1)->orWhereNull("{$alias}.active_inactive")
+                ->orWhere("{$alias}.end_date", '<', $today);
+        }
     }
 
     private function studentName(object $s): string

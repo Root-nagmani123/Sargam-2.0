@@ -110,6 +110,12 @@ class LaptopStatusImport implements ToCollection, WithHeadingRow, WithStartRow
                 continue;
             }
 
+            // Laptop status is recorded only for an OT whose roll number has been generated.
+            if ($participant->roll_number === null) {
+                $this->failures[] = "Row {$rowNumber}: {$participant->display_name} has no roll number yet. Generate roll numbers for the course first.";
+                continue;
+            }
+
             if (isset($seenInFile[$participantId])) {
                 $this->failures[] = "Row {$rowNumber}: {$participant->display_name} already has an answer in this file (row {$seenInFile[$participantId]}).";
                 continue;
@@ -173,8 +179,10 @@ class LaptopStatusImport implements ToCollection, WithHeadingRow, WithStartRow
         }
 
         $participants = DB::table('student_master')
-            ->select('pk', 'display_name', 'course_master_pk', 'batch')
-            ->whereIn('pk', array_keys($ids))
+            ->leftJoin('coe_roll_numbers', 'coe_roll_numbers.student_master_pk', '=', 'student_master.pk')
+            ->select('student_master.pk', 'student_master.display_name', 'student_master.course_master_pk',
+                'student_master.batch', 'coe_roll_numbers.roll_number')
+            ->whereIn('student_master.pk', array_keys($ids))
             ->get()
             ->keyBy(fn ($p) => (int) $p->pk)
             ->all();
