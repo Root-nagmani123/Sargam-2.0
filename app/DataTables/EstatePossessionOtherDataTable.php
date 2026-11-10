@@ -350,7 +350,8 @@ class EstatePossessionOtherDataTable extends DataTable
         $billYear = trim($billYear);
         $billDate = trim($billDate);
         $hasYear = preg_match('/^\d{4}$/', $billYear) === 1;
-        $hasDate = preg_match('/^\d{4}-\d{2}-\d{2}$/', $billDate) === 1;
+        // Shape AND calendar: 2026-99-99 is no filter, not a query on an impossible date (F-045).
+        $hasDate = preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $billDate, $ymd) === 1 && checkdate((int) $ymd[2], (int) $ymd[3], (int) $ymd[1]);
         if ($hasYear || $hasDate) {
             $query->whereExists(function ($q) use ($hasYear, $billYear, $hasDate, $billDate) {
                 $q->selectRaw('1')

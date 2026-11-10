@@ -157,7 +157,8 @@
 $(function() {
     var $table = $('#updateMeterNoTable');
 
-    // The endpoint only returns rows when BOTH bill year and month are given.
+    // Bill year and bill month each filter on their own; with neither, the endpoint returns every saved
+    // reading. The table defers its first load and fetches only when both defaults are pre-selected (below).
     var filters = {
         bill_year: ($('#filterBillYear').val() || '').trim(),
         bill_month: ($('#filterBillMonth').val() || '').trim()

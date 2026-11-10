@@ -409,7 +409,8 @@ class EstateController extends Controller
             ->get();
 
         $filters = ['Bill Year: ' . (preg_match('/^\d{4}$/', $billYear) === 1 ? $billYear : 'All')];
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $billDate) === 1) {
+        // Same calendar check as applyFilters(): an impossible date is no filter, not a 500 (F-045).
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $billDate, $ymd) === 1 && checkdate((int) $ymd[2], (int) $ymd[3], (int) $ymd[1])) {
             $filters[] = 'Bill Date: ' . \Carbon\Carbon::parse($billDate)->format('d-m-Y');
         }
         if ($search !== '') {
@@ -6514,7 +6515,8 @@ class EstateController extends Controller
             ->get();
 
         $filters = ['Bill Year: ' . (preg_match('/^\d{4}$/', $billYear) === 1 ? $billYear : 'All')];
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $billDate) === 1) {
+        // Same calendar check as applyFilters(): an impossible date is no filter, not a 500 (F-045).
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $billDate, $ymd) === 1 && checkdate((int) $ymd[2], (int) $ymd[3], (int) $ymd[1])) {
             $filters[] = 'Bill Date: ' . \Carbon\Carbon::parse($billDate)->format('d-m-Y');
         }
         if ($search !== '') {
@@ -8081,20 +8083,13 @@ class EstateController extends Controller
 
                 // New reading must be >= saved curr when present; otherwise >= last/possession baseline (first entry).
                 $minAllowed = $existingCurr !== null ? $existingCurr : $prev;
+                // No meter-replacement waiver here: outside the edit flow (skipped above) the store coerces
+                // new_meter_no back to the stored number, so a submitted change would never be recorded (F-040).
                 if ($curr < $minAllowed) {
-                    $newMeterNoDigits = preg_replace('/\D/', '', trim((string) ($item['new_meter_no'] ?? '')));
-                    $effectiveOldMeter = $this->effectiveOldMeterNoForRegularReadingRow($row, $meterSlot);
-                    $oldMeterDigits = preg_replace('/\D/', '', $effectiveOldMeter);
-                    $meterChanged = $newMeterNoDigits !== ''
-                        && $oldMeterDigits !== ''
-                        && $newMeterNoDigits !== $oldMeterDigits;
-                    // Meter replaced: the new meter starts fresh, so any lower reading is valid.
-                    if (! $meterChanged) {
-                        $v->errors()->add(
-                            $field,
-                            'New meter reading cannot be less than the saved current reading, or than the opening reading when no current reading exists yet. If the meter was replaced or the saved reading is wrong, open this row from List Meter Reading → Edit.'
-                        );
-                    }
+                    $v->errors()->add(
+                        $field,
+                        'New meter reading cannot be less than the saved current reading, or than the opening reading when no current reading exists yet. If the meter was replaced or the saved reading is wrong, open this row from List Meter Reading → Edit.'
+                    );
                 }
             }
         });
@@ -8847,11 +8842,13 @@ class EstateController extends Controller
                 DB::raw('LAG(emrd.meter_one) OVER (PARTITION BY emrd.estate_possession_details_pk ORDER BY emrd.to_date, emrd.pk) as prev_meter_one'),
                 DB::raw('LAG(emrd.meter_two) OVER (PARTITION BY emrd.estate_possession_details_pk ORDER BY emrd.to_date, emrd.pk) as prev_meter_two'),
             ]);
-        $emrdSub->when($billMonth !== '', fn ($q) => $q->where('emrd.bill_month', $billMonth))
-            ->when($billYear !== '', fn ($q) => $q->where('emrd.bill_year', $billYear));
 
+        // Bill month/year filter OUTSIDE the window: inside it, LAG() would see only the filtered rows and a
+        // reading's Old Meter No would change with the filter (F-042).
         $permBase = DB::query()
             ->fromSub($emrdSub, 'emrd')
+            ->when($billMonth !== '', fn ($q) => $q->where('emrd.bill_month', $billMonth))
+            ->when($billYear !== '', fn ($q) => $q->where('emrd.bill_year', $billYear))
             ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
             ->join('estate_home_request_details as ehrd', 'epd.estate_home_request_details', '=', 'ehrd.pk')
             ->leftJoin('estate_house_master as ehm', 'epd.estate_house_master_pk', '=', 'ehm.pk')
@@ -8905,11 +8902,11 @@ class EstateController extends Controller
                 DB::raw('LAG(emro.meter_one) OVER (PARTITION BY emro.estate_possession_other_pk ORDER BY emro.to_date, emro.pk) as prev_meter_one'),
                 DB::raw('LAG(emro.meter_two) OVER (PARTITION BY emro.estate_possession_other_pk ORDER BY emro.to_date, emro.pk) as prev_meter_two'),
             ]);
-        $emroSub->when($billMonth !== '', fn ($q) => $q->where('emro.bill_month', $billMonth))
-            ->when($billYear !== '', fn ($q) => $q->where('emro.bill_year', $billYear));
 
         $otherBase = DB::query()
             ->fromSub($emroSub, 'emro')
+            ->when($billMonth !== '', fn ($q) => $q->where('emro.bill_month', $billMonth))
+            ->when($billYear !== '', fn ($q) => $q->where('emro.bill_year', $billYear))
             ->join('estate_possession_other as epo', 'emro.estate_possession_other_pk', '=', 'epo.pk')
             ->join('estate_other_req as eor', 'epo.estate_other_req_pk', '=', 'eor.pk')
             ->leftJoin('estate_house_master as eohm', 'epo.estate_house_master_pk', '=', 'eohm.pk')
@@ -9171,7 +9168,8 @@ class EstateController extends Controller
         $orderCol = (int) data_get($request->all(), 'order.0.column', 0);
         $orderDir = strtolower(static::exportFilterText($request, 'order.0.dir', 'desc')) === 'desc' ? 'desc' : 'asc';
 
-        $cacheKey = 'estate_umn:v1:' . md5(json_encode([
+        // v2: Old Meter No now computed before the bill filter (F-042); v1 payloads hold the old values.
+        $cacheKey = 'estate_umn:v2:' . md5(json_encode([
             'dt' => $isDataTables ? 1 : 0,
             'st' => $start,
             'len' => $length,

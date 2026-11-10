@@ -65,8 +65,8 @@ class EstateOtherRequestDataTable extends DataTable
                 static::applyFilters(
                     $query,
                     (string) request()->input('search.value', ''),
-                    (string) request()->input('bill_year_filter', ''),
-                    (string) request()->input('bill_date_filter', '')
+                    static::filterText('bill_year_filter'),
+                    static::filterText('bill_date_filter')
                 );
             }, false)
             // One ORDER BY in place of listingQuery()'s orderByDesc(pk); Download / Print reuse it.
@@ -111,6 +111,14 @@ class EstateOtherRequestDataTable extends DataTable
         return static::$hasEmpIdColumn ??= Schema::hasColumn('estate_other_req', 'employee_master_emp_id');
     }
 
+    /** A toolbar filter as text; an array (key[]=x) reads as no filter instead of an error (F-045, as F-006). */
+    private static function filterText(string $key): string
+    {
+        $value = request()->input($key);
+
+        return is_array($value) ? '' : (string) $value;
+    }
+
     /**
      * Toolbar filters + free-text search, in one place so the grid and the
      * exports can never disagree about which rows are in scope.
@@ -124,7 +132,8 @@ class EstateOtherRequestDataTable extends DataTable
         $billYear = trim($billYear);
         $billDate = trim($billDate);
         $hasYear = preg_match('/^\d{4}$/', $billYear) === 1;
-        $hasDate = preg_match('/^\d{4}-\d{2}-\d{2}$/', $billDate) === 1;
+        // Shape AND calendar: 2026-99-99 is no filter, not a query on an impossible date (F-045).
+        $hasDate = preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $billDate, $ymd) === 1 && checkdate((int) $ymd[2], (int) $ymd[3], (int) $ymd[1]);
         if ($hasYear || $hasDate) {
             $query->whereExists(function ($q) use ($hasYear, $billYear, $hasDate, $billDate) {
                 $q->selectRaw('1')

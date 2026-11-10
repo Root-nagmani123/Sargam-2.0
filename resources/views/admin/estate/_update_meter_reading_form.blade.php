@@ -138,8 +138,8 @@ $(document).ready(function() {
     const prefill = @json($prefill ?? null);
     // Edit from List Meter Reading opens this same page with reading_pk — us flow me baseline validation nahi lagti.
     const isListEditMode = !!(prefill && prefill.reading_pk);
-    // Full page: New Meter No. sirf usi Edit flow me editable hai; seedha kholne par field freeze rehti hai. The dialog keeps it editable.
-    const lockNewMeterNo = !umrInModal && !isListEditMode;
+    // New Meter No. sirf usi Edit flow me editable hai — page aur dialog dono me; baaki jagah server bhi stored meter no. hi likhta hai (F-040).
+    const lockNewMeterNo = !isListEditMode;
     const newMeterNoLockAttr = lockNewMeterNo ? ' readonly' : '';
     const newMeterNoLockClass = lockNewMeterNo ? ' bg-light' : '';
     const newMeterNoPlaceholder = lockNewMeterNo ? '' : 'Enter new meter no.';
@@ -155,7 +155,9 @@ $(document).ready(function() {
     function initTs(el, placeholder) {
         if (!el || typeof $.fn.select2 === 'undefined') return null;
         if ($(el).data('select2')) { try { $(el).select2('destroy'); } catch (e) {} }
-        $(el).select2({ placeholder: placeholder || 'Select', allowClear: false, width: '100%' });
+        // In the dialog the dropdown must live inside the modal, or its focus trap swallows typing in the search box (F-043).
+        var $modal = umrInModal ? $(el).closest('.modal') : $();
+        $(el).select2({ placeholder: placeholder || 'Select', allowClear: false, width: '100%', dropdownParent: $modal.length ? $modal : $(document.body) });
         return $(el);
     }
     function getSelVal(el) { var v = el ? $(el).val() : ''; return (v === null || v === undefined) ? '' : v; }

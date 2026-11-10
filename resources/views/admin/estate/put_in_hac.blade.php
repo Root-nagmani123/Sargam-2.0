@@ -239,6 +239,9 @@
                 // The grid's sort, read back by the export as the grid's own column index.
                 params.order = $table.DataTable().order().map(function (o) { return { column: o[0], dir: o[1] }; });
             }
+            // Home ?scope=self: the export lists the same "my requests" rows as the grid (F-044).
+            var scope = new URLSearchParams(window.location.search).get('scope');
+            if (scope) params.scope = scope;
             params.cols = PIH_EXPORT_KEYS.filter(function(key, idx) {
                 return key !== '' && hidden.indexOf(idx) === -1;
             }).join(',');

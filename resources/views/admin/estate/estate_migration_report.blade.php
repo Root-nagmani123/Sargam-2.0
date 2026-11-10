@@ -286,7 +286,7 @@ $(function () {
             fillSelect($('#' + c[0]), opts[c[1]] || [], c[2]);
         }
         syncMoreCount();
-        table.ajax.reload(null, false);
+        table.ajax.reload(); // filters only: back to page 1, a narrower result may not reach the old page (F-041)
     }
 
     function fetchAndUpdateFilters(resetFrom) {
@@ -306,7 +306,7 @@ $(function () {
     $('#filter_employee_type').on('change', function () { fetchAndUpdateFilters(8); });
     $('#filter_stay_period_text').on('change', function () {
         syncMoreCount();
-        table.ajax.reload(null, false);
+        table.ajax.reload();
     });
 
     $('#btnResetFilters').on('click', function () {
@@ -320,7 +320,7 @@ $(function () {
             }
             initFilterSelects();
             syncMoreCount();
-            table.search('').ajax.reload(null, false);
+            table.search('').ajax.reload();
         });
     });
 
