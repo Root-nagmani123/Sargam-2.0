@@ -18,6 +18,15 @@ use Yajra\DataTables\Services\DataTable;
  */
 class ExaminationDriveDataTable extends DataTable
 {
+    /** Status filter values (?status_filter=) => label, matching ExaminationDrive::progress(). */
+    public const STATUS_FILTERS = [
+        'draft' => 'Draft',
+        'faculty' => 'Pending at Faculty',
+        'cc' => 'Pending at CC',
+        'approved' => 'Approved by CC',
+        'rejected' => 'Rejected by CC',
+    ];
+
     public function dataTable(Builder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
@@ -40,6 +49,7 @@ class ExaminationDriveDataTable extends DataTable
             ->addColumn('actions', fn ($row) => $this->actionsCell($row))
             ->setRowAttr([
                 'data-coe-id' => fn ($row) => $row->id,
+                'data-edc-name' => fn ($row) => $row->drive_name ?? '',
                 'data-edc-status' => fn ($row) => $row->statusLabel(),
                 'data-edc-course' => fn ($row) => $row->course->course_name ?? '',
                 'data-edc-service' => fn ($row) => $row->service_master_pk ?? '',
@@ -85,6 +95,16 @@ class ExaminationDriveDataTable extends DataTable
         if ($phase = request()->query('phase_filter')) {
             $query->where('phase', $phase);
         }
+
+        // Status filter (?status_filter=), matching ExaminationDrive::progress().
+        match (request()->query('status_filter')) {
+            'draft' => $query->where('status', ExaminationDrive::STATUS_DRAFT),
+            'faculty' => $query->where('status', '!=', ExaminationDrive::STATUS_DRAFT)->whereNull('cc_status'),
+            'cc' => $query->where('status', '!=', ExaminationDrive::STATUS_DRAFT)->where('cc_status', ExaminationDrive::CC_PENDING),
+            'approved' => $query->where('status', '!=', ExaminationDrive::STATUS_DRAFT)->where('cc_status', ExaminationDrive::CC_APPROVED),
+            'rejected' => $query->where('status', '!=', ExaminationDrive::STATUS_DRAFT)->where('cc_status', ExaminationDrive::CC_REJECTED),
+            default => null,
+        };
 
         return $query->orderByDesc('id');
     }
@@ -168,15 +188,27 @@ class ExaminationDriveDataTable extends DataTable
     {
         $coordUrl = route('admin.coe.examination-drive.coordinates', $row->id);
         $canEdit = $row->status !== ExaminationDrive::STATUS_CLOSED;
+        // Shown but disabled (update() / destroy() refuse them too):
+        //   Pending at CC - no Edit, no Delete while the Coordinator reviews it;
+        //   Approved by CC - no Edit, no Delete.
+        $approved = $row->cc_status === ExaminationDrive::CC_APPROVED;
+        $pending = $row->cc_status === ExaminationDrive::CC_PENDING;
+        $editLock = $approved ? 'Approved by the Course Coordinator - cannot be edited'
+            : ($pending ? 'Pending at the Course Coordinator - cannot be edited' : null);
 
         $html = '<div class="coe-act-group" role="group" aria-label="Row actions">'
             . '<a href="' . $coordUrl . '" class="coe-act"><span class="coe-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span><span class="coe-act__label">View</span></a>';
 
         if ($canEdit) {
-            $html .= '<button type="button" class="coe-act coe-act--edit"><span class="coe-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span><span class="coe-act__label">Edit</span></button>';
+            $html .= '<button type="button" class="coe-act coe-act--edit"'
+                . ($editLock ? ' disabled title="' . $editLock . '"' : '')
+                . '><span class="coe-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span><span class="coe-act__label">Edit</span></button>';
         }
 
-        $html .= '<button type="button" class="coe-act coe-act--del"><span class="coe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span><span class="coe-act__label">Delete</span></button>'
+        $html .= '<button type="button" class="coe-act coe-act--del"'
+            . ($pending ? ' disabled title="Pending at the Course Coordinator - cannot be deleted"'
+                : ($approved ? ' disabled title="Approved by the Course Coordinator - cannot be deleted"' : ''))
+            . '><span class="coe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span><span class="coe-act__label">Delete</span></button>'
             . '</div>';
 
         return $html;

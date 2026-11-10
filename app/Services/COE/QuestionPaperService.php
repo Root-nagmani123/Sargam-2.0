@@ -18,7 +18,8 @@ use Illuminate\Validation\ValidationException;
  * the original paper in the editor (V1, straight to Rajbhasha - no freeze),
  * editing it (V2, V3...) while it waits on Rajbhasha, and - once the translation
  * is sent back - verifying it and freezing it with an OTP to publish, or editing
- * it again, which sends it back to Rajbhasha to translate the change.
+ * it again, which sends it back to Rajbhasha to translate the change. Once COE
+ * unfreezes a published paper, the faculty may also edit the translation itself.
  *
  * A faculty owes one paper per subject mapped to them on an examination drive
  * (examination_drive_faculty_maps). The question_papers row only exists once
@@ -73,12 +74,15 @@ class QuestionPaperService
 
     private const PUBLISHED_MESSAGE = 'This question paper is published, so it can no longer be changed.';
 
+    private const TRANSLATION_LOCKED_MESSAGE = 'The translated paper can be edited only after COE unfreezes the published paper.';
+
     private const DRIVE_NOT_APPROVED_MESSAGE = 'The Course Coordinator has not approved this examination drive yet. You can upload the question paper once it is approved.';
 
     public function __construct(
         private PaperHtmlSanitizer $sanitizer,
         private FreezeOtpService $otp,
         private QuestionPaperStorage $files,
+        private RajbhashaPaperService $translations,
     ) {
     }
 
@@ -102,7 +106,7 @@ class QuestionPaperService
      * @return Collection<int, array{id:int, code:string, name:string, drive:string, examination:string,
      *     course:string, course_short:string, term:string, batch:string, max_marks:string, duration:string, exam_date:Carbon,
      *     original_file:?string, translated_file:?string, translated_by:?string, comments:?string,
-     *     version:int, status:string, drive_approved:bool, editable:bool}>
+     *     version:int, status:string, drive_approved:bool, editable:bool, translation_editable:bool}>
      */
     public function papersForFaculty(int $facultyPk): Collection
     {
@@ -228,6 +232,47 @@ class QuestionPaperService
         return $document === null ? null : $this->sanitizer->fromDocument($document);
     }
 
+    /**
+     * "Edit Translated Paper" on a paper COE unfroze: the translation, cleaned
+     * again, to start the editor from.
+     *
+     * @throws ModelNotFoundException when the paper is not this faculty's
+     * @throws ValidationException when its translation cannot be edited now
+     */
+    public function translationHtmlFor(int $facultyPk, int $paperId): string
+    {
+        $paper = $this->ownPaper($facultyPk, $paperId);
+        if (! $this->translationEditable($paper)) {
+            throw ValidationException::withMessages(['paper' => self::TRANSLATION_LOCKED_MESSAGE]);
+        }
+
+        $document = $this->files->contents($paper->translated_file_path);
+        if ($document === null) {
+            throw (new ModelNotFoundException())->setModel(QuestionPaper::class, [$paper->id]);
+        }
+
+        return $this->sanitizer->fromDocument($document);
+    }
+
+    /**
+     * Upload Paper on Edit Translated Paper: replaces the translation; the paper
+     * stays Pending Verification for the faculty to freeze. Rajbhasha remains
+     * the translator of record - the edit is in the logs.
+     *
+     * @throws ModelNotFoundException when the paper is not this faculty's
+     * @throws ValidationException when its translation cannot be edited now, or it is blank
+     */
+    public function saveTranslatedPaper(int $facultyPk, int $paperId, string $html): QuestionPaper
+    {
+        $paper = $this->ownPaper($facultyPk, $paperId);
+        if (! $this->translationEditable($paper)) {
+            throw ValidationException::withMessages(['paper' => self::TRANSLATION_LOCKED_MESSAGE]);
+        }
+
+        return $this->translations->replaceTranslation($paper, $html,
+            fn (QuestionPaper $p) => $this->translationEditable($p), self::TRANSLATION_LOCKED_MESSAGE);
+    }
+
     private function addFirstVersion(int $paperId, array $row, string $contents): QuestionPaper
     {
         $map = ExaminationDriveFacultyMap::findOrFail($paperId);
@@ -258,6 +303,7 @@ class QuestionPaperService
                     'comments' => null,
                     'frozen_at' => null,
                     'frozen_by' => null,
+                    'unfrozen_at' => null,
                     'translated_file_path' => null,
                     'translated_file_name' => null,
                     'translated_by' => null,
@@ -309,6 +355,8 @@ class QuestionPaperService
                     'status' => QuestionPaper::STATUS_PENDING_RAJBHASHA,
                     'sent_for_approval_at' => null,
                     'sent_for_approval_by' => null,
+                    // Back in the usual flow: the translation is Rajbhasha's again.
+                    'unfrozen_at' => null,
                 ]);
 
                 return $oldPath;
@@ -359,10 +407,21 @@ class QuestionPaperService
                 'status' => self::FREEZE_TO[$locked->status],
                 'frozen_at' => now(),
                 'frozen_by' => auth()->id(),
+                'unfrozen_at' => null,
             ]);
 
             return $locked;
         });
+    }
+
+    /** The faculty's paper once they have added it, or null (a new paper has no row yet). */
+    public function paperFor(int $facultyPk, int $paperId): ?QuestionPaper
+    {
+        try {
+            return $this->ownPaper($facultyPk, $paperId);
+        } catch (ModelNotFoundException) {
+            return null;
+        }
     }
 
     /**
@@ -408,6 +467,19 @@ class QuestionPaperService
             && in_array($paper->status, [QuestionPaper::STATUS_SENT_FOR_APPROVAL, QuestionPaper::STATUS_PUBLISHED], true);
     }
 
+    /**
+     * COE unfroze it and it waits on the faculty's verification: they may edit the
+     * translation too - one written in the editor (an older .docx cannot be).
+     */
+    private function translationEditable(?QuestionPaper $paper): bool
+    {
+        return $paper !== null
+            && $paper->status === QuestionPaper::STATUS_SENT_FOR_APPROVAL
+            && $paper->unfrozen_at !== null
+            && $paper->translated_file_path
+            && str_ends_with(strtolower((string) $paper->translated_file_name), '.html');
+    }
+
     private function toRow(ExaminationDriveFacultyMap $map, ?QuestionPaper $paper): array
     {
         $drive = $map->drive;
@@ -444,6 +516,8 @@ class QuestionPaperService
             'drive_approved' => $driveApproved,
             // Add; Edit while it waits on Rajbhasha or on the faculty's verification.
             'editable' => $driveApproved && ($paper === null || in_array($paper->status, self::EDITABLE, true)),
+            // Edit Translated Paper: only after COE unfroze it.
+            'translation_editable' => $this->translationEditable($paper),
         ];
     }
 

@@ -14,6 +14,9 @@ use Yajra\DataTables\EloquentDataTable;
  */
 class ExaminationDriveCoeDataTable extends ExaminationDriveFacultyDataTable
 {
+    /** Not limited to the viewer's own drives (see ExaminationDriveFacultyDataTable). */
+    protected bool $onlyOwnDrives = false;
+
     public function html()
     {
         return $this->builder()->setTableId('cedcTable')->columns($this->getColumns());

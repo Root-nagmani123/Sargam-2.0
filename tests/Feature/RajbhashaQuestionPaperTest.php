@@ -7,10 +7,13 @@ use App\Models\ExaminationDrive;
 use App\Models\ExaminationDriveFacultyMap;
 use App\Models\ExaminationTypeMaster;
 use App\Models\FacultyMaster;
+use App\Models\Notification;
 use App\Models\QuestionPaper;
+use App\Models\QuestionPaperLog;
 use App\Models\SubjectMaster;
 use App\Models\TermMaster;
 use App\Models\User;
+use App\Services\COE\QuestionPaperNotifier;
 use App\Services\COE\RajbhashaPaperService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
@@ -170,6 +173,23 @@ class RajbhashaQuestionPaperTest extends TestCase
             ->assertSee('var STARTS_FROM_COPY = true', false);
     }
 
+    public function test_covering_the_paper_on_the_translate_page_is_logged(): void
+    {
+        $url = route('admin.coe.my-question-paper.hidden', $this->paper->id);
+
+        $this->actingAs($this->rajbhasha)->get(route('admin.coe.my-question-paper.translate', $this->paper->id))
+            ->assertOk()
+            ->assertSee('var HIDDEN_URL = "'.str_replace('/', '\/', $url).'"', false);
+
+        $this->actingAs($this->rajbhasha)->post($url, ['reason' => 'left'])->assertNoContent();
+        $log = QuestionPaperLog::latest('id')->first();
+        $this->assertSame([$this->paper->id, 'Rajbhasha', 'Translation', 'Paper Hidden', 'Window left'],
+            [$log->question_paper_id, $log->role, $log->module, $log->action, $log->detail]);
+
+        $this->actingAs($this->rajbhasha)->postJson($url, ['reason' => 'anything'])->assertUnprocessable();
+        $this->actingAs($this->outsider)->post($url, ['reason' => 'left'])->assertForbidden();
+    }
+
     public function test_translate_then_edit_then_delete_the_translation(): void
     {
         $this->rajbhashaAction('translation.store', ['paper_html' => self::HINDI.'<script>alert(1)</script>'])
@@ -279,6 +299,37 @@ class RajbhashaQuestionPaperTest extends TestCase
             ->assertStatus(422);
     }
 
+    public function test_send_and_freeze_ring_the_next_ones_bell(): void
+    {
+        $coe = $this->outsider;
+        $coe->assignRole(QuestionPaperNotifier::COE_ROLE);   // rolled back with the test
+
+        $this->rajbhashaAction('translation.store', ['paper_html' => self::HINDI])->assertOk();
+        $this->rajbhashaAction('send-for-approval')->assertOk();
+        $this->assertSame([[QuestionPaperNotifier::MODULE_FACULTY, 'Translation Paper Ready',
+            'The translation for Test Subject ('.$this->paper->paper_code.') is ready. Please review it and freeze it when final.']],
+            $this->bell($this->faculty));
+
+        $otp = $this->sendFacultyOtp();
+        $this->actingAs($this->faculty)
+            ->postJson(route('admin.coe.faculty-question-paper.freeze', $this->map->id), ['otp' => $otp])
+            ->assertOk();
+        $this->assertContains([QuestionPaperNotifier::MODULE_COE, 'Question Paper Published',
+            'The question paper for Test Subject ('.$this->paper->paper_code.') has been frozen and published by the faculty.'],
+            $this->bell($coe));
+
+        // No one is told of their own action; the faculty still has only the one.
+        $this->assertSame([], $this->bell($this->rajbhasha));
+        $this->assertCount(1, $this->bell($this->faculty));
+
+        // The bell opens each one's own list.
+        $service = app(\App\Services\NotificationService::class);
+        $this->assertSame(route('admin.coe.faculty-question-paper.index'), $service->getRedirectUrl(
+            Notification::where('receiver_user_id', $this->faculty->user_id)->where('type', QuestionPaperNotifier::TYPE)->value('pk')));
+        $this->assertSame(route('admin.coe.question-paper.index'), $service->getRedirectUrl(
+            Notification::where('receiver_user_id', $coe->user_id)->where('module_name', QuestionPaperNotifier::MODULE_COE)->value('pk')));
+    }
+
     public function test_faculty_edit_before_freeze_goes_back_to_rajbhasha(): void
     {
         $this->rajbhashaAction('translation.store', ['paper_html' => self::HINDI])->assertOk();
@@ -340,6 +391,14 @@ class RajbhashaQuestionPaperTest extends TestCase
             ->postJson(route('admin.coe.faculty-question-paper.upload', $this->map->id), ['paper_html' => '<p>Too late.</p>'])
             ->assertStatus(422)
             ->assertJsonValidationErrors('paper');
+    }
+
+    /** [module, title, message] of the question paper bell notifications $user got for this paper. */
+    private function bell(User $user): array
+    {
+        return Notification::where('receiver_user_id', $user->user_id)
+            ->where('type', QuestionPaperNotifier::TYPE)->where('reference_pk', $this->paper->id)
+            ->orderBy('pk')->get()->map(fn ($n) => [$n->module_name, $n->title, $n->message])->all();
     }
 
     private function rajbhashaAction(string $name, array $data = [])

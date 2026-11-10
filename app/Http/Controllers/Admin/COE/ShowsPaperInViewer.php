@@ -32,12 +32,12 @@ trait ShowsPaperInViewer
         ]);
     }
 
-    /** "Name · ID 12 · 29-10-2026 10:15" — stamped over the viewer and the paper editor. */
+    /** "Name · ID 12 · 10.0.0.5 · 29-10-2026 10:15" — stamped over the viewer and the paper editor. */
     protected function paperStamp(Request $request): string
     {
         $user = $request->user();
         $name = trim(($user->first_name ?? '').' '.($user->last_name ?? '')) ?: ($user->name ?? 'User');
 
-        return $name.' · ID '.$user->getAuthIdentifier().' · '.now()->format('d-m-Y H:i');
+        return $name.' · ID '.$user->getAuthIdentifier().' · '.$request->ip().' · '.now()->format('d-m-Y H:i');
     }
 }

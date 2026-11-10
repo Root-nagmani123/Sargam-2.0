@@ -7,10 +7,17 @@ use App\Models\ExaminationDrive;
 use App\Models\ExaminationDriveFacultyMap;
 use App\Models\ExaminationTypeMaster;
 use App\Models\FacultyMaster;
+use App\Models\Notification;
 use App\Models\QuestionPaper;
+use App\Models\QuestionPaperLog;
 use App\Models\SubjectMaster;
 use App\Models\TermMaster;
 use App\Models\User;
+use App\Services\COE\AdminPaperService;
+use App\Services\COE\QuestionPaperNotifier;
+use App\Services\COE\RajbhashaPaperService;
+use App\Services\NotificationService;
+use App\Support\COE\PaperHtmlSanitizer;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Log\Events\MessageLogged;
@@ -138,6 +145,56 @@ class FacultyQuestionPaperUploadTest extends TestCase
             '/var WATERMARK = ".*? \\\\u00b7 ID '.$this->faculty->getAuthIdentifier().' \\\\u00b7 /u',
             $html
         );
+        $this->assertStringContainsString('var HIDDEN_URL = "'.str_replace('/', '\/', route('admin.coe.faculty-question-paper.hidden', $this->map->id)).'"', $html);
+    }
+
+    public function test_covering_the_paper_is_logged_for_a_new_and_an_added_paper(): void
+    {
+        $url = route('admin.coe.faculty-question-paper.hidden', $this->map->id);
+
+        // A new paper has no row yet: its code goes in the detail.
+        $this->actingAs($this->faculty)->post($url, ['reason' => 'left'])->assertNoContent();
+        $log = QuestionPaperLog::latest('id')->first();
+        $this->assertSame([null, 'Paper Hidden', 'Faculty'], [$log->question_paper_id, $log->action, $log->role]);
+        $this->assertStringEndsWith(' · Window left', $log->detail);
+
+        $this->write()->assertOk();
+        $this->actingAs($this->faculty)->post($url, ['reason' => 'printscreen'])->assertNoContent();
+        $log = QuestionPaperLog::latest('id')->first();
+        $this->assertSame([$this->paper()->id, 'PrintScreen key'], [$log->question_paper_id, $log->detail]);
+
+        $this->actingAs($this->faculty)->postJson($url, ['reason' => 'anything'])->assertUnprocessable();
+        $this->actingAs($this->nonFaculty())->post($url, ['reason' => 'left'])->assertForbidden();
+    }
+
+    public function test_upload_rings_rajbhashas_bell_new_then_updated(): void
+    {
+        $rajbhasha = $this->nonFaculty();
+        $rajbhasha->givePermissionTo(RajbhashaPaperService::PERMISSION);   // rolled back with the test
+
+        $this->write()->assertOk();
+        $this->upload(['paper_html' => '<p>Q1 Explain the Constitution (revised).</p>'])->assertOk();
+
+        $this->assertSame([
+            ['RajbhashaQuestionPaper', 'Question Paper for Translation', 'A question paper for '.$this->paper()->paper_name.' ('.$this->code().') has been submitted for translation.'],
+            ['RajbhashaQuestionPaper', 'Question Paper Updated', 'The question paper for '.$this->paper()->paper_name.' ('.$this->code().') has been updated (V2) and is ready for translation.'],
+        ], Notification::where('receiver_user_id', $rajbhasha->user_id)
+            ->where('type', QuestionPaperNotifier::TYPE)->where('reference_pk', $this->paper()->id)
+            ->orderBy('pk')->get()->map(fn ($n) => [$n->module_name, $n->title, $n->message])->all());
+
+        // The faculty is not told of their own upload.
+        $this->assertFalse(Notification::where('receiver_user_id', $this->faculty->user_id)
+            ->where('type', QuestionPaperNotifier::TYPE)->exists());
+    }
+
+    public function test_a_failed_notification_never_blocks_the_upload(): void
+    {
+        $this->nonFaculty()->givePermissionTo(RajbhashaPaperService::PERMISSION);   // someone to notify
+        $this->mock(NotificationService::class)
+            ->shouldReceive('createMultiple')->once()->andThrow(new \RuntimeException('bell down'));
+
+        $this->write()->assertOk()->assertJson(['message' => 'Question paper uploaded and sent for translation.']);
+        $this->assertSame(QuestionPaper::STATUS_PENDING_RAJBHASHA, $this->paper()->status);
     }
 
     public function test_editor_paper_is_stored_as_v1_and_goes_straight_to_rajbhasha(): void
@@ -294,6 +351,74 @@ class FacultyQuestionPaperUploadTest extends TestCase
         $this->assertSame(QuestionPaper::STATUS_PUBLISHED, $this->paper()->status);
     }
 
+    public function test_after_coe_unfreezes_it_the_faculty_edits_the_translation(): void
+    {
+        $this->write()->assertOk();
+        $oldPath = $this->sentBackTranslated();
+        $translator = $this->paper()->translated_by;
+        $editUrl = route('admin.coe.faculty-question-paper.translation.edit', $this->map->id);
+        $saveUrl = route('admin.coe.faculty-question-paper.translation.store', $this->map->id);
+
+        // Sent back by Rajbhasha but never unfrozen: no Edit Translated Paper.
+        $this->actingAs($this->faculty)->get(route('admin.coe.faculty-question-paper.index'))
+            ->assertOk()->assertDontSee($editUrl, false);
+        $this->actingAs($this->faculty)->get($editUrl)
+            ->assertRedirect(route('admin.coe.faculty-question-paper.index'))
+            ->assertSessionHas('error', fn ($m) => str_contains($m, 'after COE unfreezes'));
+        $this->actingAs($this->faculty)->postJson($saveUrl, ['paper_html' => '<p>बदला</p>'])
+            ->assertStatus(422)->assertJsonValidationErrors('paper');
+
+        $this->paper()->update(['status' => QuestionPaper::STATUS_PUBLISHED, 'frozen_at' => now()]);
+        app(AdminPaperService::class)->unfreeze($this->paper()->id);
+        $this->assertNotNull($this->paper()->unfrozen_at);
+
+        $this->actingAs($this->faculty)->get(route('admin.coe.faculty-question-paper.index'))
+            ->assertOk()->assertSee($editUrl, false);
+        $this->actingAs($this->faculty)->get($editUrl)
+            ->assertOk()
+            ->assertSee('Edit Translated Paper')
+            ->assertSee('प्रश्न 1');
+
+        $this->actingAs($this->faculty)->postJson($saveUrl, ['paper_html' => '<p>  </p>'])
+            ->assertStatus(422)->assertJsonValidationErrors('paper_html');
+        $this->actingAs($this->faculty)->postJson($saveUrl, ['paper_html' => '<p>प्रश्न 1 सुधारा गया</p>'])
+            ->assertOk()
+            ->assertJson(['message' => 'Translated question paper updated. Freeze it to publish.']);
+
+        // Still the faculty's to freeze; Rajbhasha stays the translator; the old file is gone.
+        $paper = $this->paper();
+        $this->assertSame(QuestionPaper::STATUS_SENT_FOR_APPROVAL, $paper->status);
+        $this->assertSame($this->code().'_hindi.html', $paper->translated_file_name);
+        $this->assertSame($translator, $paper->translated_by);
+        $this->assertStringContainsString('सुधारा गया', Storage::disk(QuestionPaper::DISK)->get($paper->translated_file_path));
+        Storage::disk(QuestionPaper::DISK)->assertMissing($oldPath);
+
+        $logs = QuestionPaperLog::where('question_paper_id', $paper->id)->where('module', 'Translation')
+            ->orderBy('id')->get(['role', 'action'])->map(fn ($l) => [$l->role, $l->action])->all();
+        $this->assertSame([['Faculty', 'Opened in Editor'], ['Faculty', 'Updated']], $logs);
+
+        // Freezing it again ends the edit.
+        $this->action('freeze', ['otp' => $this->sendOtp()])->assertOk();
+        $this->assertNull($this->paper()->unfrozen_at);
+        $this->actingAs($this->faculty)->get($editUrl)->assertRedirect(route('admin.coe.faculty-question-paper.index'));
+    }
+
+    public function test_editing_the_original_after_unfreeze_ends_the_translation_edit(): void
+    {
+        $this->write()->assertOk();
+        $this->sentBackTranslated();
+        $this->paper()->update(['status' => QuestionPaper::STATUS_PUBLISHED, 'frozen_at' => now()]);
+        app(AdminPaperService::class)->unfreeze($this->paper()->id);
+
+        $this->upload(['paper_html' => '<p>Q1 Explain the Constitution again.</p>'])->assertOk();
+
+        $this->assertSame(QuestionPaper::STATUS_PENDING_RAJBHASHA, $this->paper()->status);
+        $this->assertNull($this->paper()->unfrozen_at);
+        $this->actingAs($this->faculty)
+            ->postJson(route('admin.coe.faculty-question-paper.translation.store', $this->map->id), ['paper_html' => '<p>बदला</p>'])
+            ->assertStatus(422);
+    }
+
     public function test_freeze_without_an_otp_sent_is_refused(): void
     {
         $this->write()->assertOk();
@@ -435,6 +560,23 @@ class FacultyQuestionPaperUploadTest extends TestCase
         return QuestionPaper::where('examination_drive_id', $this->map->examination_drive_id)
             ->where('subject_master_pk', $this->map->subject_master_pk)
             ->first();
+    }
+
+    /** Rajbhasha translated it in the editor and sent it back for verification; returns the translation's path. */
+    private function sentBackTranslated(): string
+    {
+        $path = 'coe/question-papers/'.$this->map->examination_drive_id.'/'.$this->code().'_hindi_test.html';
+        Storage::disk(QuestionPaper::DISK)->put($path, app(PaperHtmlSanitizer::class)->toDocument('Hindi', '<p>प्रश्न 1</p>'));
+        $this->paper()->update([
+            'status' => QuestionPaper::STATUS_SENT_FOR_APPROVAL,
+            'translated_file_path' => $path,
+            'translated_file_name' => $this->code().'_hindi.html',
+            'translated_by' => User::where('pk', '!=', $this->faculty->pk)->value('pk'),
+            'translated_at' => now(),
+            'sent_for_approval_at' => now(),
+        ]);
+
+        return $path;
     }
 
     private function code(): string

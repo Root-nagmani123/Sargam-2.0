@@ -3,7 +3,8 @@
      posts paper_html to $saveUrl.
      Params: $pageTitle, $paper (summary + template header), $editorHtml (the
      document to start from, or null for a template), $templates, $listUrl,
-     $saveUrl, $watermark (who is writing: stamped over the sheet), $startsFromCopy
+     $saveUrl, $hiddenUrl (where each cover of the paper is reported, for the
+     logs), $watermark (who is writing: stamped over the sheet), $startsFromCopy
      (optional: $editorHtml is someone else's paper, to be changed before upload —
      Rajbhasha's first translation). Guarded like the viewer: CoePaperGuard. --}}
 @extends('admin.layouts.master')
@@ -123,6 +124,7 @@ $(function () {
 
     var LIST_URL = @json($listUrl);
     var UPLOAD_URL = @json($saveUrl);
+    var HIDDEN_URL = @json($hiddenUrl ?? null);
     var STARTS_FROM_COPY = @json($startsFromCopy);
     var WATERMARK = @json($watermark);
     var BLANK = '<p><br></p>';
@@ -253,7 +255,13 @@ $(function () {
         .appendTo($editing);
     document.body.classList.add(CoePaperGuard.NO_PRINT);
 
-    function shield(on) { $form.toggleClass('is-shielded', on); }
+    // Each cover is reported once (blur and visibilitychange both fire on Alt+Tab).
+    var shielded = false;
+    function shield(on, reason) {
+        if (on && !shielded && reason && HIDDEN_URL) { CoePaperGuard.report(HIDDEN_URL, reason); }
+        shielded = on;
+        $form.toggleClass('is-shielded', on);
+    }
     CoePaperGuard.guard({ active: function () { return true; }, shield: shield, copyKeys: true });
     $form.find('.coe-qp-shield').on('click', function () { shield(false); });
     CoePaperGuard.keepClipboard($editing.find('.note-editable')[0], function (html) {

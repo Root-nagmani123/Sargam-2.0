@@ -20,9 +20,32 @@ class ExaminationDriveFacultyDataTable extends ExaminationDriveDataTable
      * Faculty never see a Draft drive: Active tab = Active, Archived tab = Closed.
      * The parent query already splits the tabs on Closed / not Closed.
      */
+    /** Status filter options for the faculty list (no Draft: faculty never see one). Applied by the parent query. */
+    public const STATUS_FILTERS = [
+        'faculty' => 'Pending at Faculty',
+        'cc' => 'Pending at CC',
+        'approved' => 'Approved by CC',
+        'rejected' => 'Rejected by CC',
+    ];
+
+    /**
+     * A faculty user sees only the drives they are mapped on (Subject -> Faculty);
+     * Super Admin and other roles see every drive. The CC and COE grids, which
+     * extend this one, turn it off: a CC sees their courses' drives either way.
+     */
+    protected bool $onlyOwnDrives = true;
+
     public function query(ExaminationDrive $model): Builder
     {
-        return parent::query($model)->where('status', '!=', ExaminationDrive::STATUS_DRAFT);
+        $query = parent::query($model)->where('status', '!=', ExaminationDrive::STATUS_DRAFT);
+
+        $user = auth()->user();
+        if ($this->onlyOwnDrives && $user && $user->hasRole('Faculty') && ! $user->hasRole('Super Admin')) {
+            $facultyPks = \App\Models\FacultyMaster::where('employee_master_pk', $user->user_id)->pluck('pk')->all();
+            $query->whereHas('facultyMaps', fn ($q) => $q->whereIn('faculty_master_pk', $facultyPks ?: [0]));
+        }
+
+        return $query;
     }
 
     public function dataTable(Builder $query): EloquentDataTable
@@ -81,6 +104,12 @@ class ExaminationDriveFacultyDataTable extends ExaminationDriveDataTable
     protected function actionsCell(ExaminationDrive $row): string
     {
         $url = route('admin.coe.faculty-examination-drive.setup', $row->id);
+
+        // Approved by the CC: faculty can only look at the setup now.
+        if ($row->cc_status === ExaminationDrive::CC_APPROVED) {
+            return '<a href="' . $url . '" class="edc-setup-link is-done" title="Approved by the Course Coordinator - view only">'
+                . '<i class="bi bi-eye" aria-hidden="true"></i><span>View<br>Setup</span></a>';
+        }
 
         if ($this->setupCompleted($row)) {
             return '<a href="' . $url . '" class="edc-setup-link is-done" title="Setup completed - open to view or edit">'

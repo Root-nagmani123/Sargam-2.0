@@ -14,6 +14,7 @@
  *
  *   CoePaperGuard.guard({ active: fn, shield: fn(on), copyKeys: bool });
  *   CoePaperGuard.keepClipboard(editableEl, function (html) { … insert … });
+ *   CoePaperGuard.report('…/hidden', 'left');                  // the paper was covered: logged
  *   el.style.backgroundImage = CoePaperGuard.watermark('Name · ID 12 · 29-10-2026 10:15');
  *
  * These are deterrents: no browser can stop a phone camera or a capture tool
@@ -76,11 +77,17 @@
         });
     }
 
-    // One tilted line, tiled over the whole paper (it scrolls with it).
+    // One tilted line, tiled over the whole paper (it scrolls with it) - dense and
+    // dark enough that a screenshot cannot be cropped or cleaned of it. The tile
+    // grows with the text, so a long name is never cut off at its edges.
     function watermark(text) {
-        var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="440" height="240">' +
-            '<text x="220" y="120" text-anchor="middle" dominant-baseline="middle" transform="rotate(-24 220 120)" ' +
-            'font-family="Arial, sans-serif" font-size="15" font-weight="600" fill="#0b2a5b" fill-opacity="0.14">' +
+        var len = Math.ceil(String(text).length * 8.2);     // ~width of 15px bold Arial
+        var w = Math.max(440, Math.ceil(len * 0.92) + 40);  // cos 24°
+        var h = Math.max(200, Math.ceil(len * 0.41) + 40);  // sin 24°
+        var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '">' +
+            '<text x="' + (w / 2) + '" y="' + (h / 2) + '" text-anchor="middle" dominant-baseline="middle" ' +
+            'transform="rotate(-24 ' + (w / 2) + ' ' + (h / 2) + ')" ' +
+            'font-family="Arial, sans-serif" font-size="15" font-weight="600" fill="#0b2a5b" fill-opacity="0.22">' +
             escapeXml(text) + '</text></svg>';
         return 'url("data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg) + '")';
     }
@@ -227,10 +234,15 @@
 
     /**
      * Screen-capture deterrents for a paper on screen, while o.active() says so:
-     * o.shield(true) covers it whenever this window is not the one in use
-     * (Win+Shift+S, Snipping Tool, Alt+Tab, another tab) or PrintScreen is
-     * pressed, and o.shield(false) uncovers it on return; save / print / source
-     * / devtools keys are swallowed, and copy keys too unless o.copyKeys.
+     * o.shield(true, reason) covers it whenever this window is not the one in use
+     * (Win+Shift+S, Snipping Tool, Alt+Tab, another tab: 'left') or PrintScreen
+     * is pressed ('printscreen'), and o.shield(false) uncovers it on return; save
+     * / print / source / devtools keys are swallowed, and copy keys too unless
+     * o.copyKeys.
+     *
+     * A capture tool that takes PrintScreen for itself (Lightshot, ShareX) shoots
+     * before the page hears of it - only the 'left' that follows is seen, which
+     * is why the editor reports every cover (report()).
      */
     function guard(o) {
         function blocks(e) {
@@ -247,23 +259,37 @@
             if (!o.active() || !blocks(e)) { return; }
             e.preventDefault();
             e.stopPropagation();
-            if ((e.key || '').toLowerCase() === 'printscreen') { o.shield(true); }
+            if ((e.key || '').toLowerCase() === 'printscreen') { o.shield(true, 'printscreen'); }
         }, true);
         // Windows takes the PrintScreen shot on key down and only reports key up:
         // empty the clipboard and keep the paper covered until the user returns.
         document.addEventListener('keyup', function (e) {
             if (!o.active() || (e.key || '').toLowerCase() !== 'printscreen') { return; }
-            o.shield(true);
+            o.shield(true, 'printscreen');
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText('').catch(function () {});
             }
         }, true);
 
-        window.addEventListener('blur', function () { if (o.active()) { o.shield(true); } });
+        window.addEventListener('blur', function () { if (o.active()) { o.shield(true, 'left'); } });
         window.addEventListener('focus', function () { o.shield(false); });
         document.addEventListener('visibilitychange', function () {
-            if (o.active() && document.hidden) { o.shield(true); }
+            if (o.active() && document.hidden) { o.shield(true, 'left'); }
         });
+    }
+
+    /**
+     * Tell the server the paper was covered (reason: 'left' | 'printscreen') for
+     * the Question Paper Management Logs. A beacon still goes out while the tab
+     * is being hidden; nothing is shown if it fails.
+     */
+    function report(url, reason) {
+        var meta = document.querySelector('meta[name="csrf-token"]');
+        var data = new FormData();
+        data.append('_token', meta ? meta.content : '');
+        data.append('reason', reason);
+        if (navigator.sendBeacon && navigator.sendBeacon(url, data)) { return; }
+        $.ajax({ url: url, method: 'POST', data: data, processData: false, contentType: false });
     }
 
     /**
@@ -334,5 +360,5 @@
     }
 
     window.CoePaperViewer = { open: open, print: print };
-    window.CoePaperGuard = { guard: guard, keepClipboard: keepClipboard, watermark: watermark, NO_PRINT: NO_PRINT };
+    window.CoePaperGuard = { guard: guard, keepClipboard: keepClipboard, watermark: watermark, report: report, NO_PRINT: NO_PRINT };
 })(window, document, jQuery);

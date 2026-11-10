@@ -2021,6 +2021,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
             ->whereNumber('paper')->name('my-question-paper.translate');
         Route::post('my-question-paper/{paper}/translation', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'storeTranslation'])
             ->whereNumber('paper')->name('my-question-paper.translation.store');
+        Route::post('my-question-paper/{paper}/hidden', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'hidden'])
+            ->whereNumber('paper')->middleware('throttle:60,1')->name('my-question-paper.hidden');
         Route::delete('my-question-paper/{paper}/translation', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'destroyTranslation'])
             ->whereNumber('paper')->name('my-question-paper.translation.destroy');
         Route::post('my-question-paper/{paper}/send-for-approval', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'sendForApproval'])
@@ -2055,10 +2057,17 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
             ->whereNumber('paper')->name('faculty-question-paper.create');
         Route::post('faculty-question-paper/{paper}/upload', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'upload'])
             ->whereNumber('paper')->name('faculty-question-paper.upload');
+        Route::post('faculty-question-paper/{paper}/hidden', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'hidden'])
+            ->whereNumber('paper')->middleware('throttle:60,1')->name('faculty-question-paper.hidden');
         Route::get('faculty-question-paper/{paper}/original', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'original'])
             ->whereNumber('paper')->name('faculty-question-paper.original');
         Route::get('faculty-question-paper/{paper}/translated', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'translated'])
             ->whereNumber('paper')->name('faculty-question-paper.translated');
+        // Edit Translated Paper: only once COE has unfrozen the published paper.
+        Route::get('faculty-question-paper/{paper}/translation/edit', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'editTranslation'])
+            ->whereNumber('paper')->name('faculty-question-paper.translation.edit');
+        Route::post('faculty-question-paper/{paper}/translation', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'storeTranslation'])
+            ->whereNumber('paper')->name('faculty-question-paper.translation.store');
         // Throttled per user on top of FreezeOtpService's own per-paper limits.
         Route::post('faculty-question-paper/{paper}/freeze-otp', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'freezeOtp'])
             ->whereNumber('paper')->middleware('throttle:10,1')->name('faculty-question-paper.freeze-otp');
@@ -2215,6 +2224,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->whereNumber('id')->name('venue-allocation.show');
     Route::get('examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'index'])
         ->name('examination-drive.index');
+    Route::get('examination-drive/export/{format}', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'export'])
+        ->whereIn('format', ['csv', 'excel', 'pdf', 'print'])->name('examination-drive.export');
     Route::post('examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'store'])
         ->name('examination-drive.store');
     Route::put('examination-drive/{id}', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'update'])
@@ -2233,10 +2244,14 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->whereNumber('id')->name('examination-drive.coordinates');
     Route::get('faculty-examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'facultyIndex'])
         ->name('faculty-examination-drive.index');
+    Route::get('faculty-examination-drive/export/{format}', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'facultyExport'])
+        ->whereIn('format', ['csv', 'excel', 'pdf', 'print'])->name('faculty-examination-drive.export');
     Route::get('coe-examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'coeIndex'])
         ->name('coe-examination-drive.index');
     Route::get('cc-examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'ccIndex'])
         ->name('cc-examination-drive.index');
+    Route::get('cc-examination-drive/{id}/details', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'ccDetails'])
+        ->whereNumber('id')->name('cc-examination-drive.details');
     Route::put('cc-examination-drive/{id}/approve', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'ccApprove'])
         ->whereNumber('id')->name('cc-examination-drive.approve');
     Route::put('cc-examination-drive/{id}/reject', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'ccReject'])

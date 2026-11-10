@@ -126,6 +126,7 @@
                                     data-coe-original="{{ $paper['original_file'] ? '1' : '0' }}"
                                     data-coe-translated="{{ $paper['translated_file'] ? '1' : '0' }}"
                                     data-coe-create-url="{{ $paper['editable'] ? route('admin.coe.faculty-question-paper.create', $paper['id']) : '' }}"
+                                    data-coe-translate-url="{{ $paper['translation_editable'] ? route('admin.coe.faculty-question-paper.translation.edit', $paper['id']) : '' }}"
                                     data-coe-drive-approved="{{ $paper['drive_approved'] ? '1' : '0' }}">
                                     <td class="coe-col-check">
                                         <input type="checkbox" class="form-check-input m-0 qpf-row-check"
@@ -214,7 +215,8 @@ $(function () {
     var $table = $('#qpfTable');
 
     /* ── Row actions per state — the ONE place they are defined ─────────── */
-    // href: null → a button; 'create' → the row's own URL (data-coe-create-url).
+    // href: null → a button; 'create' → the row's own URL (data-coe-create-url);
+    // 'translate' → its Edit Translated Paper URL (data-coe-translate-url), only after COE unfroze it.
     // view: 'original' / 'translated' → opens that paper in the read-only viewer,
     // shown only when the row has it (data-coe-original / data-coe-translated).
     function act(cls, icon, label, href, view) {
@@ -243,9 +245,11 @@ $(function () {
         // Pending Verification: Rajbhasha sent the translation back; Freeze (OTP) publishes it.
         // Papers are only ever viewed here, never downloaded. Pending Verification:
         // Freeze publishes it; Edit Original Paper sends it back to Rajbhasha.
+        // Edit Translated Paper only once COE has unfrozen it (the row's translate URL).
         'translated': [
             ['coe-act--download', 'bi-eye', 'View Original Paper', null, 'original'],
             ['coe-act--download', 'bi-translate', 'View Translated Paper', null, 'translated'],
+            ['coe-act--create coe-act--wide', 'bi-pencil-square', 'Edit Translated Paper', 'translate'],
             ['coe-act--create coe-act--wide coe-act--resend', 'bi-pencil-square', 'Edit Original Paper', 'create'],
             ['coe-act--freeze', 'bi-snow', 'Freeze']
         ],
@@ -269,13 +273,15 @@ $(function () {
         var waitsForCc = $row.attr('data-coe-drive-approved') !== '1';
         var list = (ACTIONS[$row.attr('data-coe-state')] || []).filter(function (a) {
             if (a[3] === 'create') { return waitsForCc || !!$row.attr('data-coe-create-url'); }   // locked: no Add / Edit
+            if (a[3] === 'translate') { return !!$row.attr('data-coe-translate-url'); }
             return !a[4] || $row.attr('data-coe-' + a[4]) === '1';
         });
         $row.find('.coe-cell-actions').html(
             '<div class="coe-act-group" role="group" aria-label="Row actions">' +
             list.map(function (a) {
                 if (a[3] === 'create' && waitsForCc) { return waitingAct(a[1], a[2]); }
-                var href = a[3] === 'create' ? $row.attr('data-coe-create-url') : a[3];
+                var href = a[3] === 'create' ? $row.attr('data-coe-create-url')
+                    : a[3] === 'translate' ? $row.attr('data-coe-translate-url') : a[3];
                 return act(a[0], a[1], a[2], href, a[4]);
             }).join('') + '</div>'
         );

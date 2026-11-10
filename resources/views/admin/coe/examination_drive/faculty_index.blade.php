@@ -35,13 +35,29 @@
                class="coe-tab {{ $isArchived ? 'is-active' : '' }}"
                @if($isArchived) aria-current="page" @endif>Archived</a>
         </nav>
+        {{-- Sargam's master export: CSV / Excel / PDF and a branded landscape Print
+             (ExaminationDriveController::facultyExport); fedcSyncExportLinks() adds the
+             tab, filters, status, search and visible columns. --}}
         <div class="d-flex gap-2 coe-secondary-actions">
-            <button type="button" id="fedcDownloadBtn" class="btn programme-dt-btn-columns">
-                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-            </button>
-            <button type="button" id="fedcPrintBtn" class="btn programme-dt-btn-columns">
+            <div class="dropdown">
+                <button type="button" id="fedcDownloadToggle"
+                        class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
+                        data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                    <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="fedcDownloadToggle">
+                    <li><a class="dropdown-item fedc-export-link" href="{{ route('admin.coe.faculty-examination-drive.export', ['format' => 'csv']) }}">
+                        <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i> CSV</a></li>
+                    <li><a class="dropdown-item fedc-export-link" href="{{ route('admin.coe.faculty-examination-drive.export', ['format' => 'excel']) }}">
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Excel (.xlsx)</a></li>
+                    <li><a class="dropdown-item fedc-export-link" href="{{ route('admin.coe.faculty-examination-drive.export', ['format' => 'pdf']) }}">
+                        <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF</a></li>
+                </ul>
+            </div>
+            <a href="{{ route('admin.coe.faculty-examination-drive.export', ['format' => 'print']) }}" target="_blank" rel="noopener"
+               class="btn programme-dt-btn-columns border-0 text-primary fedc-export-link" title="Print">
                 <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
-            </button>
+            </a>
         </div>
     </div>
 
@@ -74,6 +90,14 @@
                         <select id="fedcFilterType" class="form-select" aria-label="Examination Type">
                             <option value="">Examination Type</option>
                             @foreach ($examTypes as $et)<option value="{{ $et }}">{{ $et }}</option>@endforeach
+                        </select>
+                    </div>
+                    <div class="programme-dt-filter-select">
+                        <select id="fedcFilterStatus" class="form-select" aria-label="Status">
+                            <option value="">Status</option>
+                            @foreach (\App\DataTables\ExaminationDriveFacultyDataTable::STATUS_FILTERS as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
+                            @endforeach
                         </select>
                     </div>
                     <button type="button" id="fedcResetFilters" class="btn programme-dt-btn-reset">Remove Filter</button>
@@ -147,7 +171,7 @@
 <script src="{{ asset('js/coe-grid.js') }}?v={{ @filemtime(public_path('js/coe-grid.js')) ?: time() }}"></script>
 <script>
 $(function () {
-    CoeGrid.init({
+    var dt = CoeGrid.init({
         table: '#fedcTable',
         title: 'Examination Drive Configuration',
         snoCol: 0,
@@ -156,7 +180,9 @@ $(function () {
         exclude: [12],
         serverSide: true,
         processing: true,
-        ajax: { url: @json(route('admin.coe.faculty-examination-drive.index')), data: function (d) { d.scope = @json($scope); } },
+        // The Status filter goes to the server (status_filter), like the scope tab.
+        ajax: { url: @json(route('admin.coe.faculty-examination-drive.index')),
+                data: function (d) { d.scope = @json($scope); d.status_filter = $('#fedcFilterStatus').val() || ''; } },
         columns: [
             { data: 'DT_RowIndex', name: 'DT_RowIndex' },
             { data: 'name', name: 'name' },
@@ -174,14 +200,32 @@ $(function () {
         ],
         filters: { '#fedcFilterCourse': 4, '#fedcFilterTerm': 3, '#fedcFilterType': 2 },
         reset: '#fedcResetFilters',
-        download: '#fedcDownloadBtn',
-        print: '#fedcPrintBtn',
         searchToggle: '#fedcSearchToggle',
         searchSlot: '#fedcDtSearch',
         colvisGrid: '#fedcColumnToggleGrid',
         colvisKey: 'coeFacultyExamDrive:hiddenColumns:v1',
         empty: { title: 'No Drives Assigned', text: 'No examination drives have been assigned to you yet.' }
     });
+
+    $('#fedcFilterStatus').on('change', function () { dt.ajax.reload(); });
+    $('#fedcResetFilters').on('click', function () { $('#fedcFilterStatus').val(''); dt.ajax.reload(); });
+
+    /* Export links follow the grid: tab, Course / Term / Type / Status filters, search, visible columns. */
+    var EXPORT_KEYS = ['sno', 'name', 'exam_type', 'term', 'course', 'session', 'faculty', 'sub_coords', 'components', 'start', 'end', 'status', ''];
+    function fedcSyncExportLinks() {
+        var keys = [], all = EXPORT_KEYS.filter(Boolean).length;
+        dt.columns().every(function () { var k = EXPORT_KEYS[this.index()]; if (k && this.visible()) { keys.push(k); } });
+        var set = { scope: @json($scope), course_filter: $('#fedcFilterCourse').val(), term_filter: $('#fedcFilterTerm').val(),
+                    type_filter: $('#fedcFilterType').val(), status_filter: $('#fedcFilterStatus').val(), q: dt.search() };
+        $('.fedc-export-link').each(function () {
+            var params = new URLSearchParams();
+            Object.keys(set).forEach(function (k) { if (set[k]) { params.set(k, set[k]); } });
+            if (keys.length && keys.length !== all) { params.set('cols', keys.join(',')); }
+            this.href = this.href.split('?')[0] + '?' + params.toString();
+        });
+    }
+    dt.on('draw column-visibility.dt', fedcSyncExportLinks);
+    fedcSyncExportLinks();
 });
 </script>
 @endpush

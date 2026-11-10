@@ -16,6 +16,9 @@ use Yajra\DataTables\EloquentDataTable;
  */
 class ExaminationDriveCcDataTable extends ExaminationDriveFacultyDataTable
 {
+    /** Not limited to the viewer's own drives (see ExaminationDriveFacultyDataTable). */
+    protected bool $onlyOwnDrives = false;
+
     public function query(ExaminationDrive $model): Builder
     {
         $query = parent::query($model);
@@ -38,6 +41,9 @@ class ExaminationDriveCcDataTable extends ExaminationDriveFacultyDataTable
             'data-cc-end' => fn ($row) => optional($row->end_date)->format('Y-m-d'),
             'data-cc-proposed-start' => fn ($row) => optional($row->proposed_start_date ?? $row->start_date)->format('Y-m-d'),
             'data-cc-proposed-end' => fn ($row) => optional($row->proposed_end_date ?? $row->end_date)->format('Y-m-d'),
+            // Course dates bound the dates the CC can confirm (ExaminationDriveController::ccApprove).
+            'data-cc-course-start' => fn ($row) => $row->course?->start_year ? \Carbon\Carbon::parse($row->course->start_year)->format('Y-m-d') : '',
+            'data-cc-course-end' => fn ($row) => $row->course?->end_date ? \Carbon\Carbon::parse($row->course->end_date)->format('Y-m-d') : '',
         ]);
     }
 

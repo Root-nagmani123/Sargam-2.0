@@ -95,8 +95,9 @@ class AdminPaperService
 
     /**
      * Unfreeze (Published only): the paper goes back to the faculty's Pending
-     * Verification - they can freeze it again (OTP), or edit the original, which
-     * sends it back to Rajbhasha. Logged, as the release is undone.
+     * Verification - they can freeze it again (OTP), edit the translation
+     * themselves, or edit the original, which sends it back to Rajbhasha.
+     * Logged, as the release is undone.
      *
      * @throws ModelNotFoundException
      * @throws ValidationException when it is not published
@@ -121,6 +122,8 @@ class AdminPaperService
                 'status' => QuestionPaper::STATUS_SENT_FOR_APPROVAL,
                 'frozen_at' => null,
                 'frozen_by' => null,
+                // The faculty may now also edit the translation (QuestionPaperService).
+                'unfrozen_at' => now(),
             ]);
 
             return $paper;

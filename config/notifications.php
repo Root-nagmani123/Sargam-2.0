@@ -214,6 +214,11 @@ return [
             'route' => 'admin.coe.cc-examination-drive.index',
             'params' => [],
         ],
+        // Faculty: drive approved by the CC, question paper creation is open.
+        'ExaminationDriveApproved' => [
+            'route' => 'admin.coe.faculty-question-paper.index',
+            'params' => [],
+        ],
     ],
 
     // COE Result Compilation "Notify for Pending": the faculty's Result Entry sheet for that course.
@@ -221,6 +226,22 @@ return [
         'FacultyResultEntry' => [
             'route' => 'admin.coe.faculty-result-entry.index',
             'params' => ['course' => 'reference_pk'],
+        ],
+    ],
+
+    // COE question papers (App\Services\COE\QuestionPaperNotifier): each receiver's own list.
+    'coe_question_paper' => [
+        'FacultyQuestionPaper' => [
+            'route' => 'admin.coe.faculty-question-paper.index',
+            'params' => [],
+        ],
+        'RajbhashaQuestionPaper' => [
+            'route' => 'admin.coe.my-question-paper.index',
+            'params' => [],
+        ],
+        'CoeQuestionPaper' => [
+            'route' => 'admin.coe.question-paper.index',
+            'params' => [],
         ],
     ],
 

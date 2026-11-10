@@ -5,10 +5,14 @@ namespace App\Http\Controllers\Admin\COE;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\COE\FreezeQuestionPaperRequest;
 use App\Http\Requests\Admin\COE\UploadQuestionPaperRequest;
+use App\Http\Requests\Admin\COE\UploadTranslationRequest;
 use App\Services\COE\QuestionPaperLogger;
+use App\Services\COE\QuestionPaperNotifier;
 use App\Services\COE\QuestionPaperService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Validation\ValidationException;
 
 /**
  * COE → Question Paper Management → My Question Paper, as the FACULTY sees it
@@ -18,7 +22,8 @@ use Illuminate\Http\Request;
  *
  * Once Rajbhasha sends the translation back, the faculty verifies it and
  * freezes it with an OTP to publish - or edits the original again, which sends
- * it back to Rajbhasha. The rows and their shape come from
+ * it back to Rajbhasha. After COE unfreezes a published paper, the faculty may
+ * also edit the translation itself. The rows and their shape come from
  * QuestionPaperService::papersForFaculty().
  */
 class FacultyQuestionPaperController extends Controller
@@ -51,6 +56,7 @@ class FacultyQuestionPaperController extends Controller
     public function __construct(
         private QuestionPaperService $papers,
         private QuestionPaperLogger $log,
+        private QuestionPaperNotifier $notify,
     ) {
     }
 
@@ -91,8 +97,29 @@ class FacultyQuestionPaperController extends Controller
             'templates' => self::TEMPLATES,
             'listUrl' => route('admin.coe.faculty-question-paper.index'),
             'saveUrl' => route('admin.coe.faculty-question-paper.upload', $paper),
+            'hiddenUrl' => route('admin.coe.faculty-question-paper.hidden', $paper),
             'watermark' => $this->paperStamp($request),
         ]);
+    }
+
+    /**
+     * The editor covered the paper (window left / PrintScreen) - logged, since a
+     * capture tool outside the browser takes its shot just before. A new paper
+     * has no row yet, so its code goes in the detail.
+     */
+    public function hidden(Request $request, int $paper): Response
+    {
+        $reason = $request->validate(['reason' => 'required|in:'.implode(',', array_keys(QuestionPaperLogger::HIDDEN_REASONS))])['reason'];
+        $facultyPk = $this->facultyPk();
+        $row = $this->papers->findForFaculty($facultyPk, $paper);
+        abort_if($row === null, 404);
+
+        $qp = $this->papers->paperFor($facultyPk, $paper);
+        $detail = QuestionPaperLogger::HIDDEN_REASONS[$reason];
+        $this->log->record(QuestionPaperLogger::ROLE_FACULTY, QuestionPaperLogger::MODULE_PAPER, QuestionPaperLogger::HIDDEN,
+            $qp, $qp ? $detail : $row['code'].' · '.$detail);
+
+        return response()->noContent();
     }
 
     /**
@@ -104,10 +131,53 @@ class FacultyQuestionPaperController extends Controller
         $qp = $this->papers->saveOriginalPaper($this->facultyPk(), $paper, $request->input('paper_html'));
         $this->log->record(QuestionPaperLogger::ROLE_FACULTY, QuestionPaperLogger::MODULE_PAPER,
             $qp->version > 1 ? QuestionPaperLogger::UPDATED : QuestionPaperLogger::CREATED, $qp, 'V'.$qp->version);
+        $this->notify->sentForTranslation($qp);
 
         return response()->json(['message' => $qp->version > 1
             ? 'Question paper updated (V'.$qp->version.') and sent to Rajbhasha for translation.'
             : 'Question paper uploaded and sent for translation.']);
+    }
+
+    /**
+     * Edit Translated Paper — once COE has unfrozen the published paper, the
+     * faculty corrects the translation in the editor themselves.
+     */
+    public function editTranslation(Request $request, int $paper)
+    {
+        $facultyPk = $this->facultyPk();
+        $row = $this->papers->findForFaculty($facultyPk, $paper);
+        abort_if($row === null, 404);
+
+        try {
+            $html = $this->papers->translationHtmlFor($facultyPk, $paper);
+        } catch (ValidationException $e) {
+            return redirect()->route('admin.coe.faculty-question-paper.index')
+                ->with('error', collect($e->errors())->flatten()->first());
+        }
+
+        // The page holds the translation: logged like a view.
+        $qp = $this->papers->paperFor($facultyPk, $paper);
+        $this->log->record(QuestionPaperLogger::ROLE_FACULTY, QuestionPaperLogger::MODULE_TRANSLATION, QuestionPaperLogger::OPENED, $qp, 'of V'.$qp->version);
+
+        return view('admin.coe.question_paper_editor', [
+            'pageTitle' => 'Edit Translated Paper',
+            'paper' => $row,
+            'editorHtml' => $html,
+            'templates' => self::TEMPLATES,
+            'listUrl' => route('admin.coe.faculty-question-paper.index'),
+            'saveUrl' => route('admin.coe.faculty-question-paper.translation.store', $paper),
+            'hiddenUrl' => route('admin.coe.faculty-question-paper.hidden', $paper),
+            'watermark' => $this->paperStamp($request),
+        ]);
+    }
+
+    /** Upload Paper on Edit Translated Paper: still Pending Verification, to freeze. */
+    public function storeTranslation(UploadTranslationRequest $request, int $paper): JsonResponse
+    {
+        $qp = $this->papers->saveTranslatedPaper($this->facultyPk(), $paper, $request->input('paper_html'));
+        $this->log->record(QuestionPaperLogger::ROLE_FACULTY, QuestionPaperLogger::MODULE_TRANSLATION, QuestionPaperLogger::UPDATED, $qp, 'of V'.$qp->version);
+
+        return response()->json(['message' => 'Translated question paper updated. Freeze it to publish.']);
     }
 
     /** Freeze, step 1 (modal opened / Resend OTP): sends the OTP. */
@@ -123,6 +193,7 @@ class FacultyQuestionPaperController extends Controller
     {
         $qp = $this->papers->freeze($this->facultyPk(), $paper, $request->input('otp'));
         $this->log->record(QuestionPaperLogger::ROLE_FACULTY, QuestionPaperLogger::MODULE_PAPER, QuestionPaperLogger::FROZEN, $qp, 'V'.$qp->version);
+        $this->notify->published($qp);
 
         return response()->json(['message' => 'Question paper verified and published.']);
     }
