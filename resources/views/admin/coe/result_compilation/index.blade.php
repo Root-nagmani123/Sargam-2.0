@@ -66,7 +66,7 @@
                             <tr>
                                 <th scope="col">Course</th>
                                 <th scope="col">Subject</th>
-                                <th scope="col">Approved</th>
+                                <th scope="col">Marks Entry</th>
                                 <th scope="col">Pending</th>
                                 <th scope="col">Passing Average</th>
                                 <th scope="col">Action</th>
@@ -81,8 +81,9 @@
                                         {{ $row['subject'] }}
                                         <div class="coe-muted small">{{ $row['code'] !== '' ? $row['code'].' · ' : '' }}Maximum {{ \App\Services\COE\ResultMarksService::number($row['max']) }}</div>
                                     </td>
-                                    <td data-order="{{ $row['approved'] }}">
-                                        <a href="{{ route('admin.coe.result-compilation.participants', $q + ['status' => 'evaluated']) }}">{{ $row['approved'] }} / {{ $row['total'] }}</a>
+                                    {{-- OTs with every component of the subject approved; opens the Evaluated list. --}}
+                                    <td data-order="{{ $row['approved'] }}" title="{{ $row['approved'] }} of {{ $row['total'] }} participants evaluated">
+                                        <a href="{{ route('admin.coe.result-compilation.participants', $q + ['status' => 'evaluated']) }}">{{ $row['approved'] }}</a>
                                     </td>
                                     <td data-order="{{ $row['pending'] }}">
                                         <a href="{{ route('admin.coe.result-compilation.participants', $q + ['status' => 'pending']) }}">{{ $row['pending'] }}</a>
