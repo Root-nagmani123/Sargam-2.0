@@ -312,15 +312,13 @@
                             </div>
 
                             <div>
-                                <label for="request_returning_date" class="ds-form-label">Date of Return<span
-                                        class="ds-req">*</span></label>
+                                <label for="request_returning_date" class="ds-form-label">Date of Return</label>
                                 <input type="date" class="form-control" id="request_returning_date"
                                     name="returning_date">
                             </div>
 
                             <div>
-                                <label for="request_noc_document" class="ds-form-label">Upload NOC Document<span
-                                        class="ds-req">*</span></label>
+                                <label for="request_noc_document" class="ds-form-label">Upload NOC Document</label>
                                 <div class="noc-file-wrap">
                                     <input type="file" class="form-control pe-4" id="request_noc_document"
                                         name="noc_document">

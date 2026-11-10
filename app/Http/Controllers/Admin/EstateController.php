@@ -3223,6 +3223,22 @@ class EstateController extends Controller
             ->lockForUpdate()
             ->findOrFail($id);
 
+        // A completed possession (real dates, not the 1900-01-01 pending sentinel) is final: re-allotting
+        // would rewrite it to pending and free its house (PR #349 F-032). Checked under the request lock,
+        // which every possession writer takes first, and before this method writes anything.
+        $hasCompletedPossession = DB::table('estate_possession_details')
+            ->where('estate_home_request_details', $homeReq->pk)
+            ->where(fn ($q) => $q->where('allotment_date', '>', '1900-01-01')->orWhere('possession_date', '>', '1900-01-01'))
+            ->lockForUpdate()
+            ->exists();
+        if ($hasCompletedPossession) {
+            $msg = 'This request already has a completed possession. It cannot be allotted another house.';
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 409);
+            }
+            return redirect()->route('admin.estate.change-request-hac-approved')->with('error', $msg);
+        }
+
         $request->validate([
             'estate_house_master_pk' => 'required|integer|exists:estate_house_master,pk',
         ]);
@@ -11237,9 +11253,7 @@ class EstateController extends Controller
         foreach (
             EstateMonthReadingDetails::select('bill_year', 'bill_month')
                 ->whereNotNull('bill_year')->whereNotNull('bill_month')
-                ->groupBy('bill_year', 'bill_month')
-                ->orderByRaw('CAST(bill_year AS UNSIGNED) DESC, CAST(bill_month AS UNSIGNED) DESC')
-                ->limit(24)->get() as $row
+                ->groupBy('bill_year', 'bill_month')->get() as $row
         ) {
             [$m, $y] = $this->meterReadingParseUiMonthYear($row->bill_month ?? null, $row->bill_year ?? null);
             if ($m === null || $y === null) {
@@ -11247,7 +11261,9 @@ class EstateController extends Controller
             }
             $billMonthOptions[sprintf('%04d-%02d', $y, $m)] = date('F Y', mktime(0, 0, 0, $m, 1, $y));
         }
+        // bill_month is a month name, so SQL cannot order it; limit to the newest 24 after parsing (PR #349 F-033).
         krsort($billMonthOptions);
+        $billMonthOptions = array_slice($billMonthOptions, 0, 24, true);
 
         return view('admin.estate.generate_estate_bill', compact(
             'unitSubTypes',
@@ -13650,9 +13666,7 @@ class EstateController extends Controller
             DB::table('estate_month_reading_details_other')
                 ->select('bill_year', 'bill_month')
                 ->whereNotNull('bill_year')->whereNotNull('bill_month')
-                ->groupBy('bill_year', 'bill_month')
-                ->orderByRaw('CAST(bill_year AS UNSIGNED) DESC')
-                ->limit(24)->get() as $row
+                ->groupBy('bill_year', 'bill_month')->get() as $row
         ) {
             [$m, $y] = $this->meterReadingParseUiMonthYear($row->bill_month ?? null, $row->bill_year ?? null);
             if ($m === null || $y === null) {
@@ -13660,7 +13674,9 @@ class EstateController extends Controller
             }
             $billMonthOptions[sprintf('%04d-%02d', $y, $m)] = date('F Y', mktime(0, 0, 0, $m, 1, $y));
         }
+        // bill_month is a month name, so SQL cannot order it; limit to the newest 24 after parsing (PR #349 F-033).
         krsort($billMonthOptions);
+        $billMonthOptions = array_slice($billMonthOptions, 0, 24, true);
 
         return view('admin.estate.generate_estate_bill_for_other', compact('billMonthOptions'));
     }
