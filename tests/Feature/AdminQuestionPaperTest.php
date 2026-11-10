@@ -201,7 +201,7 @@ class AdminQuestionPaperTest extends TestCase
         $subject = $paper->paper_name.' ('.$paper->paper_code.')';
         $expected = fn (string $module) => [
             [$module, 'Question Paper Reopened', 'The published question paper for '.$subject.' has been reopened and is pending verification.'],
-            [$module, 'Question Paper Deleted', 'The question paper for '.$subject.' has been deleted. Contact COE if this was unexpected.'],
+            [$module, 'Question Paper Deleted', 'The question paper for '.$subject.' has been deleted. Please contact COE if this was unexpected.'],
         ];
         $this->assertSame($expected(QuestionPaperNotifier::MODULE_RAJBHASHA), $this->bell($rajbhasha->user_id, $paper->id));
 

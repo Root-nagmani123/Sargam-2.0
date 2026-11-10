@@ -2063,6 +2063,11 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
             ->whereNumber('paper')->name('faculty-question-paper.original');
         Route::get('faculty-question-paper/{paper}/translated', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'translated'])
             ->whereNumber('paper')->name('faculty-question-paper.translated');
+        // Edit Translated Paper: only once COE has unfrozen the published paper.
+        Route::get('faculty-question-paper/{paper}/translation/edit', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'editTranslation'])
+            ->whereNumber('paper')->name('faculty-question-paper.translation.edit');
+        Route::post('faculty-question-paper/{paper}/translation', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'storeTranslation'])
+            ->whereNumber('paper')->name('faculty-question-paper.translation.store');
         // Throttled per user on top of FreezeOtpService's own per-paper limits.
         Route::post('faculty-question-paper/{paper}/freeze-otp', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'freezeOtp'])
             ->whereNumber('paper')->middleware('throttle:10,1')->name('faculty-question-paper.freeze-otp');
