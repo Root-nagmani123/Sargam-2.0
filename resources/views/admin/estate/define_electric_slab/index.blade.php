@@ -110,14 +110,14 @@
                         <label class="ds-form-label" for="start_unit_range">Start Unit Range<span
                                 class="ds-req">*</span></label>
                         <input type="number" class="form-control" id="start_unit_range" name="start_unit_range"
-                            value="0.00" step="1" min="0" required>
+                            value="0" step="1" min="0" required>
                     </div>
 
                     <div class="mb-3">
                         <label class="ds-form-label" for="end_unit_range">End Unit Range<span
                                 class="ds-req">*</span></label>
                         <input type="number" class="form-control" id="end_unit_range" name="end_unit_range"
-                            value="0.00" step="1" min="0" required>
+                            value="0" step="1" min="0" required>
                     </div>
 
                     <div class="mb-3">
@@ -411,8 +411,8 @@
             $('#esForm').attr('action', isEdit ? updateBase.replace('__ID__', data.pk) : storeUrl);
             $('#esFormMethod').val(isEdit ? 'PUT' : 'POST');
 
-            $('#start_unit_range').val(isEdit ? data.start : '0.00');
-            $('#end_unit_range').val(isEdit ? data.end : '0.00');
+            $('#start_unit_range').val(isEdit ? data.start : '0');
+            $('#end_unit_range').val(isEdit ? data.end : '0');
             $('#rate_per_unit').val(isEdit ? data.rate : '0.00');
             $('#estate_unit_type_master_pk').val(isEdit ? String(data.unitType) : '');
 

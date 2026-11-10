@@ -3224,8 +3224,9 @@ class EstateController extends Controller
             ->findOrFail($id);
 
         // A completed possession (real dates, not the 1900-01-01 pending sentinel) is final: re-allotting
-        // would rewrite it to pending and free its house (PR #349 F-032). Checked under the request lock,
-        // which every possession writer takes first, and before this method writes anything.
+        // would rewrite it to pending and free its house (PR #349 F-032). Checked under the request
+        // and possession locks, before this method writes anything. Not every possession writer takes the
+        // request lock first (Return House updates the possession by pk), so do not rely on that order.
         $hasCompletedPossession = DB::table('estate_possession_details')
             ->where('estate_home_request_details', $homeReq->pk)
             ->where(fn ($q) => $q->where('allotment_date', '>', '1900-01-01')->orWhere('possession_date', '>', '1900-01-01'))
@@ -8737,7 +8738,7 @@ class EstateController extends Controller
         $payload = $this->getUpdateMeterNoList($listRequest)->getData(true);
         $rows = collect($payload['data'] ?? [])->map(fn ($row) => (object) $row);
 
-        $monthNum = (int) $request->input('bill_month', 0);
+        $monthNum = (int) static::exportFilterText($request, 'bill_month');
         $filters = [];
         $filters[] = 'Bill Year: ' . (static::exportFilterText($request, 'bill_year') ?: 'All');
         $filters[] = 'Bill Month: ' . ($monthNum >= 1 && $monthNum <= 12
@@ -8811,9 +8812,8 @@ class EstateController extends Controller
         string $searchValue,
         int $orderCol,
         string $orderDir,
-        bool $filterByMonth,
-        $billMonth,
-        $billYear
+        string $billMonth,
+        string $billYear
     ): array {
         $eurLatestPermSub = '(SELECT eur.* FROM estate_update_reading eur INNER JOIN (
             SELECT estate_possession_details_pk, meter_change_month, MAX(pk) AS max_pk
@@ -8847,9 +8847,8 @@ class EstateController extends Controller
                 DB::raw('LAG(emrd.meter_one) OVER (PARTITION BY emrd.estate_possession_details_pk ORDER BY emrd.to_date, emrd.pk) as prev_meter_one'),
                 DB::raw('LAG(emrd.meter_two) OVER (PARTITION BY emrd.estate_possession_details_pk ORDER BY emrd.to_date, emrd.pk) as prev_meter_two'),
             ]);
-        if ($filterByMonth) {
-            $emrdSub->where('emrd.bill_month', $billMonth)->where('emrd.bill_year', $billYear);
-        }
+        $emrdSub->when($billMonth !== '', fn ($q) => $q->where('emrd.bill_month', $billMonth))
+            ->when($billYear !== '', fn ($q) => $q->where('emrd.bill_year', $billYear));
 
         $permBase = DB::query()
             ->fromSub($emrdSub, 'emrd')
@@ -8906,9 +8905,8 @@ class EstateController extends Controller
                 DB::raw('LAG(emro.meter_one) OVER (PARTITION BY emro.estate_possession_other_pk ORDER BY emro.to_date, emro.pk) as prev_meter_one'),
                 DB::raw('LAG(emro.meter_two) OVER (PARTITION BY emro.estate_possession_other_pk ORDER BY emro.to_date, emro.pk) as prev_meter_two'),
             ]);
-        if ($filterByMonth) {
-            $emroSub->where('emro.bill_month', $billMonth)->where('emro.bill_year', $billYear);
-        }
+        $emroSub->when($billMonth !== '', fn ($q) => $q->where('emro.bill_month', $billMonth))
+            ->when($billYear !== '', fn ($q) => $q->where('emro.bill_year', $billYear));
 
         $otherBase = DB::query()
             ->fromSub($emroSub, 'emro')
@@ -9109,7 +9107,7 @@ class EstateController extends Controller
     /**
      * API: Get Update Meter No. list for DataTable (permanent: estate_month_reading_details; other: estate_month_reading_details_other).
      * Old meter nos fall back to estate_update_reading (type l = permanent, type o = other; FK column stores possession pk).
-     * When bill_month/bill_year not provided: show ALL saved readings. When provided: filter by that month only.
+     * bill_month and bill_year each filter on their own; with neither, every saved reading is listed.
      */
     public function getUpdateMeterNoList(Request $request)
     {
@@ -9133,12 +9131,9 @@ class EstateController extends Controller
 
         $billMonth = static::exportFilterText($request, 'bill_month');
         $billYear = static::exportFilterText($request, 'bill_year');
-        $filterByMonth = $billMonth && $billYear;
-        if ($filterByMonth) {
-            $billYear = (string) $billYear;
-            if (is_numeric($billMonth) && (int) $billMonth >= 1 && (int) $billMonth <= 12) {
-                $billMonth = date('F', mktime(0, 0, 0, (int) $billMonth, 1));
-            }
+        // Each filter applies alone: a year without a month lists that whole year (PR #349 F-037).
+        if (is_numeric($billMonth) && (int) $billMonth >= 1 && (int) $billMonth <= 12) {
+            $billMonth = date('F', mktime(0, 0, 0, (int) $billMonth, 1));
         }
 
         $hasUnitTypeOnSubType = Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
@@ -9184,9 +9179,8 @@ class EstateController extends Controller
             'q' => $searchValue,
             'oc' => $orderCol,
             'od' => $orderDir,
-            'fm' => $filterByMonth ? 1 : 0,
-            'bm' => $filterByMonth ? (string) $billMonth : '',
-            'by' => $filterByMonth ? (string) $billYear : '',
+            'bm' => $billMonth,
+            'by' => $billYear,
             'ut' => $hasUnitTypeOnSubType ? 1 : 0,
             'e1' => $hasEpdReading1 ? 1 : 0,
             'e2' => $hasEpdReading2 ? 1 : 0,
@@ -9215,7 +9209,6 @@ class EstateController extends Controller
             $searchValue,
             $orderCol,
             $orderDir,
-            $filterByMonth,
             $billMonth,
             $billYear
         ) {
@@ -9235,7 +9228,6 @@ class EstateController extends Controller
                 $searchValue,
                 $orderCol,
                 $orderDir,
-                $filterByMonth,
                 $billMonth,
                 $billYear
             );

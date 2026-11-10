@@ -436,7 +436,7 @@
         function reload() {
             if (!$('#bill_month').val()) return;
             if (!dt) { initTable(); return; }
-            dt.ajax.reload(null, false);
+            dt.ajax.reload(); // filters only: back to page 1, a narrower result may not reach the old page (F-036)
         }
 
         $('#bill_month, #employee_type, #block_id').on('change', reload);

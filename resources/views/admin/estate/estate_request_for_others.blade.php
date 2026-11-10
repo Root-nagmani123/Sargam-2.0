@@ -193,9 +193,10 @@
 
         /* ---------- Toolbar filters ---------- */
         // Values ride along on every draw via minifiedAjax (see the DataTable's html()).
+        // A filter change starts again from page 1: a narrower result may not reach the old page (F-036).
         $(document).on('change', '#eorBillYearFilter, #eorBillDateFilter', function() {
             if ($.fn.DataTable.isDataTable($eorTable)) {
-                $eorTable.DataTable().ajax.reload(null, false);
+                $eorTable.DataTable().ajax.reload();
             }
         });
 
@@ -204,7 +205,7 @@
             $('#eorBillDateFilter').val('');
             if (!$.fn.DataTable.isDataTable($eorTable)) return;
             // "Remove Filter" clears the search box too — it resets the whole toolbar.
-            $eorTable.DataTable().search('').ajax.reload(null, false);
+            $eorTable.DataTable().search('').ajax.reload();
         });
 
         /* ---------- Column visibility (persisted per browser, per user) ---------- */

@@ -366,7 +366,7 @@ $(document).ready(function() {
                     const trDual = '<tr class="other-dual-stacked" data-dual="1" data-pk="'+ row.pk +'">' +
                         '<td class="text-center align-middle position-relative">' +
                             '<input type="checkbox" class="form-check-input row-check row-check-master" name="readings['+i0+'][selected]" value="1" data-pair-sel-id="permPairSel_'+i1+'">' +
-                            '<input type="checkbox" class="form-check-input row-check perm-pair-cb" name="readings['+i1+'][selected]" value="1" id="permPairSel_'+i1+'" tabindex="-1" aria-hidden="true">' +
+                            '<input type="checkbox" class="form-check-input row-check visually-hidden" name="readings['+i1+'][selected]" value="1" id="permPairSel_'+i1+'" tabindex="-1" aria-hidden="true">' +
                         '</td>' +
                         '<td>'+ escAttr(row.house_no || 'N/A') +'</td>' +
                         '<td>'+ escAttr(row.name || 'N/A') +'</td>' +

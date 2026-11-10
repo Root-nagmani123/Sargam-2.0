@@ -354,14 +354,17 @@
         /* ---------- Filters ---------- */
         // bill_year_filter / bill_date_filter ride on the ajax data callback
         // declared in the DataTable class.
-        $(document).on('change', '#epoBillYearFilter, #epoBillDateFilter', reloadTable);
+        // A filter change starts again from page 1: a narrower result may not reach the old page (F-036).
+        $(document).on('change', '#epoBillYearFilter, #epoBillDateFilter', function() {
+            if ($.fn.DataTable.isDataTable($table)) $table.DataTable().ajax.reload();
+        });
 
         $('#epoClearFilter').on('click', function() {
             $('#epoBillYearFilter').val('');
             $('#epoBillDateFilter').val('');
             if (!$.fn.DataTable.isDataTable($table)) return;
             // "Remove Filter" resets the whole toolbar, search included.
-            $table.DataTable().search('').ajax.reload(null, false);
+            $table.DataTable().search('').ajax.reload();
         });
 
         /* ---------- Search toggle ---------- */

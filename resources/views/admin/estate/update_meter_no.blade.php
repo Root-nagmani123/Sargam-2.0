@@ -170,10 +170,9 @@ $(function() {
         ajax: {
             url: "{{ route('admin.estate.update-meter-no.list') }}",
             data: function(d) {
-                if (filters.bill_year && filters.bill_month) {
-                    d.bill_year = filters.bill_year;
-                    d.bill_month = filters.bill_month;
-                }
+                // Each filter applies on its own, as the export does (F-037).
+                if (filters.bill_year) d.bill_year = filters.bill_year;
+                if (filters.bill_month) d.bill_month = filters.bill_month;
             }
         },
         columns: [
@@ -224,9 +223,8 @@ $(function() {
     function reload() {
         filters.bill_year = ($('#filterBillYear').val() || '').trim();
         filters.bill_month = ($('#filterBillMonth').val() || '').trim();
-        // The ajax data callback only sends bill_year/bill_month when BOTH are
-        // set; with neither the endpoint returns every saved reading, which is
-        // exactly what "Remove Filter" should show. Always re-query — clear()
+        // With neither filter set the endpoint returns every saved reading,
+        // which is exactly what "Remove Filter" should show. Always re-query — clear()
         // would blank the rows but leave the previous count in the footer.
         table.ajax.reload();
     }

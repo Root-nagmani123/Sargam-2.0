@@ -66,7 +66,6 @@
 #updateMeterReadingTable .other-dual-seg[data-slot="1"] { border-bottom: 1px solid var(--bs-border-color, #dee2e6); }
 #updateMeterReadingTable .other-dual-stacked .new-meter-reading,
 #updateMeterReadingTable .other-dual-stacked .new-meter-no { max-width: 100%; }
-.perm-pair-cb { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 </style>
 @endpush
 

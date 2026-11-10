@@ -317,13 +317,16 @@
 
         /* ---------- Filter ---------- */
         // type_filter rides on the ajax data callback declared in the DataTable class.
-        $(document).on('change', '#hacApprovedTypeFilter', reloadTable);
+        // A filter change starts again from page 1: a narrower result may not reach the old page (F-036).
+        $(document).on('change', '#hacApprovedTypeFilter', function() {
+            if ($.fn.DataTable.isDataTable($table)) $table.DataTable().ajax.reload();
+        });
 
         $('#hacClearFilter').on('click', function() {
             $('#hacApprovedTypeFilter').val('');
             if (!$.fn.DataTable.isDataTable($table)) return;
             // "Remove Filter" resets the whole toolbar, search included.
-            $table.DataTable().search('').ajax.reload(null, false);
+            $table.DataTable().search('').ajax.reload();
         });
 
         /* ---------- Column visibility (persisted per browser, per user) ---------- */

@@ -223,14 +223,17 @@
         /* ---------- Filters ---------- */
         // estate_filter / allotment_date_filter ride on the ajax data callback
         // declared in the DataTable class.
-        $(document).on('change', '#pdEstateFilter, #pdAllotmentDateFilter', reloadTable);
+        // A filter change starts again from page 1: a narrower result may not reach the old page (F-036).
+        $(document).on('change', '#pdEstateFilter, #pdAllotmentDateFilter', function() {
+            if ($.fn.DataTable.isDataTable($table)) $table.DataTable().ajax.reload();
+        });
 
         $('#pdClearFilter').on('click', function() {
             $('#pdEstateFilter').val('');
             $('#pdAllotmentDateFilter').val('');
             if (!$.fn.DataTable.isDataTable($table)) return;
             // "Remove Filter" resets the whole toolbar, search included.
-            $table.DataTable().search('').ajax.reload(null, false);
+            $table.DataTable().search('').ajax.reload();
         });
 
         /* ---------- Update Meter Reading modal ---------- */
