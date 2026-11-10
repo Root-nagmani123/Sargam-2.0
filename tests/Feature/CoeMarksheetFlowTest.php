@@ -60,8 +60,9 @@ class CoeMarksheetFlowTest extends TestCase
             ->where('student_master_pk', (int) $row['code'])->where('marksheet_number', $row['number'])->exists());
 
         $this->actingAs($this->admin())->get(route('admin.coe.marksheet-generation.index'))->assertOk();
+        // Not published yet: no signatures on it.
         $this->actingAs($this->admin())->get(route('admin.coe.marksheet.show', ['course' => $row['course_key'], 'ot' => $row['code']]))
-            ->assertOk()->assertSee($row['number'])->assertSee($row['name']);
+            ->assertOk()->assertSee($row['number'])->assertSee($row['name'])->assertDontSee('signature-master/', false);
     }
 
     public function test_view_and_verify_lists_every_pending_marksheet_of_the_course_clicked_one_first(): void
@@ -109,6 +110,10 @@ class CoeMarksheetFlowTest extends TestCase
         $this->assertTrue($record->isPublished());
         $this->assertEquals($row['grand'], $record->snapshot['grand']);
         $this->assertEqualsCanonicalizing(['UDC', 'AAO', 'COE'], array_keys($record->snapshot['signatures']));
+
+        // Published: signed.
+        $this->actingAs($this->admin())->get(route('admin.coe.marksheet.show', ['course' => $row['course_key'], 'ot' => $row['code']]))
+            ->assertOk()->assertSee('signature-master/', false);
 
         // Publishing again changes nothing.
         $this->actingAs($this->admin())->postJson(route('admin.coe.marksheet-generation.publish'), ['course' => $row['course_key'], 'ots' => [$row['code']]])

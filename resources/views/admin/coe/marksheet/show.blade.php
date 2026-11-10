@@ -107,7 +107,10 @@
                 @php $sig = $signatures->get($designation); @endphp
                 <div class="ms-sign">
                     <div class="ms-sign-cap">{{ $caption === 'Controller of Examination' ? '' : $caption.':' }}&nbsp;</div>
-                    @if ($sig)
+                    @if (! $m['published'])
+                        {{-- Signed only once Verified & Published. --}}
+                        <div class="ms-sign-empty"></div>
+                    @elseif ($sig)
                         <img src="{{ route('admin.coe.signature-master.file', ['signature' => $sig->pk]) }}" alt="Signature of {{ $sig->person_name }}">
                         <div>({{ $sig->person_name }})</div>
                     @else
