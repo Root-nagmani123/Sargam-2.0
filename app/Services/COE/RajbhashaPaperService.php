@@ -146,6 +146,24 @@ class RajbhashaPaperService
             throw ValidationException::withMessages(['paper' => self::SENT_MESSAGE]);
         }
 
+        return $this->replaceTranslation($paper, $html, fn (QuestionPaper $p) => $this->isTranslatable($p), self::SENT_MESSAGE, [
+            'translated_by' => auth()->id(),
+            'translated_at' => now(),
+            'status' => QuestionPaper::STATUS_TRANSLATED,
+        ]);
+    }
+
+    /**
+     * Stores the translation written in the editor as .html in place of the
+     * paper's current one - for Rajbhasha, and for the faculty after COE unfreezes
+     * it. $allowed is checked again on the locked row; $changes go on the row too.
+     *
+     * @param  callable(QuestionPaper): bool  $allowed
+     *
+     * @throws ValidationException when $allowed fails ($lockedMessage), or the translation is blank
+     */
+    public function replaceTranslation(QuestionPaper $paper, string $html, callable $allowed, string $lockedMessage, array $changes = []): QuestionPaper
+    {
         $clean = $this->sanitizer->clean($html);
         if ($this->sanitizer->isBlank($clean)) {
             throw ValidationException::withMessages(['paper_html' => 'Write the translated paper before uploading it.']);
@@ -155,20 +173,17 @@ class RajbhashaPaperService
             $this->sanitizer->toDocument($paper->paper_name.' (Hindi)', $clean));
 
         try {
-            [$saved, $oldPath] = DB::transaction(function () use ($paper, $path) {
+            [$saved, $oldPath] = DB::transaction(function () use ($paper, $path, $allowed, $lockedMessage, $changes) {
                 $locked = QuestionPaper::lockForUpdate()->findOrFail($paper->id);
-                if (! $this->isTranslatable($locked)) {
-                    throw ValidationException::withMessages(['paper' => self::SENT_MESSAGE]);
+                if (! $allowed($locked)) {
+                    throw ValidationException::withMessages(['paper' => $lockedMessage]);
                 }
 
                 $oldPath = $locked->translated_file_path;
                 $locked->update([
                     'translated_file_path' => $path,
                     'translated_file_name' => $locked->paper_code.'_hindi.html',
-                    'translated_by' => auth()->id(),
-                    'translated_at' => now(),
-                    'status' => QuestionPaper::STATUS_TRANSLATED,
-                ]);
+                ] + $changes);
 
                 return [$locked, $oldPath];
             });

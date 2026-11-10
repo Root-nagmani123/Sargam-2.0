@@ -42,6 +42,7 @@ class QuestionPaper extends Model
         'deadline' => 'date',
         'original_uploaded_at' => 'datetime',
         'frozen_at' => 'datetime',
+        'unfrozen_at' => 'datetime',
         'translated_at' => 'datetime',
         'sent_for_approval_at' => 'datetime',
     ];
