@@ -9210,10 +9210,23 @@ class UserController extends Controller
             $roleNames = Role::whereIn('id', $request->input('roles', []))->pluck('name')->toArray();
             $user->syncRoles($roleNames);
 
+            // Keep the Member wizard's Role Assignment step (employee_role_mapping) in
+            // step with what was just assigned, so the employee module shows the same
+            // roles as this screen. Employees only: that step exists only for 'E' logins.
+            $isEmployeeLogin = strtoupper(trim((string) $user->user_category)) === 'E';
+
+            if ($isEmployeeLogin) {
+                EmployeeRoleMapping::mirrorOfferedOptions((int) $user->pk, $roleNames);
+            }
+
             DB::commit();
 
             app(PermissionRegistrar::class)->forgetCachedPermissions();
             self::bumpAdminUsersIndexCacheEpoch();
+
+            if ($isEmployeeLogin) {
+                MemberDataTable::bumpListingCacheEpoch();
+            }
 
             // PR #319 review, F-031, restored after the merge with main's permissions
             // rewrite (which removed the block below's original, permanently-dead

@@ -718,6 +718,42 @@ class MemberController extends Controller
     }
 
     /**
+     * The offered Step 3 options this login currently holds — what Step 3 shows ticked.
+     *
+     * Read from the roles the login actually holds (Spatie), because Role & Permission >
+     * Users changes those directly: reading employee_role_mapping alone kept showing the
+     * roles from the last wizard save after the Users screen had replaced them. Falls back
+     * to employee_role_mapping when the login is shared by several credential rows, the
+     * same case in which syncSpatieRolesFromWizardSelection() refuses to touch RBAC, so
+     * the mapping is then the only record of what was chosen here.
+     *
+     * update() passes this as the "previously selected" set, so unticking a role that
+     * Step 3 showed ticked removes it, whichever screen assigned it.
+     *
+     * @return int[]
+     */
+    private function heldOfferedRoleOptions(?int $userCredentialPk): array
+    {
+        if ($userCredentialPk === null) {
+            return [];
+        }
+
+        $user = $this->memberCredentialIsUnambiguous($userCredentialPk) ? User::find($userCredentialPk) : null;
+
+        if ($user) {
+            return UserRoleMaster::offeredOptionPksForRoles($user->getRoleNames()->all());
+        }
+
+        return EmployeeRoleMapping::where('user_credentials_pk', $userCredentialPk)
+            ->whereIn('user_role_master_pk', UserRoleMaster::getUserRoleList()->keys()->all())
+            ->pluck('user_role_master_pk')
+            ->map(fn ($pk) => (int) $pk)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
      * One batch insert instead of N round-trips (PR #319 re-review F-049),
      * extracted so store()/update() can't drift from each other (F-065).
      */
@@ -1435,10 +1471,10 @@ class MemberController extends Controller
                 // can tell "this wizard granted it last time" apart from "granted some
                 // other way" (PR #319 review, F-019) — employee_role_mapping is the only
                 // durable record of what this screen itself previously selected.
-                $previouslySelectedRoleIds = EmployeeRoleMapping::where('user_credentials_pk', $userCredential->pk)
-                    ->whereIn('user_role_master_pk', $offeredRoleIds)
-                    ->pluck('user_role_master_pk')
-                    ->all();
+                //
+                // Now the same set Step 3 showed ticked (heldOfferedRoleOptions()), so a role
+                // assigned from Role & Permission > Users and unticked here is removed too.
+                $previouslySelectedRoleIds = $this->heldOfferedRoleOptions((int) $userCredential->pk);
 
                 EmployeeRoleMapping::where('user_credentials_pk', $userCredential->pk)
                     ->whereIn('user_role_master_pk', $offeredRoleIds)
@@ -1726,7 +1762,15 @@ class MemberController extends Controller
             ? PayrollSalaryMaster::where('employee_master_pk', $this->payrollEmployeeKey((int) $id))->first()
             : null;
 
-        return view("admin.member.edit_steps.step{$step}", compact('member', 'appellationMasterList', 'gradePayOptions', 'employeeCategoryOptions', 'payrollSalary'));
+        // Step 3's ticks come from the roles the login holds, resolved the way update()
+        // resolves the credential it writes (orderBy('pk')->first()).
+        $selectedRoleOptions = ((int) $step === 3)
+            ? $this->heldOfferedRoleOptions(
+                UserCredential::where('user_id', $id)->orderBy('pk')->value('pk')
+            )
+            : null;
+
+        return view("admin.member.edit_steps.step{$step}", compact('member', 'appellationMasterList', 'gradePayOptions', 'employeeCategoryOptions', 'payrollSalary', 'selectedRoleOptions'));
     }
 
     public function updateValidateStep(Request $request, $step, $id)

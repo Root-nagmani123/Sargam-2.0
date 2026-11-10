@@ -1,7 +1,9 @@
 @php
     $userRoleOptions = App\Models\UserRoleMaster::getUserRoleList();
     $memberRoles = optional($member->employeeRoleMapping())->toArray();
-    $selectedRoles = old('userrole', $memberRoles);
+    // editStep() passes the offered options the login actually holds, so a role changed on
+    // Role & Permission > Users shows here too. Any other caller keeps the mapping.
+    $selectedRoles = old('userrole', $selectedRoleOptions ?? $memberRoles);
 @endphp
 <div class="row">
     <div class="col-12">

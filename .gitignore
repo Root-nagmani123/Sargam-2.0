@@ -38,3 +38,5 @@ tools/phpstan/vendor/
 /playwright/.cache/
 bootstrap/
 tools/phpstan/
+composer.phar
+docs/employee-role-sync.md

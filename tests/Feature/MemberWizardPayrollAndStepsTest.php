@@ -622,6 +622,9 @@ class MemberWizardPayrollAndStepsTest extends TestCase
         ]);
         DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->delete();
         DB::table('employee_role_mapping')->insert(['user_credentials_pk' => $credentialPk, 'user_role_master_pk' => $hiddenPk]);
+        // Step 3 ticks the roles the login actually holds (heldOfferedRoleOptions()), so the
+        // role granted at creation is removed too; otherwise Step 3 would show it ticked.
+        User::find($credentialPk)->syncRoles([]);
         $rolesBefore = User::find($credentialPk)->getRoleNames()->sort()->values()->all();
 
         $updatePayload = $this->basicMemberPayload('HiddenOnly', $employeePk);
