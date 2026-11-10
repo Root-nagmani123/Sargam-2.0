@@ -7776,7 +7776,8 @@ class EstateController extends Controller
             }
         }
 
-        $cacheKey = 'estate_umr_reg:v1:' . md5(json_encode([
+        // Versioned: a saved reading must drop its house from the list at once, not after the TTL (F-047).
+        $cacheKey = 'estate_umr_reg:v1:' . $this->estateCacheVersion() . ':' . md5(json_encode([
             'bm' => (string) $billMonth,
             'by' => (string) $billYear,
             'campus' => $campusId,
@@ -8012,6 +8013,9 @@ class EstateController extends Controller
                 ->whereIn('emrd.pk', $pks)
                 ->select([
                     'emrd.pk',
+                    'emrd.bill_month',
+                    'emrd.bill_year',
+                    'emrd.estate_possession_details_pk',
                     'emrd.last_month_elec_red',
                     'emrd.curr_month_elec_red',
                     'emrd.last_month_elec_red2',
@@ -8025,6 +8029,10 @@ class EstateController extends Controller
                 ])
                 ->get()
                 ->keyBy('pk');
+
+            $targetYm = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', (string) $request->input('reading_bill_month')) === 1
+                ? (string) $request->input('reading_bill_month')
+                : null;
 
             foreach ($readings as $idx => $item) {
                 $currVal = $item['curr_month_elec_red'] ?? null;
@@ -8050,11 +8058,18 @@ class EstateController extends Controller
                 }
 
                 $pk = isset($item['pk']) ? (int) $item['pk'] : 0;
+                $row = $rows->get($pk);
+                // F-047: before the edit-flow skip, so an edit posted under another month is refused too.
+                if ($row && $targetYm !== null
+                    && $this->meterReadingSupersedingRowPk('estate_month_reading_details', 'estate_possession_details_pk', $row, $targetYm) !== null) {
+                    $target = \Carbon\Carbon::createFromFormat('Y-m', $targetYm);
+                    $v->errors()->add("readings.$idx.pk", $this->staleMeterReadingMessage($target->format('F'), $target->format('Y')));
+                    continue;
+                }
                 // Edit flow from List Meter Reading: correcting a saved reading, so no baseline restriction on that row.
                 if ($editReadingPk !== null && $pk === $editReadingPk) {
                     continue;
                 }
-                $row = $rows->get($pk);
                 if (! $row) {
                     continue;
                 }
@@ -8181,7 +8196,6 @@ class EstateController extends Controller
         // Step 2: One fetch + update (or insert when saving a new bill period so prior month rows are not overwritten).
         foreach ($byPk as $formRowPk => $data) {
             $resolvePk = $formRowPk;
-            $allowRetargetToTargetPeriodRow = true;
             while (true) {
             $update = [];
             $curr1Form = $data['curr1'];
@@ -8451,11 +8465,8 @@ class EstateController extends Controller
                     ->where('bill_month', $storeBillMonthName)
                     ->where('bill_year', $storeBillYearStr)
                     ->first();
-                if ($existingTarget && $allowRetargetToTargetPeriodRow && (int) $existingTarget->pk !== $resolvePk) {
-                    $resolvePk = (int) $existingTarget->pk;
-                    $allowRetargetToTargetPeriodRow = false;
-
-                    continue;
+                if ($existingTarget && (int) $existingTarget->pk !== $resolvePk) {
+                    return $this->staleMeterReadingResponse($request, (string) $storeBillMonthName, (string) $storeBillYearStr);
                 }
                 if (! $existingTarget) {
                     $insertData = array_merge(
@@ -9555,7 +9566,8 @@ class EstateController extends Controller
             }
         }
 
-        $cacheKey = 'estate_umr_oth:v1:' . md5(json_encode([
+        // Versioned: a saved reading must drop its house from the list at once, not after the TTL (F-047).
+        $cacheKey = 'estate_umr_oth:v1:' . $this->estateCacheVersion() . ':' . md5(json_encode([
             'bm' => (string) $billMonth,
             'by' => (string) $billYear,
             'campus' => $campusId,
@@ -9892,6 +9904,50 @@ class EstateController extends Controller
     }
 
     /**
+     * F-047: the pk of another row already saved for the selected month ($targetYm, Y-m) for this row's possession,
+     * when the form row itself belongs to a different month. Such a form is stale (cached list, a second operator,
+     * a replayed POST): saving it used to land on that row, checked against the old month's reading.
+     */
+    private function meterReadingSupersedingRowPk(string $table, string $possessionCol, object $row, string $targetYm): ?int
+    {
+        if (trim((string) ($row->bill_month ?? '')) === '' || trim((string) ($row->bill_year ?? '')) === '') {
+            return null;
+        }
+        $target = \Carbon\Carbon::createFromFormat('Y-m', $targetYm)->startOfMonth();
+        $rowYm = $this->meterReadingYmFromRowColumns($row->bill_month, $row->bill_year);
+        $samePeriod = $rowYm === null
+            ? ((string) $row->bill_month === $target->format('F') && (string) $row->bill_year === $target->format('Y'))
+            : $rowYm === $targetYm;
+        if ($samePeriod) {
+            return null;
+        }
+        $pk = DB::table($table)
+            ->where($possessionCol, (int) $row->{$possessionCol})
+            ->where('bill_month', $target->format('F'))
+            ->where('bill_year', $target->format('Y'))
+            ->where('pk', '<>', (int) $row->pk)
+            ->value('pk');
+
+        return $pk !== null ? (int) $pk : null;
+    }
+
+    private function staleMeterReadingMessage(string $monthName, string $year): string
+    {
+        return "A reading for {$monthName} {$year} is already saved for this house, so this list is out of date. Reload the list; to correct that reading, open it from List Meter Reading → Edit.";
+    }
+
+    /** F-047 race guard: a stale form that got past the validator is refused, never written onto the other row. */
+    private function staleMeterReadingResponse(Request $request, string $monthName, string $year)
+    {
+        $message = $this->staleMeterReadingMessage($monthName, $year);
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => false, 'message' => $message], 409);
+        }
+
+        return redirect()->back()->withInput()->with('error', $message);
+    }
+
+    /**
      * Normalize bill_month for estate_month_reading_details_other: if numeric (1-12), convert to month name.
      */
     private function normalizeBillMonthForOther($billMonth): string
@@ -9997,6 +10053,8 @@ class EstateController extends Controller
                     'pk',
                     'house_no',
                     'estate_possession_other_pk',
+                    'bill_month',
+                    'bill_year',
                     'meter_one',
                     'meter_two',
                     'last_month_elec_red',
@@ -10039,6 +10097,13 @@ class EstateController extends Controller
                 $row = $rows->get($pk);
                 if (!$row) {
                     $v->errors()->add("readings.$idx.pk", 'Selected meter reading row not found.');
+                    continue;
+                }
+                $targetYm = (string) $request->input('reading_bill_month');
+                if (preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $targetYm) === 1
+                    && $this->meterReadingSupersedingRowPk('estate_month_reading_details_other', 'estate_possession_other_pk', $row, $targetYm) !== null) {
+                    $target = \Carbon\Carbon::createFromFormat('Y-m', $targetYm);
+                    $v->errors()->add("readings.$idx.pk", $this->staleMeterReadingMessage($target->format('F'), $target->format('Y')));
                     continue;
                 }
 
@@ -10135,7 +10200,6 @@ class EstateController extends Controller
             }
 
             $resolvePk = $resolvedOtherReadingPkByFormPk[$formPk] ?? $formPk;
-            $allowRetargetToTargetPeriodRow = true;
 
             while (true) {
                 $row = EstateMonthReadingDetailsOther::where('pk', $resolvePk)->first();
@@ -10365,11 +10429,8 @@ class EstateController extends Controller
                         ->where('bill_month', $storeBillMonthNameOther)
                         ->where('bill_year', $storeBillYearStrOther)
                         ->first();
-                    if ($existingTarget && $allowRetargetToTargetPeriodRow && (int) $existingTarget->pk !== $resolvePk) {
-                        $resolvePk = (int) $existingTarget->pk;
-                        $allowRetargetToTargetPeriodRow = false;
-
-                        continue;
+                    if ($existingTarget && (int) $existingTarget->pk !== $resolvePk) {
+                        return $this->staleMeterReadingResponse($request, (string) $storeBillMonthNameOther, (string) $storeBillYearStrOther);
                     }
                     if (! $existingTarget) {
                         $dateOrNull = static function ($d) {
