@@ -86,7 +86,7 @@
                     <tbody>
                         @php $requestList = $requests ?? collect(); @endphp
                         @forelse($requestList as $index => $row)
-                        <tr>
+                        <tr data-pk="{{ (int) ($row->pk ?? 0) }}">
                             <td></td>
                             <td>{{ $row->request_id ?? '—' }}</td>
                             <td data-order="{{ $row->request_date_sort ?? '' }}">{{ $row->request_date ?? '—' }}</td>
@@ -857,6 +857,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     return key && dt.column(i).visible();
                 });
                 if (cols.length) params.cols = cols.join(',');
+                // The grid sorts in the browser: send the rows in the order it shows them.
+                params.row_order = dt.rows({search: 'applied', order: 'applied'}).nodes().toArray()
+                    .map(function (tr) { return tr.getAttribute('data-pk'); }).join(',');
                 return params;
             }
             jQuery(document).on('click', '[data-export-for="rfh"]', function () {

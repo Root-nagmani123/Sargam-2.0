@@ -136,4 +136,39 @@ class EstateGridHeaderSortTest extends TestCase
         $this->assertSame(array_values($sorted), $names['asc'], 'Name ascending is in name order');
         $this->assertSame(array_reverse($names['asc']), $names['desc'], 'descending is the reverse');
     }
+
+    /**
+     * F-029: the grid opens on Request ID desc. As text "home-req-9999" sorts above
+     * "home-req-100000"; the queue must open newest (highest number) first.
+     */
+    public function test_put_in_hac_opens_with_the_newest_request_first(): void
+    {
+        $pks = DB::table('estate_home_request_details')->where('status', '!=', 2)
+            ->orderBy('pk')->limit(3)->pluck('pk')->all();
+        if (count($pks) < 3) {
+            $this->markTestSkipped('needs three home requests');
+        }
+        $ids = ['home-req-9999', 'home-req-100000', 'home-req-10000'];
+        foreach ($pks as $i => $pk) {
+            DB::table('estate_home_request_details')->where('pk', $pk)
+                ->update(['hac_status' => 0, 'change_status' => 0, 'req_id' => $ids[$i]]);
+        }
+        EstateRequestPutInHacDataTable::bumpListingCacheEpoch();
+
+        $actor = $this->as($this->staffWithRole('Estate Admin'), ['Estate Admin', 'Super Admin', 'HAC Person', 'Estate']);
+        $grid = app(EstateRequestPutInHacDataTable::class);
+        $columns = array_map(fn ($c) => ['data' => $c->data, 'name' => $c->name, 'orderable' => 'true', 'searchable' => 'true'],
+            $grid->getColumns());
+        // The grid's own default order, as html() hands it to DataTables.
+        $order = array_map(fn ($o) => ['column' => $o[0], 'dir' => $o[1]], $grid->html()->getAttributes()['order']);
+
+        $this->app->forgetInstance('datatables.request');
+        $rows = $actor->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])
+            ->getJson(route('admin.estate.put-in-hac', ['draw' => 1, 'start' => 0, 'length' => 500, 'columns' => $columns,
+                'order' => $order, 'search' => ['value' => '']]))
+            ->assertOk()->json('data');
+        $listed = array_values(array_filter(array_map(fn ($r) => strip_tags((string) $r['req_id']), $rows), fn ($id) => in_array($id, $ids, true)));
+
+        $this->assertSame(['home-req-100000', 'home-req-10000', 'home-req-9999'], $listed);
+    }
 }

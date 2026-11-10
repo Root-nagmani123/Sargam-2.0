@@ -1358,3 +1358,24 @@
         width: 100% !important;
     }
 }
+
+/* --- Estate grids: sentence-case headers, arrows-and-numbers pager --- */
+/* Estate pages only (this file loads on estate screens alone), so the ~100
+   other programme-dt grids keep the theme's upper-case headers and First/Last
+   (F-031). The admin theme uppercases every DataTable header
+   (`table.dataTable thead th` in styles.css); the designs render them in
+   sentence case. Two classes beat the theme's one without !important. */
+table.dataTable.programme-dt-table thead th,
+.programme-dt-table thead th {
+    text-transform: none;
+}
+
+/* The designs' pager is arrows + page numbers only; full_numbers also emits
+   First/Last. `!important` is required: custom.css:577 sets
+   `display: inline-flex !important` on .paginate_button. */
+.programme-dt-footer .paginate_button.first,
+.programme-dt-footer .paginate_button.last,
+.programme-dt-footer .page-item.first,
+.programme-dt-footer .page-item.last {
+    display: none !important;
+}

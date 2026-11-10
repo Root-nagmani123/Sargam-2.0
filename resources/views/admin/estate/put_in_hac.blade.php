@@ -236,6 +236,8 @@
             if ($.fn.DataTable.isDataTable($table)) {
                 var searchValue = $table.DataTable().search();
                 if (searchValue) params.search = searchValue;
+                // The grid's sort, read back by the export as the grid's own column index.
+                params.order = $table.DataTable().order().map(function (o) { return { column: o[0], dir: o[1] }; });
             }
             params.cols = PIH_EXPORT_KEYS.filter(function(key, idx) {
                 return key !== '' && hidden.indexOf(idx) === -1;

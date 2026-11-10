@@ -325,30 +325,6 @@ a.dropdown-item:focus-visible {
     border-bottom: 1px solid var(--ds-line);
 }
 
-/* --- Opted-in grids: sentence-case headers ----------------------- */
-/* The admin theme uppercases every DataTable header
-   (`table.dataTable thead th` in styles.css). The designs render them in
-   sentence case — "S. No.", "Merge with House" — so grids that opt into the
-   design system opt out of that transform. Two classes beat the theme's one
-   without !important; legacy tables are untouched. */
-table.dataTable.programme-dt-table thead th,
-.programme-dt-table thead th {
-    text-transform: none;
-}
-
-/* The designs' pager is arrows + page numbers only. DataTables' full_numbers
-   style also emits First/Last, so the opted-in footer drops them. Kept here
-   rather than per page — every design-system grid wants the same pager.
-   `!important` is required, not stylistic: custom.css:577 sets
-   `display: inline-flex !important` on .paginate_button, which a plain
-   `display:none` cannot beat at any specificity. */
-.programme-dt-footer .paginate_button.first,
-.programme-dt-footer .paginate_button.last,
-.programme-dt-footer .page-item.first,
-.programme-dt-footer .page-item.last {
-    display: none !important;
-}
-
 /* --- Wizard shell: step rail beside the panels ------------------- */
 /* Drop inside a .ds-card. The rail keeps its own hairline so the two halves
    read as one surface rather than two stacked cards. */

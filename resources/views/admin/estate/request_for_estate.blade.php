@@ -367,6 +367,8 @@
             if ($.fn.DataTable && $.fn.DataTable.isDataTable($requestForEstateTable)) {
                 var searchValue = $requestForEstateTable.DataTable().search();
                 if (searchValue) params.search = searchValue;
+                // The grid's sort, read back by the export as the grid's own column index.
+                params.order = $requestForEstateTable.DataTable().order().map(function (o) { return { column: o[0], dir: o[1] }; });
             }
             // ?scope=self must ride along or the export would widen the row scope.
             var scope = new URLSearchParams(window.location.search).get('scope');

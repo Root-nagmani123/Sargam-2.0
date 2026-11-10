@@ -310,6 +310,11 @@
                 if (!dt || dt.column(i).visible()) cols.push(key);
             });
             if (cols.length) params.set('cols', cols.join(','));
+            // The grid's sort, read back by the export as the grid's own column index.
+            (dt ? dt.order() : []).forEach(function (o, i) {
+                params.set('order[' + i + '][column]', o[0]);
+                params.set('order[' + i + '][dir]', o[1]);
+            });
             return params.toString();
         }
 

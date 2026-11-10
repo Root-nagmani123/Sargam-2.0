@@ -342,6 +342,8 @@ $(function() {
         if (filters.bill_month) params.bill_month = filters.bill_month;
         var searchValue = table.search();
         if (searchValue) params.search = searchValue;
+        // The grid's sort, read back by the export as the grid's own column index.
+        params.order = table.order().map(function (o) { return { column: o[0], dir: o[1] }; });
         params.cols = umnVisibleExportCols().join(',');
         return params;
     }

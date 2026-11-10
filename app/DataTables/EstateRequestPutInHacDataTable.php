@@ -9,6 +9,7 @@ use App\Support\DataTableRedisCache;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
@@ -142,15 +143,25 @@ class EstateRequestPutInHacDataTable extends DataTable
                 static::applySearch($query, (string) request()->input('search.value', ''));
             }, false)
             // query() ends in orderBy(pk desc), which Yajra's own header order only appended to.
-            ->order(fn ($query) => $this->applyHeaderSort($query, 'estate_home_request_details.pk', [
-                'req_id' => 'estate_home_request_details.req_id',
-                'req_date' => 'estate_home_request_details.req_date',
-                'emp_name' => 'estate_home_request_details.emp_name',
-                'emp_designation' => 'estate_home_request_details.emp_designation',
-                'pay_scale' => 'estate_home_request_details.pay_scale',
-                'current_alot' => 'estate_home_request_details.current_alot',
-            ]))
+            ->order(fn ($query) => $this->sortQuery($query))
             ->setRowId('pk');
+    }
+
+    /** Header sort, shared by the grid and its Download / Print, so both list rows in the same order. */
+    public function sortQuery($query): void
+    {
+        $this->applyHeaderSort($query, 'estate_home_request_details.pk', [
+            // "home-req-99" < "home-req-200": order by the number, so the default view is newest first (F-029).
+            'req_id' => [
+                DB::raw("CAST(SUBSTRING_INDEX(estate_home_request_details.req_id, '-', -1) AS UNSIGNED)"),
+                'estate_home_request_details.req_id',
+            ],
+            'req_date' => 'estate_home_request_details.req_date',
+            'emp_name' => 'estate_home_request_details.emp_name',
+            'emp_designation' => 'estate_home_request_details.emp_designation',
+            'pay_scale' => 'estate_home_request_details.pay_scale',
+            'current_alot' => 'estate_home_request_details.current_alot',
+        ]);
     }
 
     /**

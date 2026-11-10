@@ -517,6 +517,7 @@ class EstateController extends Controller
                 $query,
                 $this->exportSearchTerm($request)
             ))
+            ->tap(fn ($query) => app(EstateRequestForEstateDataTable::class)->sortQuery($query))
             ->get();
 
         $statusFilter = $request->input('status_filter');
@@ -596,8 +597,10 @@ class EstateController extends Controller
         }
 
         $search = trim($this->exportSearchTerm($request));
-        $query = app(EstateRequestPutInHacDataTable::class)->query(new EstateHomeRequestDetails);
+        $grid = app(EstateRequestPutInHacDataTable::class);
+        $query = $grid->query(new EstateHomeRequestDetails);
         EstateRequestPutInHacDataTable::applySearch($query, $search);
+        $grid->sortQuery($query);
         $rows = $query->get();
 
         $date = fn ($v) => $v ? \Carbon\Carbon::parse($v)->format('d-m-Y') : '-';
@@ -2655,6 +2658,9 @@ class EstateController extends Controller
                 $row->eligibility_type ?? '—', $row->possession_from ?? '—', $row->possession_to ?? '—',
             ]), $words))->values();
         }
+
+        // The grid sorts in the browser; list the rows in the order it shows them.
+        $rows = DataTableSearchHelper::orderLikeClientGrid($rows, $request->query('row_order'), fn ($row) => $row->pk ?? '');
 
         return [
             'rows' => $rows,
@@ -8706,6 +8712,8 @@ class EstateController extends Controller
                 'bill_year' => static::exportFilterText($request, 'bill_year'),
                 'bill_month' => static::exportFilterText($request, 'bill_month'),
                 'search' => ['value' => $this->exportSearchTerm($request)],
+                // The grid's sort; getUpdateMeterNoList() reads order.0.column / dir itself.
+                'order' => is_array($request->input('order')) ? $request->input('order') : null,
             ], fn ($v) => $v !== null && $v !== '')
         );
         $listRequest->setUserResolver($request->getUserResolver());
@@ -12464,8 +12472,9 @@ class EstateController extends Controller
             date('M', mktime(0, 0, 0, $monthNum, 1)),
             (string) $monthNum,
             str_pad((string) $monthNum, 2, '0', STR_PAD_LEFT),
-            0,
-            'asc',
+            // The grid's sort, read exactly as getListMeterReadingData() reads it.
+            (int) data_get($request->all(), 'order.0.column', 0),
+            strtolower(static::exportFilterText($request, 'order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc',
             $restrictedEmployeeIdsSorted,
             \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk')
         );
@@ -13703,6 +13712,9 @@ class EstateController extends Controller
                 $money($row['water_charges'] ?? null), $money($row['grand_total'] ?? null),
             ]), $words))->values();
         }
+
+        // The grid sorts in the browser; list the rows in the order it shows them.
+        $rows = DataTableSearchHelper::orderLikeClientGrid($rows, $request->query('row_order'), fn (array $row) => $row['pk'] ?? '');
 
         $filters = ['Bill Month: ' . date('F Y', mktime(0, 0, 0, $monthNum, 1, (int) $billYearStr))];
         if ($search !== '') {

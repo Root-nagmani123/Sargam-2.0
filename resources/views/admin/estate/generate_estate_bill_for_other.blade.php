@@ -294,6 +294,11 @@
                 if (!dt || dt.column(i).visible()) cols.push(key);
             });
             if (cols.length) params.set('cols', cols.join(','));
+            // The grid sorts in the browser: send the rows in the order it shows them.
+            if (dt) {
+                params.set('row_order', dt.rows({ search: 'applied', order: 'applied' }).nodes().toArray()
+                    .map(function (tr) { return $(tr).find('.bill-row-check').attr('data-pk') || ''; }).join(','));
+            }
             return params.toString();
         }
 

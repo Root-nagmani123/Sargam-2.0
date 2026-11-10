@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\DataTables\Concerns\AppliesHeaderSort;
 use App\DataTables\Concerns\RendersEstateRowActions;
 use App\Models\EstateHomeRequestDetails;
 use App\Support\DataTableRedisCache;
@@ -17,6 +18,7 @@ use Yajra\DataTables\Services\DataTable;
 
 class EstateRequestForEstateDataTable extends DataTable
 {
+    use AppliesHeaderSort;
     use RendersEstateRowActions;
 
     public const LISTING_CACHE_EPOCH_KEY = 'estate_rfet_list_epoch';
@@ -301,13 +303,20 @@ class EstateRequestForEstateDataTable extends DataTable
                         );
                 });
             })
-            ->orderColumn('pk', fn ($query, $order) => $query->reorder()->orderBy('estate_home_request_details.pk', $order))
-            ->orderColumn('req_id', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(estate_home_request_details.req_id, "")) ' . $order))
-            ->orderColumn('req_date', fn ($query, $order) => $query->reorder()
-                ->orderBy('estate_home_request_details.req_date', $order)
-                ->orderBy('estate_home_request_details.pk', $order))
-            ->orderColumn('name_id', fn ($query, $order) => $query->reorder()->orderByRaw('LOWER(COALESCE(estate_home_request_details.emp_name, "")) ' . $order)->orderByRaw('LOWER(COALESCE(estate_home_request_details.employee_id, "")) ' . $order))
+            // One ORDER BY in place of listingQuery()'s default; Download / Print reuse it.
+            ->order(fn ($query) => $this->sortQuery($query))
             ->setRowId('pk');
+    }
+
+    /** Header sort, shared by the grid and its Download / Print, so both list rows in the same order. */
+    public function sortQuery($query): void
+    {
+        $ci = fn (string $column) => DB::raw('LOWER(COALESCE(estate_home_request_details.' . $column . ', ""))');
+        $this->applyHeaderSort($query, 'estate_home_request_details.pk', [
+            'req_id' => $ci('req_id'),
+            'req_date' => 'estate_home_request_details.req_date',
+            'name_id' => [$ci('emp_name'), $ci('employee_id')],
+        ]);
     }
 
     public function query(EstateHomeRequestDetails $model): QueryBuilder
