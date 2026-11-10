@@ -881,6 +881,8 @@ class ResultMarksService
                 'director' => $director,
                 'grand' => $grand,
                 'qualifying' => $papers,
+                // Per column key, for the marksheet (MarksheetService).
+                'marks' => array_map(fn (EvaluationMark $m) => self::resultMarks($m), $approved),
                 'result' => match (true) {
                     ! $qualified => 'Fail',
                     $passMarks === null => null,
@@ -897,12 +899,41 @@ class ResultMarksService
 
         return [
             'subjects' => $subjects,
+            'partB' => $partB,
             'maxB' => $partB ? (float) array_sum(array_column($partB, 'max')) : null,
             'qualifying' => array_map(fn ($cols) => $cols ? (float) array_sum(array_column($cols, 'max')) : null, $qualifying),
             'rows' => $rows,
             'pending' => count($participants) - count($rows),
             'noPassMarks' => $noPassMarks,
         ];
+    }
+
+    /**
+     * Merit & Ranking of every course in $scope, as the marksheets need it
+     * (MarksheetService): each course's merit sheet — rows carry their mark per
+     * column key — with the drives whose exams are over.
+     *
+     * @return array<int, array<string, mixed>> keyed by course pk
+     */
+    public function meritSheets(string $scope): array
+    {
+        $out = [];
+        foreach ($this->scopeDrives($scope)->groupBy('course_master_pk') as $pk => $drives) {
+            $held = $drives->filter(fn ($d) => $d->componentMaps->contains(fn ($m) => $this->examOver($d, $m)))->values();
+            if ($held->isEmpty()) {
+                continue;
+            }
+            $course = $held->first()->course;
+            $name = trim((string) ($course->course_name ?? ''));
+            $out[(int) $pk] = [
+                'course_pk' => (int) $pk,
+                'course' => $name,
+                'course_short' => trim((string) ($course->couse_short_name ?? '')) ?: $name,
+                'drives' => $held,
+            ] + $this->meritSheet($drives, $name);
+        }
+
+        return $out;
     }
 
     private function courseSheet(Collection $drives, array $marks): ?array

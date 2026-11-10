@@ -125,10 +125,23 @@
 <script>
 $(function () {
     'use strict';
-    // shortcut: publication is not stored yet (sample results); save it once Evaluation & Marks is live.
+    // Verify & Publish locks the marksheet; the server refuses it until UDC, AAO and COE signatures are in Signature Master.
     $('#msPublish').on('click', function () {
-        Swal.fire({ icon: 'info', title: 'Verify & Publish',
-            text: 'Publishing will be saved once Evaluation & Marks is live. This marksheet is built from sample results.' });
+        Swal.fire({
+            icon: 'question', title: 'Verify & Publish', text: 'Publish this marksheet? It cannot be changed afterwards.',
+            showCancelButton: true, confirmButtonText: 'Verify & Publish'
+        }).then(function (r) {
+            if (!r.isConfirmed) { return; }
+            $.ajax({
+                url: @json(route('admin.coe.marksheet-generation.publish')), method: 'POST', contentType: 'application/json',
+                data: JSON.stringify({ course: @json($m['course_key']), ots: [@json($m['code'])] }),
+                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+            }).done(function (res) {
+                Swal.fire({ icon: 'success', title: 'Published', text: res.message }).then(function () { window.location.reload(); });
+            }).fail(function (xhr) {
+                Swal.fire({ icon: 'error', title: 'Not published', text: (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong. Please try again.' });
+            });
+        });
     });
     @if (request()->boolean('print'))
     // Opened from a Download link: wait for the signature images, then print.

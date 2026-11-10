@@ -45,7 +45,7 @@
                 <div class="d-flex justify-content-end gap-2 mt-3 mv-actions">
                     <a href="{{ route('admin.coe.marksheet.show', ['course' => $m['course_key'], 'ot' => $m['code']]) }}"
                        class="btn coe-btn btn-outline-secondary d-inline-flex align-items-center">View</a>
-                    <button type="button" class="btn coe-btn btn-outline-primary mv-publish">Verify &amp; Publish Marksheet</button>
+                    <button type="button" class="btn coe-btn btn-outline-primary mv-publish" data-code="{{ $m['code'] }}">Verify &amp; Publish Marksheet</button>
                 </div>
             </div>
         </div>
@@ -57,10 +57,30 @@
 <script>
 $(function () {
     'use strict';
-    // shortcut: publication is not stored yet (sample results); save it once Evaluation & Marks is live.
+    var PUBLISH_URL = @json(route('admin.coe.marksheet-generation.publish'));
+    var BACK_URL = @json(route('admin.coe.marksheet-generation.index'));
+    var COURSE = @json($courseKey);
+    var ALL = @json(array_column($rows, 'code'));
+
+    // Verify & Publish locks the marksheet; the server refuses it until UDC, AAO and COE signatures are in Signature Master.
     $('.mv-publish').on('click', function () {
-        Swal.fire({ icon: 'info', title: 'Verify & Publish',
-            text: 'Publishing will be saved once Evaluation & Marks is live. These marksheets are built from sample results.' });
+        var ots = $(this).data('all') ? ALL : [String($(this).data('code'))];
+        Swal.fire({
+            icon: 'question', title: 'Verify & Publish',
+            text: ots.length === 1 ? 'Publish this marksheet? It cannot be changed afterwards.' : 'Publish these ' + ots.length + ' marksheets? They cannot be changed afterwards.',
+            showCancelButton: true, confirmButtonText: 'Verify & Publish'
+        }).then(function (r) {
+            if (!r.isConfirmed) { return; }
+            $.ajax({
+                url: PUBLISH_URL, method: 'POST', contentType: 'application/json',
+                data: JSON.stringify({ course: COURSE, ots: ots }),
+                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+            }).done(function (res) {
+                Swal.fire({ icon: 'success', title: 'Published', text: res.message }).then(function () { window.location.href = BACK_URL; });
+            }).fail(function (xhr) {
+                Swal.fire({ icon: 'error', title: 'Not published', text: (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong. Please try again.' });
+            });
+        });
     });
 });
 </script>

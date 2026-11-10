@@ -2330,6 +2330,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
             ->name('marksheet-generation.index');
         Route::get('marksheet-generation/verify', [\App\Http\Controllers\Admin\COE\MarksheetController::class, 'verify'])
             ->name('marksheet-generation.verify');
+        Route::post('marksheet-generation/publish', [\App\Http\Controllers\Admin\COE\MarksheetController::class, 'publish'])
+            ->middleware('throttle:20,1')->name('marksheet-generation.publish');
     });
     Route::get('verified-marksheet', [\App\Http\Controllers\Admin\COE\MarksheetController::class, 'verified'])
         ->middleware('menu.permission:coe_verified_marksheet')->name('verified-marksheet.index');
