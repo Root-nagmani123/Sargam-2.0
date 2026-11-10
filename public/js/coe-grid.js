@@ -847,16 +847,22 @@
             redraw($row);
         }
 
+        /* Added as a <tr> node, not a data array: the server rows carry data-order
+           (number + status cells), so DataTables reads those columns as
+           {display, @data-order} objects, and a plain array row fails with
+           "Requested unknown parameter '[object Object]'". */
         function newRowNode(id) {
-            var blank = [];
-            for (var i = 0; i <= COL.action; i++) { blank.push(''); }
-            var $row = $(dt.row.add(blank).draw(false).node()).attr('data-coe-id', id);
+            var $row = $('<tr></tr>').attr({ 'data-coe-id': id, 'data-coe-active': '1' });
+            for (var i = 0; i <= COL.action; i++) { $row.append('<td></td>'); }
             var $cells = $row.children('td');
             fields.forEach(function (f) {
-                $cells.eq(f.col).addClass('coe-cell-' + f.key + (f.align === 'center' ? ' coe-col-center' : ''));
+                var $c = $cells.eq(f.col).addClass('coe-cell-' + f.key + (f.align === 'center' ? ' coe-col-center' : ''));
+                if (f.type === 'number') { $c.attr('data-order', 0); }
             });
-            $cells.eq(COL.status).addClass('coe-col-center coe-cell-status');
+            $cells.eq(COL.status).addClass('coe-col-center coe-cell-status')
+                .attr({ 'data-order': 1, 'data-search': 'Active' });
             $cells.eq(COL.action).addClass('coe-cell-actions');
+            dt.row.add($row[0]).draw(false);
             return $row;
         }
 
@@ -970,7 +976,9 @@
 
         var columns = [{ data: 'DT_RowIndex', orderable: false, searchable: false, className: 'coe-col-sno' }];
         fields.forEach(function (f) {
-            columns.push({ data: f.name, name: f.name, className: 'coe-cell-' + f.key });
+            // A computed column (a count from another table) is not searchable server-side.
+            columns.push({ data: f.name, name: f.name, searchable: !f.computed,
+                className: 'coe-cell-' + f.key + (f.align === 'center' ? ' coe-col-center' : '') });
         });
         columns.push({ data: 'status', orderable: false, searchable: false, className: 'coe-col-center coe-cell-status' });
         columns.push({ data: 'actions', orderable: false, searchable: false, className: 'coe-cell-actions' });
@@ -1130,7 +1138,7 @@
         function submitViaAjax(values) {
             var wasEdit = !!$editing;
             var payload = { active_inactive: $status.val() === '1' ? 1 : 0 };
-            fields.forEach(function (f) { payload[f.name] = values[f.key]; });
+            formFields.forEach(function (f) { payload[f.name] = values[f.key]; });
             if (wasEdit) { payload.pk = $editing.attr('data-coe-id'); }
 
             $(P + 'Submit').prop('disabled', true);

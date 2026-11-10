@@ -2133,10 +2133,34 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->whereNumber('scriber')->name('scriber-master.destroy');
     Route::get('building', [\App\Http\Controllers\Admin\COE\BuildingController::class, 'index'])
         ->name('building.index');
+    Route::get('building/export/{format}', [\App\Http\Controllers\Admin\COE\BuildingController::class, 'export'])
+        ->whereIn('format', ['csv', 'excel', 'pdf', 'print'])->name('building.export');
+    Route::post('building', [\App\Http\Controllers\Admin\COE\BuildingController::class, 'store'])
+        ->name('building.store');
+    Route::patch('building/{id}/toggle-status', [\App\Http\Controllers\Admin\COE\BuildingController::class, 'toggleStatus'])
+        ->name('building.toggle-status');
+    Route::delete('building/{id}', [\App\Http\Controllers\Admin\COE\BuildingController::class, 'destroy'])
+        ->name('building.destroy');
     Route::get('floor', [\App\Http\Controllers\Admin\COE\FloorController::class, 'index'])
         ->name('floor.index');
+    Route::get('floor/export/{format}', [\App\Http\Controllers\Admin\COE\FloorController::class, 'export'])
+        ->whereIn('format', ['csv', 'excel', 'pdf', 'print'])->name('floor.export');
+    Route::post('floor', [\App\Http\Controllers\Admin\COE\FloorController::class, 'store'])
+        ->name('floor.store');
+    Route::patch('floor/{id}/toggle-status', [\App\Http\Controllers\Admin\COE\FloorController::class, 'toggleStatus'])
+        ->name('floor.toggle-status');
+    Route::delete('floor/{id}', [\App\Http\Controllers\Admin\COE\FloorController::class, 'destroy'])
+        ->name('floor.destroy');
     Route::get('room', [\App\Http\Controllers\Admin\COE\RoomController::class, 'index'])
         ->name('room.index');
+    Route::get('room/export/{format}', [\App\Http\Controllers\Admin\COE\RoomController::class, 'export'])
+        ->whereIn('format', ['csv', 'excel', 'pdf', 'print'])->name('room.export');
+    Route::post('room', [\App\Http\Controllers\Admin\COE\RoomController::class, 'store'])
+        ->name('room.store');
+    Route::patch('room/{id}/toggle-status', [\App\Http\Controllers\Admin\COE\RoomController::class, 'toggleStatus'])
+        ->name('room.toggle-status');
+    Route::delete('room/{id}', [\App\Http\Controllers\Admin\COE\RoomController::class, 'destroy'])
+        ->name('room.destroy');
     Route::get('grade-master', [\App\Http\Controllers\Admin\COE\GradeMasterController::class, 'index'])
         ->name('grade-master.index');
     Route::get('unique-participant-code', [\App\Http\Controllers\Admin\COE\UniqueParticipantCodeController::class, 'index'])
@@ -2271,9 +2295,20 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
             ->name('faculty-result-entry.index');
         Route::post('faculty-result-entry', [\App\Http\Controllers\Admin\COE\FacultyResultEntryController::class, 'save'])
             ->name('faculty-result-entry.save');
+        Route::get('faculty-result-entry/template', [\App\Http\Controllers\Admin\COE\FacultyResultEntryController::class, 'template'])
+            ->name('faculty-result-entry.template');
+        Route::post('faculty-result-entry/import', [\App\Http\Controllers\Admin\COE\FacultyResultEntryController::class, 'import'])
+            ->middleware('throttle:10,1')->name('faculty-result-entry.import');
     });
     Route::get('merit-ranking', [\App\Http\Controllers\Admin\COE\MeritRankingController::class, 'index'])
         ->middleware('menu.permission:coe_merit_ranking')->name('merit-ranking.index');
+    // Training section's screen; Super Admin always passes menu.permission.
+    Route::middleware('menu.permission:coe_marks_moderation')->group(function () {
+        Route::get('marks-moderation', [\App\Http\Controllers\Admin\COE\MarksModerationController::class, 'index'])
+            ->name('marks-moderation.index');
+        Route::post('marks-moderation', [\App\Http\Controllers\Admin\COE\MarksModerationController::class, 'moderate'])
+            ->middleware('throttle:20,1')->name('marks-moderation.moderate');
+    });
 
     // COE -> Document Management
     Route::middleware('menu.permission:coe_signature_master')->group(function () {

@@ -348,6 +348,169 @@ class CoeResultManagementFlowTest extends TestCase
         ])->assertStatus(422);
     }
 
+    public function test_sheet_lists_one_row_per_ot_and_component_split_into_pending_and_completed(): void
+    {
+        $y = $this->key($this->subjectA, 'Y');
+        $three = array_slice($this->ots, 0, 3);
+        $page = fn () => $this->actingAs($this->faculty[2])
+            ->get(route('admin.coe.faculty-result-entry.index', ['course' => $this->drive->course_master_pk]))->assertOk();
+
+        $entries = $page()->viewData('entries');
+        $this->assertSame(array_column($three, 'code'), array_column($entries, 'code'));
+        $this->assertSame([$y], array_values(array_unique(array_column($entries, 'key'))));
+        $this->assertSame([3, 0], [$page()->viewData('pendingCount'), $page()->viewData('completedCount')]);
+
+        $this->save(2, $this->fill($y, '15', $three), true)->assertOk();
+        $this->assertSame([0, 3], [$page()->viewData('pendingCount'), $page()->viewData('completedCount')]);
+        $this->actingAs($this->faculty[2])->get(route('admin.coe.faculty-result-entry.index', [
+            'course' => $this->drive->course_master_pk, 'tab' => 'completed',
+        ]))->assertOk()->assertSee('Completed: 3')->assertSee('Evaluation &amp; Marks Entry', false);
+    }
+
+    public function test_remarks_are_saved_only_once_the_column_exists(): void
+    {
+        $y = $this->key($this->subjectA, 'Y');
+        $first = $this->ots[0]['pk'];
+
+        $this->actingAs($this->faculty[2])->postJson(route('admin.coe.faculty-result-entry.save'), [
+            'course' => $this->drive->course_master_pk,
+            'marks' => [$y => [$first => '12']],
+            'remarks' => [$y => [$first => 'Strong analytical response']],
+        ])->assertOk();
+
+        $mark = EvaluationMark::where('examination_drive_id', $this->drive->id)->where('student_master_pk', $first)->firstOrFail();
+        $this->assertSame(12.0, $mark->marks);
+        if (\App\Services\COE\ResultMarksService::remarksEnabled()) {
+            $this->assertSame('Strong analytical response', $mark->remarks);
+        } else {
+            $this->assertNull($mark->remarks);
+        }
+    }
+
+    public function test_template_is_the_pending_table_and_import_saves_drafts_all_or_nothing(): void
+    {
+        $course = ['course' => $this->drive->course_master_pk];
+        $entries = $this->actingAs($this->faculty[2])
+            ->get(route('admin.coe.faculty-result-entry.index', $course))->assertOk()->viewData('entries');
+        [$a, $b, $c] = array_map(fn ($e) => [$e['code'], $e['course'], $e['subject'].' — '.$e['component']], $entries);
+        $csv = fn (array $rows) => \Illuminate\Http\UploadedFile::fake()->createWithContent('marks.csv',
+            "OT Unique Code,Course,Subject / Component,Attendance,Marks / 30\n"
+            .implode("\n", array_map(fn ($r) => implode(',', array_map(fn ($v) => '"'.$v.'"', $r)), $rows))."\n");
+        $import = fn (array $rows) => $this->actingAs($this->faculty[2])
+            ->post(route('admin.coe.faculty-result-entry.import'), $course + ['file' => $csv($rows)], ['Accept' => 'application/json']);
+
+        // The template is the table on screen: same columns, every pending row.
+        $download = $this->actingAs($this->faculty[2])
+            ->get(route('admin.coe.faculty-result-entry.template', $course))->assertOk()->assertDownload();
+        $sheet = \Maatwebsite\Excel\Facades\Excel::toArray(new class {}, $download->baseResponse->getFile()->getPathname(), null, \Maatwebsite\Excel\Excel::XLSX)[0];
+        $this->assertSame(['OT Unique Code', 'Course', 'Subject / Component', 'Attendance', 'Marks / 30'], array_slice($sheet[0], 0, 5));
+        $this->assertSame(array_column($entries, 'code'), array_column(array_slice($sheet, 1), 0));
+
+        // A row that is not on the sheet: the whole file is refused.
+        $import([[...$a, 'Present', 20], [$this->ots[3]['code'], $a[1], $a[2], 'Present', 20]])
+            ->assertStatus(422)->assertJsonStructure(['failures']);
+        // Over the max: refused by the same rules as the sheet, reported by row.
+        $import([[...$a, 'Present', 31]])->assertStatus(422)
+            ->assertJsonFragment(['failures' => ['Row 2: Enter marks from 0 to 30 (up to 2 decimals), or AB for absent.']]);
+        $this->assertSame(0, EvaluationMark::where('examination_drive_id', $this->drive->id)->count());
+
+        $import([[...$a, 'Present', 20], [...$b, 'Absent', ''], [...$c, 'Present', '']])->assertOk();
+        $marks = EvaluationMark::where('examination_drive_id', $this->drive->id)->get()->keyBy('student_master_pk');
+        [$pa, $pb, $pc] = array_column($entries, 'student');
+        $this->assertSame([20.0, true, false], [$marks[$pa]->marks, $marks[$pb]->is_absent, isset($marks[$pc])]);
+        $this->assertSame(EvaluationMark::STATUS_DRAFT, $marks[$pa]->status);
+    }
+
+    public function test_merit_ranks_fully_evaluated_ots_with_shared_ranks_and_service_pass_marks(): void
+    {
+        $x = $this->key($this->subjectA, 'X');
+        $y = $this->key($this->subjectA, 'Y');
+        $z = $this->key($this->subjectB, 'Z');
+        [$o0, $o1, $o2] = array_column(array_slice($this->ots, 0, 3), 'pk');
+        // Pass needs Grand Total >= 20 on every OT's service.
+        $services = DB::table('student_master')->whereIn('pk', array_column($this->ots, 'pk'))
+            ->whereNotNull('service_master_pk')->distinct()->pluck('service_master_pk');
+        foreach ($services as $service) {
+            DB::table('service_passing_marks_master')->updateOrInsert(
+                ['service_master_pk' => $service], ['passing_marks' => 20, 'active_inactive' => 1]);
+        }
+        $merit = fn () => $this->actingAs($this->admin)
+            ->get(route('admin.coe.merit-ranking.index', ['course' => $this->drive->course_master_pk]))->assertOk();
+
+        $this->save(1, [$x => [$o0 => '40', $o1 => '40'] + $this->fill($x, '10')[$x]] + $this->fill($y, '5'), true)->assertOk();
+        // Subject B is not evaluated yet: nobody is ranked.
+        $this->assertSame([], $merit()->viewData('rows'));
+        $this->assertSame(count($this->ots), $merit()->viewData('pending'));
+
+        $this->save(3, [$z => [$o2 => 'AB'] + $this->fill($z, '10')[$z]], true)->assertOk();
+        $page = $merit();
+        $rows = collect($page->viewData('rows'))->keyBy('student');
+        $this->assertSame(0, $page->viewData('pending'));
+        $this->assertCount(count($this->ots), $rows);
+
+        // The Figma's six subject columns are always there; the two held carry their drive max.
+        $subjects = $page->viewData('subjects');
+        $this->assertSame(array_map(fn ($l) => 'f:'.$l, array_keys(\App\Services\COE\ResultMarksService::MERIT_SUBJECTS)), array_slice(array_keys($subjects), 0, 6));
+        $this->assertSame(100.0, array_sum(array_column(array_filter($subjects, fn ($s) => $s['columns'] !== []), 'max')));
+        $this->assertSame($page->viewData('maxA') + $page->viewData('maxB'), $page->viewData('max'));
+        // No Director Assessment drive and no ICT / Hindi subject: '-' there, Figma max in the header.
+        $this->assertSame(\App\Services\COE\ResultMarksService::DIRECTOR_MAX, $page->viewData('maxB'));
+        $this->assertSame([55.0, null, ['ICT' => null, 'Hindi' => null]], [$rows[$o0]['total_a'], $rows[$o0]['director'], $rows[$o0]['qualifying']]);
+        $this->assertCount(count($subjects), $rows[$o0]['subjects']);
+
+        // 40 + 5 + 10 = 55 twice: both rank 1, the next is 3.
+        $this->assertSame([1, 55.0, 'Pass'], [$rows[$o0]['rank'], $rows[$o0]['grand'], $rows[$o0]['result']]);
+        $this->assertSame([1, 55.0, 'Pass'], [$rows[$o1]['rank'], $rows[$o1]['grand'], $rows[$o1]['result']]);
+        // Absent on Z counts 0: 10 + 5 = 15, under the service's 20.
+        $this->assertSame([15.0, 'Fail'], [$rows[$o2]['grand'], $rows[$o2]['result']]);
+        if (count($this->ots) > 3) {
+            $this->assertSame([3, 25.0, 'Pass'], [$rows[$this->ots[3]['pk']]['rank'], $rows[$this->ots[3]['pk']]['grand'], $rows[$this->ots[3]['pk']]['result']]);
+        }
+        $this->assertSame(count($this->ots), $rows[$o2]['rank']);
+    }
+
+    public function test_merit_splits_director_assessment_and_qualifying_papers_out_of_total_a(): void
+    {
+        $x = $this->key($this->subjectA, 'X');
+        $y = $this->key($this->subjectA, 'Y');
+        $z = $this->key($this->subjectB, 'Z');
+        [$o0] = array_column($this->ots, 'pk');
+        // Subject B is ICT: shown on its own, not added up.
+        DB::table('subject_master')->where('pk', $this->subjectB)->update(['sub_short_name' => 'ICT']);
+
+        $this->save(1, [$x => [$o0 => '40'] + $this->fill($x, '10')[$x]] + $this->fill($y, '5'), true)->assertOk();
+        $this->save(3, $this->fill($z, '12'), true)->assertOk();
+
+        $merit = fn () => $this->actingAs($this->admin)
+            ->get(route('admin.coe.merit-ranking.index', ['course' => $this->drive->course_master_pk]))->assertOk();
+        $row = collect($merit()->viewData('rows'))->keyBy('student')[$o0];
+        $this->assertSame([45.0, null, 45.0, 12.0], [$row['total_a'], $row['director'], $row['grand'], $row['qualifying']['ICT']]);
+        $this->assertSame(20.0, $merit()->viewData('qualifying')['ICT']);
+
+        // The same drive as a Director Assessment: everything is B.
+        $type = DB::table('examination_type_master')->insertGetId(['exam_type_name' => 'Director Assessment', 'active_inactive' => 1], 'pk');
+        $this->drive->update(['examination_type_master_pk' => $type]);
+        $page = $merit();
+        $row = collect($page->viewData('rows'))->keyBy('student')[$o0];
+        $this->assertSame([0.0, 57.0, 57.0], [$row['total_a'], $row['director'], $row['grand']]);
+        $this->assertSame(100.0, $page->viewData('maxB'));
+    }
+
+    public function test_merit_all_courses_ranks_each_course_within_itself(): void
+    {
+        $x = $this->key($this->subjectA, 'X');
+        $y = $this->key($this->subjectA, 'Y');
+        $z = $this->key($this->subjectB, 'Z');
+        $this->save(1, $this->fill($x, '10') + $this->fill($y, '5'), true)->assertOk();
+        $this->save(3, $this->fill($z, '10'), true)->assertOk();
+
+        $page = $this->actingAs($this->admin)->get(route('admin.coe.merit-ranking.index'))->assertOk()->assertSee('>All</option>', false);
+        $this->assertNull($page->viewData('coursePk'));
+        $mine = collect($page->viewData('rows'))->where('student', $this->ots[0]['pk'])->first();
+        // Everyone on the test drive has 25: all share rank 1 within their course.
+        $this->assertSame([1, 25.0], [$mine['rank'], $mine['grand']]);
+    }
+
     public function test_faculty_without_the_permission_is_refused(): void
     {
         // Off every role (the Faculty role holds it too); rolled back with the test.

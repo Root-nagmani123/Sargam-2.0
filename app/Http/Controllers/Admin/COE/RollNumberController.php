@@ -8,6 +8,7 @@ use App\Imports\COE\RollNumberImport;
 use App\Models\COE\RollNumber;
 use App\Models\COE\RollNumberAllocation;
 use App\Models\StudentMaster;
+use App\Services\COE\CourseParticipants;
 use App\Services\COE\RollNumberAllocator;
 use App\Services\COE\RollNumberWriter;
 use App\Services\NotificationReceiverService;
@@ -31,8 +32,9 @@ use Maatwebsite\Excel\Facades\Excel;
  * JSON — `message` always, plus whatever the page needs to repaint the affected rows.
  *
  * Roll numbers are per course + batch: one coe_roll_number_allocations row per pair, one
- * coe_roll_numbers row per participant (student_master_pk is UNIQUE, so the left join in
- * filteredQuery() cannot fan a participant out into two rows).
+ * coe_roll_numbers row per participant (student_master_pk is UNIQUE). Who is on a course
+ * + batch comes from CourseParticipants, so an OT on two courses is a row on each, and
+ * their one roll number shows on the course it was given for.
  */
 class RollNumberController extends Controller
 {
@@ -138,7 +140,7 @@ class RollNumberController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'course' => ['required', 'integer', Rule::exists('course_master', 'pk')],
-            'batch' => ['required', 'integer', Rule::exists('student_master', 'batch')],
+            'batch' => ['required', 'integer', 'min:1'],
             'prefix' => ['required', 'string', 'max:20', self::PREFIX_REGEX],
             // A string: the leading zeros are the padding width. Not asked for under
             // Sequential by OT Code, where the serial comes from the code itself.
@@ -184,6 +186,12 @@ class RollNumberController extends Controller
         $participants = $this->participantsFor($courseId, $batch);
         if ($participants->isEmpty()) {
             return $this->fail('No participants are mapped to that course and batch, so there is nothing to number.');
+        }
+
+        // One roll number per OT: numbering this course must not take an OT's number off another.
+        $elsewhere = CourseParticipants::rollNumbersElsewhere($participants->pluck('pk')->map(fn ($pk) => (int) $pk)->all(), $courseId, $batch);
+        if ($elsewhere !== []) {
+            return $this->fail(CourseParticipants::elsewhereMessage($elsewhere, 'roll number'));
         }
 
         if ($participants->count() > self::MAX_PARTICIPANTS_PER_RUN) {
@@ -335,7 +343,7 @@ class RollNumberController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'course' => ['required', 'integer', Rule::exists('course_master', 'pk')],
-            'batch' => ['required', 'integer', Rule::exists('student_master', 'batch')],
+            'batch' => ['required', 'integer', 'min:1'],
             'student_master_pk' => ['required', 'integer', Rule::exists('student_master', 'pk')],
             'prefix' => ['required', 'string', 'max:20', self::PREFIX_REGEX],
             'number' => ['required', 'string', 'regex:/^\d{1,9}$/'],
@@ -353,15 +361,22 @@ class RollNumberController extends Controller
 
         // The participant must actually sit the chosen course+batch, or a hand-edited
         // request could file somebody under a course they are not on.
+        // The course and batch go to RollNumberWriter as the participant's own, since an OT
+        // on a mapped course has another course in student_master.
         $participant = DB::table('student_master')
-            ->select('pk', 'display_name', 'course_master_pk', 'batch')
+            ->select('pk', 'display_name')
+            ->selectRaw('? as course_master_pk, ? as batch', [(int) $validated['course'], (int) $validated['batch']])
             ->where('pk', (int) $validated['student_master_pk'])
-            ->where('course_master_pk', (int) $validated['course'])
-            ->where('batch', (int) $validated['batch'])
+            ->whereIn('pk', CourseParticipants::of((int) $validated['course'], (int) $validated['batch']))
             ->first();
 
         if ($participant === null) {
             return $this->fail('That participant is not on the chosen course and batch.');
+        }
+
+        $elsewhere = CourseParticipants::rollNumbersElsewhere([(int) $participant->pk], (int) $validated['course'], (int) $validated['batch']);
+        if ($elsewhere !== []) {
+            return $this->fail("{$participant->display_name} already holds roll number " . reset($elsewhere) . ' on another course. An OT can hold only one roll number.');
         }
 
         $existing = RollNumber::where('student_master_pk', $participant->pk)->first();
@@ -423,8 +438,7 @@ class RollNumberController extends Controller
 
         $rows = DB::table('student_master as sm')
             ->leftJoin('coe_roll_numbers as rn', 'rn.student_master_pk', '=', 'sm.pk')
-            ->where('sm.course_master_pk', $courseId)
-            ->where('sm.batch', $batch)
+            ->whereIn('sm.pk', CourseParticipants::of($courseId, $batch))
             ->orderByRaw('rn.serial_number is null, rn.serial_number')
             ->orderBy('sm.display_name')
             ->get(['sm.pk', 'sm.display_name', 'sm.generated_OT_code', 'rn.roll_number', 'rn.status as roll_status']);
@@ -808,8 +822,7 @@ class RollNumberController extends Controller
         return DB::table('student_master as sm')
             ->leftJoin('service_master as svc', 'svc.pk', '=', 'sm.service_master_pk')
             ->select('sm.pk', 'sm.service_master_pk', 'sm.gender', 'sm.display_name', 'sm.generated_OT_code', 'svc.service_name')
-            ->where('sm.course_master_pk', $courseId)
-            ->where('sm.batch', $batch)
+            ->whereIn('sm.pk', CourseParticipants::of($courseId, $batch))
             ->orderBy('sm.pk')
             ->get();
     }
@@ -1074,8 +1087,8 @@ class RollNumberController extends Controller
                 'student_master.last_name',
                 'student_master.gender',
                 'student_master.generated_OT_code',
-                'student_master.batch',
-                'student_master.course_master_pk',
+                'cp.batch',
+                'cp.course_master_pk',
                 'student_master.service_master_pk',
                 'student_master.cadre_master_pk',
                 'service_master.service_name',
@@ -1088,27 +1101,38 @@ class RollNumberController extends Controller
                 'coe_roll_numbers.serial_number',
                 'coe_roll_numbers.status as roll_status',
             ])
+            // One row per OT per course (student_master or student_master_course__map).
+            ->joinSub(CourseParticipants::query(), 'cp', 'cp.student_master_pk', '=', 'student_master.pk')
             ->leftJoin('service_master', 'service_master.pk', '=', 'student_master.service_master_pk')
             ->leftJoin('cadre_master', 'cadre_master.pk', '=', 'student_master.cadre_master_pk')
-            ->leftJoin('course_master', 'course_master.pk', '=', 'student_master.course_master_pk')
-            ->leftJoin('coe_roll_numbers', 'coe_roll_numbers.student_master_pk', '=', 'student_master.pk')
-            ->when($filters['course'] !== '', fn (Builder $q) => $q->where('student_master.course_master_pk', $filters['course']))
-            ->when($filters['batch'] !== '', fn (Builder $q) => $q->where('student_master.batch', $filters['batch']))
+            ->leftJoin('course_master', 'course_master.pk', '=', 'cp.course_master_pk')
+            // An OT's one roll number shows only on the course it was given for.
+            ->leftJoinSub(
+                DB::table('coe_roll_numbers as r')
+                    ->join('coe_roll_number_allocations as a', 'a.pk', '=', 'r.roll_number_allocation_pk')
+                    ->select('r.pk', 'r.student_master_pk', 'r.roll_number', 'r.serial_number', 'r.status', 'a.course_master_pk as rn_course', 'a.batch as rn_batch'),
+                'coe_roll_numbers',
+                fn ($join) => $join->on('coe_roll_numbers.student_master_pk', '=', 'student_master.pk')
+                    ->on('coe_roll_numbers.rn_course', '=', 'cp.course_master_pk')
+                    ->on('coe_roll_numbers.rn_batch', '=', 'cp.batch')
+            )
+            ->when($filters['course'] !== '', fn (Builder $q) => $q->where('cp.course_master_pk', $filters['course']))
+            ->when($filters['batch'] !== '', fn (Builder $q) => $q->where('cp.batch', $filters['batch']))
             ->when($scope === 'all', function (Builder $q) {
                 $q->where(function (Builder $inner) {
                     $inner->whereNotNull('coe_roll_numbers.pk')
                         ->orWhereExists(function ($sub) {
                             $sub->select(DB::raw(1))
                                 ->from('coe_roll_number_allocations as rna')
-                                ->whereColumn('rna.course_master_pk', 'student_master.course_master_pk')
-                                ->whereColumn('rna.batch', 'student_master.batch');
+                                ->whereColumn('rna.course_master_pk', 'cp.course_master_pk')
+                                ->whereColumn('rna.batch', 'cp.batch');
                         });
                 });
             })
             ->when($scope === 'generated', fn (Builder $q) => $q->where('coe_roll_numbers.status', RollNumber::STATUS_GENERATED))
             ->when($scope === 'frozen', fn (Builder $q) => $q->where('coe_roll_numbers.status', RollNumber::STATUS_FROZEN))
             ->orderBy('course_master.course_name')
-            ->orderBy('student_master.batch')
+            ->orderBy('cp.batch')
             ->orderByRaw('coe_roll_numbers.serial_number is null, coe_roll_numbers.serial_number')
             ->orderBy('student_master.display_name')
             ->orderBy('student_master.pk');
@@ -1157,27 +1181,19 @@ class RollNumberController extends Controller
      */
     private function courseBatchMap(): array
     {
-        $pairs = DB::table('student_master as sm')
-            ->join('course_master as c', 'c.pk', '=', 'sm.course_master_pk')
-            ->whereNotNull('sm.batch')
-            ->where('sm.batch', '>', 0)
-            ->whereNotNull('c.course_name')
-            ->where('c.course_name', '!=', '')
-            ->distinct()
-            ->get(['c.pk', 'c.course_name', 'sm.batch']);
+        $pairs = CourseParticipants::cohorts();
 
         $batches = [];
         foreach ($pairs as $pair) {
-            $batches[(int) $pair->pk][] = (int) $pair->batch;
+            $batches[$pair->course_master_pk][] = $pair->batch;
         }
         foreach ($batches as &$list) {
-            $list = array_values(array_unique($list));
             rsort($list);
         }
         unset($list);
 
-        $courses = $pairs->unique('pk')
-            ->map(fn ($p) => (object) ['pk' => (int) $p->pk, 'course_name' => (string) $p->course_name])
+        $courses = $pairs->unique('course_master_pk')
+            ->map(fn ($p) => (object) ['pk' => $p->course_master_pk, 'course_name' => $p->course_name])
             ->sortBy('course_name', SORT_NATURAL | SORT_FLAG_CASE)
             ->values();
 

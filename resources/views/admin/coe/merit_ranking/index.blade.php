@@ -16,9 +16,11 @@
 @section('setup_content')
 @php
     $isArchived = $scope === 'archived';
-    $num = fn ($v) => number_format($v, 2);
-    $out = fn ($v) => rtrim(rtrim(number_format($v, 2), '0'), '.');
-    $grandMax = $writtenMax + $assessmentMax;
+    // No marks (not held / no such paper): '-'.
+    $num = fn ($v) => $v === null ? '-' : number_format($v, 2);
+    // Max marks as the Figma writes them: 90, 172.50, 622.50.
+    $outMax = fn ($v) => $v === null ? '-' : (floor($v) == $v ? number_format($v, 0, '.', '') : number_format($v, 2, '.', ''));
+    $out = $outMax;
 @endphp
 <div class="container-fluid coe-page">
     <x-breadcrum title="Merit & Ranking" :showBack="false"
@@ -45,26 +47,22 @@
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
             <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar coe-toolbar">
-                {{-- Ranks are per course, so the course is chosen on the server. --}}
+                {{-- Ranks are per course, so the course is chosen on the server. All: every
+                     course, each ranked within itself. --}}
                 <form method="GET" action="{{ route('admin.coe.merit-ranking.index') }}" id="mrFilterForm"
                       class="d-flex flex-wrap align-items-center gap-3">
                     @if ($isArchived)<input type="hidden" name="scope" value="archived">@endif
                     <span class="programme-dt-filters-label">Filter</span>
                     <div class="programme-dt-filter-select">
                         <select name="course" id="mrFilterCourse" class="form-select" aria-label="Course">
-                            @foreach ($courses as $key => $c)
-                                <option value="{{ $key }}" @selected($key === $courseKey)>{{ $c['name'] }}</option>
+                            <option value="" @selected($coursePk === null)>All</option>
+                            @foreach ($courses as $pk => $name)
+                                <option value="{{ $pk }}" @selected($pk === $coursePk)>{{ $name }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="programme-dt-filter-select">
-                        <select id="mrFilterResult" class="form-select" data-placeholder="Result" aria-label="Result">
-                            <option value="">Result</option>
-                            <option value="Pass">Pass</option>
-                            <option value="Fail">Fail</option>
-                        </select>
-                    </div>
-                    <button type="button" id="mrResetFilters" class="btn programme-dt-btn-reset">Remove Filter</button>
+                    <a href="{{ route('admin.coe.merit-ranking.index', $isArchived ? ['scope' => 'archived'] : []) }}"
+                       id="mrResetFilters" class="btn programme-dt-btn-reset">Remove Filter</a>
                 </form>
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
                     <button type="button" class="btn programme-dt-btn-columns"
@@ -79,6 +77,18 @@
                 </div>
             </div>
 
+            @if ($pending > 0)
+                <p class="coe-muted small mb-3">
+                    {{ $pending }} OT(s) on this course are not ranked yet: some of their marks are still to be approved.
+                    They show here once every subject held so far is evaluated.
+                </p>
+            @endif
+            @if ($noPassMarks)
+                <p class="coe-muted small mb-3">
+                    Pass / Fail is not decided for {{ implode(', ', $noPassMarks) }}: set its passing marks in Service Passing Marks.
+                </p>
+            @endif
+
             <div class="programme-dt-panel">
                 <div class="table-responsive">
                     <table id="mrTable" class="table table-hover align-middle mb-0 w-100 programme-dt-table coe-table--no-sno mr-table">
@@ -89,38 +99,43 @@
                                 <th scope="col">OT Code</th>
                                 <th scope="col">Officer Trainee</th>
                                 <th scope="col">Service</th>
-                                @foreach ($subjects as $name => $max)
-                                    <th scope="col">{{ $name }} / {{ $out($max) }}</th>
+                                @foreach ($subjects as $s)
+                                    <th scope="col">{{ $s['name'] }}<span class="mr-out">/ {{ $out($s['max']) }}</span></th>
                                 @endforeach
-                                <th scope="col">Total (A) / {{ $out($writtenMax) }}</th>
-                                <th scope="col">Director Assessment (B) / {{ $out($assessmentMax) }}</th>
-                                <th scope="col">Grand Total (A+B) / {{ $out($grandMax) }}</th>
-                                <th scope="col">ICT / 50</th>
-                                <th scope="col">Hindi / 50</th>
-                                <th scope="col">Result</th>
+                                <th scope="col">Total (A)<span class="mr-out">/ {{ $out($maxA) }}</span></th>
+                                <th scope="col">Director Assessment<span class="mr-out">/ {{ $outMax($maxB) }}</span></th>
+                                <th scope="col">Grand Total (A+B)<span class="mr-out">/ {{ $out($max) }}</span></th>
+                                @foreach ($qualifying as $paper => $paperMax)
+                                    <th scope="col">{{ $paper }}<span class="mr-out">/ {{ $outMax($paperMax) }}</span></th>
+                                @endforeach
+                                <th scope="col">Pass</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach ($rows as $row)
                                 <tr>
                                     <td data-order="{{ $row['rank'] }}">{{ $row['rank'] }}</td>
-                                    <td class="coe-nowrap">{{ $row['roll'] }}</td>
-                                    <td>{{ $row['code'] }}</td>
-                                    <td class="coe-nowrap">{{ $row['name'] }}</td>
-                                    <td>{{ $row['service'] }}</td>
-                                    @foreach ($subjects as $name => $max)
-                                        <td>{{ $num($row['subjects'][$name]) }}</td>
+                                    <td class="coe-nowrap">{{ $row['roll'] ?: '-' }}</td>
+                                    <td>{{ $row['code'] ?: '-' }}</td>
+                                    <td class="coe-nowrap">{{ $row['name'] ?: '-' }}</td>
+                                    <td>{{ $row['service'] ?: '-' }}</td>
+                                    @foreach ($subjects as $spk => $s)
+                                        <td>{{ $num($row['subjects'][$spk]) }}</td>
                                     @endforeach
-                                    <td>{{ $num($row['written']) }}</td>
-                                    <td>{{ $num($row['assessment']) }}</td>
+                                    <td>{{ $num($row['total_a']) }}</td>
+                                    <td>{{ $num($row['director']) }}</td>
                                     <td data-order="{{ $row['grand'] }}">
-                                        <strong>{{ $num($row['grand']) }}</strong><span class="mr-out">/ {{ $num($grandMax) }}</span>
+                                        <strong>{{ $num($row['grand']) }}</strong><span class="mr-out">/ {{ $num($max) }}</span>
                                     </td>
-                                    <td>{{ $num($row['ict']) }}</td>
-                                    {{-- Hindi is only set for officers whose mother tongue is not Hindi. --}}
-                                    <td>NA</td>
-                                    <td data-search="{{ $row['result'] }}">
-                                        <span class="coe-state coe-state--{{ $row['result'] === 'Pass' ? 'active' : 'inactive' }}">{{ strtoupper($row['result']) }}</span>
+                                    @foreach ($qualifying as $paper => $paperMax)
+                                        <td>{{ $num($row['qualifying'][$paper]) }}</td>
+                                    @endforeach
+                                    <td data-search="{{ $row['result'] ?? '' }}">
+                                        @if ($row['result'] === null)
+                                            <span title="No passing marks set for this service">-</span>
+                                        @else
+                                            <span class="coe-state coe-state--{{ $row['result'] === 'Pass' ? 'active' : 'inactive' }}">{{ strtoupper($row['result']) }}</span>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforeach
@@ -143,22 +158,19 @@
 $(function () {
     'use strict';
 
-    var resultCol = $('#mrTable thead th').length - 1;
-
     CoeGrid.init({
         table: '#mrTable',
-        title: @json('Merit & Ranking - '.$courses[$courseKey]['name']),
+        title: @json('Merit & Ranking' . ($coursePk ? ' - ' . $courses[$coursePk] : '')),
         snoCol: false,
-        order: [[0, 'asc']],
-        filters: { '#mrFilterResult': resultCol },
-        reset: '#mrResetFilters',
+        // All: course by course, each in rank order, as the server sends them.
+        order: @json($coursePk ? [[0, 'asc']] : []),
         download: '#mrDownloadBtn',
         print: '#mrPrintBtn',
         searchToggle: '#mrSearchToggle',
         searchSlot: '#mrDtSearch',
         colvisGrid: '#mrColumnToggleGrid',
-        colvisKey: 'coeMeritRanking:hiddenColumns:v1',
-        empty: { title: 'No Ranked Officers', zeroTitle: 'No Officers Found', text: 'Nobody on this course has been fully evaluated yet.' }
+        colvisKey: 'coeMeritRanking:hiddenColumns:v4',
+        empty: { title: 'No Ranked Officers', zeroTitle: 'No Officers Found', text: 'Nobody on this course has all their marks approved yet. Courses show here once an exam on an Active drive is over.' }
     });
 
     $('#mrFilterCourse').on('change', function () { $('#mrFilterForm').submit(); });

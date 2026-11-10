@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\COE;
 
 use App\Http\Controllers\Controller;
 use App\Models\COE\ParticipantCode;
+use App\Services\COE\CourseParticipants;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -78,9 +79,9 @@ class UniqueParticipantCodeController extends Controller
             return $this->fail('The start number must be at least 1.');
         }
 
+        // On the course by student_master or by student_master_course__map — see CourseParticipants.
         $participants = DB::table('student_master')
-            ->where('course_master_pk', $courseId)
-            ->where('batch', $batch)
+            ->whereIn('pk', CourseParticipants::of($courseId, $batch))
             ->orderBy('display_name')
             ->orderBy('first_name')
             ->orderBy('pk')
@@ -92,6 +93,12 @@ class UniqueParticipantCodeController extends Controller
         }
         if ($participants->count() > self::MAX_PARTICIPANTS_PER_RUN) {
             return $this->fail('That course and batch has more participants than one run may generate.');
+        }
+
+        // One code per OT: regenerating here must not take an OT's code off another course.
+        $elsewhere = CourseParticipants::codesElsewhere($participants->all(), $courseId, $batch);
+        if ($elsewhere !== []) {
+            return $this->fail(CourseParticipants::elsewhereMessage($elsewhere, 'Unique Participant Code'));
         }
 
         $frozen = ParticipantCode::whereIn('student_master_pk', $participants)
@@ -300,21 +307,11 @@ class UniqueParticipantCodeController extends Controller
      */
     private function cohorts(): Collection
     {
-        return DB::table('student_master as sm')
-            ->join('course_master as cm', 'cm.pk', '=', 'sm.course_master_pk')
-            ->whereNotNull('sm.batch')
-            ->where('sm.batch', '>', 0)
-            ->whereNotNull('cm.course_name')
-            ->where('cm.course_name', '!=', '')
-            ->groupBy('cm.pk', 'cm.course_name', 'sm.batch')
-            ->orderBy('cm.course_name')
-            ->orderByDesc('sm.batch')
-            ->get(['cm.pk', 'cm.course_name', 'sm.batch', DB::raw('count(*) as n')])
-            ->map(fn ($r) => [
-                'key' => $r->pk . ':' . $r->batch,
-                'label' => $r->course_name . ' — ' . $r->batch,
-                'count' => (int) $r->n,
-            ]);
+        return CourseParticipants::cohorts()->map(fn ($r) => [
+            'key' => $r->course_master_pk . ':' . $r->batch,
+            'label' => $r->course_name . ' — ' . $r->batch,
+            'count' => $r->n,
+        ]);
     }
 
     private function studentName(object $s): string

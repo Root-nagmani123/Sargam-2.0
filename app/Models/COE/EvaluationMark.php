@@ -33,6 +33,8 @@ class EvaluationMark extends Model
         'student_master_pk',
         'marks',
         'is_absent',
+        // Only once the column exists — see ResultMarksService::remarksEnabled().
+        'remarks',
         'evaluated_by_faculty_pk',
         'created_by',
         'created_date',
@@ -45,6 +47,9 @@ class EvaluationMark extends Model
         'is_absent' => 'boolean',
         'status' => 'integer',
         'approved_at' => 'datetime',
+        // Only once the columns exist — see ResultMarksService::moderationEnabled().
+        'moderated_marks' => 'float',
+        'moderated_at' => 'datetime',
     ];
 
     /** "drive:subject:component", the column key used across Result Management. */
