@@ -141,6 +141,7 @@
                                 <th><input type="checkbox" id="rnCheckAll" class="form-check-input" style="width:16px;height:16px;accent-color:#004384" aria-label="Select all"></th>
                                 <th>S.No</th>
                                 <th>Name</th>
+                                <th>Course Name</th>
                                 <th>Service</th>
                                 <th>Cadre</th>
                                 <th>Gender</th>
@@ -167,6 +168,7 @@
                                 <td><input type="checkbox" class="rn-row-check form-check-input" style="width:16px;height:16px;accent-color:#004384" aria-label="Select row"></td>
                                 <td></td>
                                 <td>{{ $row['name'] }}</td>
+                                <td>{{ $row['course'] ?: '—' }}</td>
                                 <td>{{ $row['service'] }}</td>
                                 <td>{{ $row['cadre'] }}</td>
                                 <td>{{ $row['gender'] }}</td>
@@ -201,7 +203,7 @@
                             <label class="coe-form-label" for="rnGenCourse">Course Name<span class="coe-req">*</span></label>
                             <select id="rnGenCourse" class="form-select coe-control rn-course-select" data-batch-target="#rnGenBatch">
                                 <option value="">Select Course</option>
-                                @foreach ($courses as $c)<option value="{{ $c->pk }}">{{ $c->course_name }}</option>@endforeach
+                                @foreach ($activeCourses as $c)<option value="{{ $c->pk }}">{{ $c->course_name }}</option>@endforeach
                             </select>
                         </div>
                         <div class="col-4">
@@ -340,7 +342,7 @@
                                 <label class="coe-form-label" for="rnSingleCourse">Course Name<span class="coe-req">*</span></label>
                                 <select id="rnSingleCourse" class="form-select coe-control rn-course-select" data-batch-target="#rnSingleBatch">
                                     <option value="">Select Course</option>
-                                    @foreach ($courses as $c)<option value="{{ $c->pk }}">{{ $c->course_name }}</option>@endforeach
+                                    @foreach ($activeCourses as $c)<option value="{{ $c->pk }}">{{ $c->course_name }}</option>@endforeach
                                 </select>
                             </div>
                             <div class="col-4">
@@ -427,7 +429,7 @@ $(function () {
     };
 
     /* col indexes */
-    var COL = { chk:0, sno:1, name:2, service:3, cadre:4, gender:5, ot:6, roll:7, status:8, action:9 };
+    var COL = { chk:0, sno:1, name:2, course:3, service:4, cadre:5, gender:6, ot:7, roll:8, status:9, action:10 };
 
     var $table  = $('#rnTable');
     var $checkAll = $('#rnCheckAll');
@@ -507,7 +509,7 @@ $(function () {
         searchToggle: '#rnSearchToggle',
         searchSlot: '#rnDtSearch',
         colvisGrid: '#rnColumnToggleGrid',
-        colvisKey: 'coeRollNumber:hiddenColumns:v1',
+        colvisKey: 'coeRollNumber:hiddenColumns:v2',
         empty: { title: 'No Roll Numbers', text: 'Generate or import roll numbers to get started.' }
     });
 
@@ -592,10 +594,23 @@ $(function () {
         });
     });
 
+    // Freeze works a whole course + batch at a time: every roll number of each group touched.
+    function freezeGroupCount(ids) {
+        var groups = {};
+        rowsById(ids).each(function () {
+            groups[this.getAttribute('data-rn-course') + ':' + this.getAttribute('data-rn-batch')] = true;
+        });
+        return allRows().filter(function () {
+            return this.getAttribute('data-rn-id') && this.getAttribute('data-rn-state') === 'generated'
+                && groups[this.getAttribute('data-rn-course') + ':' + this.getAttribute('data-rn-batch')];
+        }).length;
+    }
+
     function freezeIds(ids) {
+        var count = Math.max(freezeGroupCount(ids), ids.length);
         confirmThen({
             icon: 'info', title: 'Confirm Freeze?',
-            text: 'Freeze ' + ids.length + " roll number(s)? Frozen roll numbers can no longer be edited, deleted or regenerated. This action can't be undone.",
+            text: 'Freeze applies to the whole course and batch: ' + count + " roll number(s) will be frozen and each OT will be notified of their roll number. Frozen roll numbers can no longer be edited, deleted or regenerated. This action can't be undone.",
             iconColor: '#17a2b8', confirmButtonText: 'Yes, Freeze', confirmButtonColor: '#198754'
         }, function () {
             send(ROUTES.freeze, { ids: ids }).done(function (res) {

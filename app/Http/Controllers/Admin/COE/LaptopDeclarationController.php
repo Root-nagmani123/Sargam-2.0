@@ -68,6 +68,7 @@ class LaptopDeclarationController extends Controller
         unset($rules['additional_remarks']);
 
         $validated = $request->validate($rules, $declarations->messages());
+        $declarations->assertScriberAllowed([(int) $student->pk], $validated, true);
 
         // Disability Type is not asked here — the COE Admin sets it in Scribers Details.
         $declarations->record((int) $student->pk, $validated, LaptopResponse::SOURCE_TRAINEE);

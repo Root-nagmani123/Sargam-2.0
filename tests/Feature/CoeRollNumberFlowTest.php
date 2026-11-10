@@ -51,6 +51,24 @@ class CoeRollNumberFlowTest extends TestCase
         $this->course = (int) $cohort->course_master_pk;
         $this->batch = (int) $cohort->batch;
         $this->participants = (int) $cohort->n;
+
+        // Roll numbers are generated only for a running course.
+        DB::table('course_master')->where('pk', $this->course)
+            ->update(['active_inactive' => 1, 'end_date' => now()->addYear()->toDateString()]);
+    }
+
+    public function test_an_archived_course_is_refused(): void
+    {
+        DB::table('course_master')->where('pk', $this->course)
+            ->update(['end_date' => now()->subDay()->toDateString()]);
+
+        $this->generate()->assertStatus(422)
+            ->assertJsonPath('message', 'Roll numbers can be generated only for an active course.');
+        $this->assertSame(0, DB::table('coe_roll_number_allocations')
+            ->where('course_master_pk', $this->course)->where('batch', $this->batch)->count());
+
+        $this->actingAs($this->admin)->get(route('admin.coe.roll-number.index'))
+            ->assertOk()->assertViewHas('activeCourses', fn ($courses) => ! $courses->contains('pk', $this->course));
     }
 
     private function generate(array $overrides = [])
@@ -101,34 +119,79 @@ class CoeRollNumberFlowTest extends TestCase
         $this->assertSame('NEW-0101', $rows->first()->roll_number);
     }
 
-    public function test_freeze_locks_edit_delete_and_regenerate(): void
+    public function test_freezing_one_roll_number_freezes_its_whole_course_and_batch(): void
     {
         $this->generate()->assertOk();
         $rows = $this->rows();
-        $frozenIds = $rows->take(2)->pluck('pk')->all();
+        $picked = $rows->first();
+        $other = $rows->last();
 
-        $this->actingAs($this->admin)->postJson(route('admin.coe.roll-number.freeze'), ['ids' => $frozenIds])
-            ->assertOk()->assertJsonPath('frozen', 2);
+        $this->actingAs($this->admin)->postJson(route('admin.coe.roll-number.freeze'), ['ids' => [$picked->pk]])
+            ->assertOk()->assertJsonPath('frozen', $this->participants)
+            ->assertJsonCount($this->participants, 'frozen_ids');
+
+        $this->assertSame(0, RollNumber::whereIn('pk', $rows->pluck('pk'))->where('status', RollNumber::STATUS_GENERATED)->count());
+        $this->assertTrue(RollNumberAllocation::where('course_master_pk', $this->course)->where('batch', $this->batch)
+            ->firstOrFail()->isFrozen());
 
         // Idempotent: freezing again changes nothing.
-        $this->actingAs($this->admin)->postJson(route('admin.coe.roll-number.freeze'), ['ids' => $frozenIds])
+        $this->actingAs($this->admin)->postJson(route('admin.coe.roll-number.freeze'), ['ids' => [$other->pk]])
             ->assertOk()->assertJsonPath('frozen', 0);
 
-        $this->actingAs($this->admin)
-            ->putJson(route('admin.coe.roll-number.update', $frozenIds[0]), ['prefix' => 'X', 'number' => '9'])
-            ->assertStatus(422);
-        $this->actingAs($this->admin)->deleteJson(route('admin.coe.roll-number.destroy', $frozenIds[0]))->assertStatus(422);
+        // Every number of the group is locked, not only the one clicked.
+        foreach ([$picked, $other] as $row) {
+            $this->actingAs($this->admin)
+                ->putJson(route('admin.coe.roll-number.update', $row->pk), ['prefix' => 'X', 'number' => '9'])
+                ->assertStatus(422);
+            $this->actingAs($this->admin)->deleteJson(route('admin.coe.roll-number.destroy', $row->pk))->assertStatus(422);
+            $this->assertSame($row->roll_number, RollNumber::find($row->pk)->roll_number);
+        }
         $this->generate()->assertStatus(422);
+    }
 
-        $this->assertSame($rows->first()->roll_number, RollNumber::find($frozenIds[0])->roll_number);
+    public function test_freezing_notifies_each_ot_once(): void
+    {
+        $this->generate()->assertOk();
+        $rows = $this->rows();
+        $withLogin = DB::table('user_credentials')->where('user_category', 'S')
+            // One notification per OT, even for an OT with two login rows.
+            ->whereIn('user_id', $rows->pluck('student_master_pk'))->distinct()->pluck('user_id')->map(fn ($id) => (int) $id)->all();
+        if ($withLogin === []) {
+            $this->markTestSkipped('No participant in the cohort has an OT login.');
+        }
 
-        // An unfrozen row can still be edited and deleted.
-        $open = $rows->last();
-        $this->actingAs($this->admin)
-            ->putJson(route('admin.coe.roll-number.update', $open->pk), ['prefix' => 'EDIT', 'number' => '999'])
-            ->assertOk()->assertJsonPath('roll_number', 'EDIT-999');
-        $this->actingAs($this->admin)->deleteJson(route('admin.coe.roll-number.destroy', $open->pk))->assertOk();
-        $this->assertNull(RollNumber::find($open->pk));
+        $sent = fn () => DB::table('notifications')->where('type', 'coe_roll_number')
+            ->whereIn('reference_pk', $rows->pluck('pk'))->count();
+
+        $this->actingAs($this->admin)->postJson(route('admin.coe.roll-number.freeze'), ['ids' => [$rows->first()->pk]])
+            ->assertOk()->assertJsonPath('notified', count($withLogin));
+        $this->assertSame(count($withLogin), $sent());
+
+        // The OT's own bell reads notifications by their login id.
+        $sample = $rows->firstWhere('student_master_pk', $withLogin[0]);
+        $this->assertTrue(DB::table('notifications')->where('receiver_user_id', $withLogin[0])
+            ->where('type', 'coe_roll_number')->where('message', 'like', '%' . $sample->roll_number . '%')->exists());
+
+        // Freezing again freezes nothing and sends nothing.
+        $this->actingAs($this->admin)->postJson(route('admin.coe.roll-number.freeze'), ['ids' => [$rows->last()->pk]])
+            ->assertOk()->assertJsonPath('notified', 0);
+        $this->assertSame(count($withLogin), $sent());
+    }
+
+    public function test_a_part_frozen_group_is_finished_by_freezing_any_of_it(): void
+    {
+        $this->generate()->assertOk();
+        $rows = $this->rows();
+
+        // As left by the old per-row freeze: one number frozen, the rest open.
+        RollNumber::whereKey($rows->first()->pk)->update(['status' => RollNumber::STATUS_FROZEN, 'frozen_at' => now()]);
+
+        $this->generate()->assertStatus(422)
+            ->assertJsonPath('message', fn ($m) => str_contains($m, 'freeze any of its roll numbers to freeze the rest'));
+
+        $this->actingAs($this->admin)->postJson(route('admin.coe.roll-number.freeze'), ['ids' => [$rows->last()->pk]])
+            ->assertOk()->assertJsonPath('frozen', $this->participants - 1);
+        $this->assertSame(0, RollNumber::whereIn('pk', $rows->pluck('pk'))->where('status', RollNumber::STATUS_GENERATED)->count());
     }
 
     public function test_notify_sends_only_frozen_numbers(): void

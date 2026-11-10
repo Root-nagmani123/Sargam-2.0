@@ -72,6 +72,8 @@ class RollNumberImport implements ToCollection, WithHeadingRow, WithStartRow
         // clash against existing data; this catches two rows of the same upload claiming
         // the same number, which would otherwise fail confusingly on the second one.
         $claimedInFile = [];
+        // course:batch => whether its roll numbers are frozen, looked up once per group.
+        $frozenGroups = [];
 
         foreach ($rows as $index => $row) {
             $rowNumber = $index + $this->startRow();
@@ -127,6 +129,11 @@ class RollNumberImport implements ToCollection, WithHeadingRow, WithStartRow
             }
             if ($existing !== null && $existing->isFrozen()) {
                 $this->failures[] = "Row {$rowNumber}: {$participant->display_name} is frozen at {$existing->roll_number} and cannot be changed.";
+                continue;
+            }
+            $groupKey = $course['course_master_pk'] . ':' . $course['batch'];
+            if ($frozenGroups[$groupKey] ??= $this->writer->groupFrozen($course['course_master_pk'], $course['batch'])) {
+                $this->failures[] = "Row {$rowNumber}: roll numbers for {$participant->display_name}'s course and batch are frozen, so none can be added or changed.";
                 continue;
             }
 

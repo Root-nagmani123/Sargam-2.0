@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\BuildingFloorRoomMapping;
+use App\Models\BuildingMaster;
 use App\Models\COE\RollNumberAllocation;
 use App\Models\COE\SeatAllocation;
 use App\Models\COE\SeatPlan;
@@ -43,8 +45,10 @@ class CoeVenueAllocationFlowTest extends TestCase
         $map = DB::table('examination_drive_component_maps as m')
             ->join('examination_drives as d', 'd.id', '=', 'm.examination_drive_id')
             ->first(['m.id', 'd.course_master_pk']);
-        $room = DB::table('venue_master')->whereNotNull('building_master_pk')->whereNotNull('floor_master_pk')
-            ->first(['building_master_pk', 'floor_master_pk']);
+        // Rooms come from COE Room Master: an active Classroom building and an active floor.
+        $building = DB::table('building_master')->where('building_type', BuildingMaster::TYPE_CLASSROOM)
+            ->where('active_inactive', 1)->value('pk');
+        $floor = DB::table('floor_master')->where('active_inactive', 1)->value('pk');
 
         $cohort = $map === null ? null : DB::table('student_master as sm')
             ->leftJoin('coe_roll_number_allocations as rna', fn ($j) => $j
@@ -57,8 +61,8 @@ class CoeVenueAllocationFlowTest extends TestCase
             ->orderByDesc(DB::raw('count(*)'))
             ->first(['sm.batch', DB::raw('count(*) as n')]);
 
-        if ($admin === null || $map === null || $room === null || $cohort === null) {
-            $this->markTestSkipped('Needs a non-OT user, a scheduled drive component, an exam building/floor and an unnumbered batch.');
+        if ($admin === null || $map === null || $building === null || $floor === null || $cohort === null) {
+            $this->markTestSkipped('Needs a non-OT user, a scheduled drive component, a Classroom building, a floor and an unnumbered batch.');
         }
 
         $this->admin = $admin;
@@ -70,8 +74,6 @@ class CoeVenueAllocationFlowTest extends TestCase
         $this->venueId = (int) DB::table('venue_master')->insertGetId([
             'venue_name' => 'PHPUnit Exam Hall',
             'venue_short_name' => 'PHPUNIT',
-            'building_master_pk' => $room->building_master_pk,
-            'floor_master_pk' => $room->floor_master_pk,
             'room_number' => 'T-1',
             'capacity' => $this->participants + 10,
             'laptop_capacity' => 0,
@@ -79,6 +81,21 @@ class CoeVenueAllocationFlowTest extends TestCase
             'active_inactive' => 1,
             'created_date' => now()->toDateString(),
         ], 'venue_id');
+
+        DB::table('building_floor_room_mapping')->insert([
+            'building_master_pk' => $building,
+            'floor_master_pk' => $floor,
+            'room_name' => 'PHPUNIT',
+            'room_type' => array_key_first(BuildingFloorRoomMapping::$roomTypes),
+            'capacity' => $this->participants + 10,
+            'active_inactive' => 1,
+            'created_date' => now(),
+            'updated_date' => now(),
+        ]);
+
+        // Roll numbers are generated only for a running course.
+        DB::table('course_master')->where('pk', $this->course)
+            ->update(['active_inactive' => 1, 'end_date' => now()->addYear()->toDateString()]);
 
         $this->actingAs($this->admin)->postJson(route('admin.coe.roll-number.generate'), [
             'course' => $this->course,

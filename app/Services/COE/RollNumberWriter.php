@@ -137,6 +137,18 @@ class RollNumberWriter
     }
 
     /**
+     * Whether any roll number of the course + batch is frozen. Freeze works a whole
+     * course + batch at a time, so such a group is closed: nothing is added or renumbered.
+     */
+    public function groupFrozen(int $courseId, int $batch): bool
+    {
+        return RollNumber::whereIn('roll_number_allocation_pk', RollNumberAllocation::where('course_master_pk', $courseId)
+            ->where('batch', $batch)->select('pk'))
+            ->where('status', RollNumber::STATUS_FROZEN)
+            ->exists();
+    }
+
+    /**
      * The allocation a hand-written roll number belongs to.
      *
      * A course+batch that has never been generated has no allocation row, and
