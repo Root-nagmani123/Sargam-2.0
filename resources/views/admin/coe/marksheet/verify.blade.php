@@ -6,12 +6,13 @@
 <link rel="stylesheet"
       href="{{ asset('css/coe-admin.css') }}?v={{ @filemtime(public_path('css/coe-admin.css')) ?: time() }}">
 <style>
-.mv-card { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 24px; }
-.mv-label { font-size: 12px; text-transform: uppercase; color: var(--ds-ink-muted, #575757); margin-bottom: 2px; }
-.mv-value { font-size: 15px; font-weight: 600; color: var(--ds-ink, #171717); word-break: break-word; }
+.mv-card { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, .5fr); gap: 24px 24px; }
+.mv-label { font-size: 13px; text-transform: uppercase; color: var(--ds-ink-muted, #575757); margin-bottom: 4px; }
+.mv-value { font-size: 16px; font-weight: 600; color: var(--ds-ink, #171717); word-break: break-word; }
 .mv-pass { color: #24d700; }
 .mv-fail { color: #ff0025; }
-@media (max-width: 767.98px) { .mv-card { grid-template-columns: 1fr; } }
+.mv-actions .mv-publish { min-width: 254px; padding: 10px 22px; font-size: 16px; font-weight: 500; border-radius: 6px; }
+@media (max-width: 767.98px) { .mv-card { grid-template-columns: 1fr; } .mv-actions .mv-publish { min-width: 0; width: 100%; } }
 @media print { .mv-actions, .coe-secondary-actions { display: none !important; } }
 </style>
 @endpush
@@ -19,13 +20,17 @@
 @section('setup_content')
 <div class="container-fluid coe-page">
     <x-breadcrum title="Verify Document" :showBack="true"
-                 :items="['Setup', 'COE', 'Document Management', 'Marksheet Generation', 'Verify Document']">
+                 :items="['Setup', 'COE', 'Result Management', 'Verify Document']">
         <button type="button" class="btn coe-btn-header mv-publish" data-all="1">
             <span>Verify &amp; Publish All</span>
         </button>
     </x-breadcrum>
 
     <div class="d-flex justify-content-end gap-2 mb-3 coe-secondary-actions">
+        {{-- Download saves the page as a PDF through the browser's print dialog, as on View Marksheet. --}}
+        <button type="button" class="btn programme-dt-btn-columns" onclick="window.print()" title="Download">
+            <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+        </button>
         <button type="button" class="btn programme-dt-btn-columns" onclick="window.print()" title="Print">
             <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
         </button>
@@ -43,8 +48,6 @@
                     <div><div class="mv-label">Issue Date</div><div class="mv-value">{{ $m['generated_on'] }}</div></div>
                 </div>
                 <div class="d-flex justify-content-end gap-2 mt-3 mv-actions">
-                    <a href="{{ route('admin.coe.marksheet.show', ['course' => $m['course_key'], 'ot' => $m['code']]) }}"
-                       class="btn coe-btn btn-outline-secondary d-inline-flex align-items-center">View</a>
                     <button type="button" class="btn coe-btn btn-outline-primary mv-publish" data-code="{{ $m['code'] }}">Verify &amp; Publish Marksheet</button>
                 </div>
             </div>

@@ -29,14 +29,23 @@ class MarksheetController extends Controller
         return $this->listing($request, 'admin.coe.marksheet.verified', fn ($m) => $m['published']);
     }
 
-    /** Verify Document: the marksheets ticked on Marksheet Generation (?course=…&ots[]=…). */
+    /**
+     * Verify Document. ?course=…&ots[]=… — the marksheets ticked (Verify, Verify Selected);
+     * ?course=…&first=… — View & Verify: every Generated marksheet of the course, the clicked one first.
+     */
     public function verify(Request $request)
     {
         $courseKey = (string) $request->query('course');
-        $codes = array_filter((array) $request->query('ots', []), 'is_string');
-        abort_if($codes === [], 404);
+        $rows = $this->marksheets->courseRows($courseKey);
 
-        $rows = array_values(array_filter($this->marksheets->courseRows($courseKey), fn ($m) => in_array($m['code'], $codes, true)));
+        if ($request->filled('first')) {
+            $first = (string) $request->query('first');
+            $rows = array_values(array_filter($rows, fn ($m) => ! $m['published']));
+            usort($rows, fn ($a, $b) => ($b['code'] === $first) <=> ($a['code'] === $first));
+        } else {
+            $codes = array_filter((array) $request->query('ots', []), 'is_string');
+            $rows = array_values(array_filter($rows, fn ($m) => in_array($m['code'], $codes, true)));
+        }
         abort_if($rows === [], 404);
 
         return view('admin.coe.marksheet.verify', ['rows' => $rows, 'courseKey' => $courseKey]);

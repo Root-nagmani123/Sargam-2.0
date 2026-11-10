@@ -64,6 +64,19 @@ class CoeMarksheetFlowTest extends TestCase
             ->assertOk()->assertSee($row['number'])->assertSee($row['name']);
     }
 
+    public function test_view_and_verify_lists_every_pending_marksheet_of_the_course_clicked_one_first(): void
+    {
+        $row = $this->generated();
+        $pending = collect(app(MarksheetService::class)->courseRows($row['course_key']))->where('published', false);
+
+        $rows = $this->actingAs($this->admin())
+            ->get(route('admin.coe.marksheet-generation.verify', ['course' => $row['course_key'], 'first' => $row['code']]))
+            ->assertOk()->viewData('rows');
+
+        $this->assertSame($row['code'], $rows[0]['code']);
+        $this->assertEqualsCanonicalizing($pending->pluck('code')->all(), array_column($rows, 'code'));
+    }
+
     public function test_publish_is_validated(): void
     {
         $this->actingAs($this->admin())->postJson(route('admin.coe.marksheet-generation.publish'), ['course' => 'x', 'ots' => []])

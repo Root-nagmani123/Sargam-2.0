@@ -132,11 +132,11 @@
                                             </a>
                                             @unless ($row['published'])
                                                 <a href="{{ route('admin.coe.marksheet-generation.verify', ['course' => $row['course_key'], 'ots' => [$row['code']]]) }}"
-                                                   class="coe-act coe-act--approve">
+                                                   class="coe-act coe-act--approve mg-verify">
                                                     <span class="coe-act__icon"><i class="bi bi-check2" aria-hidden="true"></i></span>
                                                     <span class="coe-act__label">Verify</span>
                                                 </a>
-                                                <a href="{{ route('admin.coe.marksheet.show', $show + ['verify' => 1]) }}" class="coe-act coe-act--edit coe-act--wide">
+                                                <a href="{{ route('admin.coe.marksheet-generation.verify', ['course' => $row['course_key'], 'first' => $row['code']]) }}" class="coe-act coe-act--edit coe-act--wide">
                                                     <span class="coe-act__icon"><i class="bi bi-eye-fill" aria-hidden="true"></i></span>
                                                     <span class="coe-act__label">View &amp; Verify</span>
                                                 </a>
@@ -195,6 +195,27 @@ $(function () {
         refresh();
     });
     $('#mgTable').on('change', '.mg-row-check', refresh);
+
+    /* ── Verify on a row: publish that marksheet here, after a confirm; the server checks the signatures ── */
+    $('#mgTable').on('click', '.mg-verify', function (e) {
+        e.preventDefault();
+        var $tr = $(this).closest('tr');
+        Swal.fire({
+            icon: 'question', title: 'Verify & Publish', text: 'Publish this marksheet? It cannot be changed afterwards.',
+            showCancelButton: true, confirmButtonText: 'Verify & Publish'
+        }).then(function (r) {
+            if (!r.isConfirmed) { return; }
+            $.ajax({
+                url: @json(route('admin.coe.marksheet-generation.publish')), method: 'POST', contentType: 'application/json',
+                data: JSON.stringify({ course: String($tr.attr('data-course')), ots: [String($tr.attr('data-code'))] }),
+                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+            }).done(function (res) {
+                Swal.fire({ icon: 'success', title: 'Published', text: res.message }).then(function () { window.location.reload(); });
+            }).fail(function (xhr) {
+                Swal.fire({ icon: 'error', title: 'Not published', text: (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong. Please try again.' });
+            });
+        });
+    });
 
     $('#mgVerifySelected').on('click', function () {
         var $rows = ticked();
