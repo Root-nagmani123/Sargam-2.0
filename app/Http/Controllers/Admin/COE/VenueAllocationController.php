@@ -7,6 +7,7 @@ use App\Models\COE\SeatAllocation;
 use App\Models\COE\SeatPlan;
 use App\Models\COE\SeatPlanVenue;
 use App\Models\COE\VenueSeatLayout;
+use App\Services\COE\CourseParticipants;
 use App\Services\COE\SeatAllocator;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
@@ -583,8 +584,8 @@ class VenueAllocationController extends Controller
         return DB::table('student_master as sm')
             ->join('coe_roll_numbers as rn', 'rn.student_master_pk', '=', 'sm.pk')
             ->leftJoin('coe_laptop_responses as lr', 'lr.student_master_pk', '=', 'sm.pk')
-            ->where('sm.course_master_pk', $courseId)
-            ->where('sm.batch', $batch)
+            // On the course by student_master or by student_master_course__map — see CourseParticipants.
+            ->whereIn('sm.pk', CourseParticipants::of($courseId, $batch))
             ->when($category === SeatPlan::CATEGORY_GENERAL, fn ($q) => $q->where(fn ($w) => $w
                 ->whereNull('lr.has_disability')->orWhere('lr.has_disability', 0)))
             ->when($category === SeatPlan::CATEGORY_PH, fn ($q) => $q->where('lr.has_disability', 1));

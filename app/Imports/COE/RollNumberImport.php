@@ -3,6 +3,7 @@
 namespace App\Imports\COE;
 
 use App\Models\COE\RollNumber;
+use App\Services\COE\CourseParticipants;
 use App\Services\COE\RollNumberWriter;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +19,9 @@ use Maatwebsite\Excel\Concerns\WithStartRow;
  * (2,712 participants, 780 distinct codes, and repeats even inside one course+batch), so
  * matching on it would attach roll numbers to the wrong people. The template ships
  * pre-filled with the id, so an administrator never types it.
+ *
+ * An OT can be on more than one course (student_master_course__map), so the row's own
+ * Course and Batch say which one the number is for; an OT on one course needs neither.
  *
  * ── What a row can do ──
  *   blank Roll Number   skipped, silently — the template lists every participant and an
@@ -91,6 +95,14 @@ class RollNumberImport implements ToCollection, WithHeadingRow, WithStartRow
                 continue;
             }
 
+            $course = $this->courseOf($participant, $data);
+            if ($course === null) {
+                $this->failures[] = "Row {$rowNumber}: {$participant->display_name} is not on the course and batch in this row. Keep the Course and Batch columns as downloaded.";
+                continue;
+            }
+            // RollNumberWriter files the number under the participant's course + batch.
+            $participant = (object) ['pk' => $participant->pk, 'display_name' => $participant->display_name] + $course;
+
             if (mb_strlen($rollNumber) > 50) {
                 $this->failures[] = "Row {$rowNumber}: roll number is longer than 50 characters.";
                 continue;
@@ -108,6 +120,11 @@ class RollNumberImport implements ToCollection, WithHeadingRow, WithStartRow
             }
 
             $existing = RollNumber::where('student_master_pk', $participantId)->first();
+            $elsewhere = $existing === null ? [] : CourseParticipants::rollNumbersElsewhere([$participantId], $course['course_master_pk'], $course['batch']);
+            if ($elsewhere !== []) {
+                $this->failures[] = "Row {$rowNumber}: {$participant->display_name} already holds roll number {$elsewhere[$participantId]} on another course. An OT can hold only one roll number.";
+                continue;
+            }
             if ($existing !== null && $existing->isFrozen()) {
                 $this->failures[] = "Row {$rowNumber}: {$participant->display_name} is frozen at {$existing->roll_number} and cannot be changed.";
                 continue;
@@ -161,9 +178,25 @@ class RollNumberImport implements ToCollection, WithHeadingRow, WithStartRow
         $participants = array_keys($ids) === []
             ? collect()
             : DB::table('student_master')
-                ->select('pk', 'display_name', 'course_master_pk', 'batch')
+                ->select('pk', 'display_name')
                 ->whereIn('pk', array_keys($ids))
                 ->get();
+
+        // Every course + batch each of them is on.
+        $courses = array_keys($ids) === []
+            ? collect()
+            : DB::query()->fromSub(CourseParticipants::query(), 'cp')
+                ->join('course_master as c', 'c.pk', '=', 'cp.course_master_pk')
+                ->whereIn('cp.student_master_pk', array_keys($ids))
+                ->get(['cp.student_master_pk', 'cp.course_master_pk', 'cp.batch', 'c.course_name'])
+                ->groupBy('student_master_pk');
+        $participants->each(function ($p) use ($courses) {
+            $p->courses = ($courses[$p->pk] ?? collect())->map(fn ($c) => [
+                'course_master_pk' => (int) $c->course_master_pk,
+                'batch' => (int) $c->batch,
+                'course_name' => (string) $c->course_name,
+            ])->values()->all();
+        });
 
         $owners = array_keys($rollNumbers) === []
             ? collect()
@@ -186,6 +219,31 @@ class RollNumberImport implements ToCollection, WithHeadingRow, WithStartRow
      * @param  array<string, mixed>  $row
      * @return array<string, mixed>
      */
+    /**
+     * The course + batch the row is for: the one its Course and Batch name, or the
+     * participant's only one.
+     *
+     * @return array{course_master_pk:int, batch:int}|null
+     */
+    private function courseOf(object $participant, array $data): ?array
+    {
+        $name = mb_strtolower(trim((string) ($data['course'] ?? '')));
+        $batch = (int) ($data['batch'] ?? 0);
+
+        foreach ($participant->courses as $c) {
+            if ($name !== '' && mb_strtolower($c['course_name']) === $name && ($batch === 0 || $batch === $c['batch'])) {
+                return ['course_master_pk' => $c['course_master_pk'], 'batch' => $c['batch']];
+            }
+        }
+        if (count($participant->courses) === 1 && $name === '') {
+            $c = $participant->courses[0];
+
+            return ['course_master_pk' => $c['course_master_pk'], 'batch' => $c['batch']];
+        }
+
+        return null;
+    }
+
     private function normalise(array $row): array
     {
         $out = [];

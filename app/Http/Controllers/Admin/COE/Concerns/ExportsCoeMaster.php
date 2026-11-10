@@ -41,8 +41,11 @@ trait ExportsCoeMaster
         $term = trim((string) $request->query('q', ''));
         $status = (string) $request->query('status_filter', '');
 
-        if ($status === '1' || $status === '0') {
-            $query->where('active_inactive', (int) $status);
+        // Inactive is 0 on some masters and 2 on the shared building / floor / room ones.
+        if ($status === '1') {
+            $query->where('active_inactive', 1);
+        } elseif ($status === '0') {
+            $query->where('active_inactive', '!=', 1);
         }
         if ($term !== '') {
             $search($query, $term);

@@ -36,7 +36,8 @@ class BuildingFloorRoomMapping extends Model
         'Pantery' => 'Pantery',
         'Store Upside' => 'Store Upside',
         'Staff Room' => 'Staff Room',
-        'Gym' => 'Gym'
+        'Gym' => 'Gym',
+        'Classroom' => 'Classroom',
     ];
     function building()
     {

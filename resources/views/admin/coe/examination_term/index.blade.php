@@ -107,7 +107,7 @@
                             <tr>
                                 <th scope="col" class="coe-col-sno">{{ $master['sno']['label'] }}</th>
                                 @foreach ($master['fields'] as $f)
-                                    <th scope="col">{{ $f['column'] }}</th>
+                                    <th scope="col" @if (($f['align'] ?? '') === 'center') class="coe-col-center" @endif>{{ $f['column'] }}</th>
                                 @endforeach
                                 <th scope="col" class="coe-col-center">Status</th>
                                 <th scope="col">Action</th>
@@ -136,7 +136,8 @@
                 </div>
                 <div class="modal-body coe-modal-body">
                     <div class="row g-3">
-                        @foreach ($master['fields'] as $f)
+                        {{-- A computed field (eg. a count from another table) is a grid column only. --}}
+                        @foreach (collect($master['fields'])->reject(fn ($f) => ! empty($f['computed'])) as $f)
                             <div class="col-12">
                                 <label class="coe-form-label" for="{{ $p }}Field_{{ $f['key'] }}">
                                     {{ $f['label'] }}@if (! empty($f['required']))<span class="coe-req">*</span>@endif

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin\COE\Concerns;
 
 /**
- * Sample results behind the design-first Merit & Ranking, Marksheet Generation and
- * Verified Marksheet screens. Result Compilation has moved to real marks
+ * Sample results behind the design-first Marksheet Generation and Verified Marksheet
+ * screens. Result Compilation and Merit & Ranking have moved to real marks
  * (coe_evaluation_marks, via App\Services\COE\ResultMarksService).
  *
  * Marks are derived from a hash of (course, participant, component), so every

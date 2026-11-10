@@ -14,6 +14,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Marks behind COE → Result Management: faculty enter and approve them (Faculty
@@ -33,6 +34,9 @@ use Illuminate\Support\Facades\Log;
  */
 class ResultMarksService
 {
+    /** Longest faculty remark a mark may carry. */
+    public const REMARKS_MAX = 500;
+
     /** @var array<string, array<int, array>> */
     private array $participantCache = [];
 
@@ -282,6 +286,9 @@ class ResultMarksService
         }
         uasort($rows, fn ($a, $b) => self::compareOtCodes($a['code'], $b['code']));
 
+        $marks = $this->marks(array_values(array_unique(array_column($columns, 'drive_id'))));
+        $entries = $this->entries($columns, $subjects, $rows, $marks);
+
         return [
             'courses' => $courses,
             'coursePk' => $coursePk,
@@ -290,8 +297,53 @@ class ResultMarksService
             'subjectPk' => $subjectPk,
             'columns' => $columns,
             'rows' => $rows,
-            'marks' => $this->marks(array_values(array_unique(array_column($columns, 'drive_id')))),
+            'marks' => $marks,
+            'entries' => $entries,
+            'pendingCount' => count(array_filter($entries, fn ($e) => ! $e['mark']?->isApproved())),
+            'completedCount' => count(array_filter($entries, fn ($e) => (bool) $e['mark']?->isApproved())),
         ];
+    }
+
+    /**
+     * The sheet as Evaluation & Marks Entry lists it: one entry per participant ×
+     * column, in OT-code order and, within one OT, in column order.
+     *
+     * @return list<array{key:string, student:int, code:string, course:string, subject:string, component:string, max:float, mark:?EvaluationMark}>
+     */
+    private function entries(array $columns, array $subjects, array $rows, array $marks): array
+    {
+        $assigned = array_map(fn ($col) => array_flip($col['students']), $columns);
+        $entries = [];
+        foreach (array_keys($rows) as $pk) {
+            foreach ($columns as $i => $col) {
+                if (! isset($assigned[$i][$pk])) {
+                    continue;
+                }
+                $entries[] = [
+                    'key' => $col['key'],
+                    'student' => $pk,
+                    'code' => $rows[$pk]['code'],
+                    'course' => $col['course_short'],
+                    'subject' => $col['subject'],
+                    'component' => $subjects[$col['subject_pk']]['columns'][$col['key']]['label'] ?? $col['component'],
+                    'max' => $col['max'],
+                    'mark' => $marks[$col['key']][$pk] ?? null,
+                ];
+            }
+        }
+
+        return $entries;
+    }
+
+    /**
+     * Faculty remarks live in coe_evaluation_marks.remarks, added by DBA DDL. Until
+     * the column exists the sheet hides Remarks and saves ignore them.
+     */
+    public static function remarksEnabled(): bool
+    {
+        static $enabled;
+
+        return $enabled ??= Schema::hasColumn('coe_evaluation_marks', 'remarks');
     }
 
     /** @return array<string, mixed> */
@@ -303,12 +355,14 @@ class ResultMarksService
             'drive' => filled($drive->drive_name) ? trim($drive->drive_name) : 'Examination Drive #'.$drive->id,
             'course_pk' => (int) $drive->course_master_pk,
             'course' => trim((string) ($drive->course->course_name ?? '')),
+            'course_short' => trim((string) ($drive->course->couse_short_name ?? '')) ?: trim((string) ($drive->course->course_name ?? '')),
             'subject_pk' => (int) $map->subject_master_pk,
             'subject' => trim((string) ($map->subject->subject_name ?? '')),
             'subject_code' => trim((string) ($map->subject->sub_short_name ?? '')),
             'component_pk' => (int) $map->component_master_pk,
             'component' => trim((string) ($map->component->component_name ?? '')),
             'max' => (float) $map->max_marks,
+            'passing' => $map->passing_marks === null ? null : (float) $map->passing_marks,
             // Why nobody may be entering it yet (Result Compilation's Action column).
             'open' => $drive->status === ExaminationDrive::STATUS_ACTIVE && $drive->cc_status === ExaminationDrive::CC_APPROVED,
             'has_faculty' => $this->subjectFacultyPks($drive, (int) $map->subject_master_pk) !== [] || $map->subCoordinatorNames() !== [],
@@ -367,16 +421,19 @@ class ResultMarksService
      * cell of $columns (all must be filled). All or nothing: any error writes nothing.
      *
      * $input is column key => student pk => '' (clear) | number | 'AB' (absent).
-     * Approved cells are locked and their input is ignored.
+     * $remarks is the same shape with the cell's remarks; a cell left out of it keeps
+     * the remarks it has. Approved cells are locked and their input is ignored.
      *
      * @param  list<array<string, mixed>>  $columns  entryColumns() the page showed
      * @return array{saved:int, approved:int, errors:array<string, string>} errors keyed "key|student", or "_"
      */
-    public function save(User $user, array $columns, array $input, bool $approve): array
+    public function save(User $user, array $columns, array $input, bool $approve, array $remarks = []): array
     {
         $byKey = array_column($columns, null, 'key');
+        $withRemarks = self::remarksEnabled();
         $errors = [];
         $changes = [];
+        $notes = [];
 
         foreach ($input as $key => $cells) {
             if (! isset($byKey[$key]) || ! is_array($cells)) {
@@ -394,6 +451,16 @@ class ResultMarksService
                     continue;
                 }
                 $changes[$key][(int) $student] = $value;
+
+                if ($withRemarks && is_array($remarks[$key] ?? null) && array_key_exists($student, $remarks[$key])) {
+                    $note = trim((string) $remarks[$key][$student]);
+                    if (mb_strlen($note) > self::REMARKS_MAX) {
+                        $errors[$key.'|'.$student] = 'Remarks can be at most '.self::REMARKS_MAX.' characters.';
+
+                        continue;
+                    }
+                    $notes[$key][(int) $student] = $note === '' ? null : $note;
+                }
             }
         }
         if ($errors) {
@@ -404,7 +471,7 @@ class ResultMarksService
         $userId = $user->user_id;
 
         try {
-            return DB::transaction(function () use ($columns, $changes, $approve, $facultyPk, $userId) {
+            return DB::transaction(function () use ($columns, $changes, $notes, $withRemarks, $approve, $facultyPk, $userId) {
                 $saved = 0;
                 $approved = 0;
                 $empty = 0;
@@ -419,7 +486,11 @@ class ResultMarksService
                         if ($mark?->isApproved()) {
                             continue;
                         }
-                        if ($value === null) {
+                        $note = array_key_exists($student, $notes[$col['key']] ?? [])
+                            ? $notes[$col['key']][$student]
+                            : ($withRemarks ? $mark?->remarks : null);
+                        // A cell with no marks is kept only while it still has remarks.
+                        if ($value === null && $note === null) {
                             if ($mark) {
                                 $mark->delete();
                                 $existing->forget($student);
@@ -428,8 +499,8 @@ class ResultMarksService
 
                             continue;
                         }
-                        [$marks, $absent] = $value;
-                        if ($mark && $mark->is_absent === $absent && $mark->marks === $marks) {
+                        [$marks, $absent] = $value ?? [null, false];
+                        if ($mark && $mark->is_absent === $absent && $mark->marks === $marks && (! $withRemarks || $mark->remarks === $note)) {
                             continue;
                         }
                         $mark ??= new EvaluationMark([
@@ -446,7 +517,7 @@ class ResultMarksService
                             'evaluated_by_faculty_pk' => $facultyPk,
                             'modified_by' => $userId,
                             'modified_date' => $now,
-                        ])->save();
+                        ] + ($withRemarks ? ['remarks' => $note] : []))->save();
                         $existing[$student] = $mark;
                         $saved++;
                     }
@@ -536,13 +607,7 @@ class ResultMarksService
      */
     public function courseSheets(string $scope, ?int $coursePk = null): array
     {
-        $drives = ExaminationDrive::with(['course', 'facultyMaps', 'componentMaps.component', 'componentMaps.subject', 'componentMaps.faculty'])
-            ->where('status', $scope === 'archived' ? ExaminationDrive::STATUS_CLOSED : ExaminationDrive::STATUS_ACTIVE)
-            ->when($coursePk, fn ($q) => $q->where('course_master_pk', $coursePk))
-            ->whereHas('componentMaps')
-            ->orderBy('id')
-            ->get();
-
+        $drives = $this->scopeDrives($scope, $coursePk);
         $marks = $this->marks($drives->pluck('id')->all());
 
         return $drives->groupBy('course_master_pk')
@@ -550,6 +615,294 @@ class ResultMarksService
             ->filter()
             ->sortBy('course', SORT_NATURAL | SORT_FLAG_CASE)
             ->all();
+    }
+
+    /** active = Active drives, archived = Closed drives (Draft drives are not released yet). */
+    private function scopeDrives(string $scope, ?int $coursePk = null): Collection
+    {
+        return ExaminationDrive::with(['course', 'examinationType', 'facultyMaps.faculty', 'componentMaps.component', 'componentMaps.subject', 'componentMaps.faculty'])
+            ->where('status', $scope === 'archived' ? ExaminationDrive::STATUS_CLOSED : ExaminationDrive::STATUS_ACTIVE)
+            ->when($coursePk, fn ($q) => $q->where('course_master_pk', $coursePk))
+            ->whereHas('componentMaps')
+            ->orderBy('id')
+            ->get();
+    }
+
+    /* ───────────── Merit & Ranking ───────────── */
+
+    /** Qualifying papers: shown beside Grand Total, never added to it. Matched on subject name / short name. */
+    public const QUALIFYING = [
+        'ICT' => ['ict', 'information & communication technology', 'information and communication technology'],
+        'Hindi' => ['hindi'],
+    ];
+
+    /** A drive of this examination type (Examination Type Master) is the Director Assessment (B). */
+    public static function isDirectorAssessment(ExaminationDrive $drive): bool
+    {
+        return (bool) preg_match('/director/i', (string) ($drive->examinationType->exam_type_name ?? ''));
+    }
+
+    /** 'ICT' / 'Hindi' when the column's subject is a qualifying paper, else null. */
+    public static function qualifyingPaper(array $col): ?string
+    {
+        $names = [mb_strtolower(trim($col['subject'])), mb_strtolower(trim($col['subject_code']))];
+        foreach (self::QUALIFYING as $paper => $matches) {
+            if (array_intersect($names, $matches) !== []) {
+                return $paper;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The Merit & Ranking subject columns (as the Figma), in order: label => [subject
+     * names / short names it matches, max marks shown until a drive holds it]. A subject
+     * matching none of them gets a column of its own after these.
+     */
+    public const MERIT_SUBJECTS = [
+        'Pub. Admin.' => [['public administration', 'pub. admin.', 'pa'], 90],
+        'Basic Economics' => [['basic economics', 'economics', 'eco'], 90],
+        'Law' => [['law'], 90],
+        'Political Concept & Constitution of India' => [['political concept & constitution of india', 'political concepts and constitution of india', 'psc'], 60],
+        'Indian History & Culture' => [['indian history & culture', 'indian history and culture', 'history'], 60],
+        'Management & Behavioural Science' => [['management & behavioural science', 'management and behavioural science', 'management'], 60],
+    ];
+
+    /** Max marks shown for Director Assessment / a qualifying paper until a drive holds it. */
+    public const DIRECTOR_MAX = 172.5;
+
+    public const QUALIFYING_MAX = 50.0;
+
+    /** Active Subject Max Marks rows with their subject. */
+    private function subjectMaxMarks(): Collection
+    {
+        return DB::table('subject_max_marks_master as mm')
+            ->join('subject_master as s', 's.pk', '=', 'mm.subject_master_pk')
+            ->where('mm.active_inactive', 1)
+            ->get(['s.pk', 's.subject_name', 's.sub_short_name', 'mm.max_marks']);
+    }
+
+    /** The MERIT_SUBJECTS column a subject belongs to, else its own ('s:<pk>'). */
+    private static function meritKey(string $name, string $code, int $pk): string
+    {
+        $names = [mb_strtolower(trim($name)), mb_strtolower(trim($code))];
+        foreach (self::MERIT_SUBJECTS as $label => [$matches]) {
+            if (array_intersect($names, $matches) !== []) {
+                return 'f:'.$label;
+            }
+        }
+
+        return 's:'.$pk;
+    }
+
+    /**
+     * The marks a result counts: the SOP moderated marks where Marks Moderation saved
+     * them, else the approved marks. Absent counts 0.
+     */
+    public static function resultMarks(EvaluationMark $m): float
+    {
+        if ($m->is_absent) {
+            return 0.0;
+        }
+
+        return self::moderationEnabled() && $m->moderated_marks !== null ? (float) $m->moderated_marks : (float) $m->marks;
+    }
+
+    /**
+     * Merit & Ranking in $scope (as courseSheets()) of one course, or of every course
+     * ($coursePk null = All; each ranked within its own course).
+     *
+     * Every component whose exam is over counts, split three ways:
+     *   B          components on a Director Assessment drive (isDirectorAssessment())
+     *   ICT/Hindi  qualifying papers (qualifyingPaper()), shown but never added up
+     *   A          the MERIT_SUBJECTS columns (always shown, '-' until held), then any
+     *              other subject held; Total (A) is their sum
+     * Grand Total = A + B. Marks are resultMarks(). Header max marks: what the drive
+     * maps, else Subject Max Marks, else the Figma's (MERIT_SUBJECTS, DIRECTOR_MAX,
+     * QUALIFYING_MAX); Total (A) / Grand Total are out of the shown columns.
+     *
+     * An OT is ranked once every one of those marks is approved; the rest are only
+     * counted ($pending). Equal Grand Totals share a rank (1, 2, 2, 4), in OT-code order.
+     * Pass: every qualifying paper at or above its passing marks (absent fails), and
+     * Grand Total at or above the OT's service passing marks (Service Passing Marks).
+     * With no passing marks set for the service, the result is null (not decided).
+     *
+     * @return array{courses:array<int,string>, coursePk:?int, subjects:array, maxA:float, maxB:float, max:float, qualifying:array<string,float>, rows:list<array>, pending:int, noPassMarks:list<string>}
+     */
+    public function merit(string $scope, ?int $coursePk): array
+    {
+        $byCourse = $this->scopeDrives($scope)->groupBy('course_master_pk')
+            ->filter(fn (Collection $drives) => $drives->contains(fn ($d) => $d->componentMaps->contains(fn ($m) => $this->examOver($d, $m))));
+        $courses = $byCourse->map(fn (Collection $drives) => trim((string) ($drives->first()->course->course_name ?? '')))
+            ->sort(SORT_NATURAL | SORT_FLAG_CASE)->all();
+        $coursePk = isset($courses[$coursePk]) ? $coursePk : null;
+
+        // Header defaults: Subject Max Marks, else the Figma's.
+        $master = $this->subjectMaxMarks();
+        $subjects = [];
+        foreach (self::MERIT_SUBJECTS as $label => [, $max]) {
+            $subjects['f:'.$label] = ['name' => $label, 'max' => (float) $max, 'columns' => []];
+        }
+        $qualifyingMax = array_fill_keys(array_keys(self::QUALIFYING), self::QUALIFYING_MAX);
+        foreach ($master as $s) {
+            if ($paper = self::qualifyingPaper(['subject' => $s->subject_name, 'subject_code' => (string) $s->sub_short_name])) {
+                $qualifyingMax[$paper] = (float) $s->max_marks;
+            } elseif (isset($subjects[$key = self::meritKey($s->subject_name, (string) $s->sub_short_name, (int) $s->pk)])) {
+                $subjects[$key]['max'] = (float) $s->max_marks;
+            }
+        }
+        $maxB = self::DIRECTOR_MAX;
+
+        $rows = [];
+        $pending = 0;
+        $noPassMarks = [];
+        foreach ($coursePk ? [$coursePk] : array_keys($courses) as $pk) {
+            $sheet = $this->meritSheet($byCourse[$pk], $courses[$pk]);
+            foreach ($sheet['subjects'] as $key => $s) {
+                $subjects[$key] ??= ['name' => $s['name'], 'max' => $s['max'], 'columns' => []];
+                // One course: its own max marks. All: the first course that holds it.
+                if ($s['columns'] && ($coursePk || $subjects[$key]['columns'] === [])) {
+                    $subjects[$key] = $s;
+                }
+            }
+            if ($sheet['maxB'] !== null && ($coursePk || $maxB === self::DIRECTOR_MAX)) {
+                $maxB = $sheet['maxB'];
+            }
+            foreach ($sheet['qualifying'] as $paper => $max) {
+                $qualifyingMax[$paper] = $max ?? $qualifyingMax[$paper];
+            }
+            array_push($rows, ...$sheet['rows']);
+            $pending += $sheet['pending'];
+            $noPassMarks = array_merge($noPassMarks, $sheet['noPassMarks']);
+        }
+
+        // Every row has every column: '-' where its course does not hold it.
+        foreach ($rows as &$row) {
+            $row['subjects'] = array_replace(array_map(fn ($s) => null, $subjects), $row['subjects']);
+        }
+        unset($row);
+        if (! $coursePk) {
+            usort($rows, fn ($a, $b) => strnatcasecmp($a['course'], $b['course']) ?: $a['rank'] <=> $b['rank'] ?: self::compareOtCodes($a['code'], $b['code']));
+        }
+
+        $maxA = (float) array_sum(array_column($subjects, 'max'));
+
+        return [
+            'courses' => $courses,
+            'coursePk' => $coursePk,
+            'subjects' => $subjects,
+            'maxA' => $maxA,
+            'maxB' => $maxB,
+            'max' => $maxA + $maxB,
+            'qualifying' => $qualifyingMax,
+            'rows' => $rows,
+            'pending' => $pending,
+            'noPassMarks' => array_values(array_unique($noPassMarks)),
+        ];
+    }
+
+    /**
+     * One course of merit(): its held subject columns (keyed as meritKey()), Director
+     * Assessment and qualifying max marks (null when not held), and its ranked rows.
+     */
+    private function meritSheet(Collection $drives, string $course): array
+    {
+        $subjects = [];
+        $partB = [];
+        $qualifying = array_fill_keys(array_keys(self::QUALIFYING), []);
+        $participants = [];
+        foreach ($drives as $drive) {
+            $held = $drive->componentMaps->sortBy('id')->filter(fn ($map) => $this->examOver($drive, $map));
+            foreach ($held as $map) {
+                $col = $this->column($drive, $map);
+                if (self::isDirectorAssessment($drive)) {
+                    $partB[$col['key']] = $col;
+                } elseif (($paper = self::qualifyingPaper($col)) !== null) {
+                    $qualifying[$paper][$col['key']] = $col;
+                } else {
+                    $key = self::meritKey($col['subject'], $col['subject_code'], $col['subject_pk']);
+                    $subjects[$key] ??= ['name' => str_starts_with($key, 'f:') ? substr($key, 2) : $col['subject'], 'max' => 0.0, 'columns' => []];
+                    $subjects[$key]['columns'][$col['key']] = $col;
+                    $subjects[$key]['max'] += $col['max'];
+                }
+            }
+            if ($held->isNotEmpty()) {
+                $participants += $this->participants($drive);
+            }
+        }
+        $marks = $this->marks($drives->pluck('id')->all());
+
+        $students = DB::table('student_master as s')
+            ->leftJoin('service_master as sv', 'sv.pk', '=', 's.service_master_pk')
+            ->leftJoin('service_passing_marks_master as sp', fn ($j) => $j->on('sp.service_master_pk', '=', 's.service_master_pk')->where('sp.active_inactive', 1))
+            ->whereIn('s.pk', array_keys($participants))
+            ->selectRaw("s.pk, COALESCE(NULLIF(TRIM(sv.service_short_name), ''), TRIM(sv.service_name)) as service, sp.passing_marks")
+            ->get()->keyBy('pk');
+
+        $sum = fn (array $keys, array $approved) => round(array_sum(array_map(fn ($key) => self::resultMarks($approved[$key]), $keys)), 2);
+        $rows = [];
+        $noPassMarks = [];
+        foreach ($participants as $pk => $p) {
+            $approved = [];
+            foreach (array_merge(array_keys($partB), ...array_map('array_keys', array_values(array_column($subjects, 'columns'))), ...array_map('array_keys', array_values($qualifying))) as $key) {
+                $m = $marks[$key][$pk] ?? null;
+                if (! $m?->isApproved()) {
+                    continue 2;
+                }
+                $approved[$key] = $m;
+            }
+
+            $totals = array_map(fn ($s) => $sum(array_keys($s['columns']), $approved), $subjects);
+            $totalA = round(array_sum($totals), 2);
+            $director = $partB ? $sum(array_keys($partB), $approved) : null;
+            $grand = round($totalA + ($director ?? 0), 2);
+
+            $papers = [];
+            $qualified = true;
+            foreach ($qualifying as $paper => $cols) {
+                $papers[$paper] = $cols ? $sum(array_keys($cols), $approved) : null;
+                foreach ($cols as $key => $col) {
+                    $m = $approved[$key];
+                    $qualified = $qualified && ! $m->is_absent && ($col['passing'] === null || self::resultMarks($m) >= $col['passing']);
+                }
+            }
+
+            $student = $students[$pk] ?? null;
+            $passMarks = $student?->passing_marks === null ? null : (float) $student->passing_marks;
+            if ($passMarks === null && $qualified) {
+                $noPassMarks[] = (string) ($student?->service ?: 'No service');
+            }
+            $rows[] = $p + [
+                'course' => $course,
+                'service' => (string) ($student?->service ?? ''),
+                'subjects' => $totals,
+                'total_a' => $totalA,
+                'director' => $director,
+                'grand' => $grand,
+                'qualifying' => $papers,
+                'result' => match (true) {
+                    ! $qualified => 'Fail',
+                    $passMarks === null => null,
+                    default => $grand >= $passMarks ? 'Pass' : 'Fail',
+                },
+            ];
+        }
+
+        usort($rows, fn ($a, $b) => $b['grand'] <=> $a['grand'] ?: self::compareOtCodes($a['code'], $b['code']));
+        foreach ($rows as $i => &$row) {
+            $row['rank'] = $i > 0 && $rows[$i - 1]['grand'] === $row['grand'] ? $rows[$i - 1]['rank'] : $i + 1;
+        }
+        unset($row);
+
+        return [
+            'subjects' => $subjects,
+            'maxB' => $partB ? (float) array_sum(array_column($partB, 'max')) : null,
+            'qualifying' => array_map(fn ($cols) => $cols ? (float) array_sum(array_column($cols, 'max')) : null, $qualifying),
+            'rows' => $rows,
+            'pending' => count($participants) - count($rows),
+            'noPassMarks' => $noPassMarks,
+        ];
     }
 
     private function courseSheet(Collection $drives, array $marks): ?array
@@ -640,6 +993,162 @@ class ResultMarksService
         }
 
         return $out;
+    }
+
+    /* ───────────── Result Records and Marks Moderation ───────────── */
+
+    /**
+     * Moderated marks live in coe_evaluation_marks.moderated_marks / moderated_by /
+     * moderated_at, added by DBA DDL. Until they exist the screen shows the moderated
+     * marks the SOP formula gives, but cannot save them.
+     */
+    public static function moderationEnabled(): bool
+    {
+        static $enabled;
+
+        return $enabled ??= Schema::hasColumn('coe_evaluation_marks', 'moderated_marks');
+    }
+
+    /**
+     * One row per participant × component in $scope (as courseSheets()), for every
+     * component whose exam is over and that has a mark entered. The evaluator of an
+     * OT is who the drive maps to them (the Result Entry sheet's Tutor Name): the
+     * component's setup faculty / sub-coordinators holding their code, else the
+     * subject's faculty. evaluated_by_faculty_pk is not used — it records who typed
+     * the mark, which is often COE staff on someone's behalf.
+     *
+     * A component is moderated as a whole (MarksModeration): its moderated marks are
+     * worked out only once every participant's mark is approved, since one pending
+     * mark would move the means every other OT is moderated against.
+     *
+     * status: pending (not approved yet) | absent | not-moderated | moderated
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function moderationSheet(string $scope): array
+    {
+        $drives = $this->scopeDrives($scope);
+        $marks = $this->marks($drives->pluck('id')->all());
+        $saved = self::moderationEnabled();
+        $rows = [];
+
+        foreach ($drives as $drive) {
+            foreach ($drive->componentMaps->sortBy('id') as $map) {
+                $col = $this->column($drive, $map);
+                if (! $this->examOver($drive, $map) || empty($marks[$col['key']])) {
+                    continue;
+                }
+                $subjectFaculty = $drive->facultyMaps->where('subject_master_pk', $col['subject_pk'])
+                    ->map(fn ($f) => trim((string) ($f->faculty->full_name ?? '')))->filter()->unique()->values()->all();
+
+                $colRows = [];
+                $scores = [];
+                $complete = true;
+                foreach ($this->participants($drive) as $pk => $p) {
+                    $m = $marks[$col['key']][$pk] ?? null;
+                    $approved = (bool) $m?->isApproved();
+                    $complete = $complete && $approved;
+                    $evaluator = implode(', ', $this->evaluatorNames($map, $p) ?: $subjectFaculty) ?: 'Unassigned';
+                    $moderated = $saved && $m?->moderated_marks !== null ? (float) $m->moderated_marks : null;
+                    if ($approved && ! $m->is_absent) {
+                        $scores[$pk] = ['marks' => (float) $m->marks, 'evaluator' => $evaluator];
+                    }
+
+                    $colRows[$pk] = [
+                        'key' => $col['key'].'|'.$pk,
+                        'mark_pk' => $m?->pk,
+                        'code' => $p['code'],
+                        'name' => $p['name'],
+                        'course' => $col['course'],
+                        'subject' => $col['subject'],
+                        'component' => $col['component'],
+                        'max' => $col['max'],
+                        'marks' => $m === null ? null : ($m->is_absent ? 'AB' : $m->marks),
+                        'evaluator' => $evaluator,
+                        'moderated' => $moderated,
+                        'status' => match (true) {
+                            ! $approved => 'pending',
+                            $m->is_absent => 'absent',
+                            $moderated !== null => 'moderated',
+                            default => 'not-moderated',
+                        },
+                    ];
+                }
+
+                $calc = $complete && $scores ? MarksModeration::compute($scores, $col['max']) : null;
+                foreach ($colRows as $pk => $row) {
+                    $e = isset($scores[$pk]) ? $calc['evaluators'][$scores[$pk]['evaluator']] ?? null : null;
+                    $rows[] = $row + [
+                        // What the formula gives (shown on tick, saved by Moderate Marks).
+                        'preview' => $calc['moderated'][$pk] ?? null,
+                        'working' => $e === null ? null : [
+                            'um' => $scores[$pk]['marks'],
+                            'xj' => round($e['mean'], 2), 'sdj' => round($e['sd'], 2), 'nj' => $e['n'],
+                            'mu' => round($calc['group']['mean'], 2), 'sdg' => round($calc['group']['sd'], 2), 'ng' => $calc['group']['n'],
+                        ],
+                        'waiting' => ! $complete,
+                    ];
+                }
+            }
+        }
+
+        usort($rows, fn ($a, $b) => [$a['course'], $a['subject'], $a['component']] <=> [$b['course'], $b['subject'], $b['component']]
+            ?: self::compareOtCodes($a['code'], $b['code']));
+
+        return $rows;
+    }
+
+    /**
+     * Moderate the given rows ("drive:subject:component|student") on Active drives:
+     * work out their SOP moderated marks and save them. All or nothing; a row already
+     * moderated is skipped. Until moderationEnabled() the marks are only worked out
+     * and returned (saved = false).
+     *
+     * @param  string[]  $keys
+     * @return array{moderated:int, values:array<string, float>, saved:bool, error:?string}
+     */
+    public function moderate(User $user, array $keys): array
+    {
+        $rows = collect($this->moderationSheet('active'))->keyBy('key');
+        $todo = [];
+        $values = [];
+        foreach (array_unique($keys) as $key) {
+            $row = $rows[$key] ?? null;
+            if ($row === null) {
+                return ['moderated' => 0, 'values' => [], 'saved' => false, 'error' => 'Some of these marks are no longer listed. Reload the page.'];
+            }
+            if ($row['status'] === 'moderated') {
+                continue;
+            }
+            if ($row['status'] !== 'not-moderated' || $row['preview'] === null) {
+                return ['moderated' => 0, 'values' => [], 'saved' => false, 'error' => "{$row['code']} ({$row['component']}) cannot be moderated yet: every mark of the component must be approved first."];
+            }
+            $todo[$row['mark_pk']] = $row['preview'];
+            $values[$key] = $row['preview'];
+        }
+
+        if (! self::moderationEnabled()) {
+            return ['moderated' => count($values), 'values' => $values, 'saved' => false, 'error' => null];
+        }
+
+        $now = now();
+        $moderated = DB::transaction(function () use ($todo, $user, $now) {
+            $n = 0;
+            foreach ($todo as $pk => $value) {
+                $n += EvaluationMark::whereKey($pk)
+                    ->where('status', EvaluationMark::STATUS_APPROVED)
+                    ->whereNull('moderated_marks')
+                    ->update([
+                        'moderated_marks' => $value,
+                        'moderated_by' => $user->user_id,
+                        'moderated_at' => $now,
+                    ]);
+            }
+
+            return $n;
+        });
+
+        return ['moderated' => $moderated, 'values' => $values, 'saved' => true, 'error' => null];
     }
 
     /* ───────────── Notify for Pending ───────────── */
