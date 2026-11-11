@@ -69,7 +69,8 @@ class ExaminationDriveController extends Controller
             'courseDates' => $this->courseDatesByName(),
             'statuses'  => ExaminationDrive::STATUSES,
             'subjects'  => $this->subjectNames(),
-            'faculty'   => $this->facultyNames(),
+            // Subject and Faculty Mapping: Internal faculty only.
+            'faculty'   => $this->facultyNames(true),
         ]);
     }
 
@@ -91,7 +92,7 @@ class ExaminationDriveController extends Controller
             // At least one complete Subject + Faculty row (store and update).
             'mappings'              => ['required', 'array', $this->needsSubjectFaculty()],
             'mappings.*.subject'    => ['required_with:mappings.*.faculty', 'nullable', 'string', 'max:150'],
-            'mappings.*.faculty'    => ['required_with:mappings.*.subject', 'nullable', 'string', 'max:150'],
+            'mappings.*.faculty'    => ['required_with:mappings.*.subject', 'nullable', 'string', 'max:150', $this->internalFaculty()],
         ], [
             'mappings.required' => 'Add at least one Subject and Faculty in Subject and Faculty Mapping.',
         ]);
@@ -182,7 +183,7 @@ class ExaminationDriveController extends Controller
             // At least one complete Subject + Faculty row (store and update).
             'mappings'              => ['required', 'array', $this->needsSubjectFaculty()],
             'mappings.*.subject'    => ['required_with:mappings.*.faculty', 'nullable', 'string', 'max:150'],
-            'mappings.*.faculty'    => ['required_with:mappings.*.subject', 'nullable', 'string', 'max:150'],
+            'mappings.*.faculty'    => ['required_with:mappings.*.subject', 'nullable', 'string', 'max:150', $this->internalFaculty($drive)],
         ], [
             'mappings.required' => 'Add at least one Subject and Faculty in Subject and Faculty Mapping.',
         ]);
@@ -379,6 +380,25 @@ class ExaminationDriveController extends Controller
         );
     }
 
+    /**
+     * Validation rule: a Subject and Faculty Mapping faculty must be an active
+     * Internal faculty. On edit, a faculty already mapped on the drive is kept
+     * (drives created before this rule may map Guest faculty).
+     */
+    private function internalFaculty(?ExaminationDrive $drive = null): \Closure
+    {
+        $allowed = $this->facultyNames(true);
+        if ($drive) {
+            $allowed = array_merge($allowed, $drive->driveFacultyNames());
+        }
+
+        return function (string $attribute, $value, \Closure $fail) use ($allowed) {
+            if (filled($value) && ! in_array(trim((string) $value), $allowed, true)) {
+                $fail(trim((string) $value) . ' is not an Internal faculty. Only Internal faculty can be mapped to a drive.');
+            }
+        };
+    }
+
     /** Validation rule: the Subject and Faculty Mapping has at least one row with both filled. */
     private function needsSubjectFaculty(): \Closure
     {
@@ -561,6 +581,20 @@ class ExaminationDriveController extends Controller
         );
         if ($unknown) {
             return response()->json(['message' => 'Unknown faculty: ' . implode(', ', $unknown)], 422);
+        }
+        if ($error = $this->notInternalError($drive, $subjectPk,
+            $rows->flatMap(fn ($row) => array_merge([$row['faculty'] ?? ''], $row['sub_faculty'] ?? []))->reject(fn ($name) => $name === 'Sargam 2.0')->all())) {
+            return response()->json(['message' => $error], 422);
+        }
+        // One code, one faculty across the subject (the request carries all of its rows;
+        // a row that does not send a list keeps its stored one).
+        $stored = $drive->componentMaps->where('subject_master_pk', $subjectPk)->keyBy(fn ($m) => $m->component->component_name ?? '');
+        $listsOf = fn (string $key, string $column) => $rows->map(fn ($row) => array_key_exists($key, $row)
+            ? $row[$key] : ($stored[$row['component']]->{$column} ?? []))->all();
+        $subjectName = $limits['subject_name'] ?? '';
+        if ($error = $this->sharedCodesError($listsOf('codes', 'faculty_codes'), 'Roll number', $subjectName)
+            ?? $this->sharedCodesError($listsOf('unique_codes', 'faculty_unique_codes'), 'Unique Participant Code', $subjectName)) {
+            return response()->json(['message' => $error], 422);
         }
 
         $rollNumbers = array_column($this->courseRollNumbers($drive), 'code');
@@ -750,6 +784,18 @@ class ExaminationDriveController extends Controller
         $unknown = $this->unknownFacultyNames(array_merge([$data['faculty'] ?? ''], $subNames));
         if ($unknown) {
             return response()->json(['message' => 'Unknown faculty: ' . implode(', ', $unknown)], 422);
+        }
+        if ($error = $this->notInternalError($drive, (int) $data['subject_master_pk'], array_merge([$data['faculty'] ?? ''], $subNames))) {
+            return response()->json(['message' => $error], 422);
+        }
+        // One code, one faculty across the subject: this row plus the subject's other rows as stored.
+        $otherRows = $drive->componentMaps
+            ->where('subject_master_pk', (int) $data['subject_master_pk'])
+            ->reject(fn ($m) => ($m->component->component_name ?? null) === $data['component']);
+        $subjectName = trim((string) SubjectMaster::where('pk', (int) $data['subject_master_pk'])->value('subject_name'));
+        if ($error = $this->sharedCodesError(array_merge([$data['codes'] ?? []], $otherRows->map(fn ($m) => $m->faculty_codes ?? [])->all()), 'Roll number', $subjectName)
+            ?? $this->sharedCodesError(array_merge([$data['unique_codes'] ?? []], $otherRows->map(fn ($m) => $m->faculty_unique_codes ?? [])->all()), 'Unique Participant Code', $subjectName)) {
+            return response()->json(['message' => $error], 422);
         }
 
         $componentPk = ComponentMaster::where('component_name', $data['component'])->value('pk');
@@ -1072,7 +1118,9 @@ class ExaminationDriveController extends Controller
             'drive'       => $this->driveViewModel($drive, $subjectPk),
             'components'  => $this->componentNames(),
             'sources'     => self::SOURCES,
-            'faculty'     => $this->facultyNames(),
+            // Assign Faculty: Internal faculty only, plus anyone already assigned on
+            // this subject's rows (set before the rule) so they still show.
+            'faculty'     => $this->setupFacultyNames($drive, $subjectPk),
             'examModes'   => self::EXAM_MODES,
             'componentExamTypes' => self::COMPONENT_EXAM_TYPES,
             // Select Roll Number / Select Unique Codes list the course's generated
@@ -1088,6 +1136,156 @@ class ExaminationDriveController extends Controller
             'subjectTabs' => $this->accessibleSubjects($drive),
             'subjectPk'   => $subjectPk,
         ]);
+    }
+
+    /**
+     * Download / Print of the Map Faculty (faculty setup) page: the drive's saved
+     * components for the page's subject, in the Sargam master export format
+     * (CSV / Excel / PDF / Print). Same access as the page: a mapped faculty gets
+     * only their own subject, a Draft drive is not available.
+     */
+    public function facultySetupExport(Request $request, int $id, string $format)
+    {
+        $drive = $this->findDriveOrFail($id);
+        abort_if($drive->status === ExaminationDrive::STATUS_DRAFT, 404);
+        $subjectPk = $this->pageSubject($drive, $request);
+        $view = $this->driveViewModel($drive, $subjectPk);
+
+        $codes = fn (array $byFaculty) => collect($byFaculty)->map(fn ($c) => is_array($c) ? count($c) : 1)->sum();
+        // 90.00 -> 90, 12.50 -> 12.5, as on the page.
+        $num = fn ($v) => $v === null || $v === '' ? '-' : rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
+        $columns = [
+            'sno'        => ['heading' => 'S. No.', 'width' => '4%', 'align' => 'center', 'value' => fn ($row, int $i) => $i + 1],
+            'subject'    => ['heading' => 'Subject', 'width' => '11%', 'value' => fn ($row) => $row['subject']],
+            'component'  => ['heading' => 'Component', 'width' => '11%', 'value' => fn ($row) => $row['component']],
+            'max'        => ['heading' => 'Max Marks', 'width' => '6%', 'align' => 'center', 'value' => fn ($row) => $num($row['max_marks'])],
+            'pass'       => ['heading' => 'Passing Marks', 'width' => '6%', 'align' => 'center', 'value' => fn ($row) => $num($row['passing_marks'])],
+            'source'     => ['heading' => 'Evaluation Through', 'width' => '8%', 'value' => fn ($row) => $row['source']],
+            'faculty'    => ['heading' => 'Faculty', 'width' => '15%', 'value' => fn ($row) => implode(', ', $row['sub_coordinators']) ?: $row['faculty']],
+            'weightage'  => ['heading' => 'Weightage %', 'width' => '6%', 'align' => 'center', 'value' => fn ($row) => $num($row['weightage'])],
+            'range'      => ['heading' => 'Exam Range', 'width' => '11%', 'align' => 'center', 'value' => fn ($row) => str_replace('/', '-', $row['exam_date']) . ' to ' . str_replace('/', '-', $row['exam_end_date'])],
+            'mode'       => ['heading' => 'Exam Mode', 'width' => '7%', 'value' => fn ($row) => $row['exam_mode']],
+            'type'       => ['heading' => 'Exam Type', 'width' => '8%', 'value' => fn ($row) => $row['exam_type'] ?: '-'],
+            'rolls'      => ['heading' => 'Roll Numbers Assigned', 'width' => '7%', 'align' => 'center', 'value' => fn ($row) => $codes($row['faculty_codes']) ?: '-'],
+        ];
+
+        $filters = implode('  |  ', [
+            'Drive: ' . $view['name'],
+            'Course: ' . $view['course'],
+            'Term: ' . $view['term'],
+            'Academic Session: ' . $view['session'],
+            'Service: ' . ($view['service_name'] ?: $view['service']),
+            'Drive Dates: ' . ($view['start_date'] ?? '-') . ' to ' . ($view['end_date'] ?? '-'),
+            'Status: ' . $view['status'],
+        ]);
+
+        return $this->renderMasterExport(
+            strtolower($format),
+            collect($view['component_rows']),
+            $this->resolveExportColumns($request, $columns),
+            'Faculty Coordinates & Components',
+            'FacultyCoordinatesComponents_' . $drive->id,
+            $filters,
+            'No components set up for this subject yet',
+            'landscape'
+        );
+    }
+
+    /**
+     * Download / Print of Faculty Coordinates & Components (coordinates page), in
+     * the Sargam master export format (CSV / Excel / PDF / Print): one line per
+     * faculty per component, with their roll numbers and Unique Participant Codes.
+     */
+    public function coordinatesExport(Request $request, int $id, string $format)
+    {
+        $drive = $this->findDriveOrFail($id);
+        $view = $this->driveViewModel($drive);
+        $num = fn ($v) => $v === null || $v === '' ? '-' : rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
+
+        // One line per person on the component (system-sourced rows: one line).
+        $lines = collect($view['component_rows'])->flatMap(function (array $row) {
+            $system = in_array($row['source'], ['Sargam', 'Sargam 2.0'], true);
+            $people = $system ? [$row['source']] : ($row['sub_coordinators'] ?: ['-']);
+
+            return collect($people)->map(fn ($person) => $row + [
+                'person' => $person,
+                'rolls'  => $system ? '-' : (self::codeRangeText($row['faculty_codes'][$person] ?? null) ?: 'Not allocated'),
+                'uniq'   => $system ? '-' : (self::codeRangeText($row['faculty_unique_codes'][$person] ?? null) ?: 'Not allocated'),
+            ]);
+        })->values();
+
+        $columns = [
+            'sno'       => ['heading' => 'S. No.', 'width' => '4%', 'align' => 'center', 'value' => fn ($row, int $i) => $i + 1],
+            'subject'   => ['heading' => 'Subject', 'width' => '9%', 'value' => fn ($row) => $row['subject']],
+            'component' => ['heading' => 'Component', 'width' => '9%', 'value' => fn ($row) => $row['component']],
+            'max'       => ['heading' => 'Max Marks', 'width' => '5%', 'align' => 'center', 'value' => fn ($row) => $num($row['max_marks'])],
+            'pass'      => ['heading' => 'Passing Marks', 'width' => '5%', 'align' => 'center', 'value' => fn ($row) => $num($row['passing_marks'])],
+            'source'    => ['heading' => 'Source', 'width' => '6%', 'value' => fn ($row) => $row['source']],
+            'faculty'   => ['heading' => 'Faculty / Subcoordinator', 'width' => '11%', 'value' => fn ($row) => $row['person']],
+            'rolls'     => ['heading' => "OT's Roll Number", 'width' => '12%', 'value' => fn ($row) => $row['rolls']],
+            'uniq'      => ['heading' => 'Unique Participant Codes', 'width' => '11%', 'value' => fn ($row) => $row['uniq']],
+            'weightage' => ['heading' => 'Weightage %', 'width' => '6%', 'align' => 'center', 'value' => fn ($row) => $num($row['weightage'])],
+            'range'     => ['heading' => 'Exam Range', 'width' => '9%', 'align' => 'center', 'value' => fn ($row) => str_replace('/', '-', $row['exam_date']) . ' to ' . str_replace('/', '-', $row['exam_end_date'])],
+            'mode'      => ['heading' => 'Exam Mode', 'width' => '6%', 'value' => fn ($row) => $row['exam_mode']],
+            'type'      => ['heading' => 'Exam Type', 'width' => '7%', 'value' => fn ($row) => $row['exam_type'] ?: '-'],
+        ];
+
+        $filters = implode('  |  ', [
+            'Drive: ' . $view['name'],
+            'Examination Type: ' . $view['exam_type'],
+            'Term: ' . $view['term'],
+            'Course: ' . $view['course'],
+            'Academic Session: ' . $view['session'],
+            'Faculty: ' . $view['faculty'],
+            'Status: ' . $view['status'],
+        ]);
+
+        return $this->renderMasterExport(
+            strtolower($format),
+            $lines,
+            $this->resolveExportColumns($request, $columns),
+            'Faculty Coordinates & Components',
+            'FacultyCoordinates_' . $drive->id,
+            $filters,
+            'No components mapped to this drive yet',
+            'landscape'
+        );
+    }
+
+    /**
+     * Codes as ranges of consecutive codes: "AI-0001 – AI-0004, AI-0007 (5 OTs)";
+     * a single free-text code as is; '' for none. Shared with coordinates.blade.php.
+     */
+    public static function codeRangeText($codes): string
+    {
+        if ($codes === null || $codes === '' || $codes === []) {
+            return '';
+        }
+        if (! is_array($codes)) {
+            return (string) $codes;
+        }
+        $parts = [];
+        $run = null; // [prefix, last number, first code, last code]
+        foreach (array_values($codes) as $code) {
+            $code = (string) $code;
+            if (preg_match('/^(.*?)(\d+)$/', $code, $m) && $run && $run[0] === $m[1] && (int) $m[2] === $run[1] + 1) {
+                $run[1] = (int) $m[2];
+                $run[3] = $code;
+                continue;
+            }
+            if ($run) {
+                $parts[] = $run[2] === $run[3] ? $run[2] : $run[2] . ' – ' . $run[3];
+            }
+            $run = preg_match('/^(.*?)(\d+)$/', $code, $m) ? [$m[1], (int) $m[2], $code, $code] : null;
+            if (! $run) {
+                $parts[] = $code;
+            }
+        }
+        if ($run) {
+            $parts[] = $run[2] === $run[3] ? $run[2] : $run[2] . ' – ' . $run[3];
+        }
+
+        return implode(', ', $parts) . ' (' . count($codes) . ' OT' . (count($codes) === 1 ? '' : 's') . ')';
     }
 
     /**
@@ -1226,6 +1424,83 @@ class ExaminationDriveController extends Controller
      * @param  string[]  $names
      * @return string[]
      */
+    /**
+     * Assign Faculty list on the faculty setup page: active Internal faculty, plus
+     * names already assigned on this subject's component rows.
+     *
+     * @return string[]
+     */
+    private function setupFacultyNames(ExaminationDrive $drive, int $subjectPk): array
+    {
+        $names = $this->facultyNames(true);
+        foreach ($this->assignedFacultyNames($drive, $subjectPk) as $name) {
+            if (! in_array($name, $names, true)) {
+                $names[] = $name;
+            }
+        }
+        sort($names, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return $names;
+    }
+
+    /** @return string[] faculty + sub-faculty already stored on the subject's component rows */
+    private function assignedFacultyNames(ExaminationDrive $drive, int $subjectPk): array
+    {
+        return $drive->componentMaps->where('subject_master_pk', $subjectPk)
+            ->flatMap(fn ($map) => array_merge([trim((string) ($map->faculty->full_name ?? ''))], $map->sub_faculty_names ?? []))
+            ->map(fn ($name) => trim((string) $name))
+            ->filter()->unique()->values()->all();
+    }
+
+    /**
+     * A mapped faculty (the setup page) may assign only Internal faculty; names
+     * already on the subject's rows are kept. Admins on Map Faculty are not limited.
+     *
+     * @param  string[]  $names
+     */
+    private function notInternalError(ExaminationDrive $drive, int $subjectPk, array $names): ?string
+    {
+        if (! $this->isMappedFaculty($drive)) {
+            return null;
+        }
+        $allowed = array_merge($this->facultyNames(true), $this->assignedFacultyNames($drive, $subjectPk));
+        $bad = array_values(array_diff($this->cleanNames($names), $allowed));
+
+        return $bad ? implode(', ', $bad) . (count($bad) === 1 ? ' is' : ' are') . ' not Internal faculty. Only Internal faculty can be assigned.' : null;
+    }
+
+    /**
+     * One code, one faculty per subject: a roll number or Unique Participant Code
+     * given to two different faculty on the subject's component rows is refused.
+     * The same faculty may keep a code on several components; another subject
+     * (evaluated by its own faculty) is not affected.
+     *
+     * @param  array<int, mixed>  $lists  one {faculty: [codes]} map per component row
+     */
+    private function sharedCodesError(array $lists, string $what, string $subject): ?string
+    {
+        $owners = [];
+        foreach ($lists as $byFaculty) {
+            foreach (is_array($byFaculty) ? $byFaculty : [] as $name => $codes) {
+                foreach (is_array($codes) ? $codes : [] as $code) {
+                    $code = trim((string) $code);
+                    if ($code !== '') {
+                        $owners[$code][trim((string) $name)] = true;
+                    }
+                }
+            }
+        }
+        $shared = array_filter($owners, fn ($names) => count($names) > 1);
+        if (! $shared) {
+            return null;
+        }
+        $code = array_key_first($shared);
+
+        return "{$what} {$code} is assigned to more than one faculty in {$subject} ("
+            . implode(', ', array_keys($shared[$code])) . '). Each ' . strtolower($what) . ' can be assigned to one faculty only'
+            . (count($shared) > 1 ? ' (' . count($shared) . ' codes affected).' : '.');
+    }
+
     private function unknownFacultyNames(array $names): array
     {
         $names = $this->cleanNames($names);
@@ -1352,9 +1627,14 @@ class ExaminationDriveController extends Controller
     }
 
     /** Real faculty_master names for the Subject/Faculty mapping selects. */
-    private function facultyNames(): array
+    /** faculty_master.faculty_type of Internal faculty (faculty_type_master pk 1). */
+    private const INTERNAL_FACULTY_TYPE = 1;
+
+    /** Active faculty names; $internalOnly = Internal faculty only (Create / Edit Drive mapping). */
+    private function facultyNames(bool $internalOnly = false): array
     {
         return FacultyMaster::where('active_inactive', 1)
+            ->when($internalOnly, fn ($q) => $q->where('faculty_type', self::INTERNAL_FACULTY_TYPE))
             ->orderBy('full_name')
             ->pluck('full_name')
             ->map(fn ($name) => trim($name))

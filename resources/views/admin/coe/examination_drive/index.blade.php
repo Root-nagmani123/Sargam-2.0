@@ -396,7 +396,10 @@ $(function () {
         }).join('');
     }
     function facultyOptions(selected) {
-        return FACULTY.map(function (f) {
+        // FACULTY = Internal faculty only; a drive mapped before that rule keeps its
+        // current faculty as an option so an edit does not drop it.
+        var list = selected && FACULTY.indexOf(selected) === -1 ? [selected].concat(FACULTY) : FACULTY;
+        return list.map(function (f) {
             return '<option value="' + f + '"' + (f === selected ? ' selected' : '') + '>' + f + '</option>';
         }).join('');
     }

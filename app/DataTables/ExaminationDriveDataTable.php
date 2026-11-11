@@ -29,7 +29,7 @@ class ExaminationDriveDataTable extends DataTable
 
     public function dataTable(Builder $query): EloquentDataTable
     {
-        return (new EloquentDataTable($query))
+        return $this->applySearch(new EloquentDataTable($query))
             ->addIndexColumn()
             ->editColumn('name', fn ($row) => e($this->driveName($row)))
             ->editColumn('exam_type', fn ($row) => $row->examinationType ? e($row->examinationType->exam_type_name) : '<span class="coe-muted">-</span>')
@@ -59,11 +59,42 @@ class ExaminationDriveDataTable extends DataTable
                 'data-edc-start' => fn ($row) => optional($row->start_date)->format('d-m-Y'),
                 'data-edc-end' => fn ($row) => optional($row->end_date)->format('d-m-Y'),
             ])
-            ->filterColumn('course', fn ($q, $kw) => $q->whereHas('course', fn ($qq) => $qq->where('course_name', 'REGEXP', $kw)))
-            ->filterColumn('service', fn ($q, $kw) => $q->whereHas('service', fn ($qq) => $qq->where('service_name', 'REGEXP', $kw)->orWhere('service_short_name', 'REGEXP', $kw)))
-            ->filterColumn('term', fn ($q, $kw) => $q->whereHas('term', fn ($qq) => $qq->where('term_name', 'REGEXP', $kw)))
-            ->filterColumn('exam_type', fn ($q, $kw) => $q->whereHas('examinationType', fn ($qq) => $qq->where('exam_type_name', 'REGEXP', $kw)))
             ->rawColumns(['exam_type', 'service', 'sub_coords', 'components', 'status', 'actions']);
+    }
+
+    /**
+     * Search box rules, shared by every drive list (admin, faculty, COE, CC).
+     * Every grid column has one: computed columns (name, faculty, status ...)
+     * are not table columns, so without a rule Yajra searched e.g.
+     * examination_drives.name and the query failed. LIKE with escaped
+     * wildcards: the old REGEXP failed on input like "(".
+     */
+    protected function applySearch(EloquentDataTable $table): EloquentDataTable
+    {
+        return $table
+            ->filterColumn('name', fn ($q, $kw) => $q->where('drive_name', 'like', self::like($kw)))
+            ->filterColumn('exam_type', fn ($q, $kw) => $q->whereHas('examinationType', fn ($qq) => $qq->where('exam_type_name', 'like', self::like($kw))))
+            ->filterColumn('term', fn ($q, $kw) => $q->whereHas('term', fn ($qq) => $qq->where('term_name', 'like', self::like($kw))))
+            ->filterColumn('course', fn ($q, $kw) => $q->whereHas('course', fn ($qq) => $qq->where('course_name', 'like', self::like($kw))))
+            ->filterColumn('service', fn ($q, $kw) => $q->whereHas('service', fn ($qq) => $qq->where('service_name', 'like', self::like($kw))
+                ->orWhere('service_short_name', 'like', self::like($kw))))
+            ->filterColumn('academic_session', fn ($q, $kw) => $q->where('academic_session', 'like', self::like($kw)))
+            ->filterColumn('faculty', fn ($q, $kw) => $q->whereHas('facultyMaps.faculty', fn ($qq) => $qq->where('full_name', 'like', self::like($kw))))
+            // Dates as shown in the grid (dd-mm-yyyy).
+            ->filterColumn('start_date', fn ($q, $kw) => $q->whereRaw("DATE_FORMAT(start_date, '%d-%m-%Y') like ?", [self::like($kw)]))
+            ->filterColumn('end_date', fn ($q, $kw) => $q->whereRaw("DATE_FORMAT(end_date, '%d-%m-%Y') like ?", [self::like($kw)]))
+            // Counts, status badge and buttons: never match (the search ORs every column; use the Status filter).
+            ->filterColumn('DT_RowIndex', fn ($q) => $q->whereRaw('1 = 0'))
+            ->filterColumn('sub_coords', fn ($q) => $q->whereRaw('1 = 0'))
+            ->filterColumn('components', fn ($q) => $q->whereRaw('1 = 0'))
+            ->filterColumn('status', fn ($q) => $q->whereRaw('1 = 0'))
+            ->filterColumn('actions', fn ($q) => $q->whereRaw('1 = 0'));
+    }
+
+    /** Search term as a LIKE pattern, with the user's own % and _ taken literally. */
+    protected static function like(string $keyword): string
+    {
+        return '%' . addcslashes(trim($keyword), '%_\\') . '%';
     }
 
     public function query(ExaminationDrive $model): Builder

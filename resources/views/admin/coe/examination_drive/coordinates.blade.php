@@ -54,19 +54,14 @@
         return in_array($row['source'], ['Sargam', 'Sargam 2.0'], true) ? [$row['source']] : [];
     };
 
-    // A list of codes reads "FC101-001, FC101-002 (2 OTs)"; a single code is shown as is.
-    $codeText = fn ($codes) => is_array($codes)
-        ? implode(', ', $codes) . ' (' . count($codes) . ' OT' . (count($codes) === 1 ? '' : 's') . ')'
-        : (string) $codes;
+    // A row opens when it has a faculty (one or more) to list with their roll numbers.
+    $canOpen = fn (array $row, array $people) => $people !== [] && ! in_array($row['source'], ['Sargam', 'Sargam 2.0'], true);
 
-    // Rows for the client-side CSV download.
-    $csvRows = collect($drive['component_rows'])->map(fn ($row) => [
-        'subject' => $row['subject'], 'component' => $row['component'], 'max' => $row['max_marks'], 'pass' => $row['passing_marks'],
-        'source' => $row['source'], 'people' => $peopleFor($row), 'codes' => (object) array_map($codeText, $row['faculty_codes']),
-        'uniq' => (object) array_map($codeText, $row['faculty_unique_codes']),
-        'weightage' => $row['weightage'],
-        'date' => $row['exam_date'], 'type' => $row['exam_mode'],
-    ])->values()->all();
+    // Codes as ranges, e.g. "AI-0001 – AI-0004 (4 OTs)" (same text as the export).
+    $codeText = fn ($codes) => \App\Http\Controllers\Admin\COE\ExaminationDriveController::codeRangeText($codes);
+
+    // Download / Print: Sargam master export (ExaminationDriveController::coordinatesExport).
+    $coordExport = fn (string $format) => route('admin.coe.examination-drive.coordinates.export', ['id' => $drive['id'], 'format' => $format]);
 @endphp
 <div class="container-fluid coe-page">
     <x-breadcrum title="Faculty Coordinates & Components" :showBack="true"
@@ -74,8 +69,23 @@
                  :items="['Setup', 'COE', 'Examination Management', 'Faculty Coordinates & Components']" />
 
     <div class="edc-toolbar">
-        <button type="button" class="edc-tool-btn" id="edcDownload"><i class="bi bi-download" aria-hidden="true"></i>Download</button>
-        <button type="button" class="edc-tool-btn" id="edcPrint"><i class="bi bi-printer" aria-hidden="true"></i>Print</button>
+        <div class="dropdown">
+            <button type="button" class="edc-tool-btn dropdown-toggle" id="edcDownload"
+                    data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                <i class="bi bi-download" aria-hidden="true"></i>Download
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="edcDownload">
+                <li><a class="dropdown-item" href="{{ $coordExport('csv') }}">
+                    <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i> CSV</a></li>
+                <li><a class="dropdown-item" href="{{ $coordExport('excel') }}">
+                    <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Excel (.xlsx)</a></li>
+                <li><a class="dropdown-item" href="{{ $coordExport('pdf') }}">
+                    <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF</a></li>
+            </ul>
+        </div>
+        <a href="{{ $coordExport('print') }}" target="_blank" rel="noopener" class="edc-tool-btn text-decoration-none" id="edcPrint" title="Print">
+            <i class="bi bi-printer" aria-hidden="true"></i>Print
+        </a>
     </div>
 
     {{-- Drive info bar. FACULTY = faculty mapped when the drive was created. --}}
@@ -149,14 +159,14 @@
                                 <td class="text-center">
                                     <button type="button" class="edc-toggle" data-row="{{ $i }}"
                                             aria-expanded="false" aria-controls="edcDetail{{ $i }}"
-                                            @disabled(count($people) < 2)
-                                            title="{{ count($people) < 2 ? 'Only one faculty on this component' : 'Show faculty and roll numbers' }}">
+                                            @disabled(! $canOpen($row, $people))
+                                            title="{{ $canOpen($row, $people) ? 'Show faculty and roll numbers' : 'No faculty assigned to this component' }}">
                                         <i class="bi bi-chevron-down" aria-hidden="true"></i>
                                         <span class="edc-toggle-label">Open</span>
                                     </button>
                                 </td>
                             </tr>
-                            @if (count($people) > 1)
+                            @if ($canOpen($row, $people))
                                 <tr class="edc-detail d-none" id="edcDetail{{ $i }}">
                                     <td colspan="10">
                                         <table class="edc-sub-table">
@@ -228,25 +238,6 @@ $(function () {
         setOpen($(this).data('row'), true);
     });
 
-    $('#edcPrint').on('click', function () { window.print(); });
-
-    /* Download: CSV of what the page shows, one line per component per person. */
-    $('#edcDownload').on('click', function () {
-        var rows = {!! json_encode($csvRows, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!};
-        var cell = function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
-        var lines = [['Subject', 'Component', 'Max Marks', 'Passing Marks', 'Source', 'Faculty / Subcoordinator', 'OT Roll Number', 'Unique Participant Codes', 'Weightage %', 'Exam Date', 'Exam Mode'].map(cell).join(',')];
-        rows.forEach(function (r) {
-            (r.people.length ? r.people : ['']).forEach(function (p) {
-                lines.push([r.subject, r.component, r.max, r.pass, r.source, p, (r.codes || {})[p] || '', (r.uniq || {})[p] || '', r.weightage, r.date, r.type].map(cell).join(','));
-            });
-        });
-        var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
-        var a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = @json('faculty-coordinates-drive-' . $drive['id'] . '.csv');
-        document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
-    });
 });
 </script>
 @endpush

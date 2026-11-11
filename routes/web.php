@@ -2242,6 +2242,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->whereNumber('id')->name('examination-drive.show');
     Route::get('examination-drive/{id}/coordinates', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'coordinates'])
         ->whereNumber('id')->name('examination-drive.coordinates');
+    Route::get('examination-drive/{id}/coordinates/export/{format}', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'coordinatesExport'])
+        ->whereNumber('id')->whereIn('format', ['csv', 'excel', 'pdf', 'print'])->name('examination-drive.coordinates.export');
     Route::get('faculty-examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'facultyIndex'])
         ->name('faculty-examination-drive.index');
     Route::get('faculty-examination-drive/export/{format}', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'facultyExport'])
@@ -2256,6 +2258,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->whereNumber('id')->name('cc-examination-drive.approve');
     Route::put('cc-examination-drive/{id}/reject', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'ccReject'])
         ->whereNumber('id')->name('cc-examination-drive.reject');
+    Route::get('faculty-examination-drive/{id}/setup/export/{format}', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'facultySetupExport'])
+        ->whereNumber('id')->whereIn('format', ['csv', 'excel', 'pdf', 'print'])->name('faculty-examination-drive.setup.export');
     Route::get('faculty-examination-drive/{id}/setup', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'facultySetup'])
         ->whereNumber('id')->name('faculty-examination-drive.setup');
     // COE -> Laptop Management

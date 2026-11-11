@@ -50,7 +50,8 @@ class ExaminationDriveFacultyDataTable extends ExaminationDriveDataTable
 
     public function dataTable(Builder $query): EloquentDataTable
     {
-        return (new EloquentDataTable($query))
+        // Search rules: ExaminationDriveDataTable::applySearch (same for every drive list).
+        return $this->applySearch(new EloquentDataTable($query))
             ->addIndexColumn()
             ->editColumn('name', fn ($row) => e($this->driveName($row)))
             ->editColumn('exam_type', fn ($row) => $row->examinationType ? e($row->examinationType->exam_type_name) : '<span class="coe-muted">-</span>')
@@ -65,9 +66,6 @@ class ExaminationDriveFacultyDataTable extends ExaminationDriveDataTable
             ->addColumn('status', fn ($row) => $this->statusCell($row))
             ->addColumn('actions', fn ($row) => $this->actionsCell($row))
             ->setRowAttr(['data-coe-id' => fn ($row) => $row->id])
-            ->filterColumn('course', fn ($q, $kw) => $q->whereHas('course', fn ($qq) => $qq->where('course_name', 'REGEXP', $kw)))
-            ->filterColumn('term', fn ($q, $kw) => $q->whereHas('term', fn ($qq) => $qq->where('term_name', 'REGEXP', $kw)))
-            ->filterColumn('exam_type', fn ($q, $kw) => $q->whereHas('examinationType', fn ($qq) => $qq->where('exam_type_name', 'REGEXP', $kw)))
             ->rawColumns(['exam_type', 'sub_coords', 'components', 'status', 'actions']);
     }
 

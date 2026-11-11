@@ -20,6 +20,14 @@
 @php
     $p = $master['prefix'];
     $l = $master['labels'];
+    // Grid header: each field, then any display-only extraColumns placed after it (same order as CoeGrid).
+    $gridCols = [];
+    foreach ($master['fields'] as $f) {
+        $gridCols[] = $f;
+        foreach ($master['extraColumns'] ?? [] as $x) {
+            if (($x['after'] ?? null) === $f['key']) { $gridCols[] = $x; }
+        }
+    }
 @endphp
 <div class="container-fluid coe-page">
     <x-breadcrum :title="$master['title']" :showBack="false"
@@ -106,7 +114,7 @@
                         <thead>
                             <tr>
                                 <th scope="col" class="coe-col-sno">{{ $master['sno']['label'] }}</th>
-                                @foreach ($master['fields'] as $f)
+                                @foreach ($gridCols as $f)
                                     <th scope="col" @if (($f['align'] ?? '') === 'center') class="coe-col-center" @endif>{{ $f['column'] }}</th>
                                 @endforeach
                                 <th scope="col" class="coe-col-center">Status</th>

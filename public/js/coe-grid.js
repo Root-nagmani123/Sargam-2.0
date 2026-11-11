@@ -962,7 +962,15 @@
         var fields = cfg.fields;
         var L = cfg.labels;
         var noun = cfg.entity.toLowerCase();
-        var COL = { sno: 0, status: 1 + fields.length, action: 2 + fields.length };
+        // Grid columns: each form field, followed by any display-only extraColumns
+        // placed after it ({key, name, column, after: fieldKey}) - shown and exported,
+        // never part of the Add / Edit form.
+        var gridCols = [];
+        fields.forEach(function (f) {
+            gridCols.push(f);
+            (cfg.extraColumns || []).forEach(function (x) { if (x.after === f.key) { gridCols.push(x); } });
+        });
+        var COL = { sno: 0, status: 1 + gridCols.length, action: 2 + gridCols.length };
         var byKey = {};
         var byName = {};
         fields.forEach(function (f, i) { f.col = 1 + i; byKey[f.key] = f; byName[f.name] = f; });
@@ -975,7 +983,7 @@
         }
 
         var columns = [{ data: 'DT_RowIndex', orderable: false, searchable: false, className: 'coe-col-sno' }];
-        fields.forEach(function (f) {
+        gridCols.forEach(function (f) {
             // A computed column (a count from another table) is not searchable server-side.
             columns.push({ data: f.name, name: f.name, searchable: !f.computed,
                 className: 'coe-cell-' + f.key + (f.align === 'center' ? ' coe-col-center' : '') });
@@ -1017,7 +1025,7 @@
             if (i === COL.sno) { return 'sno'; }
             if (i === COL.status) { return 'status'; }
             if (i === COL.action) { return ''; }
-            return fields[i - 1].key;
+            return gridCols[i - 1].key;
         });
         function syncExportLinks() {
             var keys = [], all = exportKeys.filter(Boolean).length;

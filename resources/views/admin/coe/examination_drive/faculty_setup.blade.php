@@ -81,6 +81,8 @@
 .fedc-fac-item  { padding:9px 12px;border-bottom:1px solid var(--ds-line);font-size:13px;cursor:pointer; }
 .fedc-fac-item:last-child { border-bottom:none; }
 .fedc-fac-item:hover { background:var(--ds-surface-2); }
+.fedc-fac-item.is-assigned { font-weight:600;color:var(--ds-primary); }
+.fedc-fac-item.is-assigned::after { content:'\2713  assigned';float:right;font-size:11px;font-weight:600; }
 /* Multi Faculty table */
 .fedc-multi-table    { width:100%;border-collapse:collapse; }
 .fedc-multi-table th { padding:7px 10px;background:var(--ds-surface-2);font-size:12px;font-weight:700;
@@ -99,6 +101,15 @@
                    background:#fff;color:var(--ds-ink); }
 .fedc-multi-uniq.has-codes { border-color:var(--ds-primary);color:var(--ds-primary);font-weight:600; }
 .fedc-rn-item input[type=checkbox] { width:16px;height:16px;accent-color:var(--ds-primary);flex-shrink:0; }
+/* Codes already given to another faculty on the same component: shown, not selectable */
+.fedc-rn-item.is-taken { background:var(--ds-surface-2);color:var(--ds-ink-muted); }
+.fedc-rn-item.is-taken label { cursor:not-allowed; }
+.fedc-rn-owner   { margin-left:auto;font-size:11px;font-weight:600;color:#b45309;background:#fef3c7;border-radius:10px;padding:2px 8px;white-space:nowrap; }
+.fedc-rn-summary { display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;font-size:12px; }
+.fedc-rn-summary span { border-radius:10px;padding:2px 9px;font-weight:600; }
+.fedc-rn-sum-taken { background:#fef3c7;color:#b45309; }
+.fedc-rn-sum-free  { background:#dcfce7;color:#15803d; }
+.fedc-rn-sum-sel   { background:#dbeafe;color:#1d4ed8; }
 </style>
 @endpush
 
@@ -116,13 +127,27 @@
                  :backUrl="route('admin.coe.faculty-examination-drive.index')"
                  :items="['Setup', 'COE', 'Examination Management', 'Map Faculty to Examination Drive']" />
 
+    {{-- Sargam master export of this subject's saved components (facultySetupExport):
+         CSV / Excel / PDF download and a branded landscape Print. --}}
+    @php $setupExport = fn (string $format) => route('admin.coe.faculty-examination-drive.setup.export', ['id' => $drive['id'], 'format' => $format, 'subject' => $subjectPk]); @endphp
     <div class="fedc-toolbar">
-        <button type="button" class="fedc-tool-btn" id="fedcDownloadBtn">
-            <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-        </button>
-        <button type="button" class="fedc-tool-btn" id="fedcPrintBtn">
+        <div class="dropdown">
+            <button type="button" class="fedc-tool-btn dropdown-toggle" id="fedcDownloadBtn"
+                    data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="fedcDownloadBtn">
+                <li><a class="dropdown-item" href="{{ $setupExport('csv') }}">
+                    <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i> CSV</a></li>
+                <li><a class="dropdown-item" href="{{ $setupExport('excel') }}">
+                    <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Excel (.xlsx)</a></li>
+                <li><a class="dropdown-item" href="{{ $setupExport('pdf') }}">
+                    <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF</a></li>
+            </ul>
+        </div>
+        <a href="{{ $setupExport('print') }}" target="_blank" rel="noopener" class="fedc-tool-btn text-decoration-none" id="fedcPrintBtn" title="Print">
             <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
-        </button>
+        </a>
     </div>
 
     {{-- Drive info bar --}}
@@ -378,7 +403,7 @@
 
 {{-- ── Code picker: Select Roll Number / Select Unique Codes (list built by JS) ── --}}
 <div class="modal fade" id="fedcRollModal" tabindex="-1" aria-labelledby="fedcRollModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" style="max-width:360px">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:460px">
         <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header border-0 pb-1">
                 <h5 class="modal-title fw-bold" id="fedcRollModalLabel">Select Roll Number</h5>
@@ -386,6 +411,8 @@
             </div>
             <div class="modal-body pt-2">
                 <p class="small text-muted mb-2" id="fedcRnFor"></p>
+                {{-- Assigned to other faculty on this component / still available / selected now --}}
+                <div class="fedc-rn-summary" id="fedcRnSummary"></div>
                 <div class="fedc-rn-ranges" id="fedcRnRanges"></div>
                 <div class="fedc-rn-list" id="fedcRnList"></div>
                 <div class="alert alert-warning small mb-0 d-none" id="fedcRnEmpty"></div>
@@ -618,6 +645,11 @@ $(function () {
         $('.fedc-af-tab[data-tab="single"]').click();
         $('#fedcFacSearch').val('').trigger('input');
         $('#fedcAssignConfirm').text('Add Roll Number');
+        // Faculty already on this row are ticked in the Single Faculty list.
+        var onRow = [$activeRowBtn.data('faculty')].concat($activeRowBtn.data('sub') || []).filter(Boolean);
+        $('#fedcFacList .fedc-fac-item').each(function () {
+            $(this).toggleClass('is-assigned', onRow.indexOf($(this).data('faculty')) !== -1);
+        });
 
         // Multi tab starts from the row's current names (one empty row when none).
         var current = [];
@@ -672,8 +704,14 @@ $(function () {
             return;
         }
 
-        setRowFaculty($activeRowBtn, [name]);
-        persistRowFaculty($activeRowBtn, [name], false);
+        // A name already on the row (e.g. picked on the Multi Faculty tab): keep every
+        // assigned faculty and only open this one's roll numbers. Replacing the list
+        // with [name] here dropped the other faculty when roll numbers were assigned.
+        var assigned = [$activeRowBtn.data('faculty')].concat($activeRowBtn.data('sub') || []).filter(Boolean);
+        if (assigned.indexOf(name) === -1) {
+            setRowFaculty($activeRowBtn, [name]);
+            persistRowFaculty($activeRowBtn, [name], false);
+        }
         bootstrap.Modal.getOrCreateInstance($assignModal[0]).hide();
         openRollModal($activeRowBtn, name);
     });
@@ -810,6 +848,17 @@ $(function () {
             title: 'Select Unique Codes', forText: 'Unique Participant Codes for ' + name,
             items: UNIQUE_CODES.map(function (c) { return { value: c, label: '<strong>' + esc(c) + '</strong>' }; }),
             picked: $tr.data('uniq') || [],
+            // Codes picked on the other Multi Faculty rows of this component.
+            // Codes of other faculty: on this subject's other component rows, and on the
+            // other Multi Faculty rows of this one (not yet applied to the row).
+            taken: (function () {
+                var taken = subjectTaken('uniq', name, $activeRowBtn);
+                $('#fedcMultiBody .fedc-multi-row').not($tr).each(function () {
+                    var who = $.trim($(this).find('.fedc-multi-fac').val() || '');
+                    if (who && who !== name) { (($(this).data('uniq')) || []).forEach(function (c) { taken[c] = who; }); }
+                });
+                return taken;
+            })(),
             empty: 'No Unique Participant Codes have been generated for this drive\'s course yet (COE › Master Data › Unique Participant Code).',
             onAssign: function (picked) {
                 setMultiCodes($tr, picked);
@@ -823,6 +872,27 @@ $(function () {
     });
 
     /* ── Code picker (Select Roll Number / Select Unique Codes) ─────────── */
+    // {faculty: [codes]} -> {code: faculty} for every faculty except `name`.
+    /* Codes held by other faculty on any component row of this subject (the page shows
+       one subject): {code: faculty}. kind = 'codes' (roll numbers) or 'uniq'.
+       $skipBtn: a row whose own list is being edited elsewhere (Multi Faculty tab). */
+    function subjectTaken(kind, name, $skipBtn) {
+        var taken = {};
+        $('#fedcMapBody .fedc-fac-open-btn').each(function () {
+            if ($skipBtn && this === $skipBtn[0]) { return; }
+            $.extend(taken, takenBy($(this).data(kind) || {}, name));
+        });
+        return taken;
+    }
+
+    function takenBy(byFaculty, name) {
+        var taken = {};
+        Object.keys(byFaculty).forEach(function (who) {
+            if (who === name || !Array.isArray(byFaculty[who])) { return; }
+            byFaculty[who].forEach(function (c) { taken[c] = who; });
+        });
+        return taken;
+    }
     function esc(v) { return $('<div>').text(v == null ? '' : v).html(); }
     var picker = null; // { onAssign, onClose } of the open window
     var $pickModal = $('#fedcRollModal');
@@ -832,10 +902,18 @@ $(function () {
         $('#fedcRollModalLabel').text(opts.title);
         $('#fedcRnFor').text(opts.forText);
         var $list = $('#fedcRnList').empty(), $ranges = $('#fedcRnRanges').empty(), n = opts.items.length;
+        // opts.taken: {code: faculty} already given to another faculty in this subject.
+        // Those codes are listed but cannot be ticked: one code, one faculty per component.
+        var taken = opts.taken || {};
         opts.items.forEach(function (item, i) {
-            $list.append('<div class="fedc-rn-item"><input type="checkbox" class="fedc-rn-check" id="fedc_pick_' + i + '" value="' + esc(item.value) + '"' +
-                (opts.picked.indexOf(item.value) !== -1 ? ' checked' : '') + '><label for="fedc_pick_' + i + '">' + item.label + '</label></div>');
+            var owner = taken[item.value];
+            $list.append('<div class="fedc-rn-item' + (owner ? ' is-taken' : '') + '"><input type="checkbox" class="fedc-rn-check" id="fedc_pick_' + i + '" value="' + esc(item.value) + '"' +
+                (!owner && opts.picked.indexOf(item.value) !== -1 ? ' checked' : '') + (owner ? ' disabled' : '') +
+                '><label for="fedc_pick_' + i + '">' + item.label + '</label>' +
+                (owner ? '<span class="fedc-rn-owner" title="Assigned to ' + esc(owner) + '">Assigned to ' + esc(owner) + '</span>' : '') + '</div>');
         });
+        picker.takenCount = opts.items.filter(function (item) { return taken[item.value]; }).length;
+        updatePickSummary();
         // Range quick-select tabs, in steps of 50 over the list.
         for (var lo = 0; lo < n; lo += 50) {
             $ranges.append('<span class="fedc-rn-range" data-range="' + lo + '-' + Math.min(lo + 50, n) + '">' + (lo + 1) + '-' + Math.min(lo + 50, n) + '</span>');
@@ -847,6 +925,18 @@ $(function () {
         setTimeout(function () { bootstrap.Modal.getOrCreateInstance($pickModal[0]).show(); }, 300);
     }
 
+    function updatePickSummary() {
+        if (!picker) { return; }
+        var total = $('#fedcRnList .fedc-rn-check').length;
+        var sel = $('#fedcRnList .fedc-rn-check:checked').length;
+        var free = total - picker.takenCount - sel;
+        $('#fedcRnSummary').toggleClass('d-none', total === 0).html(
+            '<span class="fedc-rn-sum-taken">' + picker.takenCount + ' assigned to other faculty</span>' +
+            '<span class="fedc-rn-sum-sel">' + sel + ' selected</span>' +
+            '<span class="fedc-rn-sum-free">' + free + ' remaining</span>');
+    }
+    $('#fedcRnList').on('change', '.fedc-rn-check', updatePickSummary);
+
     $pickModal.on('hidden.bs.modal', function () {
         var done = picker; picker = null;
         if (done && done.onClose) { done.onClose(); }
@@ -856,14 +946,17 @@ $(function () {
         $('.fedc-rn-range').removeClass('is-active');
         $(this).addClass('is-active');
         var range = String($(this).data('range'));
+        // Codes assigned to another faculty stay unticked whatever range is picked.
         var $checks = $('#fedcRnList .fedc-rn-check');
         if (range === 'all' || range === 'none') {
-            $checks.prop('checked', range === 'all');
+            $checks.not(':disabled').prop('checked', range === 'all');
+            updatePickSummary();
             return;
         }
         var parts = range.split('-');
         var lo = parseInt(parts[0], 10), hi = parseInt(parts[1], 10);
-        $checks.each(function (i) { $(this).prop('checked', i >= lo && i < hi); });
+        $checks.each(function (i) { if (!this.disabled) { $(this).prop('checked', i >= lo && i < hi); } });
+        updatePickSummary();
     });
 
     $('#fedcRnAssign').on('click', function () {
@@ -880,6 +973,7 @@ $(function () {
             title: 'Select Roll Number', forText: 'OTs for ' + name,
             items: ROLL_NUMBERS.map(function (r) { return { value: r.code, label: '<strong>' + esc(r.code) + '</strong> &mdash; ' + esc(r.name) }; }),
             picked: Array.isArray(current) ? current : [],
+            taken: subjectTaken('codes', name),
             empty: 'Roll numbers have not been generated for this drive\'s course yet (COE › Examination Management › Roll Numbers).',
             onAssign: function (picked) {
                 var codes = $.extend({}, $btn.data('codes') || {});

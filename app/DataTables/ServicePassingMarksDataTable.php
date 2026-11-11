@@ -24,6 +24,7 @@ class ServicePassingMarksDataTable extends DataTable
             ->editColumn('service_master_pk', fn ($row) => $row->service
                 ? '<span title="' . e($row->service->service_name) . '">' . e($row->service->service_short_name) . '</span>'
                 : '-')
+            ->addColumn('service_name', fn ($row) => $row->service->service_name ?? '-')
             ->editColumn('passing_marks', fn ($row) => SubjectMaxMarksDataTable::marks($row->passing_marks))
             ->addColumn('status', fn ($row) => $this->statusCell((bool) $row->active_inactive))
             ->addColumn('actions', fn ($row) => $this->actionsCell((bool) $row->active_inactive))
@@ -35,6 +36,12 @@ class ServicePassingMarksDataTable extends DataTable
             ->filterColumn('service_master_pk', fn ($q, $kw) => $q->whereHas('service', fn ($qq) => $qq
                 ->where('service_name', 'like', '%' . $kw . '%')
                 ->orWhere('service_short_name', 'like', '%' . $kw . '%')))
+            ->filterColumn('service_name', fn ($q, $kw) => $q->whereHas('service', fn ($qq) => $qq
+                ->where('service_name', 'like', '%' . $kw . '%')))
+            ->orderColumn('service_name', fn ($q, $dir) => $q->orderBy(
+                ServiceMaster::select('service_name')->whereColumn('service_master.pk', 'service_passing_marks_master.service_master_pk'),
+                $dir
+            ))
             ->orderColumn('service_master_pk', fn ($q, $dir) => $q->orderBy(
                 ServiceMaster::select('service_short_name')->whereColumn('service_master.pk', 'service_passing_marks_master.service_master_pk'),
                 $dir
@@ -59,6 +66,7 @@ class ServicePassingMarksDataTable extends DataTable
         return [
             Column::computed('DT_RowIndex')->title('S. No.')->addClass('coe-col-sno'),
             Column::make('service_master_pk')->title('Service'),
+            Column::make('service_name')->title('Service Name'),
             Column::make('passing_marks')->title('Passing Marks'),
             Column::computed('status')->title('Status')->addClass('coe-col-center coe-cell-status'),
             Column::computed('actions')->title('Action')->addClass('coe-cell-actions'),

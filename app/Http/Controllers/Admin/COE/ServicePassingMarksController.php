@@ -53,6 +53,10 @@ class ServicePassingMarksController extends Controller
                     'type' => 'number', 'placeholder' => '100', 'required' => true, 'maxValue' => 9999.99,
                 ],
             ],
+            // Shown in the grid and exports only, not in the Add / Edit form.
+            'extraColumns' => [
+                ['key' => 'service_name', 'name' => 'service_name', 'column' => 'Service Name', 'after' => 'service'],
+            ],
             'endpoints' => [
                 'list' => route('admin.coe.service-passing-marks.index'),
                 'export' => route('admin.coe.service-passing-marks.export', ['format' => '__FORMAT__']),
@@ -149,9 +153,11 @@ class ServicePassingMarksController extends Controller
             ServicePassingMarksMaster::query()->with('service')->orderByDesc('pk'),
             [
                 'sno' => $this->coeSnoColumn(),
-                'service' => ['heading' => 'Service', 'width' => '48%', 'align' => 'left',
-                    'value' => fn ($row) => $row->service ? $row->service->service_short_name . ' - ' . $row->service->service_name : ''],
-                'marks' => ['heading' => 'Passing Marks', 'width' => '20%', 'align' => 'center',
+                'service' => ['heading' => 'Service', 'width' => '16%', 'align' => 'left',
+                    'value' => fn ($row) => $row->service->service_short_name ?? ''],
+                'service_name' => ['heading' => 'Service Name', 'width' => '40%', 'align' => 'left',
+                    'value' => fn ($row) => $row->service->service_name ?? ''],
+                'marks' => ['heading' => 'Passing Marks', 'width' => '16%', 'align' => 'center',
                     'value' => fn ($row) => SubjectMaxMarksDataTable::marks($row->passing_marks)],
                 'status' => $this->coeStatusColumn(),
             ],
