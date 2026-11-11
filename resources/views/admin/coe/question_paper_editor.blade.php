@@ -71,6 +71,7 @@
                             </div>
                             <input type="checkbox" class="form-check-input coe-tpl-card__check"
                                    value="{{ $key }}" data-title="{{ $template['title'] }}"
+                                   data-ready="{{ empty($template['ready']) ? 0 : 1 }}"
                                    aria-labelledby="qpaperTplName_{{ $key }}"
                                    @checked($startTemplate === $key)>
                         </div>
@@ -372,7 +373,9 @@ $(function () {
             showError('Write the question paper before uploading it.');
             return;
         }
-        if (UNTOUCHED[loaded] && !isEdited()) {
+        // A ready template (the OMR sheet) is complete as loaded.
+        var ready = loaded === 'template' && current && $checks.filter('[value="' + current + '"]').data('ready') === 1;
+        if (UNTOUCHED[loaded] && !isEdited() && !ready) {
             showError(UNTOUCHED[loaded]);
             return;
         }

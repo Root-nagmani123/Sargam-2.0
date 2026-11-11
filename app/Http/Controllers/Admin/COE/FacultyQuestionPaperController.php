@@ -51,6 +51,13 @@ class FacultyQuestionPaperController extends Controller
             'description' => 'Ideal for long-form case studies and scenario-based questions.',
             'meta' => '2 pages • 200 marks',
         ],
+        // ready: complete as filled from the paper, so it may be uploaded unedited.
+        'omr' => [
+            'title' => 'OMR Answer Sheet',
+            'description' => 'A bubble answer sheet for objective exams, filled from this paper.',
+            'meta' => '100 questions • 4 options',
+            'ready' => true,
+        ],
     ];
 
     public function __construct(
