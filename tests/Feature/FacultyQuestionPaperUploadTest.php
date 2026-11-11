@@ -131,6 +131,35 @@ class FacultyQuestionPaperUploadTest extends TestCase
             ->assertDontSee('name="question_paper"', false);
     }
 
+    public function test_sets_page_opens_from_the_editor_in_either_mode_and_locks_with_it(): void
+    {
+        $sets = route('admin.coe.faculty-question-paper.sets', $this->map->id);
+
+        $this->actingAs($this->faculty)
+            ->get(route('admin.coe.faculty-question-paper.create', $this->map->id))
+            ->assertSee($sets, false);
+
+        $this->actingAs($this->faculty)->get($sets)
+            ->assertOk()
+            ->assertSee('Create multiple paper sets')
+            ->assertSee('data-mode="shuffled"', false);
+        $this->actingAs($this->faculty)->get($sets.'?mode=independent')
+            ->assertSee('data-mode="independent"', false);
+        $this->actingAs($this->faculty)->get($sets.'?mode=other')
+            ->assertSee('data-mode="shuffled"', false);
+
+        $this->actingAs($this->faculty)
+            ->get(route('admin.coe.faculty-question-paper.sets', $this->map->id + 100000))
+            ->assertNotFound();
+        $this->actingAs($this->nonFaculty())->get($sets)->assertForbidden();
+
+        // Locked exactly when the editor is (here: the CC has not approved the drive).
+        $this->map->drive->update(['cc_status' => ExaminationDrive::CC_PENDING]);
+        $this->actingAs($this->faculty)->get($sets)
+            ->assertRedirect(route('admin.coe.faculty-question-paper.index'))
+            ->assertSessionHas('error', fn ($m) => str_contains($m, 'Course Coordinator has not approved'));
+    }
+
     public function test_editor_page_is_guarded_and_stamped_with_the_writer(): void
     {
         $html = $this->actingAs($this->faculty)

@@ -105,8 +105,79 @@ class FacultyQuestionPaperController extends Controller
             'listUrl' => route('admin.coe.faculty-question-paper.index'),
             'saveUrl' => route('admin.coe.faculty-question-paper.upload', $paper),
             'hiddenUrl' => route('admin.coe.faculty-question-paper.hidden', $paper),
+            'setsUrl' => route('admin.coe.faculty-question-paper.sets', $paper),
             'watermark' => $this->paperStamp($request),
         ]);
+    }
+
+    /**
+     * Create multiple paper sets: one master paper shuffled per set, or
+     * different questions in each set. ?mode=independent opens the second.
+     * Same access as Add Question Paper.
+     *
+     * shortcut: design-first - the paper's facts are real but the questions are
+     * SAMPLE data and nothing is saved; replace sampleSets() with stored
+     * sections/questions (and guard the page like the editor) when sets are wired.
+     */
+    public function sets(Request $request, int $paper)
+    {
+        $row = $this->papers->findForFaculty($this->facultyPk(), $paper);
+        abort_if($row === null, 404);
+
+        if (! $row['editable']) {
+            return redirect()->route('admin.coe.faculty-question-paper.index')
+                ->with('error', $this->papers->lockedMessage($row));
+        }
+
+        return view('admin.coe.faculty_question_paper.sets', [
+            'paper' => $row,
+            'mode' => $request->query('mode') === 'independent' ? 'independent' : 'shuffled',
+            'editorUrl' => route('admin.coe.faculty-question-paper.create', $paper),
+            'sample' => $this->sampleSets(),
+        ]);
+    }
+
+    /**
+     * SAMPLE blueprint and questions for the sets page (see sets()).
+     *
+     * @return array{sections: list<array{title:string, kind:string, count:int, marks:int}>, master: list<array{s:int, text:string}>, independent: list<list<array{s:int, text:string}>>}
+     */
+    private function sampleSets(): array
+    {
+        $master = [
+            ['s' => 0, 'text' => 'Explain the relationship between law and ethics.'],
+            ['s' => 0, 'text' => 'What is meant by integrity in public service?'],
+            ['s' => 0, 'text' => 'Define conflict of interest with one example.'],
+            ['s' => 0, 'text' => 'Distinguish between accountability and responsibility.'],
+            ['s' => 0, 'text' => 'What is the role of a code of conduct?'],
+            ['s' => 1, 'text' => 'Discuss ethical decision-making in public administration.'],
+            ['s' => 1, 'text' => 'Examine how transparency strengthens institutional accountability.'],
+            ['s' => 1, 'text' => 'Analyse a conflict between legal duty and moral judgement.'],
+            ['s' => 1, 'text' => 'Evaluate the role of integrity in preventing corruption.'],
+            ['s' => 1, 'text' => 'Explain the principles of natural justice with suitable examples.'],
+        ];
+
+        return [
+            'sections' => [
+                ['title' => 'Section A · Short answers', 'kind' => 'short-answer', 'count' => 5, 'marks' => 4],
+                ['title' => 'Section B · Long answers', 'kind' => 'long-answer', 'count' => 5, 'marks' => 16],
+            ],
+            'master' => $master,
+            // Independent mode: Set A complete, Set B part-built, the rest empty.
+            'independent' => [
+                $master,
+                [
+                    ['s' => 0, 'text' => 'Define the concept of administrative discretion.'],
+                    ['s' => 0, 'text' => 'Explain the importance of impartiality in public service.'],
+                    ['s' => 0, 'text' => 'What is meant by the rule of law?'],
+                    ['s' => 0, 'text' => 'Describe one safeguard against misuse of public office.'],
+                    ['s' => 0, 'text' => 'How does a citizen charter promote accountability?'],
+                    ['s' => 1, 'text' => 'Discuss the ethical challenges of using discretion in governance.'],
+                    ['s' => 1, 'text' => 'Evaluate the relationship between civil service neutrality and democracy.'],
+                    ['s' => 1, 'text' => 'Analyse the role of ethical leadership in organisational culture.'],
+                ],
+            ],
+        ];
     }
 
     /**

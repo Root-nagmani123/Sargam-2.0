@@ -1475,3 +1475,276 @@
 .coe-page .vsp-podium      { display:flex;align-items:center;justify-content:center;gap:8px;width:262px;margin:10px auto 0;
                              padding:6px 10px;border-radius:4px;background:#eaecf0;color:#667085;font-size:13px;font-weight:600;letter-spacing:.3px; }
 .coe-page .vsp-dot         { width:14px;height:14px;border-radius:3px;display:inline-block;vertical-align:middle;margin-right:4px; }
+
+/* ============================================================================
+   Create multiple paper sets (faculty) — admin/coe/faculty-question-paper/{id}/sets
+   One page, two modes: shuffled (one master paper, order varies per set) and
+   independent (different questions per set). [data-only] blocks show for the
+   mode on the root's data-mode only. Summary card: .coe-qp-summary above.
+   ========================================================================= */
+.coe-sets { --coe-brand-soft: #e4ebff; --coe-sets-ink: #002e64; }
+
+.coe-sets[data-mode="shuffled"] [data-only="independent"],
+.coe-sets[data-mode="independent"] [data-only="shuffled"] { display: none !important; }
+
+.coe-sets .coe-sets__lede { margin: -0.75rem 0 1rem; font-size: 0.875rem; color: #475467; }
+
+.coe-sets .coe-sets__title { margin: 0 0 0.25rem; font-size: 1.125rem; font-weight: 600; color: #101828; }
+.coe-sets .coe-sets__text { margin: 0; font-size: 0.8125rem; color: #475467; }
+.coe-sets .coe-sets__label { margin: 0 0 0.5rem; font-size: 0.8125rem; font-weight: 500; color: #344054; }
+.coe-sets .coe-sets__hint { margin: 0.5rem 0 0; font-size: 0.75rem; color: #475467; }
+
+.coe-sets .coe-sets__head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.coe-sets .coe-sets__actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.coe-sets .coe-sets__actions .btn { display: inline-flex; align-items: center; justify-content: center; }
+
+/* ── Set creation mode: the whole card is the radio's label ── */
+.coe-sets .coe-sets-mode {
+    display: flex;
+    gap: 1rem;
+    height: 100%;
+    margin: 0;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--coe-control-line);
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.coe-sets .coe-sets-mode.is-selected { border-color: var(--coe-brand); background: var(--coe-brand-soft); }
+.coe-sets .coe-sets-mode:focus-within { box-shadow: var(--ds-focus-ring); }
+.coe-sets .coe-sets-mode .form-check-input { flex-shrink: 0; margin-top: 0.2rem; }
+.coe-sets .coe-sets-mode__title { display: block; font-size: 0.9375rem; font-weight: 600; color: #101828; }
+.coe-sets .coe-sets-mode__text { display: block; margin-top: 0.25rem; font-size: 0.8125rem; color: #475467; }
+
+/* ── Number of sets − 4 + and the set label chips ── */
+.coe-sets .coe-sets-count { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 2.25rem; }
+.coe-sets .coe-sets-count__group { display: flex; align-items: center; gap: 1rem; }
+
+.coe-sets .coe-sets-stepper {
+    display: inline-flex;
+    align-items: center;
+    height: var(--ds-control-h);
+    border: 1px solid var(--coe-control-line);
+    border-radius: 8px;
+    background: #fff;
+}
+
+.coe-sets .coe-sets-stepper button {
+    width: 2.75rem;
+    height: 100%;
+    border: 0;
+    background: none;
+    color: var(--coe-brand);
+    font-size: 1.125rem;
+    font-weight: 500;
+}
+
+.coe-sets .coe-sets-stepper button:disabled { color: #98a2b3; cursor: not-allowed; }
+.coe-sets .coe-sets-stepper output { min-width: 3.5rem; text-align: center; font-size: 0.875rem; font-weight: 600; color: #344054; }
+
+.coe-sets .coe-sets-chips { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+
+.coe-sets .coe-sets-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.25rem;
+    height: 2.125rem;
+    padding: 0 0.5rem;
+    border-radius: 8px;
+    background: var(--coe-brand-soft);
+    color: var(--coe-brand);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+/* ── Notices: info (blue) by default, .is-warn (amber) when sets need work ── */
+.coe-sets .coe-sets-notice {
+    margin: 1.25rem 0 0;
+    padding: 0.8125rem 1.125rem;
+    border-radius: 8px;
+    background: var(--coe-brand-soft);
+    color: var(--coe-sets-ink);
+    font-size: 0.8125rem;
+}
+
+.coe-sets .coe-sets-notice.is-warn { background: var(--coe-warn-soft); color: #344054; }
+.coe-sets #setsNotice { margin: 1rem 0; }
+
+/* ── Set cards (buttons: click to preview / edit that set) ── */
+.coe-sets .coe-sets-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    width: 100%;
+    height: 100%;
+    padding: 0.8125rem 1.0625rem;
+    border: 1px solid var(--coe-control-line);
+    border-radius: 8px;
+    background: #fff;
+    text-align: left;
+}
+
+.coe-sets .coe-sets-card:hover { border-color: #c9d7ea; }
+.coe-sets .coe-sets-card.is-selected { border-color: var(--coe-brand); background: var(--coe-brand-soft); }
+.coe-sets .coe-sets-card:focus-visible { outline: 0; box-shadow: var(--ds-focus-ring); }
+.coe-sets .coe-sets-card__head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+.coe-sets .coe-sets-card__name { font-size: 1rem; font-weight: 600; color: #101828; }
+.coe-sets .coe-sets-card__line { font-size: 0.8125rem; color: #344054; }
+.coe-sets .coe-sets-card__note { font-size: 0.75rem; color: #475467; }
+.coe-sets .coe-sets-card.is-selected .coe-sets-card__note { font-weight: 500; color: var(--coe-brand); }
+
+.coe-sets .coe-sets-badge {
+    padding: 0.25rem 0.625rem;
+    border-radius: 8px;
+    color: var(--coe-sets-ink);
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.coe-sets .coe-sets-badge.is-ready { background: var(--coe-success-soft); }
+.coe-sets .coe-sets-badge.is-draft { background: var(--coe-warn-soft); }
+.coe-sets .coe-sets-badge.is-none { background: #eaecf0; }
+
+/* ── Panels: paper preview / question editor, and the side panel ── */
+.coe-sets .coe-sets-panel {
+    height: 100%;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--coe-control-line);
+    border-radius: 8px;
+    background: #fff;
+}
+
+.coe-sets .coe-sets-eyebrow {
+    margin: 0 0 0.375rem;
+    color: var(--coe-brand);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.coe-sets .coe-sets-panel__title { margin: 0; font-size: 1.25rem; font-weight: 600; color: #101828; }
+.coe-sets .coe-sets-panel__subtitle { margin: 0; font-size: 1rem; font-weight: 600; color: #101828; }
+.coe-sets .coe-sets-panel__marks { margin: 0.25rem 0 0; font-size: 0.9375rem; font-weight: 600; color: #101828; white-space: nowrap; }
+
+.coe-sets .coe-sets-instructions {
+    margin: 1.25rem 0 0;
+    padding: 0.875rem;
+    border-radius: 8px;
+    background: var(--coe-brand-soft);
+    color: var(--coe-sets-ink);
+    font-size: 0.8125rem;
+}
+
+.coe-sets .coe-sets-section {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1.25rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    background: #eaecf0;
+    color: #101828;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.coe-sets .coe-sets-section--edit { background: var(--coe-brand-soft); }
+.coe-sets .coe-sets-section__marks { font-size: 0.8125rem; font-weight: 500; color: #344054; white-space: nowrap; }
+
+.coe-sets .coe-sets-qs { margin: 0; padding: 0; list-style: none; }
+
+.coe-sets .coe-sets-qs li {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.5625rem 0.75rem;
+    border-bottom: 1px solid #eaecf0;
+    color: #344054;
+    font-size: 0.8125rem;
+}
+
+.coe-sets .coe-sets-qs__num { flex: 0 0 2rem; color: var(--coe-brand); font-size: 0.75rem; font-weight: 500; }
+.coe-sets .coe-sets-qs__text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.coe-sets .coe-sets-qs__marks { flex-shrink: 0; font-weight: 500; white-space: nowrap; }
+
+.coe-sets .coe-sets-qs__edit,
+.coe-sets .coe-sets-link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--coe-brand);
+    font-weight: 500;
+}
+
+.coe-sets .coe-sets-qs__edit { flex-shrink: 0; font-size: 0.75rem; }
+.coe-sets .coe-sets-link { margin-top: 1rem; font-size: 0.875rem; }
+.coe-sets :is(.coe-sets-qs__edit, .coe-sets-link):hover { text-decoration: underline; }
+
+.coe-sets .coe-sets-remaining { margin-top: 1rem; padding: 0.5625rem 1rem; border-radius: 6px; background: var(--coe-warn-soft); }
+.coe-sets .coe-sets-remaining strong { display: block; color: #344054; font-size: 0.875rem; font-weight: 500; }
+.coe-sets .coe-sets-remaining span { color: #475467; font-size: 0.75rem; }
+
+.coe-sets .coe-sets-foot { margin: 1rem 0 0; color: #475467; font-size: 0.75rem; }
+
+/* Shuffled: Set X question → master question */
+.coe-sets .coe-sets-map { width: 100%; margin-top: 1rem; font-size: 0.8125rem; }
+
+.coe-sets .coe-sets-map th {
+    padding: 0.5rem 0.75rem;
+    background: #eaecf0;
+    color: #344054;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.coe-sets .coe-sets-map th:first-child { border-radius: 4px 0 0 4px; }
+.coe-sets .coe-sets-map th:last-child { border-radius: 0 4px 4px 0; }
+.coe-sets .coe-sets-map td { padding: 0.375rem 0.75rem; color: #344054; }
+.coe-sets .coe-sets-map td + td { color: var(--coe-brand); font-weight: 500; }
+
+.coe-sets .coe-sets-guide {
+    margin-top: 1.5rem;
+    padding: 0.875rem 1rem;
+    border-radius: 8px;
+    background: var(--coe-brand-soft);
+    color: var(--coe-sets-ink);
+    font-size: 0.8125rem;
+}
+
+.coe-sets .coe-sets-guide strong { display: block; margin-bottom: 0.5rem; color: #101828; font-size: 0.875rem; font-weight: 600; }
+.coe-sets .coe-sets-guide ul { margin: 0; padding-left: 1.1rem; list-style: disc; }
+
+/* Independent: Set X checklist */
+.coe-sets .coe-sets-progress { height: 8px; margin-top: 1.25rem; border-radius: 4px; background: #eaecf0; }
+.coe-sets .coe-sets-progress .progress-bar { background: var(--coe-brand); }
+.coe-sets .coe-sets-big { margin: 0.75rem 0 0; color: #101828; font-size: 1.125rem; font-weight: 600; }
+.coe-sets .coe-sets-check { margin: 1.25rem 0 0; padding: 0; list-style: none; }
+.coe-sets .coe-sets-check li { padding: 0.75rem 0; border-bottom: 1px solid #eaecf0; }
+.coe-sets .coe-sets-check strong { display: block; color: #344054; font-size: 0.8125rem; font-weight: 500; }
+.coe-sets .coe-sets-check span { color: #475467; font-size: 0.75rem; }
+.coe-sets .coe-sets-check span.is-done { color: var(--coe-brand); }
+
+/* ── Footer: N of N sets ready · Back / Save draft · Review all ── */
+.coe-sets .coe-sets-footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
+.coe-sets .coe-sets-footer__count { margin: 0; color: var(--coe-sets-ink); font-size: 0.875rem; font-weight: 600; }
+.coe-sets .coe-sets-footer__note { margin: 0; color: #475467; font-size: 0.75rem; }
+
+@media (max-width: 575.98px) {
+    .coe-sets .coe-sets-panel { padding: 1rem; }
+    .coe-sets .coe-sets-qs li { flex-wrap: wrap; }
+    .coe-sets .coe-sets-qs__text { flex-basis: calc(100% - 2.75rem); }
+    .coe-sets .coe-sets-qs__marks { margin-left: 2.75rem; }
+}

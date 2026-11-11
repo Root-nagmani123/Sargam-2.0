@@ -6,7 +6,8 @@
      $saveUrl, $hiddenUrl (where each cover of the paper is reported, for the
      logs), $watermark (who is writing: stamped over the sheet), $startsFromCopy
      (optional: $editorHtml is someone else's paper, to be changed before upload —
-     Rajbhasha's first translation). Guarded like the viewer: CoePaperGuard. --}}
+     Rajbhasha's first translation), $setsUrl (optional: the faculty's Create
+     multiple sets page). Guarded like the viewer: CoePaperGuard. --}}
 @extends('admin.layouts.master')
 
 @section('title', $pageTitle)
@@ -29,7 +30,11 @@
 @section('setup_content')
 <div class="container-fluid coe-page coe-qp-add">
     <x-breadcrum :title="$pageTitle" :showBack="true"
-                 :items="['Setup', 'COE', 'Question Paper Management', $pageTitle]" />
+                 :items="['Setup', 'COE', 'Question Paper Management', $pageTitle]">
+        @if (! empty($setsUrl))
+            <a href="{{ $setsUrl }}" class="btn coe-btn coe-btn-cancel coe-btn-cancel--brand d-inline-flex align-items-center">Create multiple sets</a>
+        @endif
+    </x-breadcrum>
 
     <x-session_message />
 
