@@ -9,6 +9,7 @@ use App\Models\COE\LaptopResponse;
 use App\Models\COE\ScriberMaster;
 use App\Services\COE\LaptopDeclarationService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -104,12 +105,11 @@ class OtLaptopStatusController extends Controller
             return response()->json(['data' => []]);
         }
 
-        $rows = DB::table('student_master as sm')
-            ->leftJoin('coe_roll_numbers as rn', 'rn.student_master_pk', '=', 'sm.pk')
+        // Only OTs whose roll number has been generated for this course.
+        $rows = $this->numberedOn($courseId)
+            ->join('student_master as sm', 'sm.pk', '=', 'rn.student_master_pk')
             ->leftJoin('coe_laptop_responses as lr', 'lr.student_master_pk', '=', 'sm.pk')
-            ->where('sm.course_master_pk', $courseId)
-            // Roll-number order, the not-yet-numbered at the end — the grid's own order.
-            ->orderByRaw('rn.serial_number is null, rn.serial_number')
+            ->orderBy('rn.serial_number')
             ->orderBy('sm.display_name')
             ->get([
                 'sm.pk',
@@ -118,6 +118,7 @@ class OtLaptopStatusController extends Controller
                 'sm.middle_name',
                 'sm.last_name',
                 'sm.generated_OT_code',
+                'sm.ph',
                 'rn.roll_number',
                 'lr.pk as response_pk',
                 'lr.laptop_required',
@@ -137,6 +138,8 @@ class OtLaptopStatusController extends Controller
                 'name' => $this->studentName($row),
                 'code' => (string) ($row->generated_OT_code ?? ''),
                 'roll_number' => $row->roll_number,
+                // A scriber only for an OT with a disability (PwBD) category in their profile.
+                'pwbd' => LaptopDeclarationService::isPwbd($row->ph),
                 'answered' => $row->response_pk !== null,
                 'laptop_required' => $row->response_pk === null ? null : (int) $row->laptop_required,
                 'reason' => (string) ($row->reason ?? ''),
@@ -178,11 +181,13 @@ class OtLaptopStatusController extends Controller
         // on a different course entirely. All or nothing — one stray id saves none.
         if (! $this->participantsBelongTo($studentPks, (int) $validated['course'])) {
             $message = count($studentPks) === 1
-                ? 'That OT is not on the selected course.'
-                : 'One or more of those OTs are not on the selected course.';
+                ? 'That OT has no roll number on the selected course.'
+                : 'One or more of those OTs have no roll number on the selected course.';
 
             return response()->json(['message' => $message, 'errors' => ['student_master_pks' => [$message]]], 422);
         }
+
+        $declarations->assertScriberAllowed($studentPks, $validated);
 
         $hasDisability = (int) $validated['has_disability'] === LaptopResponse::HAS_DISABILITY_YES;
 
@@ -285,19 +290,22 @@ class OtLaptopStatusController extends Controller
         $scope = $this->resolveScope($request);
         $today = now()->toDateString();
 
-        $participants = DB::table('student_master')
-            ->join('course_master', 'course_master.pk', '=', 'student_master.course_master_pk')
-            ->leftJoin('coe_roll_numbers', 'coe_roll_numbers.student_master_pk', '=', 'student_master.pk')
+        // Only OTs with a generated roll number, on the course that roll number belongs to.
+        $participants = DB::table('coe_roll_numbers')
+            ->join('coe_roll_number_allocations', 'coe_roll_number_allocations.pk', '=', 'coe_roll_numbers.roll_number_allocation_pk')
+            ->join('course_master', 'course_master.pk', '=', 'coe_roll_number_allocations.course_master_pk')
+            ->join('student_master', 'student_master.pk', '=', 'coe_roll_numbers.student_master_pk')
             ->leftJoin('coe_laptop_responses', 'coe_laptop_responses.student_master_pk', '=', 'student_master.pk')
             ->where(fn ($q) => $this->applyScope($q, $scope, $today))
-            ->orderByRaw('coe_roll_numbers.serial_number is null, coe_roll_numbers.serial_number')
+            ->orderBy('course_master.course_name')
+            ->orderBy('coe_roll_numbers.serial_number')
             ->orderBy('student_master.display_name')
             ->get([
                 'student_master.pk',
                 'student_master.display_name',
                 'student_master.generated_OT_code',
                 'course_master.course_name',
-                'student_master.batch',
+                'coe_roll_number_allocations.batch',
                 'coe_roll_numbers.roll_number',
                 'coe_laptop_responses.laptop_required',
                 'coe_laptop_responses.reason',
@@ -357,7 +365,8 @@ class OtLaptopStatusController extends Controller
      * The grid's query: one row per recorded laptop status.
      *
      * Every join is one-to-at-most-one — student_master.pk is the key,
-     * coe_roll_numbers.student_master_pk is UNIQUE and service_master is a lookup — so
+     * coe_roll_numbers.student_master_pk is UNIQUE (and has one allocation) and
+     * service_master is a lookup — so
      * none can fan the result out and the row count stays the answer count.
      */
     private function listQuery(string $scope): Builder
@@ -384,9 +393,13 @@ class OtLaptopStatusController extends Controller
             ->join('student_master', 'student_master.pk', '=', 'coe_laptop_responses.student_master_pk')
             ->leftJoin('coe_scriber_master as primary_scriber', 'primary_scriber.pk', '=', 'coe_laptop_responses.primary_scriber_pk')
             ->leftJoin('coe_scriber_master as secondary_scriber', 'secondary_scriber.pk', '=', 'coe_laptop_responses.secondary_scriber_pk')
-            ->join('course_master', 'course_master.pk', '=', 'student_master.course_master_pk')
             ->leftJoin('service_master', 'service_master.pk', '=', 'student_master.service_master_pk')
             ->leftJoin('coe_roll_numbers', 'coe_roll_numbers.student_master_pk', '=', 'student_master.pk')
+            ->leftJoin('coe_roll_number_allocations', 'coe_roll_number_allocations.pk', '=', 'coe_roll_numbers.roll_number_allocation_pk')
+            // The course the OT's roll number is on — where the dialog recorded the answer —
+            // else student_master's own course.
+            ->join('course_master', 'course_master.pk', '=',
+                DB::raw('COALESCE(coe_roll_number_allocations.course_master_pk, student_master.course_master_pk)'))
             ->where(fn ($q) => $this->applyScope($q, $scope, $today))
             ->orderByRaw('coe_roll_numbers.roll_number is null, coe_roll_numbers.roll_number')
             ->orderBy('student_master.display_name')
@@ -421,22 +434,33 @@ class OtLaptopStatusController extends Controller
      */
     private function participantsBelongTo(array $studentPks, int $courseId): bool
     {
-        return DB::table('student_master')
-            ->whereIn('pk', $studentPks)
-            ->where('course_master_pk', $courseId)
+        return $this->numberedOn($courseId)
+            ->whereIn('rn.student_master_pk', $studentPks)
             ->count() === count($studentPks);
     }
 
     /**
-     * Courses the Add Single Record dialog offers: every course with at least one OT.
+     * The roll numbers generated for a course (coe_roll_numbers as rn), whatever their
+     * batch. Laptop status is recorded only for an OT who has one.
+     */
+    private function numberedOn(int $courseId): QueryBuilder
+    {
+        return DB::table('coe_roll_numbers as rn')
+            ->join('coe_roll_number_allocations as rna', 'rna.pk', '=', 'rn.roll_number_allocation_pk')
+            ->where('rna.course_master_pk', $courseId);
+    }
+
+    /**
+     * Courses the Add Single Record dialog offers: every course with roll numbers generated.
      *
      * Not restricted to courses already in the grid — the dialog exists to record an
      * answer that is missing, so that would make the first entry for a course impossible.
      */
     private function singleCourseOptions(): Collection
     {
-        return DB::table('student_master')
-            ->join('course_master', 'course_master.pk', '=', 'student_master.course_master_pk')
+        return DB::table('coe_roll_number_allocations')
+            ->join('coe_roll_numbers', 'coe_roll_numbers.roll_number_allocation_pk', '=', 'coe_roll_number_allocations.pk')
+            ->join('course_master', 'course_master.pk', '=', 'coe_roll_number_allocations.course_master_pk')
             ->select('course_master.pk', 'course_master.course_name', 'course_master.couse_short_name')
             ->distinct()
             ->orderBy('course_master.course_name')

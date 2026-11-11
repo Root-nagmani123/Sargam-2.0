@@ -179,13 +179,13 @@
                 </div>
                 <div class="modal-body coe-modal-body">
                     @if ($rooms->isEmpty())
-                        {{-- No examination rooms yet: rooms come from Venue Master (building, floor, capacity). --}}
+                        {{-- No examination rooms yet: rooms come from COE Room Master (building, floor, capacity). --}}
                         <div id="lssNoRooms" class="alert alert-warning d-flex align-items-start gap-2 mb-0" role="alert">
                             <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
                             <div>
                                 <strong>No examination rooms found.</strong>
                                 Laptop and scriber seats are marked on an examination room. Add rooms in
-                                <a href="{{ route('Venue-Master.index') }}">Venue Master</a>
+                                <a href="{{ route('admin.coe.room.index') }}">Room Master</a>
                                 with a building, a floor and a capacity first, then come back here.
                             </div>
                         </div>

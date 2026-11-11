@@ -6,6 +6,7 @@ use App\Models\COE\LaptopResponse;
 use App\Models\COE\ScriberMaster;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -199,6 +200,57 @@ class LaptopDeclarationService
     }
 
     /**
+     * A scriber is only for an OT whose profile records a disability (PwBD) category —
+     * student_master.ph (MD, HI, VI, LD, …). Refuses a "Scriber Required: Yes" for any
+     * other OT, whatever was answered for "OT with Disabilities".
+     *
+     * @param  array<int, int>  $studentPks
+     * @param  array<string, mixed>  $validated
+     */
+    public function assertScriberAllowed(array $studentPks, array $validated, bool $self = false): void
+    {
+        $asksScriber = (int) ($validated['has_disability'] ?? 0) === LaptopResponse::HAS_DISABILITY_YES
+            && (int) ($validated['scriber_required'] ?? 0) === 1;
+        if (! $asksScriber || ! ($names = $this->withoutPwbd($studentPks))) {
+            return;
+        }
+
+        throw ValidationException::withMessages(['scriber_required' => [$self
+            ? 'A scriber can be requested only if a disability (PwBD) category is recorded in your profile. Please contact the Examination Section.'
+            : 'A scriber can be requested only for an OT with a disability (PwBD) category in their profile. Not PwBD: ' . implode(', ', $names) . '.',
+        ]]);
+    }
+
+    /** student_master.ph values that mean "no disability category". */
+    private const NOT_PWBD = ['', 'NA', 'N/A', 'NO', 'NIL', 'NONE', '-', '0'];
+
+    /** Whether a student_master.ph value names a disability category. */
+    public static function isPwbd(?string $ph): bool
+    {
+        return ! in_array(strtoupper(trim((string) $ph)), self::NOT_PWBD, true);
+    }
+
+    /**
+     * Of $studentPks, the OTs with no disability category, as pk => name.
+     *
+     * @param  array<int, int>  $studentPks
+     * @return array<int, string>
+     */
+    private function withoutPwbd(array $studentPks): array
+    {
+        if ($studentPks === []) {
+            return [];
+        }
+
+        return DB::table('student_master')
+            ->whereIn('pk', $studentPks)
+            ->get(['pk', 'display_name', 'ph'])
+            ->reject(fn ($s) => self::isPwbd($s->ph))
+            ->mapWithKeys(fn ($s) => [(int) $s->pk => trim((string) $s->display_name) ?: ('OT #' . $s->pk)])
+            ->all();
+    }
+
+    /**
      * Validation for the dialog's Scribers Details rows.
      *
      * Every row carries its OT's Disability Type. Each picked scriber must hold the role
@@ -254,10 +306,22 @@ class LaptopDeclarationService
      */
     public function assignScribers(int $courseId, array $rows): void
     {
+        $withScriber = array_map(fn ($row) => (int) $row['student_master_pk'], array_filter($rows,
+            fn ($row) => ! empty($row['primary_scriber_pk']) || ! empty($row['secondary_scriber_pk'])));
+        if ($names = $this->withoutPwbd($withScriber)) {
+            throw ValidationException::withMessages(['scribers' => [
+                'A scriber can be assigned only to an OT with a disability (PwBD) category in their profile: ' . implode(', ', $names) . '.',
+            ]]);
+        }
+
         // student_master_pk => scriber_required, for the course's OTs with disabilities.
+        // On the course = holding a roll number generated for it, as in the dialog's OT list;
+        // an OT on a phase course through student_master_course__map keeps another course
+        // in student_master.
         $eligible = LaptopResponse::query()
-            ->join('student_master', 'student_master.pk', '=', 'coe_laptop_responses.student_master_pk')
-            ->where('student_master.course_master_pk', $courseId)
+            ->join('coe_roll_numbers', 'coe_roll_numbers.student_master_pk', '=', 'coe_laptop_responses.student_master_pk')
+            ->join('coe_roll_number_allocations', 'coe_roll_number_allocations.pk', '=', 'coe_roll_numbers.roll_number_allocation_pk')
+            ->where('coe_roll_number_allocations.course_master_pk', $courseId)
             ->where('coe_laptop_responses.has_disability', 1)
             ->pluck('coe_laptop_responses.scriber_required', 'coe_laptop_responses.student_master_pk')
             ->mapWithKeys(fn ($required, $pk) => [(int) $pk => (int) $required === 1])
@@ -268,7 +332,7 @@ class LaptopDeclarationService
             $studentPk = (int) $row['student_master_pk'];
             if (! array_key_exists($studentPk, $eligible)) {
                 throw ValidationException::withMessages([
-                    'scribers' => ['An OT in Scribers Details is not on this course or has no disability recorded.'],
+                    'scribers' => ['An OT in Scribers Details has no roll number on this course or has no disability recorded.'],
                 ]);
             }
             $listed[] = $studentPk;

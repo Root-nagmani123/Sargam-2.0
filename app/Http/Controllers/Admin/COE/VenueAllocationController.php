@@ -8,6 +8,7 @@ use App\Models\COE\SeatPlan;
 use App\Models\COE\SeatPlanVenue;
 use App\Models\COE\VenueSeatLayout;
 use App\Services\COE\CourseParticipants;
+use App\Services\COE\ExamRooms;
 use App\Services\COE\SeatAllocator;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
@@ -618,9 +619,11 @@ class VenueAllocationController extends Controller
         }
 
         return DB::table('venue_master as vm')
+            ->leftJoinSub(ExamRooms::placements(), 'rp', 'rp.venue_id', '=', 'vm.venue_id')
             ->leftJoin('coe_venue_seat_layouts as vsl', 'vsl.venue_id', '=', 'vm.venue_id')
             ->whereIn('vm.venue_id', $venueIds)
-            ->get(['vm.venue_id', 'vm.venue_name', 'vm.capacity', 'vm.laptop_capacity', 'vm.seating_capacity',
+            ->get(['vm.venue_id', 'vm.venue_name', DB::raw('COALESCE(rp.room_capacity, vm.capacity) as capacity'),
+                'vm.laptop_capacity', 'vm.seating_capacity',
                 'vsl.laptop_seats', 'vsl.scriber_seats'])
             ->map(function ($v) {
                 $v->laptop_seat_numbers = VenueSeatLayout::normalise(json_decode((string) $v->laptop_seats, true));
@@ -655,10 +658,13 @@ class VenueAllocationController extends Controller
     {
         $seats = DB::table('coe_seat_allocations as sa')
             ->join('venue_master as vm', 'vm.venue_id', '=', 'sa.venue_id')
+            ->leftJoinSub(ExamRooms::placements(), 'rp', 'rp.venue_id', '=', 'vm.venue_id')
             ->leftJoin('exam_building_master as eb', 'eb.pk', '=', 'vm.building_master_pk')
             ->leftJoin('exam_floor_master as ef', 'ef.pk', '=', 'vm.floor_master_pk')
             ->where('sa.seat_plan_pk', $plan->pk)
-            ->get(['sa.student_master_pk', 'sa.seat_number', 'vm.venue_name', 'eb.building_name', 'ef.floor_name']);
+            ->get(['sa.student_master_pk', 'sa.seat_number', 'vm.venue_name',
+                DB::raw('COALESCE(rp.building_name, eb.building_name) as building_name'),
+                DB::raw('COALESCE(rp.floor_name, ef.floor_name) as floor_name')]);
 
         // Same lookup as NotificationReceiverService::getStudentUserId, once for the plan.
         $accounts = DB::table('user_credentials')
@@ -713,6 +719,7 @@ class VenueAllocationController extends Controller
             ->join('coe_seat_plans as sp', 'sp.pk', '=', 'spv.seat_plan_pk')
             ->join('course_master as cm', 'cm.pk', '=', 'sp.course_master_pk')
             ->join('venue_master as vm', 'vm.venue_id', '=', 'spv.venue_id')
+            ->leftJoinSub(ExamRooms::placements(), 'rp', 'rp.venue_id', '=', 'vm.venue_id')
             ->leftJoin('exam_building_master as eb', 'eb.pk', '=', 'vm.building_master_pk')
             ->leftJoin('exam_floor_master as ef', 'ef.pk', '=', 'vm.floor_master_pk')
             ->leftJoin('coe_venue_seat_layouts as vsl', 'vsl.venue_id', '=', 'spv.venue_id')
@@ -723,8 +730,12 @@ class VenueAllocationController extends Controller
             ->orderBy('sp.pk')
             ->orderBy('spv.display_order')
             ->get(['spv.pk', 'spv.seat_plan_pk', 'spv.venue_id', 'sp.batch', 'sp.candidate_category', 'sp.subject_name',
-                'sp.exam_name', 'sp.status', 'sp.unallocated_count', 'cm.course_name', 'vm.venue_name', 'vm.capacity',
-                'vm.laptop_capacity', 'eb.building_name', 'ef.floor_name', 'vsl.laptop_seats', 'vsl.scriber_seats']);
+                'sp.exam_name', 'sp.status', 'sp.unallocated_count', 'cm.course_name', 'vm.venue_name',
+                DB::raw('COALESCE(rp.room_capacity, vm.capacity) as capacity'),
+                DB::raw('COALESCE(rp.room_laptops, vm.laptop_capacity) as laptop_capacity'),
+                DB::raw('COALESCE(rp.building_name, eb.building_name) as building_name'),
+                DB::raw('COALESCE(rp.floor_name, ef.floor_name) as floor_name'),
+                'vsl.laptop_seats', 'vsl.scriber_seats']);
 
         $counts = DB::table('coe_seat_allocations')
             ->whereIn('seat_plan_pk', $rows->pluck('seat_plan_pk')->unique()->all())
@@ -780,20 +791,18 @@ class VenueAllocationController extends Controller
             ]);
     }
 
-    /** Examination rooms: venues with a building, a floor and a capacity. */
+    /** Examination rooms: the active rooms of Room Master, with a capacity. */
     private function examRooms(): Collection
     {
-        return DB::table('venue_master as vm')
-            ->join('exam_building_master as eb', 'eb.pk', '=', 'vm.building_master_pk')
-            ->join('exam_floor_master as ef', 'ef.pk', '=', 'vm.floor_master_pk')
-            ->leftJoin('coe_venue_seat_layouts as vsl', 'vsl.venue_id', '=', 'vm.venue_id')
-            ->where('vm.active_inactive', 1)
-            ->where('vm.capacity', '>', 0)
-            ->orderBy('eb.building_name')
-            ->orderBy('ef.display_order')
+        return ExamRooms::active()
+            ->join('venue_master as vm', 'vm.venue_id', '=', 'rp.venue_id')
+            ->leftJoin('coe_venue_seat_layouts as vsl', 'vsl.venue_id', '=', 'rp.venue_id')
+            ->orderBy('rp.building_name')
+            ->orderBy('rp.floor_name')
             ->orderBy('vm.venue_name')
-            ->get(['vm.venue_id', 'vm.venue_name', 'vm.capacity', 'vm.laptop_capacity', 'eb.pk as building_pk',
-                'eb.building_name as building', 'ef.pk as floor_pk', 'ef.floor_name as floor', 'vsl.laptop_seats', 'vsl.scriber_seats']);
+            ->get(['vm.venue_id', 'vm.venue_name', 'rp.room_capacity as capacity', 'rp.room_laptops as laptop_capacity',
+                'rp.building_pk', 'rp.building_name as building', 'rp.floor_pk', 'rp.floor_name as floor',
+                'vsl.laptop_seats', 'vsl.scriber_seats']);
     }
 
     /** building id → floor id → { name, rooms: [{ id, name, capacity, laptop, scriber }] } for the dependent selects. */
@@ -818,11 +827,14 @@ class VenueAllocationController extends Controller
     private function roomDetails(int $venueId): ?object
     {
         $room = DB::table('venue_master as vm')
+            ->leftJoinSub(ExamRooms::placements(), 'rp', 'rp.venue_id', '=', 'vm.venue_id')
             ->leftJoin('exam_building_master as eb', 'eb.pk', '=', 'vm.building_master_pk')
             ->leftJoin('exam_floor_master as ef', 'ef.pk', '=', 'vm.floor_master_pk')
             ->leftJoin('coe_venue_seat_layouts as vsl', 'vsl.venue_id', '=', 'vm.venue_id')
             ->where('vm.venue_id', $venueId)
-            ->first(['vm.venue_id', 'vm.venue_name', 'vm.capacity', 'eb.building_name as building', 'ef.floor_name as floor',
+            ->first(['vm.venue_id', 'vm.venue_name', DB::raw('COALESCE(rp.room_capacity, vm.capacity) as capacity'),
+                DB::raw('COALESCE(rp.building_name, eb.building_name) as building'),
+                DB::raw('COALESCE(rp.floor_name, ef.floor_name) as floor'),
                 'vsl.laptop_seats', 'vsl.scriber_seats']);
 
         if ($room) {

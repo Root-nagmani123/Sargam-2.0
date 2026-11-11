@@ -239,7 +239,7 @@
                         <div class="coe-instructions">
                             <h6 class="coe-instructions__title">Instructions &amp; Excel Template</h6>
                             <ul class="coe-instructions__list">
-                                <li><a href="{{ route('admin.coe.ot-laptop-status.template', ['scope' => $scope]) }}" id="olsTemplateLink">Download the template file</a>, pre-filled with the OTs of {{ $isArchived ? 'archived' : 'running' }} courses. Fill in <strong>Laptop Required</strong> (Yes/No) and <strong>Reason</strong>; rows left blank are skipped.</li>
+                                <li><a href="{{ route('admin.coe.ot-laptop-status.template', ['scope' => $scope]) }}" id="olsTemplateLink">Download the template file</a>, pre-filled with the OTs of {{ $isArchived ? 'archived' : 'running' }} courses whose roll numbers have been generated. Fill in <strong>Laptop Required</strong> (Yes/No) and <strong>Reason</strong>; rows left blank are skipped.</li>
                                 <li><span class="coe-tip">Tip:</span> Keep the Participant ID column as downloaded — the import matches OTs on it. Disability and scriber answers are recorded through Add Single Record.</li>
                             </ul>
                         </div>
@@ -552,7 +552,7 @@ $(function () {
                 $scrRows.empty();
                 syncScriberRows();
                 if (!otList.length) {
-                    fieldError($ot, 'No OTs on this course.');
+                    fieldError($ot, 'No OTs on this course have a roll number yet. Generate roll numbers first.');
                 }
             })
             .fail(function (xhr) { if (ticket === otRequest) { showError(xhr); } });
@@ -599,6 +599,9 @@ $(function () {
     }
     $dis.on('change', syncConditional);
     $('#olsSingleForm').on('change', 'input[type=radio]', syncConditional);
+    $ot.add($dis).add('input[name="ols_scriber"]').on('change', function () {
+        if (!nonPwbdError()) { fieldError($('input[name="ols_scriber"]').first(), ''); }
+    });
 
     /* ── Scribers Details ────────────────────────────────────────────────────
        Each row's OT list holds only the course's OTs with disabilities: the
@@ -610,10 +613,21 @@ $(function () {
        record for the rest. */
     function isEdited(o) { return selectedOts().indexOf(String(o.pk)) !== -1; }
 
+    // A scriber only for an OT with a disability (PwBD) category in their profile.
     function needsScriber(o) {
-        return isEdited(o)
+        return !!o.pwbd && (isEdited(o)
             ? $dis.val() === 'yes' && radio('ols_scriber') === 'yes'
-            : o.scriber_required === 1;
+            : o.scriber_required === 1);
+    }
+
+    function nonPwbdError() {
+        if ($dis.val() !== 'yes' || radio('ols_scriber') !== 'yes') { return ''; }
+        var names = selectedOts().map(function (pk) { return otsByPk[pk]; })
+            .filter(function (o) { return o && !o.pwbd; })
+            .map(function (o) { return o.name; });
+        return names.length
+            ? 'A scriber can be requested only for an OT with a disability (PwBD) category in their profile. Not PwBD: ' + names.join(', ') + '.'
+            : '';
     }
 
     function scriberEligibleOts() {
@@ -798,6 +812,7 @@ $(function () {
         var $rl = $('#olsReasonLaptop'), $rs = $('#olsReasonScriber');
         ok = fieldError($rl, $rl.prop('required') && !$.trim($rl.val()) ? 'Enter the reason for the laptop.' : '') && ok;
         ok = fieldError($rs, $rs.prop('required') && !$.trim($rs.val()) ? 'Enter the reason for the scriber.' : '') && ok;
+        ok = fieldError($('input[name="ols_scriber"]').first(), nonPwbdError()) && ok;
         return ok;
     }
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\COE;
 use App\Http\Controllers\Controller;
 use App\Models\COE\VenueSeatLayout;
 use App\Models\VenueMaster;
+use App\Services\COE\ExamRooms;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -14,10 +15,10 @@ use Illuminate\Validation\ValidationException;
 /**
  * COE → Master Data → Laptop & Scriber Seats Master.
  *
- * One row per examination room (venue_master with a building, a floor and a
- * capacity) that has a seat layout in coe_venue_seat_layouts. The admin picks the
- * laptop desks and the scriber desks on a seat map; seat numbers run
- * 1..venue_master.capacity and use the numbering of public/js/coe-seat-map.js.
+ * One row per examination room (a Room Master room, see ExamRooms) that has a seat
+ * layout in coe_venue_seat_layouts. The admin picks the laptop desks and the scriber
+ * desks on a seat map; seat numbers run 1..the Room Master capacity and use the
+ * numbering of public/js/coe-seat-map.js.
  *
  * Every save keeps venue_master.laptop_capacity equal to the number of laptop
  * seats; deleting a layout sets it back to NULL.
@@ -29,17 +30,21 @@ class LaptopScriberSeatsController extends Controller
         $layouts = VenueSeatLayout::with(['venue.building', 'venue.floor'])->get()
             ->filter(fn (VenueSeatLayout $l) => $l->venue !== null);
 
-        $rows = $layouts->map(function (VenueSeatLayout $l) {
+        $placements = $this->placements($layouts->pluck('venue_id')->all());
+
+        $rows = $layouts->map(function (VenueSeatLayout $l) use ($placements) {
             $venue = $l->venue;
+            $placed = $placements->get((int) $venue->venue_id);
             $laptop = $l->laptopSeatNumbers();
             $scriber = $l->scriberSeatNumbers();
 
+            // A layout saved before Room Master keeps its old Venue Master building and floor.
             return [
                 'venue_id'      => (int) $venue->venue_id,
                 'room'          => (string) $venue->venue_name,
-                'building'      => (string) optional($venue->building)->building_name,
-                'floor'         => (string) optional($venue->floor)->floor_name,
-                'capacity'      => (int) $venue->capacity,
+                'building'      => (string) ($placed->building_name ?? optional($venue->building)->building_name),
+                'floor'         => (string) ($placed->floor_name ?? optional($venue->floor)->floor_name),
+                'capacity'      => (int) ($placed->room_capacity ?? $venue->capacity),
                 'laptop'        => $laptop,
                 'scriber'       => $scriber,
                 'laptop_seats'  => count($laptop),
@@ -47,7 +52,7 @@ class LaptopScriberSeatsController extends Controller
             ];
         })->sortBy([['building', 'asc'], ['room', 'asc']])->values();
 
-        $rooms = $this->examRooms($layouts->pluck('venue_id')->all());
+        $rooms = $this->examRooms($placements);
 
         return view('admin.coe.laptop_scriber_seats.index', [
             'rows'            => $rows,
@@ -148,17 +153,18 @@ class LaptopScriberSeatsController extends Controller
      */
     private function assertSeatsFit(?VenueMaster $venue, ?VenueSeatLayout $layout, array $laptop, array $scriber): void
     {
-        if (!$venue || !$this->isExamRoom($venue)) {
+        $placed = $venue ? $this->placements([(int) $venue->venue_id])->first() : null;
+        if (!$placed || (int) $placed->room_capacity <= 0) {
             throw ValidationException::withMessages([
-                'venue_id' => 'Select an examination room (a room with a building, a floor and a capacity).',
+                'venue_id' => 'Select an examination room (a Room Master room with a capacity).',
             ]);
         }
         // A new layout only for an active room; an existing one stays editable.
-        if (!$layout && (int) $venue->active_inactive !== 1) {
+        if (!$layout && !$placed->is_active) {
             throw ValidationException::withMessages(['venue_id' => 'This room is inactive.']);
         }
 
-        $capacity = (int) $venue->capacity;
+        $capacity = (int) $placed->room_capacity;
         $errors = [];
 
         $outside = fn (array $seats) => array_values(array_filter($seats, fn (int $n) => $n < 1 || $n > $capacity));
@@ -176,49 +182,52 @@ class LaptopScriberSeatsController extends Controller
         }
     }
 
-    private function isExamRoom(VenueMaster $venue): bool
+    /**
+     * Room Master building, floor and capacity of the given venues, keyed by venue_id.
+     *
+     * @param  list<int>  $venueIds
+     */
+    private function placements(array $venueIds): Collection
     {
-        return $venue->building_master_pk && $venue->floor_master_pk && (int) $venue->capacity > 0;
+        if ($venueIds === []) {
+            return collect();
+        }
+
+        return DB::query()->fromSub(ExamRooms::placements(), 'rp')
+            ->whereIn('rp.venue_id', $venueIds)
+            ->get()
+            ->keyBy('venue_id');
     }
 
     /**
-     * Rooms the Add / Edit modal can offer: every active examination room in an
-     * active building and on an active floor, plus any room that already has a
-     * layout (so it can still be edited after the room was deactivated).
+     * Rooms the Add / Edit modal can offer: every active Room Master room with a
+     * capacity, plus any room that already has a layout (so it can still be edited
+     * after the room was deactivated).
      *
-     * @param  list<int>  $withLayout
+     * @param  Collection<int, object>  $withLayout  placements() of the rooms that have a layout
      * @return Collection<int, array{id:int, name:string, building_pk:int, building:string,
      *     floor_pk:int, floor:string, floor_order:int, capacity:int}>
      */
-    private function examRooms(array $withLayout): Collection
+    private function examRooms(Collection $withLayout): Collection
     {
-        return VenueMaster::with(['building', 'floor'])
-            ->whereNotNull('building_master_pk')
-            ->whereNotNull('floor_master_pk')
-            ->where('capacity', '>', 0)
-            ->where(function ($q) use ($withLayout) {
-                $q->where(function ($q) {
-                    $q->where('active_inactive', 1)
-                        ->whereHas('building', fn ($b) => $b->where('active_inactive', 1))
-                        ->whereHas('floor', fn ($f) => $f->where('active_inactive', 1));
-                });
-                if ($withLayout) {
-                    $q->orWhereIn('venue_id', $withLayout);
-                }
-            })
-            ->get()
-            ->filter(fn (VenueMaster $v) => $v->building && $v->floor)
-            ->map(fn (VenueMaster $v) => [
-                'id'          => (int) $v->venue_id,
-                'name'        => (string) $v->venue_name,
-                'building_pk' => (int) $v->building->pk,
-                'building'    => (string) $v->building->building_name,
-                'floor_pk'    => (int) $v->floor->pk,
-                'floor'       => (string) $v->floor->floor_name,
-                'floor_order' => (int) $v->floor->display_order,
-                'capacity'    => (int) $v->capacity,
+        $rooms = ExamRooms::active()->get()->keyBy('venue_id')
+            ->union($withLayout->filter(fn ($p) => (int) $p->room_capacity > 0));
+        $names = VenueMaster::whereIn('venue_id', $rooms->keys()->all())->pluck('venue_name', 'venue_id');
+
+        return $rooms->values()
+            ->filter(fn ($r) => $names->has($r->venue_id))
+            ->map(fn ($r) => [
+                'id'          => (int) $r->venue_id,
+                'name'        => (string) $names[$r->venue_id],
+                'building_pk' => (int) $r->building_pk,
+                'building'    => (string) $r->building_name,
+                'floor_pk'    => (int) $r->floor_pk,
+                'floor'       => (string) $r->floor_name,
+                // floor_master has no display order; floors sort by name.
+                'floor_order' => 0,
+                'capacity'    => (int) $r->room_capacity,
             ])
-            ->sortBy([['building', 'asc'], ['floor_order', 'asc'], ['name', 'asc']])
+            ->sortBy([['building', 'asc'], ['floor', 'asc'], ['name', 'asc']])
             ->values();
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\COE;
 use App\Exports\COE\RollNumberImportTemplateExport;
 use App\Http\Controllers\Controller;
 use App\Imports\COE\RollNumberImport;
+use App\Models\CourseMaster;
 use App\Models\COE\RollNumber;
 use App\Models\COE\RollNumberAllocation;
 use App\Models\StudentMaster;
@@ -118,6 +119,8 @@ class RollNumberController extends Controller
             // Every course that has participants with a batch — the Generate and Add
             // Single Record pickers, with the batches each course actually has.
             'courses' => $courseBatches['courses'],
+            // Generate and Add Single Record create roll numbers, so only running courses.
+            'activeCourses' => $courseBatches['courses']->filter(fn ($c) => isset($this->activeCourseIds()[$c->pk]))->values(),
             'courseBatches' => $courseBatches['batches'],
             'strategies' => RollNumberAllocation::strategies(),
             // The strategies that honour the rule checkboxes; the form hides the rules for
@@ -167,6 +170,9 @@ class RollNumberController extends Controller
         }
 
         $validated = $validator->validated();
+        if (! isset($this->activeCourseIds()[(int) $validated['course']])) {
+            return $this->fail('Roll numbers can be generated only for an active course.');
+        }
         $derivesFromOtCode = $allocator->derivesSerialFromOtCode($validated['strategy']);
 
         $startNumber = $derivesFromOtCode ? null : (int) $validated['start_number'];
@@ -358,6 +364,9 @@ class RollNumberController extends Controller
         }
 
         $validated = $validator->validated();
+        if (! isset($this->activeCourseIds()[(int) $validated['course']])) {
+            return $this->fail('Roll numbers can be added only for an active course.');
+        }
 
         // The participant must actually sit the chosen course+batch, or a hand-edited
         // request could file somebody under a course they are not on.
@@ -377,6 +386,10 @@ class RollNumberController extends Controller
         $elsewhere = CourseParticipants::rollNumbersElsewhere([(int) $participant->pk], (int) $validated['course'], (int) $validated['batch']);
         if ($elsewhere !== []) {
             return $this->fail("{$participant->display_name} already holds roll number " . reset($elsewhere) . ' on another course. An OT can hold only one roll number.');
+        }
+
+        if ($writer->groupFrozen((int) $validated['course'], (int) $validated['batch'])) {
+            return $this->fail('Roll numbers for that course and batch are frozen, so no roll number can be added to it.');
         }
 
         $existing = RollNumber::where('student_master_pk', $participant->pk)->first();
@@ -509,14 +522,29 @@ class RollNumberController extends Controller
     }
 
     /**
-     * Freeze one or more roll numbers. Idempotent: an already-frozen row keeps its
-     * original frozen_at and is not counted. Freezing does NOT notify — that is notify().
+     * Freeze roll numbers a whole course + batch at a time: freezing any roll number
+     * freezes every one of its run, so a run is never part frozen — Generate cannot
+     * renumber a run some of whose numbers are fixed. Idempotent: an already-frozen row
+     * keeps its original frozen_at and is not counted. The OTs whose numbers this call
+     * froze are notified once it has committed; notify() resends.
      */
-    public function freeze(Request $request): JsonResponse
-    {
+    public function freeze(
+        Request $request,
+        NotificationReceiverService $receivers,
+        NotificationService $notifications
+    ): JsonResponse {
         $ids = $this->requestedIds($request);
         if ($ids === null) {
             return $this->fail('Select at least one roll number to freeze.');
+        }
+
+        $ids = RollNumber::whereIn('roll_number_allocation_pk',
+            RollNumber::whereIn('pk', $ids)->select('roll_number_allocation_pk'))
+            ->pluck('pk')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        if ($ids === []) {
+            return $this->fail('Those roll numbers no longer exist.');
         }
 
         $toFreeze = RollNumber::whereIn('pk', $ids)
@@ -547,12 +575,22 @@ class RollNumberController extends Controller
             return $this->fail('The roll numbers could not be frozen.', 500);
         }
 
+        // After the commit: a notice must never announce a freeze that rolled back.
+        $notice = $frozen === 0 ? null : $this->sendRollNumberNotices(
+            $this->noticeRecords($toFreeze)->filter(fn ($r) => (int) $r->status === RollNumber::STATUS_FROZEN),
+            $receivers,
+            $notifications
+        );
+
         return response()->json([
             'message' => $frozen === 0
                 ? 'Nothing to freeze — every roll number selected was already frozen.'
-                : trans_choice(':count roll number frozen.|:count roll numbers frozen.', $frozen, ['count' => $frozen]),
+                : trans_choice(':count roll number frozen.|:count roll numbers frozen', $frozen, ['count' => $frozen])
+                    . ($frozen > 1 ? ' — the whole course and batch.' : '')
+                    . ' ' . implode(' ', $notice['parts']),
             'frozen' => $frozen,
             'frozen_ids' => $toFreeze,
+            'notified' => $notice['notified'] ?? 0,
         ]);
     }
 
@@ -571,11 +609,7 @@ class RollNumberController extends Controller
             return $this->fail('Select at least one roll number to notify.');
         }
 
-        $records = DB::table('coe_roll_numbers as rn')
-            ->join('coe_roll_number_allocations as a', 'a.pk', '=', 'rn.roll_number_allocation_pk')
-            ->leftJoin('course_master as c', 'c.pk', '=', 'a.course_master_pk')
-            ->whereIn('rn.pk', $ids)
-            ->get(['rn.pk', 'rn.student_master_pk', 'rn.roll_number', 'rn.status', 'c.course_name', 'a.batch']);
+        $records = $this->noticeRecords($ids);
 
         $frozen = $records->filter(fn ($r) => (int) $r->status === RollNumber::STATUS_FROZEN);
         $notFrozen = $records->count() - $frozen->count();
@@ -584,11 +618,46 @@ class RollNumberController extends Controller
             return $this->fail('Only frozen roll numbers can be notified — freeze them first, so OTs are never sent a number that may still change.');
         }
 
+        ['notified' => $notified, 'no_account' => $noAccount, 'failed' => $failed, 'parts' => $parts]
+            = $this->sendRollNumberNotices($frozen, $receivers, $notifications);
+
+        if ($notFrozen > 0) {
+            $parts[] = trans_choice(':count roll number is not frozen and was skipped.|:count roll numbers are not frozen and were skipped.', $notFrozen, ['count' => $notFrozen]);
+        }
+        return response()->json([
+            'message' => implode(' ', $parts),
+            'notified' => $notified,
+            'no_account' => $noAccount,
+            'skipped_not_frozen' => $notFrozen,
+            'failed' => $failed,
+        ], $notified === 0 ? 422 : 200);
+    }
+
+    /** @param  array<int, int>  $ids */
+    private function noticeRecords(array $ids): Collection
+    {
+        return DB::table('coe_roll_numbers as rn')
+            ->join('coe_roll_number_allocations as a', 'a.pk', '=', 'rn.roll_number_allocation_pk')
+            ->leftJoin('course_master as c', 'c.pk', '=', 'a.course_master_pk')
+            ->whereIn('rn.pk', $ids)
+            ->get(['rn.pk', 'rn.student_master_pk', 'rn.roll_number', 'rn.status', 'c.course_name', 'a.batch']);
+    }
+
+    /**
+     * Send each OT an in-app notification with their (frozen) roll number.
+     *
+     * @return array{notified: int, no_account: int, failed: int, parts: list<string>}
+     */
+    private function sendRollNumberNotices(
+        Collection $records,
+        NotificationReceiverService $receivers,
+        NotificationService $notifications
+    ): array {
         $notified = 0;
         $noAccount = 0;
         $failed = 0;
 
-        foreach ($frozen as $record) {
+        foreach ($records as $record) {
             $receiverUserId = $receivers->getStudentUserId((int) $record->student_master_pk);
             if (! $receiverUserId) {
                 $noAccount++;
@@ -622,20 +691,11 @@ class RollNumberController extends Controller
         if ($noAccount > 0) {
             $parts[] = trans_choice(':count OT has no user account and was not notified.|:count OTs have no user account and were not notified.', $noAccount, ['count' => $noAccount]);
         }
-        if ($notFrozen > 0) {
-            $parts[] = trans_choice(':count roll number is not frozen and was skipped.|:count roll numbers are not frozen and were skipped.', $notFrozen, ['count' => $notFrozen]);
-        }
         if ($failed > 0) {
             $parts[] = $failed . ' could not be sent.';
         }
 
-        return response()->json([
-            'message' => implode(' ', $parts),
-            'notified' => $notified,
-            'no_account' => $noAccount,
-            'skipped_not_frozen' => $notFrozen,
-            'failed' => $failed,
-        ], $notified === 0 ? 422 : 200);
+        return ['notified' => $notified, 'no_account' => $noAccount, 'failed' => $failed, 'parts' => $parts];
     }
 
     /** Delete one roll number. Frozen rows are refused. */
@@ -803,7 +863,8 @@ class RollNumberController extends Controller
 
         if ($frozenRows > 0) {
             return sprintf(
-                '%d roll number(s) in that course and batch are already frozen, so the run cannot be regenerated.',
+                '%d roll number(s) in that course and batch are already frozen, so the run cannot be regenerated. '
+                . 'Freeze works for the whole course and batch — freeze any of its roll numbers to freeze the rest.',
                 $frozenRows
             );
         }
@@ -1170,6 +1231,20 @@ class RollNumberController extends Controller
         $parts = array_filter([$student->first_name, $student->middle_name, $student->last_name]);
 
         return trim(preg_replace('/\s+/', ' ', implode(' ', $parts))) ?: '—';
+    }
+
+    /** @var array<int, true>|null */
+    private ?array $activeCourseIds = null;
+
+    /**
+     * Running courses (CourseMaster::activeRunning) as pk => true.
+     *
+     * @return array<int, true>
+     */
+    private function activeCourseIds(): array
+    {
+        return $this->activeCourseIds ??= CourseMaster::activeRunning()->pluck('pk')
+            ->mapWithKeys(fn ($pk) => [(int) $pk => true])->all();
     }
 
     /**
