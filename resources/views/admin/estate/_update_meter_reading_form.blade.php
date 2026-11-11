@@ -75,7 +75,7 @@
                 <input type="hidden" name="reading_block_id" id="reading_block_id" value="">
                 <input type="hidden" name="reading_unit_type_id" id="reading_unit_type_id" value="">
                 <input type="hidden" name="reading_unit_sub_type_id" id="reading_unit_sub_type_id" value="">
-                {{-- Set only when opened via Edit from List Meter Reading: that row skips the min-reading check. Units are unaffected. --}}
+                {{-- Set only when opened via Edit from List Meter Reading: that row skips the min-reading check, and units are measured from the month's opening reading (F-049). --}}
                 <input type="hidden" name="edit_reading_pk" id="edit_reading_pk" value="{{ $prefill['reading_pk'] ?? '' }}">
 
                 <div class="table-responsive umr-grid-wrap mt-3">

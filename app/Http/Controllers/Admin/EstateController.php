@@ -7577,6 +7577,8 @@ class EstateController extends Controller
             });
         }
 
+        // Edit deep link (one reading): the Unit preview measures from the month's opening reading, as the store does (F-049).
+        $editOpening = $readingPkScoped !== null;
         $rows = collect();
         foreach ($query->get() as $row) {
             // Use estate_house_master meter numbers when estate_month_reading_details has 0/null
@@ -7603,7 +7605,7 @@ class EstateController extends Controller
             // One list row for houses with two meters (same stacked UI as Update Meter Reading of Other).
             if ($hasMeterOne && $hasMeterTwo) {
                 $curr1 = $row->curr_month_elec_red;
-                $baselineMin1 = $curr1 !== null
+                $baselineMin1 = $curr1 !== null && ! $editOpening
                     ? (int) $curr1
                     : $this->effectiveLastMonthElecBaselineForMeterSlot(
                         $row->last_month_elec_red,
@@ -7615,7 +7617,7 @@ class EstateController extends Controller
                 $newNo1 = $row->emrd_meter_one !== null && $row->emrd_meter_one !== '' ? (string) $row->emrd_meter_one : (string) $meterOne;
 
                 $curr2 = $row->curr_month_elec_red2;
-                $baselineMin2 = $curr2 !== null
+                $baselineMin2 = $curr2 !== null && ! $editOpening
                     ? (int) $curr2
                     : $this->effectiveLastMonthElecBaselineForMeterSlot(
                         $row->last_month_elec_red2,
@@ -7650,7 +7652,7 @@ class EstateController extends Controller
             // baseline_min_reading aligns client min validation with server (curr when set, else last/possession).
             if ($hasMeterOne) {
                 $curr1 = $row->curr_month_elec_red;
-                $baselineMin1 = $curr1 !== null
+                $baselineMin1 = $curr1 !== null && ! $editOpening
                     ? (int) $curr1
                     : $this->effectiveLastMonthElecBaselineForMeterSlot(
                         $row->last_month_elec_red,
@@ -7675,7 +7677,7 @@ class EstateController extends Controller
             }
             if ($hasMeterTwo) {
                 $curr2 = $row->curr_month_elec_red2;
-                $baselineMin2 = $curr2 !== null
+                $baselineMin2 = $curr2 !== null && ! $editOpening
                     ? (int) $curr2
                     : $this->effectiveLastMonthElecBaselineForMeterSlot(
                         $row->last_month_elec_red2,
@@ -7703,7 +7705,7 @@ class EstateController extends Controller
                 $lastMeter = $meterOne ?? $meterTwo ?? 'N/A';
                 $currReadingRaw = $row->curr_month_elec_red ?? $row->curr_month_elec_red2;
                 $lastReadingRaw = $row->last_month_elec_red ?? $row->last_month_elec_red2;
-                $baselineMinFb = $currReadingRaw !== null
+                $baselineMinFb = $currReadingRaw !== null && ! $editOpening
                     ? (int) $currReadingRaw
                     : $this->effectiveLastMonthElecBaselineForMeterSlot(
                         $lastReadingRaw,
@@ -7944,8 +7946,8 @@ class EstateController extends Controller
         }
 
         // Set only when this page was opened via Edit from List Meter Reading. It relaxes the input validation for
-        // that one row (a lower reading may be entered); it does NOT change how units are measured — those stay
-        // New Meter Reading − Electric Meter Reading, exactly as the screen shows.
+        // that one row (a lower reading may be entered), and a correction of the row's own month keeps the
+        // month's opening reading and measures units from it (F-049 Rule A).
         $editReadingPkRaw = $request->input('edit_reading_pk');
         $editReadingPk = (is_numeric($editReadingPkRaw) && (int) $editReadingPkRaw > 0) ? (int) $editReadingPkRaw : null;
         // The edit deep-link scopes the grid to that one reading (getMeterReadingList: reading_pk), so a genuine
@@ -8318,16 +8320,20 @@ class EstateController extends Controller
                 $prev2 = ($last2Raw > 0) ? $last2Raw : ($epdSecondary ?? $epdPrimary ?? 0);
                 $curr1Existing = $row->curr_month_elec_red !== null ? (int) $row->curr_month_elec_red : null;
                 $curr2Existing = $row->curr_month_elec_red2 !== null ? (int) $row->curr_month_elec_red2 : null;
+                // F-049 Rule A: an Edit correction of the month's own reading keeps that month's opening reading.
+                $correctsOwnMonth = $editReadingPk !== null && $formRowPk === $editReadingPk
+                    && $readingBillMonth !== null
+                    && $this->meterReadingYmFromRowColumns($row->bill_month, $row->bill_year) === (string) $readingBillMonth;
 
                 if ($curr1Form !== null) {
                     $update['curr_month_elec_red'] = $curr1Form;
-                    if ($row->curr_month_elec_red !== null) {
+                    if ($row->curr_month_elec_red !== null && ! $correctsOwnMonth) {
                         $update['last_month_elec_red'] = (int) $row->curr_month_elec_red;
                     }
                 }
                 if ($curr2Form !== null) {
                     $update['curr_month_elec_red2'] = $curr2Form;
-                    if ($row->curr_month_elec_red2 !== null) {
+                    if ($row->curr_month_elec_red2 !== null && ! $correctsOwnMonth) {
                         $update['last_month_elec_red2'] = (int) $row->curr_month_elec_red2;
                     }
                 }
@@ -8337,8 +8343,8 @@ class EstateController extends Controller
 
                 // Units = New Meter Reading − Electric Meter Reading (the saved reading shown on screen);
                 // pehli entry par saved reading nahi hoti, tab last month / possession opening se naapte hain.
-                $baseline1 = \App\Support\EstateMeterReadingUnits::baseline($curr1Existing, (int) $prev1);
-                $baseline2 = \App\Support\EstateMeterReadingUnits::baseline($curr2Existing, (int) $prev2);
+                $baseline1 = \App\Support\EstateMeterReadingUnits::baseline($curr1Existing, (int) $prev1, $correctsOwnMonth);
+                $baseline2 = \App\Support\EstateMeterReadingUnits::baseline($curr2Existing, (int) $prev2, $correctsOwnMonth);
 
                 // Meter replace hua ho toh naya meter 0 se start hota hai — reading hi consumed unit hai,
                 // warna purane baseline se difference lo.

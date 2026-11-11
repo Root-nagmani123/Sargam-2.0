@@ -17,12 +17,16 @@ class EstateMeterReadingUnits
      * "Electric Meter Reading" column, so Unit stays equal to New Meter Reading minus that column. Only
      * when nothing is saved yet does the previous period supply the opening reading.
      *
+     * Exception (PR #349 F-049, Rule A): correcting a month's own saved reading through List Meter Reading →
+     * Edit replaces that reading, so the month is measured from its opening reading, not the replaced one.
+     *
      * @param  int|null  $savedCurrentReading  curr_month_elec_red already stored on the row, null when unset
      * @param  int  $previousPeriodReading  last_month_elec_red, or the possession's opening reading
+     * @param  bool  $correctingOwnMonth  the save is an Edit correction of the row's own month
      */
-    public static function baseline(?int $savedCurrentReading, int $previousPeriodReading): int
+    public static function baseline(?int $savedCurrentReading, int $previousPeriodReading, bool $correctingOwnMonth = false): int
     {
-        return $savedCurrentReading !== null ? $savedCurrentReading : $previousPeriodReading;
+        return $savedCurrentReading !== null && ! $correctingOwnMonth ? $savedCurrentReading : $previousPeriodReading;
     }
 
     /**
