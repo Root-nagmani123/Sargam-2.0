@@ -3166,6 +3166,7 @@ class EstateController extends Controller
      * its writes (error 1665, PR #349 F-008). There SERIALIZABLE runs instead: every read is current
      * (share-locked), so the occupancy re-read stays correct; writers of different houses can then
      * deadlock on those share locks, and the retry below takes the loser after the winner commits.
+     * The two meter-reading saves use it the same way, serialised on the possession row (F-048).
      */
     private function runAllotmentTransaction(\Closure $callback)
     {
@@ -8194,6 +8195,9 @@ class EstateController extends Controller
         }
 
         // Step 2: One fetch + update (or insert when saving a new bill period so prior month rows are not overwritten).
+        // One transaction for the whole save: a refusal is thrown as HttpResponseException, which rolls back the
+        // houses already written, so a failure response never leaves part of the save behind (PR #349 F-048).
+        $this->runAllotmentTransaction(function () use ($byPk, $editReadingPk, $hasSecondaryPossessionReadingCol, $hasUnitTypeOnSubType, $emrdHasWaterCharges, $emrdHasLicenceFees, $request, $storeBillMonthName, $storeBillYearStr, $currentMeterReadingDate, $readingBillMonth, $lastMeterReadingDate, $hasLastMeterDateCol, $hasCurrentMeterDateCol) {
         foreach ($byPk as $formRowPk => $data) {
             $resolvePk = $formRowPk;
             while (true) {
@@ -8272,13 +8276,13 @@ class EstateController extends Controller
                 if ($rh !== null && (int) $rh !== 0) {
                     $returnedMsg = 'Meter reading cannot be updated for houses that have been returned.';
                     if ($request->ajax() || $request->wantsJson()) {
-                        return response()->json(['success' => false, 'message' => $returnedMsg], 422);
+                        throw new \Illuminate\Http\Exceptions\HttpResponseException(response()->json(['success' => false, 'message' => $returnedMsg], 422));
                     }
 
-                    return redirect()
+                    throw new \Illuminate\Http\Exceptions\HttpResponseException(redirect()
                         ->back()
                         ->withInput()
-                        ->with('error', $returnedMsg);
+                        ->with('error', $returnedMsg));
                 }
             }
 
@@ -8460,13 +8464,16 @@ class EstateController extends Controller
                 );
 
             if ($periodMismatch && ! empty($update)) {
+                // Possession row lock: a second operator's save of this house waits here, and under READ COMMITTED
+                // the check below then sees that save's committed row (the table has no possession index to lock on).
+                DB::table('estate_possession_details')->where('pk', (int) $row->estate_possession_details_pk)->lockForUpdate()->value('pk');
                 $existingTarget = DB::table('estate_month_reading_details')
                     ->where('estate_possession_details_pk', (int) $row->estate_possession_details_pk)
                     ->where('bill_month', $storeBillMonthName)
                     ->where('bill_year', $storeBillYearStr)
                     ->first();
                 if ($existingTarget && (int) $existingTarget->pk !== $resolvePk) {
-                    return $this->staleMeterReadingResponse($request, (string) $storeBillMonthName, (string) $storeBillYearStr);
+                    throw new \Illuminate\Http\Exceptions\HttpResponseException($this->staleMeterReadingResponse($request, (string) $storeBillMonthName, (string) $storeBillYearStr));
                 }
                 if (! $existingTarget) {
                     $insertData = array_merge(
@@ -8663,6 +8670,7 @@ class EstateController extends Controller
             break;
             }
         }
+        });
 
         $meterNoQuery = [];
         if (! empty($storeBillYearStr) && ! empty($storeBillMonthName)) {
@@ -10191,6 +10199,8 @@ class EstateController extends Controller
         $emroHasBillNo = \Illuminate\Support\Facades\Schema::hasColumn('estate_month_reading_details_other', 'bill_no');
         $emroHasPayrollRecovery = \Illuminate\Support\Facades\Schema::hasColumn('estate_month_reading_details_other', 'payroll_recovery_head_amount');
 
+        // One transaction for the whole save, as in storeMeterReadings() (PR #349 F-048).
+        $this->runAllotmentTransaction(function () use ($selected, $resolvedOtherReadingPkByFormPk, $hasUnitTypeOnSubTypeForOtherElectric, $emroHasWaterCharges, $emroHasLicenceFees, $emroHasBillNo, $emroHasPayrollRecovery, $request, $storeBillMonthNameOther, $storeBillYearStrOther, $readingBillMonthOther, $readingMeterDateForStore) {
         foreach ($selected as $item) {
             $formPk = (int) ($item['pk'] ?? 0);
             $currVal = $item['curr_month_elec_red'] ?? null;
@@ -10253,13 +10263,13 @@ class EstateController extends Controller
                     if ($possReturned) {
                         $returnedMsg = 'Meter reading cannot be updated for houses that have been returned.';
                         if ($json = $this->estateFormFailure($request, $returnedMsg)) {
-                            return $json;
+                            throw new \Illuminate\Http\Exceptions\HttpResponseException($json);
                         }
 
-                        return redirect()
+                        throw new \Illuminate\Http\Exceptions\HttpResponseException(redirect()
                             ->back()
                             ->withInput()
-                            ->with('error', $returnedMsg);
+                            ->with('error', $returnedMsg));
                     }
                 }
 
@@ -10424,13 +10434,15 @@ class EstateController extends Controller
                     );
 
                 if ($periodMismatch && ! empty($update)) {
+                    // Possession row lock, as in storeMeterReadings(): a concurrent save of this house is seen below.
+                    DB::table('estate_possession_other')->where('pk', (int) $row->estate_possession_other_pk)->lockForUpdate()->value('pk');
                     $existingTarget = DB::table('estate_month_reading_details_other')
                         ->where('estate_possession_other_pk', (int) $row->estate_possession_other_pk)
                         ->where('bill_month', $storeBillMonthNameOther)
                         ->where('bill_year', $storeBillYearStrOther)
                         ->first();
                     if ($existingTarget && (int) $existingTarget->pk !== $resolvePk) {
-                        return $this->staleMeterReadingResponse($request, (string) $storeBillMonthNameOther, (string) $storeBillYearStrOther);
+                        throw new \Illuminate\Http\Exceptions\HttpResponseException($this->staleMeterReadingResponse($request, (string) $storeBillMonthNameOther, (string) $storeBillYearStrOther));
                     }
                     if (! $existingTarget) {
                         $dateOrNull = static function ($d) {
@@ -10623,6 +10635,7 @@ class EstateController extends Controller
                 break;
             }
         }
+        });
 
         // Naya bill turant "Generate Estate Bill for Other" list me dikhe — cached payload chhod do.
         $this->bumpEstateCacheVersion();
