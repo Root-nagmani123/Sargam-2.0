@@ -1192,29 +1192,36 @@
 }
 
 /* OMR Answer Sheet template: a pink sheet; bubbles are round spans (the sanitizer keeps classes, not inline styles). */
-:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr { --omr: #d6286f; --omr-tint: #fde4ee; color: var(--omr); font-family: Arial, Helvetica, sans-serif; font-size: 0.8125rem; line-height: 1.35; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr { --omr: #d6286f; --omr-tint: #fde4ee; padding: 0 30px; color: var(--omr); font-family: Arial, Helvetica, sans-serif; font-size: 0.8125rem; line-height: 1.35; background: repeating-linear-gradient(to bottom, #111 0 7px, transparent 7px 24px) left top / 14px 100% no-repeat, repeating-linear-gradient(to bottom, #111 0 7px, transparent 7px 24px) right top / 14px 100% no-repeat; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr table { width: 100%; margin: 0; border-collapse: collapse; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr table td { border: 0; padding: 0.2rem 0.3rem; vertical-align: top; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr p { margin: 0 0 0.25rem; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr ol { margin: 0; padding-left: 1.25rem; color: #1d2939; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-center { text-align: center; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-label { margin: 0.35rem 0 0.2rem; font-weight: 700; color: var(--omr); }
-:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-sub { margin: 0.4rem 0 0.2rem; padding: 0.15rem; background: var(--omr-tint); text-align: center; font-weight: 700; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-label--ink { color: #111; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-boxhead { margin: -0.4rem -0.6rem 0.4rem; padding: 0.3rem 0.4rem; border-bottom: 1px solid var(--omr); color: #111; font-size: 0.875rem; font-weight: 700; text-align: center; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-sub { margin: 0.4rem -0.6rem 0.3rem; padding: 0.2rem; border-top: 1px solid var(--omr); border-bottom: 1px solid var(--omr); color: #111; text-align: center; font-weight: 700; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-field { min-height: 2rem; margin-bottom: 0.35rem; padding: 0.3rem 0.5rem; border: 1px solid var(--omr); color: #1d2939; font-size: 1rem; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-field--tall { min-height: 3.5rem; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-b { display: inline-block; width: 1.2rem; height: 1.2rem; margin: 0.1rem 0.15rem; border: 1px solid var(--omr); border-radius: 50%; color: var(--omr); font-size: 0.625rem; line-height: 1.1rem; text-align: center; vertical-align: middle; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-b.is-filled { border-color: #111; background: #111; color: #111; }
-:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr table.coe-omr-head { margin-bottom: 0.5rem; border-bottom: 2px solid var(--omr); }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr table.coe-omr-head { margin-bottom: 0.25rem; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr table.coe-omr-head td { vertical-align: middle; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-head__logo { width: 12%; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-head__logo img { width: 72px; height: auto; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-head__logo--right img { width: 120px; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr img.coe-omr-emblem { width: 70px; height: 86px; object-fit: cover; object-position: left center; } /* the emblem: left part of the emblem + name image */
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-head__title { text-align: center; color: #111; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-head__hi { font-size: 1.25rem; font-weight: 700; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-head__en { font-size: 1.0625rem; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-head__note { margin-top: 0.35rem; padding: 0.25rem; background: #f7b6d0; font-weight: 700; }
-:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-head__set { width: 14%; text-align: center; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-head__logo--right { text-align: right; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-set { display: inline-block; padding: 0.2rem 0.9rem; border: 2px solid var(--omr); border-radius: 999px; background: var(--omr-tint); color: #111; font-size: 1.375rem; font-weight: 700; }
-:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr table:is(.coe-omr-rules, .coe-omr-details) { margin-bottom: 0.5rem; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr table.coe-omr-ruled { margin-bottom: 0.5rem; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-ruled__line { background: linear-gradient(var(--omr), var(--omr)) center / 100% 2px no-repeat; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr table td.coe-omr-ruled__mid { width: 1%; padding: 0 0.75rem; white-space: nowrap; vertical-align: middle; text-align: center; color: #111; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr table:is(.coe-omr-rules, .coe-omr-details) { margin-bottom: 0.5rem; border-collapse: separate; border-spacing: 6px 0; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr table:is(.coe-omr-rules, .coe-omr-details) > tbody > tr > td { border: 1px solid var(--omr); padding: 0.4rem 0.6rem; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-rules__example { width: 22%; text-align: center; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-details__left { width: 36%; }
@@ -1227,9 +1234,10 @@
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr table.coe-omr-grid { border: 1px solid var(--omr); }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr table.coe-omr-grid td { padding: 0.05rem 0.2rem; white-space: nowrap; vertical-align: middle; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr table.coe-omr-grid tr:nth-child(odd) td { background: var(--omr-tint); }
-:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-grid__no { width: 2.25rem; color: #c2185b; font-weight: 700; text-align: center; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-grid__no { width: 2.25rem; color: #c2185b !important; font-weight: 700 !important; text-align: center; } /* !important: styles.css forces td colour and weight */
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr table.coe-omr-foot { margin-top: 0.5rem; }
-:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr table.coe-omr-foot td { width: 33%; color: var(--omr); font-weight: 700; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr table.coe-omr-foot td.coe-omr-foot__code { width: 22%; vertical-align: middle; }
+:is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr .coe-omr-code { color: var(--omr); font-weight: 700; }
 
 /* Narrow screens: the boxed blocks and the four answer columns stack. */
 @media (max-width: 767.98px) {

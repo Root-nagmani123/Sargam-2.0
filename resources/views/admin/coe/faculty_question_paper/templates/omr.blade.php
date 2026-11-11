@@ -24,14 +24,27 @@
     <table class="coe-omr-head">
         <tbody>
             <tr>
-                <td class="coe-omr-head__logo"><img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA emblem"></td>
+                {{-- Logos from the web (https - CSP allows it), so a saved paper shows them on any server.
+                     The LBSNAA image is emblem + name; .coe-omr-emblem crops it to the emblem. --}}
+                <td class="coe-omr-head__logo"><img class="coe-omr-emblem" src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA emblem"></td>
                 <td class="coe-omr-head__title">
                     <p class="coe-omr-head__hi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी, मसूरी</p>
                     <p class="coe-omr-head__en">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
                     <p>{{ $paper['examination'] }}</p>
                     <p class="coe-omr-head__note">PLEASE FILL ALL THE ENTRIES WITH BLACK/BLUE BALL POINT PEN ONLY</p>
                 </td>
-                <td class="coe-omr-head__set"><span class="coe-omr-set">Set : A</span></td>
+                <td class="coe-omr-head__logo coe-omr-head__logo--right"><img src="https://upload.wikimedia.org/wikipedia/commons/e/ee/Azadi-Ka-Amrit-Mahotsav-Logo.png" alt="Azadi Ka Amrit Mahotsav"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    {{-- The set, centred on a rule. --}}
+    <table class="coe-omr-ruled">
+        <tbody>
+            <tr>
+                <td class="coe-omr-ruled__line">&nbsp;</td>
+                <td class="coe-omr-ruled__mid"><span class="coe-omr-set">Set : A</span></td>
+                <td class="coe-omr-ruled__line">&nbsp;</td>
             </tr>
         </tbody>
     </table>
@@ -40,7 +53,7 @@
         <tbody>
             <tr>
                 <td>
-                    <p class="coe-omr-label">INSTRUCTIONS FOR ENTERING ANSWERS</p>
+                    <p class="coe-omr-boxhead">INSTRUCTIONS FOR ENTERING ANSWERS</p>
                     <ol>
                         @foreach ($instructions as [$english])
                             <li>{{ $english }}</li>
@@ -48,7 +61,7 @@
                     </ol>
                 </td>
                 <td class="coe-omr-rules__example">
-                    <p class="coe-omr-label">Example for Entering Answers</p>
+                    <p class="coe-omr-boxhead">Example for Entering Answers (Correct)</p>
                     <p class="coe-omr-sub">Correct Method (सही तरीका)</p>
                     <p><span class="coe-omr-b is-filled">A</span><span class="coe-omr-b">B</span><span class="coe-omr-b">C</span><span class="coe-omr-b">D</span></p>
                     <p class="coe-omr-sub">Wrong Method (गलत तरीका)</p>
@@ -57,7 +70,7 @@
                     <p><span class="coe-omr-b">A</span><span class="coe-omr-b">B</span><span class="coe-omr-b is-filled">C</span><span class="coe-omr-b is-filled">D</span></p>
                 </td>
                 <td>
-                    <p class="coe-omr-label">महत्वपूर्ण निर्देश</p>
+                    <p class="coe-omr-boxhead">महत्वपूर्ण निर्देश</p>
                     <ol>
                         @foreach ($instructions as [, $hindi])
                             <li>{{ $hindi }}</li>
@@ -72,11 +85,11 @@
         <tbody>
             <tr>
                 <td class="coe-omr-details__left">
-                    <p class="coe-omr-label">Subject / Topic</p>
+                    <p class="coe-omr-label coe-omr-label--ink">Subject / Topic</p>
                     <p class="coe-omr-field">{{ $paper['name'] }}</p>
-                    <p class="coe-omr-label">Name of Course / Batch</p>
+                    <p class="coe-omr-label coe-omr-label--ink">Name of Course / Batch</p>
                     <p class="coe-omr-field">{{ $course }}</p>
-                    <p class="coe-omr-label coe-omr-center">ROLL NUMBER</p>
+                    <p class="coe-omr-label coe-omr-label--ink coe-omr-center">ROLL NUMBER</p>
                     <table class="coe-omr-roll">
                         <tbody>
                             <tr>
@@ -151,9 +164,11 @@
     <table class="coe-omr-foot">
         <tbody>
             <tr>
-                <td>{{ $paper['code'] }}</td>
-                <td class="coe-omr-center"><strong>— A —</strong></td>
-                <td>&nbsp;</td>
+                <td class="coe-omr-foot__code"><span class="coe-omr-code">{{ $paper['code'] }}</span></td>
+                <td class="coe-omr-ruled__line">&nbsp;</td>
+                <td class="coe-omr-ruled__mid"><strong>A</strong></td>
+                <td class="coe-omr-ruled__line">&nbsp;</td>
+                <td class="coe-omr-foot__code">&nbsp;</td>
             </tr>
         </tbody>
     </table>
