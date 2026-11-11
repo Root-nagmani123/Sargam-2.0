@@ -329,12 +329,13 @@
                                     </button>
                                 </div>
                             </div>
-                        </div>
 
-                        {{-- The design has no Remarks field, but the store action still
-                             accepts one; keep it in the payload so nothing downstream
-                             changes shape. --}}
-                        <input type="hidden" id="request_remarks" name="remarks" value="">
+                            <div>
+                                <label for="request_remarks" class="ds-form-label">Remarks</label>
+                                <textarea class="form-control" id="request_remarks" name="remarks" rows="3"
+                                    maxlength="1000" placeholder="Optional remarks"></textarea>
+                            </div>
+                        </div>
 
                         <div id="request_details_loading" class="mt-3 d-none">
                             <span class="text-secondary d-inline-flex align-items-center gap-2">
