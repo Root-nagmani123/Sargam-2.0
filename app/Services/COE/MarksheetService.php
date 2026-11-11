@@ -21,9 +21,11 @@ use Illuminate\Support\Facades\Storage;
  *      marks is not decided yet, so gets no marksheet.
  *   2. Their marksheet is Generated: a coe_marksheets row with its number,
  *      MS/<course short name>/<year>/<serial>, the first time it is listed.
- *   3. COE Verify & Publish it — only while Signature Master holds exactly one
- *      Active UDC, AAO and COE signature. Publishing freezes the marksheet in
- *      `snapshot`; a published marksheet is never recomputed.
+ *   3. It is signed one by one with Verify (verify()): the UDC puts the UDC
+ *      signature; the AAO the AAO one, and the UDC one if still blank; the COE
+ *      the COE one and any still blank, which publishes it. Each signature is
+ *      the designation's Active image in Signature Master. Publishing freezes the
+ *      marksheet in `snapshot`; a published marksheet is never recomputed.
  *   4. Verified Marksheet lists the published ones.
  *
  * A course is Active while it has an Active drive, else Archived, so each
@@ -58,6 +60,14 @@ class MarksheetService
         static $enabled;
 
         return $enabled ??= Schema::hasTable('coe_marksheets');
+    }
+
+    /** coe_marksheets.signed is added by a later migration; until then marksheets cannot be signed. */
+    public static function signingEnabled(): bool
+    {
+        static $enabled;
+
+        return $enabled ??= self::enabled() && Schema::hasColumn('coe_marksheets', 'signed');
     }
 
     /* ───────────── Listing ───────────── */
@@ -133,7 +143,7 @@ class MarksheetService
         }
 
         if (! self::enabled()) {
-            return array_map(fn ($row) => $row + ['number' => '-', 'generated_on' => '-', 'published' => false], $candidates);
+            return array_map(fn ($row) => $row + ['number' => '-', 'generated_on' => '-', 'published' => false] + self::status(false, []), $candidates);
         }
 
         $this->generate($candidates);
@@ -162,14 +172,46 @@ class MarksheetService
         return $rows;
     }
 
-    /** A marksheet row with its record's number, date and status. */
+    /**
+     * A marksheet row with its record's number, date and status. `signatures` is
+     * designation => Signature Master pk: those put on it so far, or as published.
+     */
     private function stamp(array $row, Marksheet $record): array
     {
+        $signed = $record->isPublished() || ! self::signingEnabled() ? [] : ($record->signed ?? []);
+
         return array_replace($row, [
             'number' => $record->marksheet_number,
             'generated_on' => optional($record->generated_at)->format('d M Y') ?? '-',
             'published' => $record->isPublished(),
+            ...self::status($record->isPublished(), array_keys($signed)),
+        ], $record->isPublished() ? [] : [
+            'signatures' => array_map(fn ($s) => (int) $s['signature'], $signed),
         ]);
+    }
+
+    /** Statuses of the Marksheet Status column and filter, in signing order. */
+    public const STATUSES = ['Generated', 'Verified by UDC', 'Verified by AAO', 'Published'];
+
+    /**
+     * The Status column: Generated, then Verified by the highest signatory so far
+     * (UDC, AAO), then Published once the COE signs. `state` is its badge style.
+     *
+     * @param  string[]  $signed  designations signed so far
+     * @return array{status:string, state:string}
+     */
+    private static function status(bool $published, array $signed): array
+    {
+        if ($published) {
+            return ['status' => 'Published', 'state' => 'published'];
+        }
+        foreach (['AAO', 'UDC'] as $designation) {
+            if (in_array($designation, $signed, true)) {
+                return ['status' => 'Verified by '.$designation, 'state' => 'pending'];
+            }
+        }
+
+        return ['status' => 'Generated', 'state' => 'draft'];
     }
 
     /**
@@ -323,17 +365,19 @@ class MarksheetService
     }
 
     /**
-     * Why a marksheet cannot be published yet, or null: Signature Master must hold
-     * exactly one Active UDC, AAO and COE signature, each with its image.
+     * Why these designations cannot sign yet, or null: Signature Master must hold
+     * exactly one Active signature of each, with its image. Default: all three.
+     *
+     * @param  string[]|null  $designations
      */
-    public function signatureProblem(): ?string
+    public function signatureProblem(?array $designations = null): ?string
     {
         $active = $this->activeSignatures()->groupBy('designation_name');
         $disk = Storage::disk(SignatureMaster::DISK);
 
         $missing = [];
         $twice = [];
-        foreach (array_keys(self::SIGNATORIES) as $designation) {
+        foreach ($designations ?? array_keys(self::SIGNATORIES) as $designation) {
             $rows = $active->get($designation, collect());
             if ($rows->count() > 1) {
                 $twice[] = $designation;
@@ -344,30 +388,29 @@ class MarksheetService
 
         if ($missing) {
             return 'Upload the '.implode(', ', $missing).' signature'.(count($missing) > 1 ? 's' : '')
-                .' in Signature Master and keep '.(count($missing) > 1 ? 'them' : 'it').' Active before publishing. All three — UDC, AAO and COE — are needed.';
+                .' in Signature Master and keep '.(count($missing) > 1 ? 'them' : 'it').' Active before verifying.';
         }
         if ($twice) {
-            return 'More than one Active '.implode(', ', $twice).' signature in Signature Master. Keep only one Active per designation before publishing.';
+            return 'More than one Active '.implode(', ', $twice).' signature in Signature Master. Keep only one Active per designation before verifying.';
         }
 
         return null;
     }
 
     /**
-     * The signatures a marksheet prints, keyed by designation: those it was published
-     * with (while they still exist), else the current Active ones.
+     * The signatures a marksheet prints, keyed by designation: the ones put on it
+     * (still existing; on a published marksheet a deleted one falls back to the
+     * current Active signature of its designation). A place not signed yet is blank.
      */
     public function signaturesFor(array $m): Collection
     {
-        $current = $this->activeSignatures()->keyBy('designation_name');
-        if (! $m['published'] || empty($m['signatures'])) {
-            return $current;
-        }
+        $put = $m['signatures'] ?? [];
+        $kept = SignatureMaster::whereIn('pk', array_values($put) ?: [0])->get()->keyBy('pk');
+        $current = $m['published'] ? $this->activeSignatures()->keyBy('designation_name') : collect();
 
-        $kept = SignatureMaster::whereIn('pk', array_values($m['signatures']))->get()->keyBy('pk');
         $out = collect();
         foreach (array_keys(self::SIGNATORIES) as $designation) {
-            $sig = $kept->get($m['signatures'][$designation] ?? 0) ?? $current->get($designation);
+            $sig = isset($put[$designation]) ? ($kept->get($put[$designation]) ?? $current->get($designation)) : null;
             if ($sig) {
                 $out->put($designation, $sig);
             }
@@ -376,59 +419,115 @@ class MarksheetService
         return $out;
     }
 
+    /**
+     * The designation $user signs as: their highest of COE > AAO > UDC; Super Admin
+     * signs as the COE. Null when they are none of these.
+     */
+    public static function signerRole(User $user): ?string
+    {
+        if ($user->hasRole('Super Admin')) {
+            return 'COE';
+        }
+        foreach (array_reverse(array_keys(self::SIGNATORIES)) as $designation) {
+            if ($user->hasRole($designation)) {
+                return $designation;
+            }
+        }
+
+        return null;
+    }
+
     /* ───────────── Verify & Publish ───────────── */
 
     /**
-     * Publish the course's Generated marksheets of these OTs (student pks). All or
-     * nothing; an already published one is skipped.
+     * Verify the course's marksheets of these OTs (student pks) as $user: put their
+     * designation's signature on each, and every lower one still blank (the AAO the
+     * UDC's, the COE the UDC's and AAO's). The COE's signature publishes the
+     * marksheet. All or nothing; a published marksheet is skipped.
      *
      * @param  string[]  $codes
-     * @return array{published:int, error:?string}
+     * @return array{as:?string, signed:int, published:int, error:?string}
      */
-    public function publish(User $user, string $courseKey, array $codes): array
+    public function verify(User $user, string $courseKey, array $codes): array
     {
-        if (! self::enabled()) {
-            return ['published' => 0, 'error' => 'Marksheets cannot be published yet: the coe_marksheets table has not been created.'];
+        $fail = fn (string $error, ?string $as = null) => ['as' => $as, 'signed' => 0, 'published' => 0, 'error' => $error];
+
+        $as = self::signerRole($user);
+        if ($as === null) {
+            return $fail('Only the UDC, AAO or COE can verify marksheets.');
         }
-        if ($problem = $this->signatureProblem()) {
-            return ['published' => 0, 'error' => $problem];
+        if (! self::signingEnabled()) {
+            return $fail('Marksheets cannot be signed yet: run the coe_marksheets migrations.', $as);
         }
 
         $rows = collect($this->courseRows($courseKey))->keyBy('code');
         foreach ($codes as $code) {
             if (! $rows->has($code)) {
-                return ['published' => 0, 'error' => 'Some of these marksheets are no longer listed. Reload the page.'];
+                return $fail('Some of these marksheets are no longer listed. Reload the page.', $as);
             }
         }
 
-        $signatures = $this->activeSignatures()->mapWithKeys(fn (SignatureMaster $s) => [$s->designation_name => (int) $s->pk])->all();
+        // UDC → [UDC]; AAO → [UDC, AAO]; COE → [UDC, AAO, COE]: each put only where still blank.
+        $order = array_keys(self::SIGNATORIES);
+        $mine = array_slice($order, 0, array_search($as, $order, true) + 1);
+        $records = Marksheet::where('course_master_pk', (int) $courseKey)->whereIn('student_master_pk', array_map('intval', $codes))
+            ->get()->keyBy(fn (Marksheet $m) => (string) $m->student_master_pk);
+
+        $needed = [];
+        foreach ($codes as $code) {
+            if (! $rows[$code]['published'] && isset($records[$code])) {
+                $needed = array_merge($needed, array_diff($mine, array_keys($records[$code]->signed ?? [])));
+            }
+        }
+        $needed = array_values(array_unique($needed));
+        if ($needed && ($problem = $this->signatureProblem($needed))) {
+            return $fail($problem, $as);
+        }
+        $signatureOf = $this->activeSignatures()->mapWithKeys(fn (SignatureMaster $s) => [$s->designation_name => (int) $s->pk])->all();
         $now = now();
 
-        $published = DB::transaction(function () use ($rows, $codes, $courseKey, $signatures, $user, $now) {
-            $n = 0;
+        [$signed, $published] = DB::transaction(function () use ($rows, $codes, $courseKey, $mine, $as, $signatureOf, $user, $now) {
+            $signed = 0;
+            $published = 0;
             foreach ($codes as $code) {
-                $row = $rows[$code];
-                if ($row['published']) {
+                $record = Marksheet::where('course_master_pk', (int) $courseKey)->where('student_master_pk', (int) $code)
+                    ->lockForUpdate()->first();
+                if (! $record || $record->isPublished()) {
                     continue;
                 }
-                $snapshot = array_diff_key($row, array_flip(['number', 'generated_on', 'published'])) + ['signatures' => $signatures];
-                $n += Marksheet::where('course_master_pk', (int) $courseKey)
-                    ->where('student_master_pk', (int) $code)
-                    ->where('status', Marksheet::STATUS_GENERATED)
-                    ->update([
-                        'status' => Marksheet::STATUS_PUBLISHED,
-                        'published_by' => $user->user_id,
-                        'published_at' => $now,
-                        'snapshot' => json_encode($snapshot),
-                        'modified_by' => $user->user_id,
-                        'modified_date' => $now,
-                    ]);
+
+                $put = $record->signed ?? [];
+                $added = false;
+                foreach ($mine as $designation) {
+                    if (! isset($put[$designation])) {
+                        $put[$designation] = ['signature' => $signatureOf[$designation], 'by' => $user->user_id, 'at' => $now->format('Y-m-d H:i:s')];
+                        $added = true;
+                    }
+                }
+                if (! $added) {
+                    continue;
+                }
+
+                $record->signed = $put;
+                $record->modified_by = $user->user_id;
+                $record->modified_date = $now;
+                if ($as === 'COE') {
+                    $signatures = array_map(fn ($s) => (int) $s['signature'], $put);
+                    $snapshot = array_replace(array_diff_key($rows[$code], array_flip(['number', 'generated_on', 'published', 'status', 'state'])), ['signatures' => $signatures]);
+                    $record->status = Marksheet::STATUS_PUBLISHED;
+                    $record->published_by = $user->user_id;
+                    $record->published_at = $now;
+                    $record->snapshot = $snapshot;
+                    $published++;
+                }
+                $record->save();
+                $signed++;
             }
 
-            return $n;
+            return [$signed, $published];
         });
         $this->rowCache = [];
 
-        return ['published' => $published, 'error' => null];
+        return ['as' => $as, 'signed' => $signed, 'published' => $published, 'error' => null];
     }
 }

@@ -40,6 +40,8 @@ class Marksheet extends Model
         'generated_at' => 'datetime',
         'published_at' => 'datetime',
         'snapshot' => 'array',
+        // Only once the column exists — see MarksheetService::signingEnabled().
+        'signed' => 'array',
     ];
 
     public function isPublished(): bool

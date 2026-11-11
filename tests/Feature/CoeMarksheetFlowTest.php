@@ -23,20 +23,23 @@ class CoeMarksheetFlowTest extends TestCase
         return User::role('Super Admin')->first() ?? $this->markTestSkipped('Needs a Super Admin.');
     }
 
-    /** A Generated marksheet, as the listing has it. */
-    private function generated(): array
+    /** A Generated marksheet, as the listing has it; with $unsigned, one nobody has signed and that can be signed. */
+    private function generated(bool $unsigned = false): array
     {
         if (! MarksheetService::enabled()) {
             $this->markTestSkipped('Needs the coe_marksheets table.');
         }
+        if ($unsigned && ! MarksheetService::signingEnabled()) {
+            $this->markTestSkipped('Needs the coe_marksheets signed column.');
+        }
         foreach (['active', 'archived'] as $scope) {
             foreach (app(MarksheetService::class)->rows($scope) as $row) {
-                if (! $row['published']) {
+                if (! $row['published'] && (! $unsigned || empty($row['signatures']))) {
                     return $row;
                 }
             }
         }
-        $this->markTestSkipped('Needs an OT ranked in Merit & Ranking with a Pass / Fail.');
+        $this->markTestSkipped('Needs an OT ranked in Merit & Ranking with a Pass / Fail'.($unsigned ? ', not signed yet.' : '.'));
     }
 
     public function test_the_screens_open(): void
@@ -60,9 +63,12 @@ class CoeMarksheetFlowTest extends TestCase
             ->where('student_master_pk', (int) $row['code'])->where('marksheet_number', $row['number'])->exists());
 
         $this->actingAs($this->admin())->get(route('admin.coe.marksheet-generation.index'))->assertOk();
-        // Not published yet: no signatures on it.
-        $this->actingAs($this->admin())->get(route('admin.coe.marksheet.show', ['course' => $row['course_key'], 'ot' => $row['code']]))
-            ->assertOk()->assertSee($row['number'])->assertSee($row['name'])->assertDontSee('signature-master/', false);
+        $page = $this->actingAs($this->admin())->get(route('admin.coe.marksheet.show', ['course' => $row['course_key'], 'ot' => $row['code']]))
+            ->assertOk()->assertSee($row['number'])->assertSee($row['name']);
+        // Nobody has signed it yet: no signatures on it.
+        if (empty($row['signatures'])) {
+            $page->assertDontSee('signature-master/', false);
+        }
     }
 
     public function test_view_and_verify_lists_every_pending_marksheet_of_the_course_clicked_one_first(): void
@@ -86,7 +92,7 @@ class CoeMarksheetFlowTest extends TestCase
 
     public function test_publish_is_refused_until_all_three_signatures_are_active(): void
     {
-        $row = $this->generated();
+        $row = $this->generated(true);
         SignatureMaster::where('designation_name', 'AAO')->update(['active_inactive' => 0]);
 
         $this->actingAs($this->admin())->postJson(route('admin.coe.marksheet-generation.publish'), ['course' => $row['course_key'], 'ots' => [$row['code']]])
@@ -98,7 +104,7 @@ class CoeMarksheetFlowTest extends TestCase
 
     public function test_publish_saves_the_marksheet_and_lists_it_as_verified(): void
     {
-        $row = $this->generated();
+        $row = $this->generated(true);
         if (app(MarksheetService::class)->signatureProblem() !== null) {
             $this->markTestSkipped('Needs one Active UDC, AAO and COE signature with its image.');
         }

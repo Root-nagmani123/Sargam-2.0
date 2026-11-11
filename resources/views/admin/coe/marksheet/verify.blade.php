@@ -65,13 +65,13 @@ $(function () {
     var COURSE = @json($courseKey);
     var ALL = @json(array_column($rows, 'code'));
 
-    // Verify & Publish locks the marksheet; the server refuses it until UDC, AAO and COE signatures are in Signature Master.
+    // Verify puts the logged-in UDC / AAO / COE signature on the marksheet; the COE's publishes it (MarksheetService::verify()).
     $('.mv-publish').on('click', function () {
         var ots = $(this).data('all') ? ALL : [String($(this).data('code'))];
         Swal.fire({
-            icon: 'question', title: 'Verify & Publish',
-            text: ots.length === 1 ? 'Publish this marksheet? It cannot be changed afterwards.' : 'Publish these ' + ots.length + ' marksheets? They cannot be changed afterwards.',
-            showCancelButton: true, confirmButtonText: 'Verify & Publish'
+            icon: 'question', title: 'Verify',
+            text: ots.length === 1 ? 'Verify this marksheet? Your signature will be added to it.' : 'Verify these ' + ots.length + ' marksheets? Your signature will be added to them.',
+            showCancelButton: true, confirmButtonText: 'Verify'
         }).then(function (r) {
             if (!r.isConfirmed) { return; }
             $.ajax({
@@ -79,9 +79,9 @@ $(function () {
                 data: JSON.stringify({ course: COURSE, ots: ots }),
                 headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
             }).done(function (res) {
-                Swal.fire({ icon: 'success', title: 'Published', text: res.message }).then(function () { window.location.href = BACK_URL; });
+                Swal.fire({ icon: 'success', title: 'Verified', text: res.message }).then(function () { window.location.href = BACK_URL; });
             }).fail(function (xhr) {
-                Swal.fire({ icon: 'error', title: 'Not published', text: (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong. Please try again.' });
+                Swal.fire({ icon: 'error', title: 'Not verified', text: (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong. Please try again.' });
             });
         });
     });

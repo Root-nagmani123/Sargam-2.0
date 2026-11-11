@@ -59,8 +59,9 @@
                     <div class="programme-dt-filter-select">
                         <select id="mgFilterStatus" class="form-select" data-placeholder="Marksheet Status" aria-label="Marksheet Status">
                             <option value="">Marksheet Status</option>
-                            <option value="Generated">Generated</option>
-                            <option value="Published">Published</option>
+                            @foreach (\App\Services\COE\MarksheetService::STATUSES as $status)
+                                <option value="{{ $status }}">{{ $status }}</option>
+                            @endforeach
                         </select>
                     </div>
                     <div class="programme-dt-filter-select">
@@ -122,7 +123,7 @@
                                     <td class="coe-nowrap">{{ $row['number'] }}</td>
                                     <td class="coe-nowrap">{{ $row['generated_on'] }}</td>
                                     <td>
-                                        <span class="coe-state coe-state--{{ $row['published'] ? 'published' : 'draft' }}">{{ $row['published'] ? 'Published' : 'Generated' }}</span>
+                                        <span class="coe-state coe-state--{{ $row['state'] }}">{{ $row['status'] }}</span>
                                     </td>
                                     <td>
                                         <div class="coe-act-group" role="group" aria-label="Row actions">
@@ -130,7 +131,7 @@
                                                 <span class="coe-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span>
                                                 <span class="coe-act__label">View</span>
                                             </a>
-                                            @unless ($row['published'])
+                                            @if ($row['can_verify'])
                                                 <a href="{{ route('admin.coe.marksheet-generation.verify', ['course' => $row['course_key'], 'ots' => [$row['code']]]) }}"
                                                    class="coe-act coe-act--approve mg-verify">
                                                     <span class="coe-act__icon"><i class="bi bi-check2" aria-hidden="true"></i></span>
@@ -140,7 +141,7 @@
                                                     <span class="coe-act__icon"><i class="bi bi-eye-fill" aria-hidden="true"></i></span>
                                                     <span class="coe-act__label">View &amp; Verify</span>
                                                 </a>
-                                            @endunless
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>
@@ -196,13 +197,13 @@ $(function () {
     });
     $('#mgTable').on('change', '.mg-row-check', refresh);
 
-    /* ── Verify on a row: publish that marksheet here, after a confirm; the server checks the signatures ── */
+    /* ── Verify on a row: puts the logged-in UDC / AAO / COE signature on it here, after a confirm; the COE's publishes it ── */
     $('#mgTable').on('click', '.mg-verify', function (e) {
         e.preventDefault();
         var $tr = $(this).closest('tr');
         Swal.fire({
-            icon: 'question', title: 'Verify & Publish', text: 'Publish this marksheet? It cannot be changed afterwards.',
-            showCancelButton: true, confirmButtonText: 'Verify & Publish'
+            icon: 'question', title: 'Verify', text: 'Verify this marksheet? Your signature will be added to it.',
+            showCancelButton: true, confirmButtonText: 'Verify'
         }).then(function (r) {
             if (!r.isConfirmed) { return; }
             $.ajax({
@@ -210,9 +211,9 @@ $(function () {
                 data: JSON.stringify({ course: String($tr.attr('data-course')), ots: [String($tr.attr('data-code'))] }),
                 headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
             }).done(function (res) {
-                Swal.fire({ icon: 'success', title: 'Published', text: res.message }).then(function () { window.location.reload(); });
+                Swal.fire({ icon: 'success', title: 'Verified', text: res.message }).then(function () { window.location.reload(); });
             }).fail(function (xhr) {
-                Swal.fire({ icon: 'error', title: 'Not published', text: (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong. Please try again.' });
+                Swal.fire({ icon: 'error', title: 'Not verified', text: (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong. Please try again.' });
             });
         });
     });

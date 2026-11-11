@@ -107,12 +107,12 @@
                 @php $sig = $signatures->get($designation); @endphp
                 <div class="ms-sign">
                     <div class="ms-sign-cap">{{ $caption === 'Controller of Examination' ? '' : $caption.':' }}&nbsp;</div>
-                    @if (! $m['published'])
-                        {{-- Signed only once Verified & Published. --}}
-                        <div class="ms-sign-empty"></div>
-                    @elseif ($sig)
+                    @if ($sig)
                         <img src="{{ route('admin.coe.signature-master.file', ['signature' => $sig->pk]) }}" alt="Signature of {{ $sig->person_name }}">
                         <div>({{ $sig->person_name }})</div>
+                    @elseif (! $m['published'])
+                        {{-- Blank until the UDC / AAO / COE verifies (MarksheetService::verify()). --}}
+                        <div class="ms-sign-empty"></div>
                     @else
                         <div class="ms-sign-empty">No active {{ $designation }} signature in Signature Master</div>
                     @endif
@@ -128,11 +128,11 @@
 <script>
 $(function () {
     'use strict';
-    // Verify & Publish locks the marksheet; the server refuses it until UDC, AAO and COE signatures are in Signature Master.
+    // Verify puts the logged-in UDC / AAO / COE signature on the marksheet; the COE's publishes it (MarksheetService::verify()).
     $('#msPublish').on('click', function () {
         Swal.fire({
-            icon: 'question', title: 'Verify & Publish', text: 'Publish this marksheet? It cannot be changed afterwards.',
-            showCancelButton: true, confirmButtonText: 'Verify & Publish'
+            icon: 'question', title: 'Verify', text: 'Verify this marksheet? Your signature will be added to it.',
+            showCancelButton: true, confirmButtonText: 'Verify'
         }).then(function (r) {
             if (!r.isConfirmed) { return; }
             $.ajax({
@@ -140,9 +140,9 @@ $(function () {
                 data: JSON.stringify({ course: @json($m['course_key']), ots: [@json($m['code'])] }),
                 headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
             }).done(function (res) {
-                Swal.fire({ icon: 'success', title: 'Published', text: res.message }).then(function () { window.location.reload(); });
+                Swal.fire({ icon: 'success', title: 'Verified', text: res.message }).then(function () { window.location.reload(); });
             }).fail(function (xhr) {
-                Swal.fire({ icon: 'error', title: 'Not published', text: (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong. Please try again.' });
+                Swal.fire({ icon: 'error', title: 'Not verified', text: (xhr.responseJSON && xhr.responseJSON.message) || 'Something went wrong. Please try again.' });
             });
         });
     });
