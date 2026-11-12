@@ -313,8 +313,9 @@ function init() {
                     var i1 = readingIdx++;
                     var m1 = row.m1;
                     var m2 = row.m2;
-                    var last1 = parseLastReading(m1.last_month_reading);
-                    var last2 = parseLastReading(m2.last_month_reading);
+                    // F-049 Rule A: a month's own row measures units from its opening reading (opening_reading).
+                    var last1 = parseLastReading(m1.opening_reading != null ? m1.opening_reading : m1.last_month_reading);
+                    var last2 = parseLastReading(m2.opening_reading != null ? m2.opening_reading : m2.last_month_reading);
                     var nm1 = String(m1.new_meter_no || '').trim() || String(m1.old_meter_no || '');
                     var nm2 = String(m2.new_meter_no || '').trim() || String(m2.old_meter_no || '');
                     var elec1 = (m1.last_month_reading != null && m1.last_month_reading !== '') ? m1.last_month_reading : 'N/A';
@@ -367,7 +368,7 @@ function init() {
                 }
 
                 var idx = readingIdx++;
-                var lastReading = parseLastReading(row.last_month_reading);
+                var lastReading = parseLastReading(row.opening_reading != null ? row.opening_reading : row.last_month_reading);
                 var existingCurrStored = (row.curr_month_reading !== null && row.curr_month_reading !== undefined && row.curr_month_reading !== '')
                     ? String(row.curr_month_reading) : '';
                 var slot = row.meter_slot || 1;
