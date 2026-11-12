@@ -21,6 +21,11 @@
     // Max marks as the Figma writes them: 90, 172.50, 622.50.
     $outMax = fn ($v) => $v === null ? '-' : (floor($v) == $v ? number_format($v, 0, '.', '') : number_format($v, 2, '.', ''));
     $out = $outMax;
+    // Header max, or nothing when the courses listed (All) differ on it.
+    $head = fn ($v) => $v === null ? '' : '<span class="mr-out">/ '.e($outMax($v)).'</span>';
+    // A cell's own course max, shown only where the header has none.
+    $own = fn ($value, $headerMax, $rowMax) => $value !== null && $headerMax === null && $rowMax !== null
+        ? '<span class="mr-out">/ '.e($outMax($rowMax)).'</span>' : '';
 @endphp
 <div class="container-fluid coe-page">
     <x-breadcrum title="Merit & Ranking" :showBack="false"
@@ -100,13 +105,13 @@
                                 <th scope="col">Officer Trainee</th>
                                 <th scope="col">Service</th>
                                 @foreach ($subjects as $s)
-                                    <th scope="col">{{ $s['name'] }}<span class="mr-out">/ {{ $out($s['max']) }}</span></th>
+                                    <th scope="col">{{ $s['name'] }}{!! $head($s['max']) !!}</th>
                                 @endforeach
-                                <th scope="col">Total (A)<span class="mr-out">/ {{ $out($maxA) }}</span></th>
-                                <th scope="col">Director Assessment<span class="mr-out">/ {{ $outMax($maxB) }}</span></th>
-                                <th scope="col">Grand Total (A+B)<span class="mr-out">/ {{ $out($max) }}</span></th>
+                                <th scope="col">Total (A){!! $head($maxA) !!}</th>
+                                <th scope="col">Director Assessment{!! $head($maxB) !!}</th>
+                                <th scope="col">Grand Total (A+B){!! $head($max) !!}</th>
                                 @foreach ($qualifying as $paper => $paperMax)
-                                    <th scope="col">{{ $paper }}<span class="mr-out">/ {{ $outMax($paperMax) }}</span></th>
+                                    <th scope="col">{{ $paper }}{!! $head($paperMax) !!}</th>
                                 @endforeach
                                 <th scope="col">Pass</th>
                             </tr>
@@ -120,15 +125,16 @@
                                     <td class="coe-nowrap">{{ $row['name'] ?: '-' }}</td>
                                     <td>{{ $row['service'] ?: '-' }}</td>
                                     @foreach ($subjects as $spk => $s)
-                                        <td>{{ $num($row['subjects'][$spk]) }}</td>
+                                        <td>{{ $num($row['subjects'][$spk]) }}{!! $own($row['subjects'][$spk], $s['max'], $row['max']['subjects'][$spk] ?? null) !!}</td>
                                     @endforeach
-                                    <td>{{ $num($row['total_a']) }}</td>
-                                    <td>{{ $num($row['director']) }}</td>
+                                    <td>{{ $num($row['total_a']) }}{!! $own($row['total_a'], $maxA, $row['max']['a']) !!}</td>
+                                    <td>{{ $num($row['director']) }}{!! $own($row['director'], $maxB, $row['max']['b']) !!}</td>
                                     <td data-order="{{ $row['grand'] }}">
-                                        <strong>{{ $num($row['grand']) }}</strong><span class="mr-out">/ {{ $num($max) }}</span>
+                                        {{-- Always the row's own course max: under All courses differ. --}}
+                                        <strong>{{ $num($row['grand']) }}</strong><span class="mr-out">/ {{ $num($row['max']['max']) }}</span>
                                     </td>
                                     @foreach ($qualifying as $paper => $paperMax)
-                                        <td>{{ $num($row['qualifying'][$paper]) }}</td>
+                                        <td>{{ $num($row['qualifying'][$paper]) }}{!! $own($row['qualifying'][$paper], $paperMax, $row['max']['qualifying'][$paper]) !!}</td>
                                     @endforeach
                                     <td data-search="{{ $row['result'] ?? '' }}">
                                         @if ($row['result'] === null)

@@ -12,6 +12,7 @@
 .mm-out { font-size: 11px; color: var(--ds-ink-muted, #7c7c7c); }
 .coe-page .coe-state--not-moderated { background: #fff4e5; border-color: #fedf89; color: #c4320a; }
 .coe-page .coe-state--absent { background: #e2e8f0; border-color: #cbd5e1; color: #475569; }
+.coe-page .coe-state--moderated { background: #d1f0e0; border-color: #abefc6; color: #067647; }
 /* Moderated, but not saved (no moderation columns yet). */
 .mm-unsaved { color: var(--coe-brand); font-weight: 600; }
 </style>
