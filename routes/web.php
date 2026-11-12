@@ -2171,6 +2171,14 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('grade-master.toggle-status');
     Route::delete('grade-master/{id}', [\App\Http\Controllers\Admin\COE\GradeMasterController::class, 'destroy'])
         ->name('grade-master.destroy');
+    // Roll No <-> Unique Code Mapping: read-only, confidential (undoes the codes' anonymity) -
+    // only coe_roll_code_mapping (COE; Super Admin always passes).
+    Route::middleware('menu.permission:coe_roll_code_mapping')->group(function () {
+        Route::get('roll-code-mapping', [\App\Http\Controllers\Admin\COE\RollCodeMappingController::class, 'index'])
+            ->name('roll-code-mapping.index');
+        Route::get('roll-code-mapping/export/{format}', [\App\Http\Controllers\Admin\COE\RollCodeMappingController::class, 'export'])
+            ->whereIn('format', ['csv', 'excel', 'pdf', 'print'])->name('roll-code-mapping.export');
+    });
     Route::get('unique-participant-code', [\App\Http\Controllers\Admin\COE\UniqueParticipantCodeController::class, 'index'])
         ->name('unique-participant-code.index');
     Route::post('unique-participant-code/generate', [\App\Http\Controllers\Admin\COE\UniqueParticipantCodeController::class, 'generate'])
