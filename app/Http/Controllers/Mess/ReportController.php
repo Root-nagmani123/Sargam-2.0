@@ -2589,8 +2589,9 @@ class ReportController extends Controller
         $cwBuyers = $this->normalizedBuyerNameList($request);
 
         // Opened with no filters: show the current month instead of an empty report.
-        if (! $request->filled('from_date') && ! $request->filled('to_date')
-            && $cwSlugs === [] && $cwPks === [] && $cwBuyers === []) {
+        $defaultMonth = ! $request->filled('from_date') && ! $request->filled('to_date')
+            && $cwSlugs === [] && $cwPks === [] && $cwBuyers === [];
+        if ($defaultMonth) {
             $request->merge([
                 'from_date' => now()->startOfMonth()->toDateString(),
                 'to_date' => now()->toDateString(),
@@ -2664,7 +2665,8 @@ class ReportController extends Controller
         ]));
         $loadMeta = fn () => $this->loadCategoryWisePrintSlipMeta($request);
 
-        if ($request->boolean('refresh')) {
+        // The default month includes today, so it is always rebuilt to show today's new entries.
+        if ($request->boolean('refresh') || $defaultMonth) {
             $meta = $loadMeta();
             $this->putMessReportCache($cacheKey, $meta, self::SALE_VOUCHER_REPORT_CACHE_ENV_KEYS, 'ReportController@categoryWisePrintSlip');
             $cacheHit = false;
