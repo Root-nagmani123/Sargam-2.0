@@ -54,7 +54,7 @@ class RoomController extends Controller
                     'options' => $this->venueOptions()],
                 ['key' => 'building', 'name' => 'building_master_pk', 'label' => 'Building Name', 'column' => 'Building',
                     'type' => 'select', 'placeholder' => 'Select Building Name', 'required' => true,
-                    'options' => $this->buildingOptions()],
+                    'options' => $this->buildingOptions(), 'inactiveOptions' => $this->inactiveBuildingOptions()],
                 ['key' => 'floor', 'name' => 'floor_master_pk', 'label' => 'Floor Name', 'column' => 'Floor',
                     'type' => 'select', 'placeholder' => 'Select Floor', 'required' => true,
                     'options' => $this->floorOptions()],
@@ -103,7 +103,15 @@ class RoomController extends Controller
                 Rule::unique('building_floor_room_mapping', 'room_name')->ignore($id, 'pk'),
             ],
             'building_master_pk' => ['required', 'integer',
-                Rule::exists('building_master', 'pk')->where('building_type', BuildingMaster::TYPE_CLASSROOM)],
+                Rule::exists('building_master', 'pk')->where('building_type', BuildingMaster::TYPE_CLASSROOM),
+                // An inactive building only stays on a room that is already on it.
+                function ($attribute, $value, $fail) use ($id) {
+                    $active = BuildingMaster::whereKey($value)->where('active_inactive', 1)->exists();
+                    $current = $id && (int) BuildingFloorRoomMapping::whereKey($id)->value('building_master_pk') === (int) $value;
+                    if (! $active && ! $current) {
+                        $fail('This building is inactive. Select an active building.');
+                    }
+                }],
             'floor_master_pk' => ['required', 'integer', Rule::exists('floor_master', 'pk')],
             'room_type' => ['required', Rule::in(array_keys(BuildingFloorRoomMapping::$roomTypes))],
             'capacity' => ['required', 'integer', 'min:1', 'max:9999'],
@@ -220,15 +228,26 @@ class RoomController extends Controller
             ->all();
     }
 
-    /** Active Classroom buildings, plus any inactive one a room is on, for its Edit dialog. [pk => name] */
+    /** Active Classroom buildings, the only ones Add Room offers. [pk => name] */
     private function buildingOptions(): array
     {
         return BuildingMaster::classroom()
-            ->where(fn ($q) => $q->where('active_inactive', 1)
-                ->orWhereIn('pk', BuildingFloorRoomMapping::select('building_master_pk')))
+            ->where('active_inactive', 1)
             ->orderBy('building_name')
             ->pluck('building_name', 'pk')
             ->map(fn ($name) => trim((string) $name))
+            ->all();
+    }
+
+    /** Inactive Classroom buildings a room is on; Edit shows only the room's own one. [pk => name] */
+    private function inactiveBuildingOptions(): array
+    {
+        return BuildingMaster::classroom()
+            ->where('active_inactive', '!=', 1)
+            ->whereIn('pk', BuildingFloorRoomMapping::select('building_master_pk'))
+            ->orderBy('building_name')
+            ->pluck('building_name', 'pk')
+            ->map(fn ($name) => trim((string) $name) . ' (Inactive)')
             ->all();
     }
 

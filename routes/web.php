@@ -2163,6 +2163,14 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('room.destroy');
     Route::get('grade-master', [\App\Http\Controllers\Admin\COE\GradeMasterController::class, 'index'])
         ->name('grade-master.index');
+    Route::get('grade-master/export/{format}', [\App\Http\Controllers\Admin\COE\GradeMasterController::class, 'export'])
+        ->whereIn('format', ['csv', 'excel', 'pdf', 'print'])->name('grade-master.export');
+    Route::post('grade-master', [\App\Http\Controllers\Admin\COE\GradeMasterController::class, 'store'])
+        ->name('grade-master.store');
+    Route::patch('grade-master/{id}/toggle-status', [\App\Http\Controllers\Admin\COE\GradeMasterController::class, 'toggleStatus'])
+        ->name('grade-master.toggle-status');
+    Route::delete('grade-master/{id}', [\App\Http\Controllers\Admin\COE\GradeMasterController::class, 'destroy'])
+        ->name('grade-master.destroy');
     Route::get('unique-participant-code', [\App\Http\Controllers\Admin\COE\UniqueParticipantCodeController::class, 'index'])
         ->name('unique-participant-code.index');
     Route::post('unique-participant-code/generate', [\App\Http\Controllers\Admin\COE\UniqueParticipantCodeController::class, 'generate'])

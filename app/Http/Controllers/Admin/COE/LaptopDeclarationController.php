@@ -44,6 +44,8 @@ class LaptopDeclarationController extends Controller
             'student' => $student,
             'declaration' => $declaration,
             'blocked' => $this->blockedReason($declaration),
+            // Scriber Required: Yes is offered only with a PwBD category in the profile.
+            'pwbd' => LaptopDeclarationService::isPwbd($student->ph),
         ]);
     }
 
@@ -114,6 +116,7 @@ class LaptopDeclarationController extends Controller
                 'sm.last_name',
                 'sm.generated_OT_code',
                 'sm.batch',
+                'sm.ph',
                 'c.course_name',
                 'c.couse_short_name',
                 'rn.roll_number',
