@@ -38,8 +38,8 @@ class PurchaseOrderController extends Controller
         if ($request->ajax() && $request->has('draw')) {
             return DataTableRedisCache::serveCachedAjax(
                 $request,
-                // v2: list gained Order Date, Bill No. and Challan No. columns.
-                'purchase_order_dt:v2:',
+                // v3: default order puts approved POs first (v2: Order Date, Bill No., Challan No. columns).
+                'purchase_order_dt:v3:',
                 self::PURCHASE_ORDER_DT_LIST_EPOCH,
                 [
                     'enabled' => 'PURCHASE_ORDER_DATATABLE_CACHE_ENABLED',
@@ -196,7 +196,9 @@ class PurchaseOrderController extends Controller
                 $paged->orderBy($table . '.po_date', $orderDir);
                 break;
             case 1:
-                $paged->orderBy($table . '.po_number', $orderDir);
+                // Approved first, then pending, then rejected; order number within each.
+                $paged->orderByRaw("CASE {$table}.status WHEN 'approved' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END")
+                    ->orderBy($table . '.po_number', $orderDir);
                 break;
             case 2:
                 $paged->orderBy($table . '.po_date', $orderDir);
