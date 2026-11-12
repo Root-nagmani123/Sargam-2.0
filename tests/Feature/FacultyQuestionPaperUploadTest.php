@@ -131,33 +131,18 @@ class FacultyQuestionPaperUploadTest extends TestCase
             ->assertDontSee('name="question_paper"', false);
     }
 
-    public function test_sets_page_opens_from_the_editor_in_either_mode_and_locks_with_it(): void
+    public function test_add_page_configures_paper_sets_with_set_a_as_the_master(): void
     {
-        $sets = route('admin.coe.faculty-question-paper.sets', $this->map->id);
-
         $this->actingAs($this->faculty)
             ->get(route('admin.coe.faculty-question-paper.create', $this->map->id))
-            ->assertSee($sets, false);
-
-        $this->actingAs($this->faculty)->get($sets)
             ->assertOk()
-            ->assertSee('Create multiple paper sets')
-            ->assertSee('data-mode="shuffled"', false);
-        $this->actingAs($this->faculty)->get($sets.'?mode=independent')
-            ->assertSee('data-mode="independent"', false);
-        $this->actingAs($this->faculty)->get($sets.'?mode=other')
-            ->assertSee('data-mode="shuffled"', false);
-
-        $this->actingAs($this->faculty)
-            ->get(route('admin.coe.faculty-question-paper.sets', $this->map->id + 100000))
-            ->assertNotFound();
-        $this->actingAs($this->nonFaculty())->get($sets)->assertForbidden();
-
-        // Locked exactly when the editor is (here: the CC has not approved the drive).
-        $this->map->drive->update(['cc_status' => ExaminationDrive::CC_PENDING]);
-        $this->actingAs($this->faculty)->get($sets)
-            ->assertRedirect(route('admin.coe.faculty-question-paper.index'))
-            ->assertSessionHas('error', fn ($m) => str_contains($m, 'Course Coordinator has not approved'));
+            ->assertSee('1. Configure your sets')
+            ->assertSee('id="setsModeShuffled" value="shuffled" checked', false)
+            ->assertSee('id="setsModeIndependent" value="independent"', false)
+            ->assertSee('id="setsCards"', false)
+            ->assertSee('id="setsOrder"', false)
+            // Only Set A goes up: the upload still posts one paper.
+            ->assertSee('data: { paper_html: docHtml(0) }', false);
     }
 
     public function test_editor_page_is_guarded_and_stamped_with_the_writer(): void
@@ -170,10 +155,10 @@ class FacultyQuestionPaperUploadTest extends TestCase
             ->assertSee('class="coe-qp-shield"', false)
             ->getContent();
 
-        $this->assertMatchesRegularExpression(
-            '/var WATERMARK = ".*? \\\\u00b7 ID '.$this->faculty->getAuthIdentifier().' \\\\u00b7 /u',
-            $html
-        );
+        // The LBSNAA watermark (coe-admin.css), not the writer's name and ID.
+        $this->assertStringContainsString('class="coe-qp-mark"', $html);
+        $this->assertStringNotContainsString('WATERMARK', $html);
+        $this->assertStringNotContainsString('ID '.$this->faculty->getAuthIdentifier().' ·', $html);
         $this->assertStringContainsString('var HIDDEN_URL = "'.str_replace('/', '\/', route('admin.coe.faculty-question-paper.hidden', $this->map->id)).'"', $html);
     }
 
@@ -322,7 +307,7 @@ class FacultyQuestionPaperUploadTest extends TestCase
             ->assertJson(['format' => 'html']);
         $this->assertStringContainsString('Q1 Explain.', $response->json('content'));
         $this->assertStringNotContainsString('<script', $response->json('content'));
-        $this->assertStringContainsString('ID '.$this->faculty->getAuthIdentifier(), $response->json('watermark'));
+        $this->assertNull($response->json('watermark'));
         $this->assertNull($response->headers->get('Content-Disposition'));
         $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
 

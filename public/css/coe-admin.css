@@ -961,7 +961,7 @@
     box-shadow: none;
 }
 
-.coe-qp-add .coe-qp-editor .note-toolbar {
+.coe-qp-add .coe-qp-toolbar .note-toolbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -974,25 +974,25 @@
     background: #fff;
 }
 
-.coe-qp-add .coe-qp-editor .note-toolbar .note-btn-group {
+.coe-qp-add .coe-qp-toolbar .note-toolbar .note-btn-group {
     margin: 0;
     padding: 0 0.375rem;
 }
 
 /* A thin rule between groups, as designed. */
-.coe-qp-add .coe-qp-editor .note-toolbar .note-btn-group + .note-btn-group { border-left: 1px solid #e4e7ec; }
+.coe-qp-add .coe-qp-toolbar .note-toolbar .note-btn-group + .note-btn-group { border-left: 1px solid #e4e7ec; }
 
-.coe-qp-add .coe-qp-editor .note-toolbar .note-btn {
+.coe-qp-add .coe-qp-toolbar .note-toolbar .note-btn {
     border: 0;
     background: transparent;
     color: #344054;
 }
 
-.coe-qp-add .coe-qp-editor .note-toolbar .note-btn:hover,
-.coe-qp-add .coe-qp-editor .note-toolbar .note-btn.active { background: #f2f4f7; }
+.coe-qp-add .coe-qp-toolbar .note-toolbar .note-btn:hover,
+.coe-qp-add .coe-qp-toolbar .note-toolbar .note-btn.active { background: #f2f4f7; }
 
 /* "Normal ▾": the style's name in a small bordered select. */
-.coe-qp-add .coe-qp-editor .note-toolbar .note-btn.coe-qp-style {
+.coe-qp-add .coe-qp-toolbar .note-toolbar .note-btn.coe-qp-style {
     display: inline-flex;
     align-items: center;
     justify-content: space-between;
@@ -1004,8 +1004,8 @@
 }
 
 /* The 'more' group (table, line, undo, redo) shows once "…" is pressed. */
-.coe-qp-add .coe-qp-editor .note-toolbar .note-more { display: none; }
-.coe-qp-add .coe-qp-editor .note-toolbar.is-more-open .note-more { display: inline-flex; }
+.coe-qp-add .coe-qp-toolbar .note-toolbar .note-more { display: none; }
+.coe-qp-add .coe-qp-toolbar .note-toolbar.is-more-open .note-more { display: inline-flex; }
 
 .coe-qp-add .coe-qp-editor .note-editing-area { background: transparent; }
 
@@ -1191,7 +1191,7 @@
     color: #475467;
 }
 
-/* OMR Answer Sheet template: a pink sheet; bubbles are round spans (the sanitizer keeps classes, not inline styles). */
+/* OMR Answer Sheet (no longer offered as a template; kept so papers saved from it still render): a pink sheet; bubbles are round spans (the sanitizer keeps classes, not inline styles). */
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr { --omr: #d6286f; --omr-tint: #fde4ee; padding: 0 30px; color: var(--omr); font-family: Arial, Helvetica, sans-serif; font-size: 0.8125rem; line-height: 1.35; background: repeating-linear-gradient(to bottom, #111 0 7px, transparent 7px 24px) left top / 14px 100% no-repeat, repeating-linear-gradient(to bottom, #111 0 7px, transparent 7px 24px) right top / 14px 100% no-repeat; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr table { width: 100%; margin: 0; border-collapse: collapse; }
 :is(.coe-page.coe-qp-add .coe-qp-editor .note-editable, .coe-page.coe-qp-add .coe-tpl-sheet, .coe-paper-view) .coe-omr table td { border: 0; padding: 0.2rem 0.3rem; vertical-align: top; }
@@ -1255,7 +1255,7 @@
 @media (max-width: 767.98px) {
     .coe-qp-add .coe-qp-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 1rem; }
     .coe-qp-add .coe-qp-summary > div:last-child { justify-self: start; }
-    .coe-qp-add .coe-qp-editor .note-toolbar { width: 100%; }
+    .coe-qp-add .coe-qp-toolbar .note-toolbar { width: 100%; }
     .coe-qp-add .coe-qp-editor .note-editor .note-editing-area .note-editable { padding: 1.25rem 1rem; }
     /* Header, particulars, instructions and section bands stack: one cell per line. */
     .coe-page.coe-qp-add .coe-qp-editor .note-editable table:is(.coe-paper-head, .coe-paper-meta, .coe-paper-instructions, .coe-paper-section, .coe-paper-candidate) td {
@@ -1341,8 +1341,17 @@
     position: absolute;
     inset: 0;
     z-index: 2;
-    background-repeat: repeat;
     pointer-events: none;
+}
+
+/* The LBSNAA watermark over every view of a paper (viewer, editor, set previews):
+   the crest once per page height, and a faint diagonal line tiled across, so a
+   screenshot cannot be cropped clean of it. Both are see-through over the text. */
+:is(.coe-viewer__mark, .coe-qp-add .coe-qp-mark) {
+    background-image: url("../images/coe/lbsnaa-watermark.png"), url("../images/coe/lbsnaa-watermark-text.svg");
+    background-position: center 40px, 0 0;
+    background-repeat: repeat-y, repeat;
+    background-size: min(640px, 100%) auto, 460px 240px;
 }
 
 .coe-viewer__shield {
@@ -1389,14 +1398,13 @@
 }
 
 /* ── The paper editor, guarded like the viewer (CoePaperGuard) ──
-   The writer's name, ID and time tiled over the sheet - it never takes a
-   click, so typing is untouched - and a cover while the window is not in use. */
+   The LBSNAA watermark over the sheet (with the viewer's, above) - it never
+   takes a click, so typing is untouched - and a cover while the window is not in use. */
 .coe-qp-add .coe-qp-editor .note-editing-area { position: relative; }
 .coe-qp-add .coe-qp-mark {
     position: absolute;
     inset: 0;
     z-index: 2;
-    background-repeat: repeat;
     pointer-events: none;
 }
 .coe-qp-add .coe-qp-form { position: relative; }
@@ -1477,274 +1485,286 @@
 .coe-page .vsp-dot         { width:14px;height:14px;border-radius:3px;display:inline-block;vertical-align:middle;margin-right:4px; }
 
 /* ============================================================================
-   Create multiple paper sets (faculty) — admin/coe/faculty-question-paper/{id}/sets
-   One page, two modes: shuffled (one master paper, order varies per set) and
-   independent (different questions per set). [data-only] blocks show for the
-   mode on the root's data-mode only. Summary card: .coe-qp-summary above.
+   Add Question Paper → paper sets (faculty, $paperSets): the Template card
+   beside "1. Configure your sets", the set cards above the paper and, in the
+   shuffled mode, the "Question order" panel beside it. Sizes are the Figma
+   frames' ("Add Question Paper", Super Admin View - shuffled and independent).
    ========================================================================= */
-.coe-sets { --coe-brand-soft: #e4ebff; --coe-sets-ink: #002e64; }
-
-.coe-sets[data-mode="shuffled"] [data-only="independent"],
-.coe-sets[data-mode="independent"] [data-only="shuffled"] { display: none !important; }
-
-.coe-sets .coe-sets__lede { margin: -0.75rem 0 1rem; font-size: 0.875rem; color: #475467; }
-
-.coe-sets .coe-sets__title { margin: 0 0 0.25rem; font-size: 1.125rem; font-weight: 600; color: #101828; }
-.coe-sets .coe-sets__text { margin: 0; font-size: 0.8125rem; color: #475467; }
-.coe-sets .coe-sets__label { margin: 0 0 0.5rem; font-size: 0.8125rem; font-weight: 500; color: #344054; }
-.coe-sets .coe-sets__hint { margin: 0.5rem 0 0; font-size: 0.75rem; color: #475467; }
-
-.coe-sets .coe-sets__head {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 1rem;
-    margin-bottom: 1.25rem;
+.coe-qp-add {
+    --coe-brand-soft: #e4ebff;
+    --coe-sets-ink: #002e64;
+    --coe-sets-title: #000b22;
+    --coe-sets-text: #2a2a2a;
+    --coe-sets-muted: #575757;
+    --coe-sets-line: #d1d1d1;
 }
 
-.coe-sets .coe-sets__actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
-.coe-sets .coe-sets__actions .btn { display: inline-flex; align-items: center; justify-content: center; }
+.coe-qp-add .coe-qp-setup { margin-bottom: 16px; }
+.coe-qp-add .coe-qp-setup > .card { margin: 0; }
 
-/* ── Set creation mode: the whole card is the radio's label ── */
-.coe-sets .coe-sets-mode {
+.coe-qp-add .coe-qp-setup.has-sets {
+    display: grid;
+    grid-template-columns: minmax(0, 394fr) minmax(0, 892fr);
+    gap: 16px;
+}
+
+.coe-qp-add .coe-qp-setup.has-sets > .card { border-radius: 12px; }
+
+/* The Template card beside the sets: its three cards in miniature. */
+.coe-qp-add .has-sets .coe-qp-tpl .card-body { padding: 24px !important; }
+.coe-qp-add .has-sets .coe-qp-block-title { margin: 0 0 6px; font-size: 16px; font-weight: 700; color: #070707; }
+.coe-qp-add .has-sets .coe-qp-block-text { margin: 0 0 20px; font-size: 14px; line-height: 20px; color: var(--coe-sets-muted); }
+.coe-qp-add .has-sets .coe-tpl-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.coe-qp-add .has-sets .coe-tpl-card { gap: 8px; padding: 8px; border-radius: 6px; background: #f6f7f9; }
+.coe-qp-add .has-sets .coe-tpl-card__head { align-items: center; gap: 4px; }
+.coe-qp-add .has-sets .coe-tpl-card__head > div { min-width: 0; }
+.coe-qp-add .has-sets .coe-tpl-card__title { margin: 0 0 2px; font-size: 7.8px; font-weight: 600; color: #070707; }
+.coe-qp-add .has-sets .coe-tpl-card__desc { font-size: 7.3px; line-height: 10.4px; color: var(--coe-sets-muted); }
+.coe-qp-add .has-sets .coe-tpl-card__check { width: 12.5px; height: 12.5px; margin: 0; }
+.coe-qp-add .has-sets .coe-tpl-card__preview { height: 62px; border-radius: 4px; }
+.coe-qp-add .has-sets .coe-tpl-sheet { top: 4px; transform: translateX(-50%) scale(0.11); }
+.coe-qp-add .has-sets .coe-tpl-card__meta { font-size: 7.3px; line-height: 10.4px; color: var(--coe-sets-muted); }
+
+/* ── 1. Configure your sets ── */
+.coe-qp-add .coe-sets-config { padding: 24px; background: #fff; }
+
+.coe-qp-add .coe-sets-config__title {
+    margin: 0 0 13px;
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 30px;
+    color: var(--coe-sets-title);
+}
+
+.coe-qp-add .coe-sets-modes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 26px;
+}
+
+/* The whole card is the label of its radio. */
+.coe-qp-add .coe-sets-mode {
     display: flex;
-    gap: 1rem;
-    height: 100%;
+    align-items: flex-start;
+    gap: 14px;
+    min-height: 103px;
     margin: 0;
-    padding: 0.875rem 1rem;
-    border: 1px solid var(--coe-control-line);
+    padding: 14px 18px;
+    border: 1px solid var(--coe-sets-line);
     border-radius: 8px;
     background: #fff;
     cursor: pointer;
 }
 
-.coe-sets .coe-sets-mode.is-selected { border-color: var(--coe-brand); background: var(--coe-brand-soft); }
-.coe-sets .coe-sets-mode:focus-within { box-shadow: var(--ds-focus-ring); }
-.coe-sets .coe-sets-mode .form-check-input { flex-shrink: 0; margin-top: 0.2rem; }
-.coe-sets .coe-sets-mode__title { display: block; font-size: 0.9375rem; font-weight: 600; color: #101828; }
-.coe-sets .coe-sets-mode__text { display: block; margin-top: 0.25rem; font-size: 0.8125rem; color: #475467; }
+.coe-qp-add .coe-sets-mode.is-selected { border-color: var(--coe-brand); background: var(--coe-brand-soft); }
+.coe-qp-add .coe-sets-mode:focus-within { box-shadow: var(--ds-focus-ring); }
+.coe-qp-add .coe-sets-mode .form-check-input { flex-shrink: 0; width: 18px; height: 18px; margin: 2px 0 0; }
+.coe-qp-add .coe-sets-mode__title { display: block; font-size: 15px; font-weight: 600; line-height: 22px; color: var(--coe-sets-title); }
+.coe-qp-add .coe-sets-mode__text { display: block; margin-top: 7px; font-size: 13px; line-height: 22px; color: var(--coe-sets-muted); }
 
-/* ── Number of sets − 4 + and the set label chips ── */
-.coe-sets .coe-sets-count { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 2.25rem; }
-.coe-sets .coe-sets-count__group { display: flex; align-items: center; gap: 1rem; }
+/* Number of sets − 4 + · Set labels A (Master Paper) B C D */
+.coe-qp-add .coe-sets-count {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 16px 36px;
+    margin-bottom: 26px;
+}
 
-.coe-sets .coe-sets-stepper {
+.coe-qp-add .coe-sets-count__number { width: 314px; max-width: 100%; }
+.coe-qp-add .coe-sets-count__row { display: flex; align-items: center; }
+.coe-qp-add .coe-sets-label { flex-shrink: 0; font-size: 13px; font-weight: 500; line-height: 22px; color: var(--coe-sets-text); }
+.coe-qp-add .coe-sets-count__row .coe-sets-label { width: 160px; }
+.coe-qp-add .coe-sets-count__labels { display: flex; align-items: center; gap: 2px; }
+.coe-qp-add .coe-sets-count__labels .coe-sets-label { width: 90px; }
+
+.coe-qp-add .coe-sets-stepper {
     display: inline-flex;
     align-items: center;
-    height: var(--ds-control-h);
-    border: 1px solid var(--coe-control-line);
+    width: 154px;
+    height: 40px;
+    border: 1px solid var(--coe-sets-line);
     border-radius: 8px;
     background: #fff;
 }
 
-.coe-sets .coe-sets-stepper button {
-    width: 2.75rem;
+.coe-qp-add .coe-sets-stepper button {
+    width: 50px;
     height: 100%;
+    padding: 0;
     border: 0;
     background: none;
     color: var(--coe-brand);
-    font-size: 1.125rem;
+    font-size: 18px;
     font-weight: 500;
+    line-height: 1;
 }
 
-.coe-sets .coe-sets-stepper button:disabled { color: #98a2b3; cursor: not-allowed; }
-.coe-sets .coe-sets-stepper output { min-width: 3.5rem; text-align: center; font-size: 0.875rem; font-weight: 600; color: #344054; }
+.coe-qp-add .coe-sets-stepper button:disabled { color: #a6a6a6; cursor: not-allowed; }
+.coe-qp-add .coe-sets-stepper output { flex: 1; text-align: center; font-size: 14px; font-weight: 600; color: var(--coe-sets-text); }
+.coe-qp-add .coe-sets-hint { margin: 6px 0 0; font-size: 12px; line-height: 18px; color: var(--coe-sets-muted); }
 
-.coe-sets .coe-sets-chips { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.coe-qp-add .coe-sets-chips { display: flex; flex-wrap: wrap; gap: 12px; }
 
-.coe-sets .coe-sets-chip {
+.coe-qp-add .coe-sets-chip {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 2.25rem;
-    height: 2.125rem;
-    padding: 0 0.5rem;
+    min-width: 36px;
+    height: 34px;
+    padding: 0 8px;
     border-radius: 8px;
     background: var(--coe-brand-soft);
     color: var(--coe-brand);
-    font-size: 0.875rem;
+    font-size: 14px;
     font-weight: 600;
+    line-height: 22px;
 }
 
-/* ── Notices: info (blue) by default, .is-warn (amber) when sets need work ── */
-.coe-sets .coe-sets-notice {
-    margin: 1.25rem 0 0;
-    padding: 0.8125rem 1.125rem;
-    border-radius: 8px;
-    background: var(--coe-brand-soft);
-    color: var(--coe-sets-ink);
-    font-size: 0.8125rem;
+.coe-qp-add .coe-sets-chip:first-child { min-width: 124px; }
+
+.coe-qp-add .coe-sets-options { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; }
+.coe-qp-add .coe-sets-options .form-check { display: flex; align-items: center; gap: 6px; min-height: 24px; margin: 0; padding: 0; }
+.coe-qp-add .coe-sets-options .form-check-input { float: none; flex-shrink: 0; width: 18px; height: 18px; margin: 3px; }
+.coe-qp-add .coe-sets-options .form-check-label { font-size: 13px; line-height: 22px; color: var(--coe-sets-text); }
+
+/* ── The paper card: set cards, toolbar, paper (+ Question order), actions ── */
+.coe-qp-add .coe-qp-form__body { padding: 24px; }
+.coe-qp-add .coe-qp-form.has-sets { border-radius: 12px; }
+.coe-qp-add .coe-qp-form.has-sets .coe-qp-form__body { padding: 16px; }
+
+.coe-qp-add .coe-sets-cards {
+    display: grid;
+    grid-template-columns: repeat(var(--sets, 4), minmax(0, 1fr));
+    gap: 18px;
+    margin-bottom: 24px;
 }
 
-.coe-sets .coe-sets-notice.is-warn { background: var(--coe-warn-soft); color: #344054; }
-.coe-sets #setsNotice { margin: 1rem 0; }
-
-/* ── Set cards (buttons: click to preview / edit that set) ── */
-.coe-sets .coe-sets-card {
+/* A button: click to preview (shuffled) or edit (independent) that set. */
+.coe-qp-add .coe-sets-card {
     display: flex;
     flex-direction: column;
-    gap: 0.375rem;
     width: 100%;
-    height: 100%;
-    padding: 0.8125rem 1.0625rem;
-    border: 1px solid var(--coe-control-line);
+    padding: 13px 10px 13px 11px;
+    border: 1px solid var(--coe-sets-line);
     border-radius: 8px;
     background: #fff;
     text-align: left;
 }
 
-.coe-sets .coe-sets-card:hover { border-color: #c9d7ea; }
-.coe-sets .coe-sets-card.is-selected { border-color: var(--coe-brand); background: var(--coe-brand-soft); }
-.coe-sets .coe-sets-card:focus-visible { outline: 0; box-shadow: var(--ds-focus-ring); }
-.coe-sets .coe-sets-card__head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
-.coe-sets .coe-sets-card__name { font-size: 1rem; font-weight: 600; color: #101828; }
-.coe-sets .coe-sets-card__line { font-size: 0.8125rem; color: #344054; }
-.coe-sets .coe-sets-card__note { font-size: 0.75rem; color: #475467; }
-.coe-sets .coe-sets-card.is-selected .coe-sets-card__note { font-weight: 500; color: var(--coe-brand); }
+.coe-qp-add .coe-sets-card:hover { border-color: #c9d7ea; }
+.coe-qp-add .coe-sets-card.is-selected { border-color: var(--coe-brand); background: var(--coe-brand-soft); }
+.coe-qp-add .coe-sets-card:focus-visible { outline: 0; box-shadow: var(--ds-focus-ring); }
 
-.coe-sets .coe-sets-badge {
-    padding: 0.25rem 0.625rem;
+.coe-qp-add .coe-sets-card__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+.coe-qp-add .coe-sets-card__name { font-size: 16px; font-weight: 600; line-height: 22px; color: var(--coe-sets-title); }
+.coe-qp-add .coe-sets-card__line { font-size: 13px; line-height: 22px; color: var(--coe-sets-text); white-space: pre-wrap; }
+.coe-qp-add .coe-sets-card__note { margin-top: 5px; font-size: 12px; line-height: 18px; color: var(--coe-sets-muted); }
+.coe-qp-add .coe-sets-card__note.is-selected { font-weight: 500; color: var(--coe-brand); }
+
+.coe-qp-add .coe-sets-badge {
+    flex-shrink: 0;
+    width: 72px;
+    height: 26px;
+    padding: 3px 12px;
     border-radius: 8px;
-    color: var(--coe-sets-ink);
-    font-size: 0.75rem;
+    font-size: 12px;
     font-weight: 500;
-    white-space: nowrap;
+    line-height: 18px;
 }
 
-.coe-sets .coe-sets-badge.is-ready { background: var(--coe-success-soft); }
-.coe-sets .coe-sets-badge.is-draft { background: var(--coe-warn-soft); }
-.coe-sets .coe-sets-badge.is-none { background: #eaecf0; }
+.coe-qp-add .coe-sets-badge.is-ready { background: #d6ffec; color: var(--coe-sets-ink); }
+.coe-qp-add .coe-sets-badge.is-pending { background: #fff6d7; color: #eea800; }
 
-/* ── Panels: paper preview / question editor, and the side panel ── */
-.coe-sets .coe-sets-panel {
-    height: 100%;
-    padding: 1.25rem 1.5rem;
-    border: 1px solid var(--coe-control-line);
+.coe-qp-add .coe-qp-form.has-sets .coe-qp-toolbar .note-toolbar { margin-bottom: 24px; }
+
+/* Shuffled: the paper and its Question order side by side once the card is
+   wide enough (the design's 1302px card); below that the panel follows the paper. */
+.coe-qp-add .coe-qp-form.has-sets { container: qpform / inline-size; }
+.coe-qp-add .coe-qp-form.has-sets[data-mode="shuffled"] .coe-qp-work { display: grid; gap: 24px; align-items: start; }
+
+@container qpform (min-width: 1100px) {
+    .coe-qp-add .coe-qp-form.has-sets[data-mode="shuffled"] .coe-qp-work { grid-template-columns: minmax(0, 1fr) 376px; }
+}
+
+.coe-qp-add .coe-qp-form:not([data-mode="shuffled"]) .coe-sets-order { display: none; }
+.coe-qp-add .coe-qp-form.has-sets .coe-qp-editor .note-editor .note-editing-area .note-editable { max-width: none; }
+
+.coe-qp-add .has-sets .coe-qp-actions { gap: 16px; margin-top: 24px; }
+
+.coe-qp-add .has-sets .coe-qp-actions .coe-btn {
+    min-width: 0;
+    min-height: 48px;
+    padding: 0 24px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* ── Question order: Set X question → master question ── */
+.coe-qp-add .coe-sets-order {
+    padding: 19px 19px 17px;
+    border: 1px solid var(--coe-sets-line);
     border-radius: 8px;
     background: #fff;
 }
 
-.coe-sets .coe-sets-eyebrow {
-    margin: 0 0 0.375rem;
-    color: var(--coe-brand);
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
+.coe-qp-add .coe-sets-order__title { margin: 0; font-size: 16px; font-weight: 600; line-height: 22px; color: var(--coe-sets-title); }
+.coe-qp-add .coe-sets-order__text { margin: 9px 0 0; font-size: 13px; line-height: 22px; color: var(--coe-sets-muted); }
+
+.coe-qp-add .coe-sets-order__map { width: 100%; margin-top: 18px; border-collapse: separate; border-spacing: 0; }
+
+/* !important: the admin theme forces th/td to 500 / 0.75rem with it. */
+.coe-qp-add .coe-sets-order__map th {
+    height: 34px;
+    padding: 8px 12px;
+    background: #e8e8e8;
+    color: var(--coe-sets-text);
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    line-height: 18px;
     text-transform: uppercase;
 }
 
-.coe-sets .coe-sets-panel__title { margin: 0; font-size: 1.25rem; font-weight: 600; color: #101828; }
-.coe-sets .coe-sets-panel__subtitle { margin: 0; font-size: 1rem; font-weight: 600; color: #101828; }
-.coe-sets .coe-sets-panel__marks { margin: 0.25rem 0 0; font-size: 0.9375rem; font-weight: 600; color: #101828; white-space: nowrap; }
+.coe-qp-add .coe-sets-order__map th:first-child { width: 152px; border-radius: 4px 0 0 4px; }
+.coe-qp-add .coe-sets-order__map th:last-child { border-radius: 0 4px 4px 0; }
 
-.coe-sets .coe-sets-instructions {
-    margin: 1.25rem 0 0;
-    padding: 0.875rem;
-    border-radius: 8px;
-    background: var(--coe-brand-soft);
-    color: var(--coe-sets-ink);
-    font-size: 0.8125rem;
-}
-
-.coe-sets .coe-sets-section {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-top: 1.25rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: 4px;
-    background: #eaecf0;
-    color: #101828;
-    font-size: 0.875rem;
-    font-weight: 600;
-}
-
-.coe-sets .coe-sets-section--edit { background: var(--coe-brand-soft); }
-.coe-sets .coe-sets-section__marks { font-size: 0.8125rem; font-weight: 500; color: #344054; white-space: nowrap; }
-
-.coe-sets .coe-sets-qs { margin: 0; padding: 0; list-style: none; }
-
-.coe-sets .coe-sets-qs li {
-    display: flex;
-    align-items: baseline;
-    gap: 0.75rem;
-    padding: 0.5625rem 0.75rem;
-    border-bottom: 1px solid #eaecf0;
-    color: #344054;
-    font-size: 0.8125rem;
-}
-
-.coe-sets .coe-sets-qs__num { flex: 0 0 2rem; color: var(--coe-brand); font-size: 0.75rem; font-weight: 500; }
-.coe-sets .coe-sets-qs__text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
-.coe-sets .coe-sets-qs__marks { flex-shrink: 0; font-weight: 500; white-space: nowrap; }
-
-.coe-sets .coe-sets-qs__edit,
-.coe-sets .coe-sets-link {
-    padding: 0;
+.coe-qp-add .coe-sets-order__map td {
+    padding: 6px 12px;
     border: 0;
-    background: none;
-    color: var(--coe-brand);
-    font-weight: 500;
+    color: var(--coe-sets-text);
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    line-height: 22px;
 }
 
-.coe-sets .coe-sets-qs__edit { flex-shrink: 0; font-size: 0.75rem; }
-.coe-sets .coe-sets-link { margin-top: 1rem; font-size: 0.875rem; }
-.coe-sets :is(.coe-sets-qs__edit, .coe-sets-link):hover { text-decoration: underline; }
+.coe-qp-add .coe-sets-order__map tbody tr:first-child td { padding-top: 12px; }
+.coe-qp-add .coe-sets-order__map td + td { color: var(--coe-brand); font-weight: 500 !important; }
 
-.coe-sets .coe-sets-remaining { margin-top: 1rem; padding: 0.5625rem 1rem; border-radius: 6px; background: var(--coe-warn-soft); }
-.coe-sets .coe-sets-remaining strong { display: block; color: #344054; font-size: 0.875rem; font-weight: 500; }
-.coe-sets .coe-sets-remaining span { color: #475467; font-size: 0.75rem; }
-
-.coe-sets .coe-sets-foot { margin: 1rem 0 0; color: #475467; font-size: 0.75rem; }
-
-/* Shuffled: Set X question → master question */
-.coe-sets .coe-sets-map { width: 100%; margin-top: 1rem; font-size: 0.8125rem; }
-
-.coe-sets .coe-sets-map th {
-    padding: 0.5rem 0.75rem;
-    background: #eaecf0;
-    color: #344054;
-    font-size: 0.6875rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.coe-sets .coe-sets-map th:first-child { border-radius: 4px 0 0 4px; }
-.coe-sets .coe-sets-map th:last-child { border-radius: 0 4px 4px 0; }
-.coe-sets .coe-sets-map td { padding: 0.375rem 0.75rem; color: #344054; }
-.coe-sets .coe-sets-map td + td { color: var(--coe-brand); font-weight: 500; }
-
-.coe-sets .coe-sets-guide {
-    margin-top: 1.5rem;
-    padding: 0.875rem 1rem;
+.coe-qp-add .coe-sets-order__same {
+    margin-top: 32px;
+    padding: 15px 16px 32px;
     border-radius: 8px;
     background: var(--coe-brand-soft);
-    color: var(--coe-sets-ink);
-    font-size: 0.8125rem;
 }
 
-.coe-sets .coe-sets-guide strong { display: block; margin-bottom: 0.5rem; color: #101828; font-size: 0.875rem; font-weight: 600; }
-.coe-sets .coe-sets-guide ul { margin: 0; padding-left: 1.1rem; list-style: disc; }
+.coe-qp-add .coe-sets-order__same p { margin: 0 0 12px; font-size: 14px; font-weight: 600; line-height: 22px; color: var(--coe-sets-title); }
+.coe-qp-add .coe-sets-order__same ul { margin: 0; padding: 0; list-style: none; }
+.coe-qp-add .coe-sets-order__same li { font-size: 13px; line-height: 22px; color: var(--coe-sets-ink); }
+.coe-qp-add .coe-sets-order__same li::before { content: "•"; margin-right: 9px; }
+.coe-qp-add .coe-sets-order__foot { margin: 23px 0 0; font-size: 12px; line-height: 18px; color: var(--coe-sets-muted); }
 
-/* Independent: Set X checklist */
-.coe-sets .coe-sets-progress { height: 8px; margin-top: 1.25rem; border-radius: 4px; background: #eaecf0; }
-.coe-sets .coe-sets-progress .progress-bar { background: var(--coe-brand); }
-.coe-sets .coe-sets-big { margin: 0.75rem 0 0; color: #101828; font-size: 1.125rem; font-weight: 600; }
-.coe-sets .coe-sets-check { margin: 1.25rem 0 0; padding: 0; list-style: none; }
-.coe-sets .coe-sets-check li { padding: 0.75rem 0; border-bottom: 1px solid #eaecf0; }
-.coe-sets .coe-sets-check strong { display: block; color: #344054; font-size: 0.8125rem; font-weight: 500; }
-.coe-sets .coe-sets-check span { color: #475467; font-size: 0.75rem; }
-.coe-sets .coe-sets-check span.is-done { color: var(--coe-brand); }
+@media (max-width: 1199.98px) {
+    .coe-qp-add .coe-qp-setup.has-sets { grid-template-columns: minmax(0, 1fr); }
+    .coe-qp-add .coe-sets-cards { grid-template-columns: repeat(min(var(--sets, 4), 2), minmax(0, 1fr)); }
+}
 
-/* ── Footer: N of N sets ready · Back / Save draft · Review all ── */
-.coe-sets .coe-sets-footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; }
-.coe-sets .coe-sets-footer__count { margin: 0; color: var(--coe-sets-ink); font-size: 0.875rem; font-weight: 600; }
-.coe-sets .coe-sets-footer__note { margin: 0; color: #475467; font-size: 0.75rem; }
-
-@media (max-width: 575.98px) {
-    .coe-sets .coe-sets-panel { padding: 1rem; }
-    .coe-sets .coe-sets-qs li { flex-wrap: wrap; }
-    .coe-sets .coe-sets-qs__text { flex-basis: calc(100% - 2.75rem); }
-    .coe-sets .coe-sets-qs__marks { margin-left: 2.75rem; }
+@media (max-width: 767.98px) {
+    .coe-qp-add .coe-qp-form__body,
+    .coe-qp-add .has-sets .coe-qp-tpl .card-body,
+    .coe-qp-add .coe-sets-config { padding: 16px !important; }
+    .coe-qp-add .coe-sets-modes,
+    .coe-qp-add .coe-sets-cards { grid-template-columns: minmax(0, 1fr); }
+    .coe-qp-add .coe-sets-count__row .coe-sets-label { width: auto; margin-right: 16px; }
 }

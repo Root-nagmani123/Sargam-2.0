@@ -106,7 +106,6 @@ class MyQuestionPaperController extends Controller
             'listUrl' => route('admin.coe.my-question-paper.index'),
             'saveUrl' => route('admin.coe.my-question-paper.translation.store', $paper),
             'hiddenUrl' => route('admin.coe.my-question-paper.hidden', $paper),
-            'watermark' => $this->paperStamp($request),
         ]);
     }
 

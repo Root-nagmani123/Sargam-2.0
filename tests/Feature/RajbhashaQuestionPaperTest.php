@@ -143,7 +143,8 @@ class RajbhashaQuestionPaperTest extends TestCase
             ->assertOk()
             ->assertJson(['format' => 'docx', 'content' => base64_encode('original paper')]);
         $this->assertNull($response->headers->get('Content-Disposition'));
-        $this->assertStringContainsString('ID '.$this->rajbhasha->getAuthIdentifier(), $response->json('watermark'));
+        // The viewer shows the LBSNAA watermark, not the viewer's name.
+        $this->assertNull($response->json('watermark'));
 
         // Opening the address in the browser gets no file.
         $this->actingAs($this->rajbhasha)->get($url)->assertNotFound();
@@ -158,9 +159,10 @@ class RajbhashaQuestionPaperTest extends TestCase
             ->assertOk()
             ->assertSee('Translate Question Paper')
             ->assertSee('Standard Question Paper')
+            ->assertDontSee('1. Configure your sets')
             ->assertSee('var STARTS_FROM_COPY = false', false)
             ->assertSee('CoePaperGuard.guard(', false)
-            ->assertSee('ID '.$this->rajbhasha->getAuthIdentifier());
+            ->assertDontSee('ID '.$this->rajbhasha->getAuthIdentifier().' ·');
 
         // A paper written in the editor: translated in place.
         $path = 'coe/question-papers/'.$this->paper->examination_drive_id.'/orig.html';

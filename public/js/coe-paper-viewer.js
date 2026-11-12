@@ -5,7 +5,7 @@
  *   CoePaperViewer.open({ url: '…/original', title: 'QP-3-015 · Counselling', subtitle: 'Original Paper · V1' });
  *   CoePaperViewer.print({ url: '…/original', title: '…' });   // administrator: print, no viewer
  *
- * The server answers { format: 'html' | 'docx', content, watermark }: an editor
+ * The server answers { format: 'html' | 'docx', content }: an editor
  * paper as its cleaned HTML, a Word file as base64 that docx-preview lays out
  * (loaded on first use). The paper is never offered as a file.
  *
@@ -15,11 +15,10 @@
  *   CoePaperGuard.guard({ active: fn, shield: fn(on), copyKeys: bool });
  *   CoePaperGuard.keepClipboard(editableEl, function (html) { … insert … });
  *   CoePaperGuard.report('…/hidden', 'left');                  // the paper was covered: logged
- *   el.style.backgroundImage = CoePaperGuard.watermark('Name · ID 12 · 29-10-2026 10:15');
  *
  * These are deterrents: no browser can stop a phone camera or a capture tool
- * outside it. What makes a leak traceable is the viewer's name, ID and time
- * stamped across the whole page.
+ * outside it. The LBSNAA watermark over the paper (coe-admin.css) marks every
+ * screenshot as the Academy's; who opened a paper is in the question paper log.
  */
 (function (window, document, $) {
     'use strict';
@@ -71,27 +70,6 @@
         return out.buffer;
     }
 
-    function escapeXml(text) {
-        return String(text).replace(/[<>&"']/g, function (c) {
-            return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[c];
-        });
-    }
-
-    // One tilted line, tiled over the whole paper (it scrolls with it) - dense and
-    // dark enough that a screenshot cannot be cropped or cleaned of it. The tile
-    // grows with the text, so a long name is never cut off at its edges.
-    function watermark(text) {
-        var len = Math.ceil(String(text).length * 8.2);     // ~width of 15px bold Arial
-        var w = Math.max(440, Math.ceil(len * 0.92) + 40);  // cos 24°
-        var h = Math.max(200, Math.ceil(len * 0.41) + 40);  // sin 24°
-        var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + w + '" height="' + h + '">' +
-            '<text x="' + (w / 2) + '" y="' + (h / 2) + '" text-anchor="middle" dominant-baseline="middle" ' +
-            'transform="rotate(-24 ' + (w / 2) + ' ' + (h / 2) + ')" ' +
-            'font-family="Arial, sans-serif" font-size="15" font-weight="600" fill="#0b2a5b" fill-opacity="0.22">' +
-            escapeXml(text) + '</text></svg>';
-        return 'url("data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg) + '")';
-    }
-
     function state(text) {
         el.state.textContent = text || '';
         el.state.hidden = !text;
@@ -101,7 +79,6 @@
         if (request) { request.abort(); request = null; }
         el.sheet.innerHTML = '';
         el.sheet.className = 'coe-viewer__sheet';
-        el.mark.style.backgroundImage = '';
         el.stage.hidden = true;
     }
 
@@ -139,7 +116,6 @@
         current
             .then(function (res) {
                 if (request !== current) { return $.Deferred().reject().promise(); }
-                el.mark.style.backgroundImage = watermark(res.watermark || '');
                 el.stage.hidden = false;
                 return render(res);
             })
@@ -334,8 +310,7 @@
             sub: document.getElementById('coePaperViewerSub'),
             state: document.getElementById('coePaperViewerState'),
             stage: document.getElementById('coePaperViewerStage'),
-            sheet: document.getElementById('coePaperViewerSheet'),
-            mark: document.getElementById('coePaperViewerMark')
+            sheet: document.getElementById('coePaperViewerSheet')
         };
         modal = bootstrap.Modal.getOrCreateInstance(root);
 
@@ -360,5 +335,5 @@
     }
 
     window.CoePaperViewer = { open: open, print: print };
-    window.CoePaperGuard = { guard: guard, keepClipboard: keepClipboard, watermark: watermark, report: report, NO_PRINT: NO_PRINT };
+    window.CoePaperGuard = { guard: guard, keepClipboard: keepClipboard, report: report, NO_PRINT: NO_PRINT };
 })(window, document, jQuery);
