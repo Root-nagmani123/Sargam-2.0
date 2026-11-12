@@ -9,6 +9,7 @@ use App\Models\COE\SeatPlanVenue;
 use App\Models\COE\VenueSeatLayout;
 use App\Services\COE\CourseParticipants;
 use App\Services\COE\ExamRooms;
+use App\Services\COE\LaptopDeclarationService;
 use App\Services\COE\SeatAllocator;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
@@ -105,7 +106,8 @@ class VenueAllocationController extends Controller
                 ->selectRaw('COUNT(*) as total')
                 ->selectRaw('SUM(CASE WHEN lr.laptop_required = 1 THEN 1 ELSE 0 END) as declared_yes')
                 ->selectRaw('SUM(CASE WHEN lr.laptop_required = 0 THEN 1 ELSE 0 END) as declared_no')
-                ->selectRaw('SUM(CASE WHEN lr.scriber_required = 1 THEN 1 ELSE 0 END) as scriber')
+                // A scriber only for a PwBD OT, whatever an older answer recorded.
+                ->selectRaw('SUM(CASE WHEN lr.scriber_required = 1 AND ' . LaptopDeclarationService::pwbdSql('sm.ph') . ' THEN 1 ELSE 0 END) as scriber')
                 ->first();
             $counts[$category] = [
                 'total' => (int) $row->total,
@@ -271,9 +273,24 @@ class VenueAllocationController extends Controller
             'display_order' => (int) SeatPlanVenue::where('seat_plan_pk', $plan->pk)->max('display_order') + 1,
             'created_by' => Auth::id(),
             'created_date' => $now,
+            'filled_by' => $this->filledByRole(),
         ]);
 
         return ['plan' => $plan, 'summary' => $this->reseat($plan, $allocator)];
+    }
+
+    /** The role a room was mapped under: COE, else Super Admin, else the user's first role. */
+    private function filledByRole(): ?string
+    {
+        $roles = Auth::user()?->getRoleNames() ?? collect();
+
+        foreach (['COE', 'Super Admin'] as $role) {
+            if ($roles->contains($role)) {
+                return $role;
+            }
+        }
+
+        return $roles->first();
     }
 
     /** Freeze = publish the whole plan and tell every seated OT where they sit. */
@@ -565,7 +582,7 @@ class VenueAllocationController extends Controller
     private function allocationInput(SeatPlan $plan): Collection
     {
         return $this->participantQuery((int) $plan->course_master_pk, (int) $plan->batch, (int) $plan->candidate_category)
-            ->select(['sm.pk', 'rn.pk as roll_number_pk', 'rn.roll_number', 'rn.serial_number', 'lr.laptop_required', 'lr.scriber_required'])
+            ->select(['sm.pk', 'sm.ph', 'rn.pk as roll_number_pk', 'rn.roll_number', 'rn.serial_number', 'lr.laptop_required', 'lr.scriber_required'])
             ->orderBy('rn.serial_number')
             ->orderBy('sm.pk')
             ->get()
@@ -575,7 +592,7 @@ class VenueAllocationController extends Controller
                 'roll_number' => (string) $row->roll_number,
                 'serial_number' => (int) $row->serial_number,
                 'requires_laptop' => $this->requiresLaptop($plan, $row->laptop_required),
-                'requires_scriber' => (int) $row->scriber_required === 1,
+                'requires_scriber' => (int) $row->scriber_required === 1 && LaptopDeclarationService::isPwbd($row->ph),
             ]);
     }
 

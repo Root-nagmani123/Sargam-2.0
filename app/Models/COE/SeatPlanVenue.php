@@ -36,6 +36,7 @@ class SeatPlanVenue extends Model
         'display_order',
         'created_by',
         'created_date',
+        'filled_by',
     ];
 
     protected $casts = [

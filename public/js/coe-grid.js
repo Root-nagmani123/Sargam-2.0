@@ -1089,8 +1089,13 @@
         function cellText($row, f) { return cell($row, f).text().trim(); }
 
         $status.select2({ width: '100%', dropdownParent: $(P + 'FormModal .modal-body') });
+        // Inactive options (data-coe-inactive) are kept aside; openForm puts back only the edited row's own one.
+        var inactiveOptions = {};
         fields.forEach(function (f) {
-            if (f.type === 'select') { input(f).select2({ width: '100%', dropdownParent: $(P + 'FormModal .modal-body') }); }
+            if (f.type === 'select') {
+                inactiveOptions[f.key] = input(f).find('option[data-coe-inactive]').detach();
+                input(f).select2({ width: '100%', dropdownParent: $(P + 'FormModal .modal-body') });
+            }
         });
 
         function fieldError(f, msg) {
@@ -1114,7 +1119,12 @@
             formFields.forEach(function (f) {
                 // A select's cell shows a label; its value comes from the row's data-coe-val-<key>.
                 if (f.type === 'select') {
-                    input(f).val(isEdit ? ($row.attr('data-coe-val-' + f.key) || '') : '').trigger('change.select2');
+                    var value = isEdit ? ($row.attr('data-coe-val-' + f.key) || '') : '';
+                    input(f).find('option[data-coe-inactive]').remove();
+                    if (value !== '' && inactiveOptions[f.key]) {
+                        input(f).append(inactiveOptions[f.key].filter(function () { return this.value === value; }).clone());
+                    }
+                    input(f).val(value).trigger('change.select2');
                 } else {
                     input(f).val(isEdit ? cellText($row, f) : '');
                 }

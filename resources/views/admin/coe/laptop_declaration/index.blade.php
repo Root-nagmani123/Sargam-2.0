@@ -17,7 +17,7 @@
     // failed submit old() wins; once answered, the stored row does.
     $laptop = old('laptop_required', $answered && $declaration->laptop_required ? '1' : '0') === '1';
     $hasDisability = old('has_disability', $answered && $declaration->has_disability ? '1' : '0') === '1';
-    $scriber = old('scriber_required', $answered && $declaration->scriber_required ? '1' : '0') === '1';
+    $scriber = $pwbd && old('scriber_required', $answered && $declaration->scriber_required ? '1' : '0') === '1';
 
     $name = trim((string) $student->display_name) !== ''
         ? $student->display_name
@@ -88,9 +88,12 @@
                     <div class="col-12 col-md-6 coe-decl-if-disability {{ $hasDisability ? '' : 'd-none' }}">
                         <span class="coe-form-label" id="coeDeclScriberLabel">Scriber Required<span class="coe-req">*</span></span>
                         <div class="coe-radio-row" role="radiogroup" aria-labelledby="coeDeclScriberLabel">
-                            <label class="coe-radio"><input type="radio" name="scriber_required" value="1" @checked($scriber) @disabled($locked)> Yes</label>
+                            <label class="coe-radio"><input type="radio" name="scriber_required" value="1" @checked($scriber) @disabled($locked || ! $pwbd)> Yes</label>
                             <label class="coe-radio"><input type="radio" name="scriber_required" value="0" @checked(! $scriber) @disabled($locked)> No</label>
                         </div>
+                        @unless ($pwbd)
+                            <div class="form-text">A scriber can be requested only if a disability (PwBD) category is recorded in your profile. Please contact the Examination Section.</div>
+                        @endunless
                         @error('scriber_required')<div class="coe-field-error">{{ $message }}</div>@enderror
                     </div>
 

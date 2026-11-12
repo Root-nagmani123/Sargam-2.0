@@ -157,6 +157,7 @@
                                             @if (! empty($f['required'])) required @endif>
                                         <option value="">{{ $f['placeholder'] ?? 'Select' }}</option>
                                         @foreach ($f['options'] as $value => $text)<option value="{{ $value }}">{{ $text }}</option>@endforeach
+                                        @foreach ($f['inactiveOptions'] ?? [] as $value => $text)<option value="{{ $value }}" data-coe-inactive="1">{{ $text }}</option>@endforeach
                                     </select>
                                 @elseif (($f['type'] ?? 'text') === 'number')
                                     <input type="number" id="{{ $p }}Field_{{ $f['key'] }}"

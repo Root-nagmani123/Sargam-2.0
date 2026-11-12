@@ -230,6 +230,14 @@ class LaptopDeclarationService
         return ! in_array(strtoupper(trim((string) $ph)), self::NOT_PWBD, true);
     }
 
+    /** isPwbd() as a SQL condition on a student_master.ph column, for counts in a query. */
+    public static function pwbdSql(string $column): string
+    {
+        $notPwbd = implode(', ', array_map(fn ($value) => "'" . $value . "'", self::NOT_PWBD));
+
+        return "UPPER(TRIM(COALESCE({$column}, ''))) NOT IN ({$notPwbd})";
+    }
+
     /**
      * Of $studentPks, the OTs with no disability category, as pk => name.
      *

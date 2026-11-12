@@ -728,7 +728,10 @@ class ResultMarksService
      * Grand Total at or above the OT's service passing marks (Service Passing Marks).
      * With no passing marks set for the service, the result is null (not decided).
      *
-     * @return array{courses:array<int,string>, coursePk:?int, subjects:array, maxA:float, maxB:float, max:float, qualifying:array<string,float>, rows:list<array>, pending:int, noPassMarks:list<string>}
+     * Under All, a header max is null where the courses listed differ on it; each row
+     * carries its course's own in row['max'] (subjects, a, b, max, qualifying).
+     *
+     * @return array{courses:array<int,string>, coursePk:?int, subjects:array, maxA:?float, maxB:?float, max:?float, qualifying:array<string,?float>, rows:list<array>, pending:int, noPassMarks:list<string>}
      */
     public function merit(string $scope, ?int $coursePk): array
     {
@@ -752,29 +755,67 @@ class ResultMarksService
                 $subjects[$key]['max'] = (float) $s->max_marks;
             }
         }
-        $maxB = self::DIRECTOR_MAX;
+        $defaultMax = array_map(fn ($s) => $s['max'], $subjects);
+        $defaultQualifying = $qualifyingMax;
 
+        $sheets = [];
+        foreach ($coursePk ? [$coursePk] : array_keys($courses) as $pk) {
+            $sheets[$pk] = $this->meritSheet($byCourse[$pk], $courses[$pk]);
+        }
+        foreach ($sheets as $sheet) {
+            foreach ($sheet['subjects'] as $key => $s) {
+                $subjects[$key] ??= ['name' => $s['name'], 'max' => $s['max'], 'columns' => []];
+                if ($s['columns'] && $subjects[$key]['columns'] === []) {
+                    $subjects[$key]['columns'] = $s['columns'];
+                }
+            }
+        }
+
+        // Each course's own max marks: what its drives map, else the header defaults.
+        // The same subject can be out of 70 on one course and 140 on another (two
+        // drives), so under All every row carries its course's maxes.
         $rows = [];
         $pending = 0;
         $noPassMarks = [];
-        foreach ($coursePk ? [$coursePk] : array_keys($courses) as $pk) {
-            $sheet = $this->meritSheet($byCourse[$pk], $courses[$pk]);
+        $perCourse = [];
+        foreach ($sheets as $pk => $sheet) {
+            $max = $defaultMax;
             foreach ($sheet['subjects'] as $key => $s) {
-                $subjects[$key] ??= ['name' => $s['name'], 'max' => $s['max'], 'columns' => []];
-                // One course: its own max marks. All: the first course that holds it.
-                if ($s['columns'] && ($coursePk || $subjects[$key]['columns'] === [])) {
-                    $subjects[$key] = $s;
-                }
+                $max[$key] = $s['max'];
             }
-            if ($sheet['maxB'] !== null && ($coursePk || $maxB === self::DIRECTOR_MAX)) {
-                $maxB = $sheet['maxB'];
+            $a = (float) array_sum($max);
+            $b = $sheet['maxB'] ?? self::DIRECTOR_MAX;
+            $q = array_map(fn ($m) => $m, $defaultQualifying);
+            foreach ($sheet['qualifying'] as $paper => $m) {
+                $q[$paper] = $m ?? $q[$paper];
             }
-            foreach ($sheet['qualifying'] as $paper => $max) {
-                $qualifyingMax[$paper] = $max ?? $qualifyingMax[$paper];
+            $perCourse[$pk] = ['subjects' => $max, 'a' => $a, 'b' => $b, 'max' => $a + $b, 'qualifying' => $q];
+
+            foreach ($sheet['rows'] as $row) {
+                $rows[] = $row + ['max' => $perCourse[$pk]];
             }
-            array_push($rows, ...$sheet['rows']);
             $pending += $sheet['pending'];
             $noPassMarks = array_merge($noPassMarks, $sheet['noPassMarks']);
+        }
+
+        // The header carries a max only where every course listed agrees on it.
+        $same = function (array $values) {
+            $values = array_values(array_unique(array_map(fn ($v) => (string) $v, $values)));
+
+            return count($values) === 1 ? (float) $values[0] : null;
+        };
+        foreach ($subjects as $key => &$s) {
+            $values = array_column(array_filter($perCourse, fn ($c) => isset($c['subjects'][$key])), 'subjects');
+            $values = array_map(fn ($m) => $m[$key], $values);
+            $s['max'] = $values === [] ? $s['max'] : $same($values);
+        }
+        unset($s);
+        $pick = fn (string $field, $fallback) => $perCourse === [] ? $fallback : $same(array_column($perCourse, $field));
+        $maxA = $pick('a', (float) array_sum($defaultMax));
+        $maxB = $pick('b', self::DIRECTOR_MAX);
+        $qualifyingMax = [];
+        foreach ($defaultQualifying as $paper => $m) {
+            $qualifyingMax[$paper] = $perCourse === [] ? $m : $same(array_map(fn ($c) => $c['qualifying'][$paper], $perCourse));
         }
 
         // Every row has every column: '-' where its course does not hold it.
@@ -786,15 +827,13 @@ class ResultMarksService
             usort($rows, fn ($a, $b) => strnatcasecmp($a['course'], $b['course']) ?: $a['rank'] <=> $b['rank'] ?: self::compareOtCodes($a['code'], $b['code']));
         }
 
-        $maxA = (float) array_sum(array_column($subjects, 'max'));
-
         return [
             'courses' => $courses,
             'coursePk' => $coursePk,
             'subjects' => $subjects,
             'maxA' => $maxA,
             'maxB' => $maxB,
-            'max' => $maxA + $maxB,
+            'max' => $maxA !== null && $maxB !== null ? $maxA + $maxB : $pick('max', null),
             'qualifying' => $qualifyingMax,
             'rows' => $rows,
             'pending' => $pending,

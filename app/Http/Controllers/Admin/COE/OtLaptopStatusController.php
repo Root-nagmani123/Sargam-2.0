@@ -52,26 +52,31 @@ class OtLaptopStatusController extends Controller
     {
         $scope = $this->resolveScope($request);
 
-        $rows = $this->listQuery($scope)->get()->map(fn (LaptopResponse $row) => [
-            'id' => (int) $row->pk,
-            'roll' => (string) ($row->roll_number ?: '—'),
-            'name' => $this->studentName($row),
-            'code' => (string) ($row->generated_OT_code ?: '—'),
-            'course' => $this->courseLabel($row),
-            'service' => (string) ($row->service_short_name ?: $row->service_name ?: ''),
-            'batch' => (string) ($row->batch ?: '—'),
-            'laptop_required' => (bool) $row->laptop_required,
-            'reason' => $row->reason,
-            'disability' => (bool) $row->has_disability,
-            'disability_type' => LaptopResponse::disabilityTypeLabel($row->disability_type),
-            // NULL = the scriber question was never put (no disability), shown as "—".
-            'scriber' => $row->scriber_required,
-            'scriber_remarks' => $row->scriber_remarks,
-            'primary_scriber' => $row->primary_scriber_name,
-            'secondary_scriber' => $row->secondary_scriber_name,
-            'additional_remarks' => $row->additional_remarks,
-            'updated_by' => LaptopResponse::sourceLabel((int) $row->source),
-        ]);
+        $rows = $this->listQuery($scope)->get()->map(function (LaptopResponse $row) {
+            // A scriber only for a PwBD OT: an older answer on anyone else is not shown as one.
+            $pwbd = LaptopDeclarationService::isPwbd($row->ph);
+
+            return [
+                'id' => (int) $row->pk,
+                'roll' => (string) ($row->roll_number ?: '—'),
+                'name' => $this->studentName($row),
+                'code' => (string) ($row->generated_OT_code ?: '—'),
+                'course' => $this->courseLabel($row),
+                'service' => (string) ($row->service_short_name ?: $row->service_name ?: ''),
+                'batch' => (string) ($row->batch ?: '—'),
+                'laptop_required' => (bool) $row->laptop_required,
+                'reason' => $row->reason,
+                'disability' => (bool) $row->has_disability,
+                'disability_type' => LaptopResponse::disabilityTypeLabel($row->disability_type),
+                // NULL = the scriber question was never put (no disability), shown as "—".
+                'scriber' => $pwbd || $row->scriber_required === null ? $row->scriber_required : 0,
+                'scriber_remarks' => $row->scriber_remarks,
+                'primary_scriber' => $pwbd ? $row->primary_scriber_name : null,
+                'secondary_scriber' => $pwbd ? $row->secondary_scriber_name : null,
+                'additional_remarks' => $row->additional_remarks,
+                'updated_by' => LaptopResponse::sourceLabel((int) $row->source),
+            ];
+        });
 
         // The toolbar filters match the text the grid shows, so their options are taken
         // from the rows themselves — an option that can never match a row is not offered.
@@ -145,11 +150,13 @@ class OtLaptopStatusController extends Controller
                 'reason' => (string) ($row->reason ?? ''),
                 'has_disability' => $row->response_pk === null ? null : (int) $row->has_disability,
                 'disability_type' => $row->disability_type === null ? null : (int) $row->disability_type,
-                // Stays NULL where the scriber question was never asked.
-                'scriber_required' => $row->scriber_required === null ? null : (int) $row->scriber_required,
+                // Stays NULL where the scriber question was never asked; an older Yes or
+                // assignment on a non-PwBD OT comes back as No / none, so saving clears it.
+                'scriber_required' => $row->scriber_required === null ? null
+                    : (LaptopDeclarationService::isPwbd($row->ph) ? (int) $row->scriber_required : 0),
                 'scriber_remarks' => (string) ($row->scriber_remarks ?? ''),
-                'primary_scriber_pk' => $row->primary_scriber_pk === null ? null : (int) $row->primary_scriber_pk,
-                'secondary_scriber_pk' => $row->secondary_scriber_pk === null ? null : (int) $row->secondary_scriber_pk,
+                'primary_scriber_pk' => $row->primary_scriber_pk === null || ! LaptopDeclarationService::isPwbd($row->ph) ? null : (int) $row->primary_scriber_pk,
+                'secondary_scriber_pk' => $row->secondary_scriber_pk === null || ! LaptopDeclarationService::isPwbd($row->ph) ? null : (int) $row->secondary_scriber_pk,
                 'additional_remarks' => (string) ($row->additional_remarks ?? ''),
             ])->all(),
         ]);
@@ -382,6 +389,7 @@ class OtLaptopStatusController extends Controller
                 'student_master.last_name',
                 'student_master.generated_OT_code',
                 'student_master.batch',
+                'student_master.ph',
                 'course_master.course_name',
                 'course_master.couse_short_name',
                 'service_master.service_name',
