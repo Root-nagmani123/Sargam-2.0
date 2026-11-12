@@ -2588,6 +2588,15 @@ class ReportController extends Controller
         $cwPks = $this->categoryWiseClientTypePkUnion($request);
         $cwBuyers = $this->normalizedBuyerNameList($request);
 
+        // Opened with no filters: show the current month instead of an empty report.
+        if (! $request->filled('from_date') && ! $request->filled('to_date')
+            && $cwSlugs === [] && $cwPks === [] && $cwBuyers === []) {
+            $request->merge([
+                'from_date' => now()->startOfMonth()->toDateString(),
+                'to_date' => now()->toDateString(),
+            ]);
+        }
+
         $filtersApplied = $request->filled('from_date')
             || $request->filled('to_date')
             || ($cwSlugs !== [])
