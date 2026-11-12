@@ -10,9 +10,10 @@ use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
 use Tests\TestCase;
 
 /**
- * PR #349 F-049, Rule A: correcting a saved month's reading through List Meter Reading → Edit keeps the
- * month's opening reading (the previous month's reading) and measures units from it. It used to replace
- * the opening reading with the mistaken saved one, so a downward correction billed 0 units.
+ * PR #349 F-049, Rule A: saving a month's own reading again — through List Meter Reading → Edit or the
+ * Update Meter Reading dialog — keeps the month's opening reading (the previous month's reading) and
+ * measures units from it. It used to replace the opening reading with the saved one, so a downward Edit
+ * billed 0 units and an upward re-save dropped the units already billed.
  */
 class EstateMeterReadingEditCorrectionTest extends TestCase
 {
@@ -57,6 +58,35 @@ class EstateMeterReadingEditCorrectionTest extends TestCase
         $slot = $data[0]['m1'] ?? $data[0];
         $this->assertSame($opening, (int) $slot['baseline_min_reading']);
         $this->assertSame((string) ($opening + 100), (string) $slot['electric_meter_reading'], 'the reading being corrected is still shown');
+    }
+
+    /** Re-saving the month higher from the plain dialog keeps the opening and bills the whole rise (dev, PV-11 August). */
+    public function test_an_upward_resave_from_the_dialog_keeps_the_opening_reading(): void
+    {
+        [$saved, $opening, $target] = $this->savedNewMonth(100);
+
+        $this->actor()->postJson(route('admin.estate.update-meter-reading.store'), $this->payload($saved->pk, $opening + 160, $target, false))
+            ->assertOk()->assertJson(['success' => true]);
+
+        $row = DB::table('estate_month_reading_details')->where('pk', $saved->pk)->first();
+        $this->assertSame($opening, (int) $row->last_month_elec_red, 'opening reading is still the previous month\'s');
+        $this->assertSame($opening + 160, (int) $row->curr_month_elec_red);
+        $this->assertSame(160, (int) $row->meter_one_consume_unit, 'the 100 units already billed are not dropped');
+        $this->assertEqualsWithDelta($this->tariff($saved->poss, 160), (float) $row->electricty_charges, 0.001);
+    }
+
+    /** The plain dialog listing a month's own row previews units from that month's opening reading. */
+    public function test_the_dialog_offers_the_opening_reading_for_a_months_own_row(): void
+    {
+        [$saved, $opening, $target] = $this->savedNewMonth(100);
+
+        $data = collect($this->actor()->getJson(route('admin.estate.update-meter-reading.list', [
+            'bill_month' => $target->month, 'bill_year' => $target->year, 'possession_pk' => $saved->poss,
+        ]))->assertOk()->json('data'));
+
+        $own = $data->firstWhere('pk', $saved->pk);
+        $this->assertNotNull($own, 'the month\'s own row is listed');
+        $this->assertSame($opening, (int) ($own['m1'] ?? $own)['baseline_min_reading']);
     }
 
     /**

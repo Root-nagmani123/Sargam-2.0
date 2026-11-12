@@ -7504,6 +7504,8 @@ class EstateController extends Controller
             ->from('estate_month_reading_details as emrd')
             ->select([
                 'emrd.pk',
+                'emrd.bill_month',
+                'emrd.bill_year',
                 'emrd.from_date',
                 'emrd.to_date',
                 'emrd.last_month_elec_red',
@@ -7577,10 +7579,14 @@ class EstateController extends Controller
             });
         }
 
-        // Edit deep link (one reading): the Unit preview measures from the month's opening reading, as the store does (F-049).
-        $editOpening = $readingPkScoped !== null;
+        // A month's own row (Edit deep link, or listed for its own month) previews units from the month's opening
+        // reading, as the store does (F-049 Rule A); a previous month's row still offers its saved reading.
+        [$uiListM, $uiListY] = $this->meterReadingParseUiMonthYear($billMonth, $billYear);
+        $uiListYm = $uiListM !== null && $uiListY !== null ? sprintf('%04d-%02d', $uiListY, $uiListM) : null;
         $rows = collect();
         foreach ($query->get() as $row) {
+            $editOpening = $readingPkScoped !== null
+                || ($uiListYm !== null && $this->meterReadingYmFromRowColumns($row->bill_month, $row->bill_year) === $uiListYm);
             // Use estate_house_master meter numbers when estate_month_reading_details has 0/null
             $meterOne = $row->emrd_meter_one ?? $row->ehm_meter_one;
             $meterTwo = $row->emrd_meter_two ?? $row->ehm_meter_two;
@@ -7946,8 +7952,8 @@ class EstateController extends Controller
         }
 
         // Set only when this page was opened via Edit from List Meter Reading. It relaxes the input validation for
-        // that one row (a lower reading may be entered), and a correction of the row's own month keeps the
-        // month's opening reading and measures units from it (F-049 Rule A).
+        // that one row (a lower reading may be entered). Any save of a row's own month — Edit or this dialog —
+        // keeps the month's opening reading and measures units from it (F-049 Rule A).
         $editReadingPkRaw = $request->input('edit_reading_pk');
         $editReadingPk = (is_numeric($editReadingPkRaw) && (int) $editReadingPkRaw > 0) ? (int) $editReadingPkRaw : null;
         // The edit deep-link scopes the grid to that one reading (getMeterReadingList: reading_pk), so a genuine
@@ -8320,9 +8326,9 @@ class EstateController extends Controller
                 $prev2 = ($last2Raw > 0) ? $last2Raw : ($epdSecondary ?? $epdPrimary ?? 0);
                 $curr1Existing = $row->curr_month_elec_red !== null ? (int) $row->curr_month_elec_red : null;
                 $curr2Existing = $row->curr_month_elec_red2 !== null ? (int) $row->curr_month_elec_red2 : null;
-                // F-049 Rule A: an Edit correction of the month's own reading keeps that month's opening reading.
-                $correctsOwnMonth = $editReadingPk !== null && $formRowPk === $editReadingPk
-                    && $readingBillMonth !== null
+                // F-049 Rule A: saving a month's own row again (List Meter Reading → Edit, or this dialog) keeps that
+                // month's opening reading; only a new month takes the form row's saved reading as its opening.
+                $correctsOwnMonth = $readingBillMonth !== null
                     && $this->meterReadingYmFromRowColumns($row->bill_month, $row->bill_year) === (string) $readingBillMonth;
 
                 if ($curr1Form !== null) {

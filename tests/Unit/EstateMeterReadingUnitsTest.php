@@ -8,10 +8,9 @@ use PHPUnit\Framework\TestCase;
 /**
  * Pins the consumed-unit rules for estate electricity bills.
  *
- * The rule the screen shows: Unit = New Meter Reading − Electric Meter Reading, where the
- * "Electric Meter Reading" column is the reading already saved on the row. Only when nothing is
- * saved yet does the previous period (last month / possession opening) supply the baseline, and an
- * Edit correction of the month's own reading measures from that opening reading too (F-049).
+ * A new month is measured from the previous month's saved reading; with nothing saved, the previous
+ * period (last month / possession opening) supplies the baseline. Saving a month's own row again —
+ * Edit or the Update Meter Reading dialog — measures from that month's opening reading (F-049 Rule A).
  */
 class EstateMeterReadingUnitsTest extends TestCase
 {
@@ -28,10 +27,16 @@ class EstateMeterReadingUnitsTest extends TestCase
         $this->assertSame(500, $this->units(null, 4500));
     }
 
-    /** A saved reading is the baseline, so re-saving bills only the rise above it. */
-    public function test_resave_bills_the_rise_above_the_saved_reading(): void
+    /** A new month saved from the previous month's row bills the rise above that row's saved reading. */
+    public function test_new_month_bills_the_rise_above_the_previous_months_reading(): void
     {
         $this->assertSame(200, $this->units(5000, 5200));
+    }
+
+    /** Rule A, upward re-save of a month's own row: 5000 raised to 5200 bills 1200 from the 4000 opening, not 200. */
+    public function test_upward_resave_of_own_month_bills_from_its_opening_reading(): void
+    {
+        $this->assertSame(1200, Units::consumed(5200, Units::baseline(5000, self::PREV, true), false));
     }
 
     /**
@@ -50,8 +55,8 @@ class EstateMeterReadingUnitsTest extends TestCase
     }
 
     /**
-     * Outside an Edit correction, a value below the saved reading yields zero units, not a negative
-     * charge (the validator refuses such a save before it gets here).
+     * A new month entered below the previous month's reading yields zero units, not a negative charge
+     * (the validator refuses such a save before it gets here).
      */
     public function test_entering_below_the_saved_reading_yields_zero_units(): void
     {
