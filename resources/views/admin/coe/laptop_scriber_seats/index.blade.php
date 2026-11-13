@@ -43,8 +43,8 @@
 
 @section('setup_content')
 <div class="container-fluid coe-page">
-    <x-breadcrum title="Laptop &amp; Scriber Seats Master" :showBack="false"
-                 :items="['Setup', 'COE', 'Master Data', 'Laptop &amp; Scriber Seats Master']">
+    <x-breadcrum title="Laptop & Scriber Seats Master" :showBack="false"
+                 :items="['Setup', 'COE', 'Master Data', 'Laptop & Scriber Seats Master']">
         <button type="button" class="btn coe-btn-header" id="lssAddBtn">
             <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add Laptop &amp; Scriber Seats</span>
         </button>
@@ -53,9 +53,8 @@
     <x-session_message />
 
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 coe-secondary-actions">
-        <button type="button" id="lssDownloadBtn" class="btn programme-dt-btn-columns" title="Download as Excel">
-            <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-        </button>
+        @include('admin.coe.partials.download_menu', ['prefix' => 'lss', 'csv' => true])
+        @include('admin.coe.partials.print_brand')
         <button type="button" id="lssPrintBtn" class="btn programme-dt-btn-columns" title="Print">
             <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
         </button>
@@ -320,7 +319,7 @@ $(function () {
         exclude: [COL.action],
         filters: { '#lssFilterBuilding': COL.building, '#lssFilterFloor': COL.floor },
         reset: '#lssResetFilters',
-        download: '#lssDownloadBtn',
+        download: '#lssDownloadExcel', pdf: '#lssDownloadPdf', csv: '#lssDownloadCsv',
         print: '#lssPrintBtn',
         searchToggle: '#lssSearchToggle',
         searchSlot: '#lssDtSearch',

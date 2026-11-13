@@ -42,9 +42,8 @@
         <div class="d-flex flex-wrap gap-2 align-items-center coe-secondary-actions">
             <button type="button" id="upcDeleteAllBtn" class="btn coe-btn coe-btn-danger d-none">Delete All</button>
             <button type="button" id="upcFreezeAllBtn" class="btn coe-btn coe-btn-freeze d-none">Freeze All</button>
-            <button type="button" id="upcDownloadBtn" class="btn programme-dt-btn-columns" title="Download as Excel">
-                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-            </button>
+            @include('admin.coe.partials.download_menu', ['prefix' => 'upc', 'csv' => true])
+            @include('admin.coe.partials.print_brand')
             <button type="button" id="upcPrintBtn" class="btn programme-dt-btn-columns" title="Print">
                 <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
             </button>
@@ -312,7 +311,7 @@ $(function () {
         exclude: [COL.check, COL.action],
         filters: { '#upcFilterCourse': COL.course, '#upcFilterStatus': COL.status },
         reset: '#upcResetFilters',
-        download: '#upcDownloadBtn',
+        download: '#upcDownloadExcel', pdf: '#upcDownloadPdf', csv: '#upcDownloadCsv',
         print: '#upcPrintBtn',
         searchToggle: '#upcSearchToggle',
         searchSlot: '#upcDtSearch',

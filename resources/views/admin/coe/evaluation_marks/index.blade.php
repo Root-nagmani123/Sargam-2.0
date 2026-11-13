@@ -42,7 +42,7 @@
 
 @section('setup_content')
 <div class="container-fluid coe-page">
-    <x-breadcrum title="Evaluation &amp; Marks" :showBack="false"
+    <x-breadcrum title="Evaluation & Marks" :showBack="false"
                  :items="['Setup', 'COE', 'Examination Management', 'Evaluation & Marks']">
         {{-- Bulk actions – visible when rows selected --}}
         <div id="emBulkActions" class="d-none d-flex gap-2">

@@ -24,9 +24,8 @@
 
     {{-- Secondary actions (Download / Print) — above the card, per §1 --}}
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 coe-secondary-actions">
-        <button type="button" id="qpDownloadBtn" class="btn programme-dt-btn-columns" title="Download as Excel">
-            <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-        </button>
+        @include('admin.coe.partials.download_menu', ['prefix' => 'qp', 'csv' => true])
+        @include('admin.coe.partials.print_brand')
         <button type="button" id="qpPrintBtn" class="btn programme-dt-btn-columns" title="Print">
             <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
         </button>
@@ -256,7 +255,7 @@ $(function () {
         exclude: [COL.action],
         filters: { '#qpFilterDrive': COL.drive, '#qpFilterBatch': COL.batch, '#qpFilterStatus': COL.status },
         reset: '#qpResetFilters',
-        download: '#qpDownloadBtn',
+        download: '#qpDownloadExcel', pdf: '#qpDownloadPdf', csv: '#qpDownloadCsv',
         print: '#qpPrintBtn',
         searchToggle: '#qpSearchToggle',
         searchSlot: '#qpDtSearch',

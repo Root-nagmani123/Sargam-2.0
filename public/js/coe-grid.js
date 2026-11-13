@@ -19,6 +19,8 @@
  *       reset: '#qpResetFilters',
  *       download: '#qpDownloadBtn', print: '#qpPrintBtn',
  *       pdf: '#qpDownloadPdf',                // optional: PDF of the same rows/columns
+ *       csv: '#qpDownloadCsv',                // optional: CSV of the same rows/columns
+ *       (Print is LBSNAA-branded when the page includes admin.coe.partials.print_brand.)
  *       searchToggle: '#qpSearchToggle', searchSlot: '#qpDtSearch',
  *       colvisGrid: '#qpColumnToggleGrid', colvisKey: 'coeMyQuestionPaper:hiddenColumns:v1',
  *       empty: { title: '…', text: '…' }
@@ -82,9 +84,13 @@
         // snoCol: false = the grid has no running-number column.
         var snoCol = o.snoCol === false ? false : (o.snoCol || 0);
         if (snoCol !== false) {
+            // Number every filtered row, not just this page's: exports read the cells,
+            // and rows past page 1 printed with a blank S. No. A server-side grid only
+            // holds the current page, so it numbers from that page's start.
+            var serverSide = !!dt.settings()[0].oFeatures.bServerSide;
             dt.on('draw.dt', function () {
-                var start = dt.page.info().start;
-                dt.column(snoCol, { search: 'applied', order: 'applied', page: 'current' }).nodes()
+                var start = serverSide ? dt.page.info().start : 0;
+                dt.column(snoCol, { search: 'applied', order: 'applied', page: serverSide ? 'current' : 'all' }).nodes()
                     .each(function (cell, i) { cell.textContent = start + i + 1; });
             });
             dt.draw(false);
@@ -106,16 +112,31 @@
                 return String(text).replace(/\s+/g, ' ').trim();
             } }
         };
+        var cellText = exportOptions.format.body;
+        // CSV opens in Excel, which runs a cell starting = + - @ as a formula. Quote
+        // it the way the server's ExportCellValue does (numbers and "-" excepted).
+        var csvOptions = $.extend({}, exportOptions, { format: { body: function (data, row, column, node) {
+            var text = cellText(data, row, column, node);
+            return /^[=+\-@]/.test(text) && isNaN(Number(text)) && !/^[-–—]+$/.test(text) ? "'" + text : text;
+        } } });
+        // Buttons' print writes cells as HTML, but cellText is decoded text: escape it,
+        // or a stored "<img onerror=…>" runs in the print window.
+        var printOptions = $.extend({}, exportOptions, { format: { body: function (data, row, column, node) {
+            return $('<div>').text(cellText(data, row, column, node)).html();
+        } } });
         var filename = String(o.title || 'export').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        var $brand = $('#coePrintBrand');
 
         new $.fn.dataTable.Buttons(dt, {
             buttons: [
                 { extend: 'excelHtml5', title: o.title, filename: filename, exportOptions: exportOptions },
                 {
-                    extend: 'print', title: o.title, exportOptions: exportOptions,
+                    extend: 'print', title: o.title, exportOptions: printOptions,
+                    autoPrint: !$brand.length,   // branded print prints itself once the logos load
                     // Fit every column on the page: landscape, wrapping cells, and
                     // smaller type as columns grow (wide grids were cut off at the edge).
                     customize: function (win) {
+                        if ($brand.length) { brandPrint(win); return; }
                         var $body = $(win.document.body);
                         var cols = $body.find('table thead th').length;
                         var size = cols > 16 ? 7 : cols > 10 ? 8 : 10;
@@ -141,9 +162,59 @@
                         doc.styles.tableHeader.fontSize = size;
                         if (table) { table.table.widths = Array(cols).fill('*'); }
                     }
-                }
+                },
+                { extend: 'csvHtml5', title: o.title, filename: filename, exportOptions: csvOptions }
             ]
         });
+
+        /* Branded print: the same LBSNAA header, styles and footer as the masters'
+           server Print (admin.master.partials.export_print), around the rows on screen. */
+        function printStamp() {
+            var d = new Date();
+            var p = function (n) { return (n < 10 ? '0' : '') + n; };
+            return p(d.getDate()) + '-' + p(d.getMonth() + 1) + '-' + d.getFullYear() + ' ' +
+                p(d.getHours() % 12 || 12) + ':' + p(d.getMinutes()) + ' ' + (d.getHours() < 12 ? 'AM' : 'PM');
+        }
+        function filterLine() {
+            var parts = Object.keys(filters).concat(Object.keys(rowFilters)).map(function (sel) {
+                var $s = $(sel);
+                return $s.val() ? ($s.attr('aria-label') || 'Filter') + ': ' + $s.find('option:selected').text().trim() : null;
+            });
+            if (dt.search()) { parts.unshift('Search: ' + dt.search()); }
+            return parts.filter(Boolean).join('  |  ');
+        }
+        function brandPrint(win) {
+            var doc = win.document;
+            var $tpl = $('<div>').html($brand.html());
+            var $table = $(doc.body).find('table').first();
+            var rows = $table.find('tbody tr').length;
+            var line = filterLine();
+
+            $tpl.find('.mst-print-title').text(o.title || '');
+            $tpl.find('.mst-print-meta').text('Generated: ' + printStamp())
+                .after($('<div class="mst-print-total">').text('Total Records: ' + rows))
+                .after(line ? $('<div class="mst-print-filters">').text(line) : null);
+            if (!rows) {
+                $table.find('tbody').html('<tr><td class="mst-print-empty" colspan="' +
+                    $table.find('thead th').length + '">No records to print</td></tr>');
+            }
+
+            // Drop the app stylesheets Buttons copied in; they fight the print styles.
+            $(doc.head).find('style, link').remove();
+            $(doc.head).append($tpl.find('style').remove().prop('outerHTML'));
+            $(doc.body).removeClass('dt-print-view').children().not($table).remove();
+            $table.attr('class', 'mst-print-table')
+                .before($tpl.children().not('.mst-print-foot').map(function () { return this.outerHTML; }).get().join(''))
+                .after($tpl.find('.mst-print-foot').prop('outerHTML'));
+
+            var imgs = $(doc.body).find('img').toArray();
+            var left = imgs.length;
+            var done = function () { if (--left <= 0) { win.focus(); win.print(); } };
+            if (!left) { left = 1; done(); }
+            imgs.forEach(function (img) {
+                if (img.complete) { done(); } else { img.onload = img.onerror = done; }
+            });
+        }
         function exportWith(button) {
             anyTicked = !!o.rowCheck
                 && dt.rows({ search: 'applied' }).nodes().to$().find(o.rowCheck + ':checked').length > 0;
@@ -152,6 +223,7 @@
         $(o.download).on('click', function () { exportWith(0); });
         $(o.print).on('click', function () { exportWith(1); });
         $(o.pdf).on('click', function () { exportWith(2); });
+        $(o.csv).on('click', function () { exportWith(3); });
 
         /* Filters. Initialised here rather than through the global data-searchable
            hook: that one runs before admin_assets/js/custom.js, whose unscoped

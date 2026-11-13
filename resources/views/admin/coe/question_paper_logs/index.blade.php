@@ -33,9 +33,8 @@
         </nav>
 
         <div class="d-flex flex-wrap gap-2 coe-secondary-actions">
-            <button type="button" id="qplgDownloadBtn" class="btn programme-dt-btn-columns" title="Download as Excel">
-                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-            </button>
+            @include('admin.coe.partials.download_menu', ['prefix' => 'qplg', 'csv' => true])
+            @include('admin.coe.partials.print_brand')
             <button type="button" id="qplgPrintBtn" class="btn programme-dt-btn-columns" title="Print">
                 <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
             </button>
@@ -186,7 +185,7 @@ $(function () {
         filters: { '#qplgFilterStatus': COL.action },
         rowFilters: { '#qplgFilterDrive': 'drive', '#qplgFilterBatch': 'batch', '#qplgFilterFaculty': 'faculty' },
         reset: '#qplgResetFilters',
-        download: '#qplgDownloadBtn',
+        download: '#qplgDownloadExcel', pdf: '#qplgDownloadPdf', csv: '#qplgDownloadCsv',
         print: '#qplgPrintBtn',
         searchToggle: '#qplgSearchToggle',
         searchSlot: '#qplgDtSearch',
