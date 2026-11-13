@@ -313,9 +313,12 @@ function init() {
                     var i1 = readingIdx++;
                     var m1 = row.m1;
                     var m2 = row.m2;
-                    // F-049 Rule A: a month's own row measures units from its opening reading (opening_reading).
-                    var last1 = parseLastReading(m1.opening_reading != null ? m1.opening_reading : m1.last_month_reading);
-                    var last2 = parseLastReading(m2.opening_reading != null ? m2.opening_reading : m2.last_month_reading);
+                    // The minimum is the saved reading, as the store checks it (F-054); a month's own row measures
+                    // units from its opening reading (opening_reading, F-049 Rule A).
+                    var last1 = parseLastReading(m1.last_month_reading);
+                    var last2 = parseLastReading(m2.last_month_reading);
+                    var open1 = parseLastReading(m1.opening_reading != null ? m1.opening_reading : m1.last_month_reading);
+                    var open2 = parseLastReading(m2.opening_reading != null ? m2.opening_reading : m2.last_month_reading);
                     var nm1 = String(m1.new_meter_no || '').trim() || String(m1.old_meter_no || '');
                     var nm2 = String(m2.new_meter_no || '').trim() || String(m2.old_meter_no || '');
                     var elec1 = (m1.last_month_reading != null && m1.last_month_reading !== '') ? m1.last_month_reading : 'N/A';
@@ -341,20 +344,20 @@ function init() {
                         '</td>' +
                         '<td class="other-dual-col other-dual-newmeter-col">' +
                             '<div class="other-dual-seg" data-slot="1">' +
-                            '<input type="text" class="form-control form-control-sm new-meter-no" name="readings[' + i0 + '][new_meter_no]" value="' + escAttr(nm1) + '" placeholder="' + newMeterNoPlaceholder + '" inputmode="numeric" maxlength="50" data-old-meter-no="' + escAttr(m1.old_meter_no || '') + '"' + newMeterNoLockAttr + '>' +
+                            '<input type="text" class="form-control form-control-sm new-meter-no" name="readings[' + i0 + '][new_meter_no]" value="' + escAttr(nm1) + '" placeholder="' + newMeterNoPlaceholder + '" inputmode="numeric" maxlength="50" data-old-meter-no="' + escAttr(m1.old_meter_no || '') + '" data-opening-meter-no="' + escAttr(m1.opening_meter_no || '') + '"' + newMeterNoLockAttr + '>' +
                             '</div>' +
                             '<div class="other-dual-seg" data-slot="2">' +
-                            '<input type="text" class="form-control form-control-sm new-meter-no" name="readings[' + i1 + '][new_meter_no]" value="' + escAttr(nm2) + '" placeholder="' + newMeterNoPlaceholder + '" inputmode="numeric" maxlength="50" data-old-meter-no="' + escAttr(m2.old_meter_no || '') + '"' + newMeterNoLockAttr + '>' +
+                            '<input type="text" class="form-control form-control-sm new-meter-no" name="readings[' + i1 + '][new_meter_no]" value="' + escAttr(nm2) + '" placeholder="' + newMeterNoPlaceholder + '" inputmode="numeric" maxlength="50" data-old-meter-no="' + escAttr(m2.old_meter_no || '') + '" data-opening-meter-no="' + escAttr(m2.opening_meter_no || '') + '"' + newMeterNoLockAttr + '>' +
                             '</div>' +
                         '</td>' +
                         '<td class="other-dual-col other-dual-reading-col">' +
                             '<div class="other-dual-seg" data-slot="1">' +
-                            '<input type="number" class="form-control form-control-sm curr-reading" name="readings[' + i0 + '][curr_month_elec_red]" value="" min="0" step="1" placeholder="Meter Reading" inputmode="numeric" data-last-reading="' + (last1 !== null ? last1 : '') + '" data-existing-curr="">' +
+                            '<input type="number" class="form-control form-control-sm curr-reading" name="readings[' + i0 + '][curr_month_elec_red]" value="" min="0" step="1" placeholder="Meter Reading" inputmode="numeric" data-last-reading="' + (last1 !== null ? last1 : '') + '" data-opening-reading="' + (open1 !== null ? open1 : '') + '" data-existing-curr="">' +
                             '<input type="hidden" name="readings[' + i0 + '][pk]" value="' + row.pk + '">' +
                             '<input type="hidden" name="readings[' + i0 + '][meter_slot]" value="1">' +
                             '</div>' +
                             '<div class="other-dual-seg" data-slot="2">' +
-                            '<input type="number" class="form-control form-control-sm curr-reading" name="readings[' + i1 + '][curr_month_elec_red]" value="" min="0" step="1" placeholder="Meter Reading" inputmode="numeric" data-last-reading="' + (last2 !== null ? last2 : '') + '" data-existing-curr="">' +
+                            '<input type="number" class="form-control form-control-sm curr-reading" name="readings[' + i1 + '][curr_month_elec_red]" value="" min="0" step="1" placeholder="Meter Reading" inputmode="numeric" data-last-reading="' + (last2 !== null ? last2 : '') + '" data-opening-reading="' + (open2 !== null ? open2 : '') + '" data-existing-curr="">' +
                             '<input type="hidden" name="readings[' + i1 + '][pk]" value="' + row.pk + '">' +
                             '<input type="hidden" name="readings[' + i1 + '][meter_slot]" value="2">' +
                             '</div>' +
@@ -368,7 +371,8 @@ function init() {
                 }
 
                 var idx = readingIdx++;
-                var lastReading = parseLastReading(row.opening_reading != null ? row.opening_reading : row.last_month_reading);
+                var lastReading = parseLastReading(row.last_month_reading);
+                var openingReading = parseLastReading(row.opening_reading != null ? row.opening_reading : row.last_month_reading);
                 var existingCurrStored = (row.curr_month_reading !== null && row.curr_month_reading !== undefined && row.curr_month_reading !== '')
                     ? String(row.curr_month_reading) : '';
                 var slot = row.meter_slot || 1;
@@ -389,8 +393,8 @@ function init() {
                     '<td class="text-nowrap">' + escAttr(row.last_reading_date || 'N/A') + '</td>' +
                     '<td>' + escAttr(oldDisp) + '</td>' +
                     '<td>' + escAttr(lastElecDisp) + '</td>' +
-                    '<td><input type="text" class="form-control form-control-sm new-meter-no" name="readings[' + idx + '][new_meter_no]" value="' + escAttr(newMeterNoPrefill) + '" placeholder="' + newMeterNoPlaceholder + '" inputmode="numeric" maxlength="50" data-old-meter-no="' + escAttr(oldMeterNoStr) + '"' + newMeterNoLockAttr + '></td>' +
-                    '<td><input type="number" class="form-control form-control-sm curr-reading" name="readings[' + idx + '][curr_month_elec_red]" value="" min="0" step="1" placeholder="Meter Reading" inputmode="numeric" data-last-reading="' + (lastReading !== null ? lastReading : '') + '" data-existing-curr="' + existingCurrStored.replace(/"/g, '&quot;') + '">' +
+                    '<td><input type="text" class="form-control form-control-sm new-meter-no" name="readings[' + idx + '][new_meter_no]" value="' + escAttr(newMeterNoPrefill) + '" placeholder="' + newMeterNoPlaceholder + '" inputmode="numeric" maxlength="50" data-old-meter-no="' + escAttr(oldMeterNoStr) + '" data-opening-meter-no="' + escAttr(row.opening_meter_no || '') + '"' + newMeterNoLockAttr + '></td>' +
+                    '<td><input type="number" class="form-control form-control-sm curr-reading" name="readings[' + idx + '][curr_month_elec_red]" value="" min="0" step="1" placeholder="Meter Reading" inputmode="numeric" data-last-reading="' + (lastReading !== null ? lastReading : '') + '" data-opening-reading="' + (openingReading !== null ? openingReading : '') + '" data-existing-curr="' + existingCurrStored.replace(/"/g, '&quot;') + '">' +
                     '<input type="hidden" name="readings[' + idx + '][pk]" value="' + row.pk + '">' +
                     '<input type="hidden" name="readings[' + idx + '][meter_slot]" value="' + slot + '"></td>' +
                     '<td class="unit-cell">—</td>' +
@@ -482,15 +486,30 @@ function init() {
         window.otherMeterRowData[keyFlat].new_meter_no = $row.find('.new-meter-no').first().val() || '';
     }
 
+    /** Same rule as EstateMeterReadingUnits::meterReplaced(): the number differs from the one the month opened with (F-051). */
+    function isMeterReplacedForUnits($inp) {
+        var $meterInp = getNewMeterInputForReading($inp);
+        var digits = function(v) { return String(v == null ? '' : v).replace(/\D/g, ''); };
+        var recorded = function(d) { return d.replace(/^0+/, '') === '' ? '' : d; };
+        var submitted = digits($meterInp.val());
+        var stored = digits($meterInp.attr('data-old-meter-no'));
+        var opening = recorded(digits($meterInp.attr('data-opening-meter-no')));
+        var finalNo = recorded(submitted || stored);
+        if (opening !== '' && finalNo !== '') return finalNo !== opening;
+        return submitted !== '' && stored !== '' && submitted !== stored;
+    }
+
     function refreshUnitForReadingInput($inp) {
         var $row = $inp.closest('tr');
-        var lastVal = $inp.data('last-reading');
+        // Units are measured from the opening reading (a month's own row), not from the minimum (F-054).
+        var lastVal = $inp.attr('data-opening-reading');
+        if (lastVal === undefined || lastVal === '') lastVal = $inp.attr('data-last-reading');
         var lastReading = (lastVal !== '' && lastVal !== undefined && !isNaN(parseFloat(lastVal))) ? parseFloat(lastVal) : null;
         var currVal = $inp.val();
         var currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
 
         var unit = '';
-        if (isMeterNoChangedForReading($inp)) {
+        if (isMeterReplacedForUnits($inp)) {
             // Meter replaced: the new meter starts at 0, so the reading is the unit.
             if (currReading !== null) unit = currReading;
         } else if (lastReading !== null && currReading !== null && currReading >= lastReading) {

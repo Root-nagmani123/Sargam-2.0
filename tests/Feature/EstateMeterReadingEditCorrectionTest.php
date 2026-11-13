@@ -56,7 +56,7 @@ class EstateMeterReadingEditCorrectionTest extends TestCase
 
         $this->assertCount(1, $data);
         $slot = $data[0]['m1'] ?? $data[0];
-        $this->assertSame($opening, (int) $slot['baseline_min_reading']);
+        $this->assertSame($opening, (int) $slot['opening_reading']);
         $this->assertSame((string) ($opening + 100), (string) $slot['electric_meter_reading'], 'the reading being corrected is still shown');
     }
 
@@ -86,7 +86,7 @@ class EstateMeterReadingEditCorrectionTest extends TestCase
 
         $own = $data->firstWhere('pk', $saved->pk);
         $this->assertNotNull($own, 'the month\'s own row is listed');
-        $this->assertSame($opening, (int) ($own['m1'] ?? $own)['baseline_min_reading']);
+        $this->assertSame($opening, (int) ($own['m1'] ?? $own)['opening_reading']);
     }
 
     /**

@@ -144,6 +144,8 @@ $(document).ready(function() {
     const newMeterNoLockClass = lockNewMeterNo ? ' bg-light' : '';
     const newMeterNoPlaceholder = lockNewMeterNo ? '' : 'Enter new meter no.';
     const belowBaselineMessage = 'New Meter Reading cannot be less than the minimum allowed baseline for this row.\n\nIf the meter was replaced or the saved reading is wrong, open this row from List Meter Reading → Edit.';
+    // Month (Y-m) of the row opened via Edit, from the list payload; the store refuses an Edit under any other month (F-053).
+    let editRowBillYm = null;
 
     // The dialog injects this script again on every open; drop the previous copy's document handlers first.
     $(document).off('.umr');
@@ -347,14 +349,24 @@ $(document).ready(function() {
             }
 
             let readingIdx = 0;
+            editRowBillYm = null;
+            // baseline_min_reading = the store's minimum (F-054); opening_reading / opening_meter_no = what units are measured from.
+            function figure(v) {
+                return (v !== undefined && v !== null && v !== '') ? String(v) : '';
+            }
             res.data.forEach(function(row) {
+                if (isListEditMode && String(row.pk) === String(prefill.reading_pk)) {
+                    editRowBillYm = row.bill_ym || null;
+                }
                 if (row.dual_meter && row.m1 && row.m2) {
                     const i0 = readingIdx++;
                     const i1 = readingIdx++;
                     const m1 = row.m1;
                     const m2 = row.m2;
-                    const base1 = (m1.baseline_min_reading !== undefined && m1.baseline_min_reading !== null && m1.baseline_min_reading !== '') ? String(m1.baseline_min_reading) : '';
-                    const base2 = (m2.baseline_min_reading !== undefined && m2.baseline_min_reading !== null && m2.baseline_min_reading !== '') ? String(m2.baseline_min_reading) : '';
+                    const base1 = figure(m1.baseline_min_reading);
+                    const base2 = figure(m2.baseline_min_reading);
+                    const open1 = figure(m1.opening_reading) || base1;
+                    const open2 = figure(m2.opening_reading) || base2;
                     const nm1 = String(m1.new_meter_no || '').trim() || String(m1.old_meter_no || '');
                     const nm2 = String(m2.new_meter_no || '').trim() || String(m2.old_meter_no || '');
                     const elec1 = (m1.electric_meter_reading != null && m1.electric_meter_reading !== '') ? m1.electric_meter_reading : 'N/A';
@@ -383,20 +395,20 @@ $(document).ready(function() {
                         '</td>' +
                         '<td class="other-dual-col other-dual-newmeter-col">' +
                             '<div class="other-dual-seg" data-slot="1">' +
-                            '<input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+i0+'][new_meter_no]" value="'+ escAttr(nm1) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m1.old_meter_no || '') +'"'+ newMeterNoLockAttr +'>' +
+                            '<input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+i0+'][new_meter_no]" value="'+ escAttr(nm1) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m1.old_meter_no || '') +'" data-opening-meter-no="'+ escAttr(m1.opening_meter_no || '') +'"'+ newMeterNoLockAttr +'>' +
                             '</div>' +
                             '<div class="other-dual-seg" data-slot="2">' +
-                            '<input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+i1+'][new_meter_no]" value="'+ escAttr(nm2) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m2.old_meter_no || '') +'"'+ newMeterNoLockAttr +'>' +
+                            '<input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+i1+'][new_meter_no]" value="'+ escAttr(nm2) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(m2.old_meter_no || '') +'" data-opening-meter-no="'+ escAttr(m2.opening_meter_no || '') +'"'+ newMeterNoLockAttr +'>' +
                             '</div>' +
                         '</td>' +
                         '<td class="other-dual-col other-dual-reading-col">' +
                             '<div class="other-dual-seg" data-slot="1">' +
-                            '<input type="number" class="form-control form-control-sm new-meter-reading" name="readings['+i0+'][curr_month_elec_red]" value="" min="0" step="1" placeholder="Enter" inputmode="numeric" data-last-reading="'+ escAttr(base1) +'" data-existing-curr="">' +
+                            '<input type="number" class="form-control form-control-sm new-meter-reading" name="readings['+i0+'][curr_month_elec_red]" value="" min="0" step="1" placeholder="Enter" inputmode="numeric" data-last-reading="'+ escAttr(base1) +'" data-opening-reading="'+ escAttr(open1) +'" data-existing-curr="">' +
                             '<input type="hidden" name="readings['+i0+'][pk]" value="'+ row.pk +'">' +
                             '<input type="hidden" name="readings['+i0+'][meter_slot]" value="1">' +
                             '</div>' +
                             '<div class="other-dual-seg" data-slot="2">' +
-                            '<input type="number" class="form-control form-control-sm new-meter-reading" name="readings['+i1+'][curr_month_elec_red]" value="" min="0" step="1" placeholder="Enter" inputmode="numeric" data-last-reading="'+ escAttr(base2) +'" data-existing-curr="">' +
+                            '<input type="number" class="form-control form-control-sm new-meter-reading" name="readings['+i1+'][curr_month_elec_red]" value="" min="0" step="1" placeholder="Enter" inputmode="numeric" data-last-reading="'+ escAttr(base2) +'" data-opening-reading="'+ escAttr(open2) +'" data-existing-curr="">' +
                             '<input type="hidden" name="readings['+i1+'][pk]" value="'+ row.pk +'">' +
                             '<input type="hidden" name="readings['+i1+'][meter_slot]" value="2">' +
                             '</div>' +
@@ -415,7 +427,8 @@ $(document).ready(function() {
                 var apiNewMeterNo = (row.new_meter_no != null && row.new_meter_no !== undefined) ? String(row.new_meter_no).trim() : '';
                 var newMeterNo = apiNewMeterNo !== '' ? apiNewMeterNo : (oldMeterNoStr !== '' && oldMeterNoStr !== 'N/A' ? oldMeterNoStr : '');
                 var newMeterReading = '';
-                var baselineMin = (row.baseline_min_reading !== undefined && row.baseline_min_reading !== null && row.baseline_min_reading !== '') ? String(row.baseline_min_reading) : '';
+                var baselineMin = figure(row.baseline_min_reading);
+                var openingReading = figure(row.opening_reading) || baselineMin;
                 const meterSlot = row.meter_slot || 1;
                 const rowKey = row.pk + '_' + meterSlot;
                 window.meterReadingRowData[rowKey] = {
@@ -425,14 +438,14 @@ $(document).ready(function() {
                     curr_month_elec_red: '',
                     original_curr_month_elec_red: ''
                 };
-                const tr = '<tr data-last-reading="'+ baselineMin.replace(/"/g, '&quot;') +'" data-existing-curr="" data-pk="'+ row.pk +'" data-meter-slot="'+ meterSlot +'">' +
+                const tr = '<tr data-last-reading="'+ escAttr(baselineMin) +'" data-opening-reading="'+ escAttr(openingReading) +'" data-existing-curr="" data-pk="'+ row.pk +'" data-meter-slot="'+ meterSlot +'">' +
                     '<td><input type="checkbox" class="form-check-input row-check row-check-master" name="readings['+idx+'][selected]" value="1"></td>' +
                     '<td>'+ escAttr(row.house_no || 'N/A') +'</td>' +
                     '<td>'+ escAttr(row.name || 'N/A') +'</td>' +
                     '<td class="text-nowrap">'+ escAttr(row.last_reading_date || 'N/A') +'</td>' +
                     '<td>'+ escAttr(row.old_meter_no || 'N/A') +'</td>' +
                     '<td>'+ escAttr(row.electric_meter_reading ?? 'N/A') +'</td>' +
-                    '<td><input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+idx+'][new_meter_no]" value="'+ escAttr(newMeterNo) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(oldMeterNoStr) +'"'+ newMeterNoLockAttr +'></td>' +
+                    '<td><input type="text" class="form-control form-control-sm new-meter-no'+ newMeterNoLockClass +'" name="readings['+idx+'][new_meter_no]" value="'+ escAttr(newMeterNo) +'" placeholder="'+ newMeterNoPlaceholder +'" inputmode="numeric" maxlength="50" data-old-meter-no="'+ escAttr(oldMeterNoStr) +'" data-opening-meter-no="'+ escAttr(row.opening_meter_no || '') +'"'+ newMeterNoLockAttr +'></td>' +
                     '<td><input type="number" class="form-control form-control-sm new-meter-reading" name="readings['+idx+'][curr_month_elec_red]" value="'+ escAttr(newMeterReading) +'" min="0" placeholder="Enter" step="1" inputmode="numeric">' +
                     '<input type="hidden" name="readings['+idx+'][pk]" value="'+row.pk+'">' +
                     '<input type="hidden" name="readings['+idx+'][meter_slot]" value="'+ meterSlot +'"></td>' +
@@ -495,6 +508,28 @@ $(document).ready(function() {
         return newNo !== oldNo;
     }
 
+    /** Same rule as EstateMeterReadingUnits::meterReplaced(): the number differs from the one the month opened with (F-051). */
+    function isMeterReplacedForUnits($inp) {
+        const $meterInp = getNewMeterInputForReading($inp);
+        const digits = function(v) { return String(v == null ? '' : v).replace(/\D/g, ''); };
+        const recorded = function(d) { return d.replace(/^0+/, '') === '' ? '' : d; };
+        const submitted = digits($meterInp.val());
+        const stored = digits($meterInp.attr('data-old-meter-no'));
+        const opening = recorded(digits($meterInp.attr('data-opening-meter-no')));
+        const finalNo = recorded(submitted || stored);
+        if (opening !== '' && finalNo !== '') return finalNo !== opening;
+        return submitted !== '' && stored !== '' && submitted !== stored;
+    }
+
+    /** Reading this save's units are measured from: the month's opening for its own row, else the minimum. */
+    function getOpeningForReadingInput($inp) {
+        let v = $inp.attr('data-opening-reading');
+        if (v === undefined || v === '') {
+            v = $inp.closest('tr').attr('data-opening-reading');
+        }
+        return (v !== undefined && v !== '' && !isNaN(parseFloat(v))) ? parseFloat(v) : getMinAllowedForReadingInput($inp);
+    }
+
     function isReadingBelowMinAllowed($inp, currReading) {
         // Edit from List Meter Reading: purani galat reading theek karne ke liye khulta hai, isliye koi min baseline nahi (server: edit_reading_pk).
         if (isListEditMode) return false;
@@ -519,6 +554,14 @@ $(document).ready(function() {
             e.preventDefault();
             alert('Meter reading date is mandatory. Please select Meter Reading Date before saving.');
             $('#meter_reading_date').trigger('focus');
+            return;
+        }
+
+        if (isListEditMode && editRowBillYm && billMonthVal !== editRowBillYm) {
+            e.preventDefault();
+            const editMonth = new Date(editRowBillYm + '-01T00:00:00').toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+            alert('This Edit corrects the ' + editMonth + ' reading only. Set Meter Change Month back to ' + editMonth + '; to record another month, use Update Meter Reading without Edit.');
+            $('#bill_month').trigger('focus');
             return;
         }
 
@@ -609,13 +652,13 @@ $(document).ready(function() {
 
     function refreshUnitForReadingInput($inp) {
         const $row = $inp.closest('tr');
-        const minBaseline = getMinAllowedForReadingInput($inp);
+        const minBaseline = getOpeningForReadingInput($inp);
 
         const currVal = $inp.val();
         const currReading = (currVal !== '' && currVal !== null && !isNaN(parseFloat(currVal))) ? parseFloat(currVal) : null;
 
         let unit = '';
-        if (isMeterNoChangedForReading($inp)) {
+        if (isMeterReplacedForUnits($inp)) {
             // Meter replaced: naya meter 0 se start hota hai, isliye reading hi unit hai.
             if (currReading !== null) unit = currReading;
         } else if (minBaseline !== null && currReading !== null && currReading >= minBaseline) {

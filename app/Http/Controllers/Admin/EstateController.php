@@ -7504,6 +7504,7 @@ class EstateController extends Controller
             ->from('estate_month_reading_details as emrd')
             ->select([
                 'emrd.pk',
+                'emrd.estate_possession_details_pk',
                 'emrd.bill_month',
                 'emrd.bill_year',
                 'emrd.from_date',
@@ -7579,14 +7580,29 @@ class EstateController extends Controller
             });
         }
 
-        // A month's own row (Edit deep link, or listed for its own month) previews units from the month's opening
-        // reading, as the store does (F-049 Rule A); a previous month's row still offers its saved reading.
+        // A row listed for its own month previews units from the month's opening reading, as the store measures them
+        // (F-049 Rule A) — also an Edit link, but only under the row's own month: the store refuses an Edit posted
+        // under another month (F-053). baseline_min_reading stays the store's minimum outside Edit (F-054).
         [$uiListM, $uiListY] = $this->meterReadingParseUiMonthYear($billMonth, $billYear);
         $uiListYm = $uiListM !== null && $uiListY !== null ? sprintf('%04d-%02d', $uiListY, $uiListM) : null;
+        $listed = $query->get();
+        $isOwnMonth = fn ($row) => $uiListYm !== null && $this->meterReadingYmFromRowColumns($row->bill_month, $row->bill_year) === $uiListYm;
+        $openingMeterNosByPk = $this->meterReadingOpeningMeterNos('estate_month_reading_details', 'estate_possession_details_pk', $listed->filter($isOwnMonth));
         $rows = collect();
-        foreach ($query->get() as $row) {
-            $editOpening = $readingPkScoped !== null
-                || ($uiListYm !== null && $this->meterReadingYmFromRowColumns($row->bill_month, $row->bill_year) === $uiListYm);
+        foreach ($listed as $row) {
+            $editOpening = $isOwnMonth($row);
+            // Per meter: the store's minimum, the reading units are measured from, and the meter no. the month opened
+            // with (a different New Meter No. bills the reading itself, F-051).
+            $slotFigures = function (int $slot, $curr, $last, string $storedMeterNo) use ($row, $editOpening, $openingMeterNosByPk): array {
+                $opening = $this->effectiveLastMonthElecBaselineForMeterSlot($last, $row->epd_electric_meter_reading, $row->epd_electric_meter_reading_2, $slot);
+                $min = $curr !== null ? (int) $curr : $opening;
+
+                return [
+                    'baseline_min_reading' => $min,
+                    'opening_reading' => $editOpening ? $opening : $min,
+                    'opening_meter_no' => $editOpening ? ($openingMeterNosByPk[(int) $row->pk][$slot] ?? $storedMeterNo) : $storedMeterNo,
+                ];
+            };
             // Use estate_house_master meter numbers when estate_month_reading_details has 0/null
             $meterOne = $row->emrd_meter_one ?? $row->ehm_meter_one;
             $meterTwo = $row->emrd_meter_two ?? $row->ehm_meter_two;
@@ -7605,32 +7621,18 @@ class EstateController extends Controller
                 'house_no' => $row->house_no ?? 'N/A',
                 'name' => $row->emp_name ?? 'N/A',
                 'last_reading_date' => $lastReadingDate,
+                // The row's own month: the Edit page refuses a save under any other month, as the store does (F-053).
+                'bill_ym' => $this->meterReadingYmFromRowColumns($row->bill_month, $row->bill_year),
             ];
             $pushed = false;
 
             // One list row for houses with two meters (same stacked UI as Update Meter Reading of Other).
             if ($hasMeterOne && $hasMeterTwo) {
                 $curr1 = $row->curr_month_elec_red;
-                $baselineMin1 = $curr1 !== null && ! $editOpening
-                    ? (int) $curr1
-                    : $this->effectiveLastMonthElecBaselineForMeterSlot(
-                        $row->last_month_elec_red,
-                        $row->epd_electric_meter_reading,
-                        $row->epd_electric_meter_reading_2,
-                        1
-                    );
                 $displayElectric1 = $curr1 !== null ? (string) (int) $curr1 : 'N/A';
                 $newNo1 = $row->emrd_meter_one !== null && $row->emrd_meter_one !== '' ? (string) $row->emrd_meter_one : (string) $meterOne;
 
                 $curr2 = $row->curr_month_elec_red2;
-                $baselineMin2 = $curr2 !== null && ! $editOpening
-                    ? (int) $curr2
-                    : $this->effectiveLastMonthElecBaselineForMeterSlot(
-                        $row->last_month_elec_red2,
-                        $row->epd_electric_meter_reading,
-                        $row->epd_electric_meter_reading_2,
-                        2
-                    );
                 $displayElectric2 = $curr2 !== null ? (string) (int) $curr2 : 'N/A';
                 $newNo2 = $row->emrd_meter_two !== null && $row->emrd_meter_two !== '' ? (string) $row->emrd_meter_two : (string) $meterTwo;
 
@@ -7640,16 +7642,14 @@ class EstateController extends Controller
                         'meter_slot' => 1,
                         'old_meter_no' => (string) $meterOne,
                         'electric_meter_reading' => $displayElectric1,
-                        'baseline_min_reading' => $baselineMin1,
                         'new_meter_no' => $newNo1,
-                    ],
+                    ] + $slotFigures(1, $curr1, $row->last_month_elec_red, (string) $meterOne),
                     'm2' => [
                         'meter_slot' => 2,
                         'old_meter_no' => (string) $meterTwo,
                         'electric_meter_reading' => $displayElectric2,
-                        'baseline_min_reading' => $baselineMin2,
                         'new_meter_no' => $newNo2,
-                    ],
+                    ] + $slotFigures(2, $curr2, $row->last_month_elec_red2, (string) $meterTwo),
                 ]));
                 continue;
             }
@@ -7658,14 +7658,6 @@ class EstateController extends Controller
             // baseline_min_reading aligns client min validation with server (curr when set, else last/possession).
             if ($hasMeterOne) {
                 $curr1 = $row->curr_month_elec_red;
-                $baselineMin1 = $curr1 !== null && ! $editOpening
-                    ? (int) $curr1
-                    : $this->effectiveLastMonthElecBaselineForMeterSlot(
-                        $row->last_month_elec_red,
-                        $row->epd_electric_meter_reading,
-                        $row->epd_electric_meter_reading_2,
-                        1
-                    );
                 $unit1 = null;
 
                 $displayElectric1 = $curr1 !== null ? (string) (int) $curr1 : 'N/A';
@@ -7674,23 +7666,14 @@ class EstateController extends Controller
                     'meter_slot' => 1,
                     'old_meter_no' => (string) $meterOne,
                     'electric_meter_reading' => $displayElectric1,
-                    'baseline_min_reading' => $baselineMin1,
                     'new_meter_no' => $row->emrd_meter_one !== null && $row->emrd_meter_one !== '' ? (string) $row->emrd_meter_one : (string) $meterOne,
                     'new_meter_reading' => '',
                     'unit' => $unit1,
-                ]));
+                ], $slotFigures(1, $curr1, $row->last_month_elec_red, (string) $meterOne)));
                 $pushed = true;
             }
             if ($hasMeterTwo) {
                 $curr2 = $row->curr_month_elec_red2;
-                $baselineMin2 = $curr2 !== null && ! $editOpening
-                    ? (int) $curr2
-                    : $this->effectiveLastMonthElecBaselineForMeterSlot(
-                        $row->last_month_elec_red2,
-                        $row->epd_electric_meter_reading,
-                        $row->epd_electric_meter_reading_2,
-                        2
-                    );
                 $unit2 = null;
 
                 $displayElectric2 = $curr2 !== null ? (string) (int) $curr2 : 'N/A';
@@ -7699,11 +7682,10 @@ class EstateController extends Controller
                     'meter_slot' => 2,
                     'old_meter_no' => (string) $meterTwo,
                     'electric_meter_reading' => $displayElectric2,
-                    'baseline_min_reading' => $baselineMin2,
                     'new_meter_no' => $row->emrd_meter_two !== null && $row->emrd_meter_two !== '' ? (string) $row->emrd_meter_two : (string) $meterTwo,
                     'new_meter_reading' => '',
                     'unit' => $unit2,
-                ]));
+                ], $slotFigures(2, $curr2, $row->last_month_elec_red2, (string) $meterTwo)));
                 $pushed = true;
             }
             // Fallback when neither meter has value
@@ -7711,14 +7693,6 @@ class EstateController extends Controller
                 $lastMeter = $meterOne ?? $meterTwo ?? 'N/A';
                 $currReadingRaw = $row->curr_month_elec_red ?? $row->curr_month_elec_red2;
                 $lastReadingRaw = $row->last_month_elec_red ?? $row->last_month_elec_red2;
-                $baselineMinFb = $currReadingRaw !== null && ! $editOpening
-                    ? (int) $currReadingRaw
-                    : $this->effectiveLastMonthElecBaselineForMeterSlot(
-                        $lastReadingRaw,
-                        $row->epd_electric_meter_reading,
-                        $row->epd_electric_meter_reading_2,
-                        1
-                    );
 
                 $displayFallback = $currReadingRaw !== null ? (string) (int) $currReadingRaw : 'N/A';
 
@@ -7726,11 +7700,10 @@ class EstateController extends Controller
                     'meter_slot' => 1,
                     'old_meter_no' => (string) $lastMeter,
                     'electric_meter_reading' => $displayFallback,
-                    'baseline_min_reading' => $baselineMinFb,
                     'new_meter_no' => '',
                     'new_meter_reading' => '',
                     'unit' => null,
-                ]));
+                ], $slotFigures(1, $currReadingRaw, $lastReadingRaw, '')));
             }
         }
 
@@ -7786,7 +7759,7 @@ class EstateController extends Controller
         }
 
         // Versioned: a saved reading must drop its house from the list at once, not after the TTL (F-047).
-        $cacheKey = 'estate_umr_reg:v1:' . $this->estateCacheVersion() . ':' . md5(json_encode([
+        $cacheKey = 'estate_umr_reg:v2:' . $this->estateCacheVersion() . ':' . md5(json_encode([
             'bm' => (string) $billMonth,
             'by' => (string) $billYear,
             'campus' => $campusId,
@@ -8077,6 +8050,13 @@ class EstateController extends Controller
                 }
                 // Edit flow from List Meter Reading: correcting a saved reading, so no baseline restriction on that row.
                 if ($editReadingPk !== null && $pk === $editReadingPk) {
+                    // F-053: Edit corrects the row's own month only; under another month it would create that month
+                    // below its opening reading.
+                    $editRowYm = $row ? $this->meterReadingYmFromRowColumns($row->bill_month, $row->bill_year) : null;
+                    if ($editRowYm !== null && $editRowYm !== $targetYm) {
+                        $editMonth = \Carbon\Carbon::createFromFormat('Y-m', $editRowYm)->format('F Y');
+                        $v->errors()->add("readings.$idx.pk", "This Edit corrects the {$editMonth} reading only. Set Meter Change Month back to {$editMonth}; to record another month, use Update Meter Reading without Edit.");
+                    }
                     continue;
                 }
                 if (! $row) {
@@ -8202,10 +8182,19 @@ class EstateController extends Controller
             }
         }
 
+        // F-051: the meter numbers each form row's month opened with. Read before the transaction: this save never
+        // writes the earlier rows, and a read inside it would take share locks on the whole table under SERIALIZABLE.
+        $openingMeterNosByFormPk = $byPk === [] ? [] : $this->meterReadingOpeningMeterNos(
+            'estate_month_reading_details',
+            'estate_possession_details_pk',
+            DB::table('estate_month_reading_details')->whereIn('pk', array_keys($byPk))
+                ->get(['pk', 'bill_month', 'bill_year', 'estate_possession_details_pk'])
+        );
+
         // Step 2: One fetch + update (or insert when saving a new bill period so prior month rows are not overwritten).
         // One transaction for the whole save: a refusal is thrown as HttpResponseException, which rolls back the
         // houses already written, so a failure response never leaves part of the save behind (PR #349 F-048).
-        $this->runAllotmentTransaction(function () use ($byPk, $editReadingPk, $hasSecondaryPossessionReadingCol, $hasUnitTypeOnSubType, $emrdHasWaterCharges, $emrdHasLicenceFees, $request, $storeBillMonthName, $storeBillYearStr, $currentMeterReadingDate, $readingBillMonth, $lastMeterReadingDate, $hasLastMeterDateCol, $hasCurrentMeterDateCol) {
+        $this->runAllotmentTransaction(function () use ($byPk, $openingMeterNosByFormPk, $editReadingPk, $hasSecondaryPossessionReadingCol, $hasUnitTypeOnSubType, $emrdHasWaterCharges, $emrdHasLicenceFees, $request, $storeBillMonthName, $storeBillYearStr, $currentMeterReadingDate, $readingBillMonth, $lastMeterReadingDate, $hasLastMeterDateCol, $hasCurrentMeterDateCol) {
         foreach ($byPk as $formRowPk => $data) {
             $resolvePk = $formRowPk;
             while (true) {
@@ -8353,9 +8342,11 @@ class EstateController extends Controller
                 $baseline2 = \App\Support\EstateMeterReadingUnits::baseline($curr2Existing, (int) $prev2, $correctsOwnMonth);
 
                 // Meter replace hua ho toh naya meter 0 se start hota hai — reading hi consumed unit hai,
-                // warna purane baseline se difference lo.
-                $meter1Changed = $this->isRegularMeterReplaced($row, 1, $data['meter_one']);
-                $meter2Changed = $this->isRegularMeterReplaced($row, 2, $data['meter_two']);
+                // warna purane baseline se difference lo. A month's own row compares with the number the month
+                // opened with, so a replacement recorded by an earlier save of this month still counts (F-051).
+                $openingMeterNos = $correctsOwnMonth ? ($openingMeterNosByFormPk[$formRowPk] ?? null) : null;
+                $meter1Changed = \App\Support\EstateMeterReadingUnits::meterReplaced($data['meter_one'], $this->effectiveOldMeterNoForRegularReadingRow($row, 1), $openingMeterNos[1] ?? null);
+                $meter2Changed = \App\Support\EstateMeterReadingUnits::meterReplaced($data['meter_two'], $this->effectiveOldMeterNoForRegularReadingRow($row, 2), $openingMeterNos[2] ?? null);
 
                 $u1 = \App\Support\EstateMeterReadingUnits::consumed(
                     $curr1New !== null ? (int) $curr1New : null,
@@ -9381,13 +9372,19 @@ class EstateController extends Controller
 
         [$uiListMOther, $uiListYOther] = $this->meterReadingParseUiMonthYear($billMonth, $billYear);
         $uiListYmOther = $uiListMOther !== null && $uiListYOther !== null ? sprintf('%04d-%02d', $uiListYOther, $uiListMOther) : null;
+        $listedOther = $query->get();
+        $isOwnMonthOther = fn ($row) => $uiListYmOther !== null && $this->meterReadingYmFromRowColumns($row->bill_month, $row->bill_year) === $uiListYmOther;
+        $openingMeterNosByPkOther = $this->meterReadingOpeningMeterNos('estate_month_reading_details_other', 'estate_possession_other_pk', $listedOther->filter($isOwnMonthOther));
         $rows = collect();
-        foreach ($query->get() as $row) {
+        foreach ($listedOther as $row) {
             // F-049 Rule A (6814733034): a month's own row previews units from its opening reading, as the store
             // does; the displayed reading stays the saved one. Null keeps the client on last_month_reading.
-            $ownMonthRow = $uiListYmOther !== null && $this->meterReadingYmFromRowColumns($row->bill_month, $row->bill_year) === $uiListYmOther;
+            $ownMonthRow = $isOwnMonthOther($row);
             $opening1 = $ownMonthRow && $row->last_month_elec_red !== null && $row->last_month_elec_red !== '' ? (int) $row->last_month_elec_red : null;
             $opening2 = $ownMonthRow && $row->last_month_elec_red2 !== null && $row->last_month_elec_red2 !== '' ? (int) $row->last_month_elec_red2 : null;
+            // F-051: the meter no. the month opened with; null keeps the client on old_meter_no.
+            $openingMeterNo1 = $ownMonthRow ? ($openingMeterNosByPkOther[(int) $row->pk][1] ?? null) : null;
+            $openingMeterNo2 = $ownMonthRow ? ($openingMeterNosByPkOther[(int) $row->pk][2] ?? null) : null;
             $poss = $row->estatePossessionOther;
             $req = $poss ? $poss->estateOtherRequest : null;
             $name = $req ? ($req->emp_name ?? 'N/A') : 'N/A';
@@ -9433,6 +9430,7 @@ class EstateController extends Controller
                         'new_meter_no' => $newNo1,
                         'last_month_reading' => $displayLast1 !== null ? $displayLast1 : 'N/A',
                         'opening_reading' => $opening1,
+                        'opening_meter_no' => $openingMeterNo1,
                     ],
                     'm2' => [
                         'meter_slot' => 2,
@@ -9440,6 +9438,7 @@ class EstateController extends Controller
                         'new_meter_no' => $newNo2,
                         'last_month_reading' => $displayLast2 !== null ? $displayLast2 : 'N/A',
                         'opening_reading' => $opening2,
+                        'opening_meter_no' => $openingMeterNo2,
                     ],
                 ]);
             } elseif ($hasMeterOne) {
@@ -9455,6 +9454,7 @@ class EstateController extends Controller
                     'new_meter_no' => $row->emro_meter_one !== null && $row->emro_meter_one !== '' ? (string) $row->emro_meter_one : (string) $meterOne,
                     'last_month_reading' => $displayLast1 !== null ? $displayLast1 : 'N/A',
                     'opening_reading' => $opening1,
+                    'opening_meter_no' => $openingMeterNo1,
                     'curr_month_reading' => null,
                     'unit' => 'N/A',
                 ]);
@@ -9471,6 +9471,7 @@ class EstateController extends Controller
                     'new_meter_no' => $row->emro_meter_two !== null && $row->emro_meter_two !== '' ? (string) $row->emro_meter_two : (string) $meterTwo,
                     'last_month_reading' => $displayLast2 !== null ? $displayLast2 : 'N/A',
                     'opening_reading' => $opening2,
+                    'opening_meter_no' => $openingMeterNo2,
                     'curr_month_reading' => null,
                     'unit' => 'N/A',
                 ]);
@@ -9498,6 +9499,7 @@ class EstateController extends Controller
                     'new_meter_no' => '',
                     'last_month_reading' => $displayLast !== null ? $displayLast : 'N/A',
                     'opening_reading' => $opening1,
+                    'opening_meter_no' => $openingMeterNo1,
                     'curr_month_reading' => null,
                     'unit' => 'N/A',
                 ]);
@@ -9526,21 +9528,6 @@ class EstateController extends Controller
     /**
      * Effective old meter number for regular possession reading validation (matches list: emrd ?? ehm).
      */
-    /**
-     * Slot ka meter replace hua ya nahi — submitted new meter no. vs effective old meter no.
-     * True hone par us slot ke units = current reading (naya meter 0 se start hota hai).
-     */
-    private function isRegularMeterReplaced($row, int $meterSlot, ?string $submittedMeterNo): bool
-    {
-        $newDigits = preg_replace('/\D/', '', trim((string) $submittedMeterNo));
-        if ($newDigits === '') {
-            return false;
-        }
-        $oldDigits = preg_replace('/\D/', '', $this->effectiveOldMeterNoForRegularReadingRow($row, $meterSlot));
-
-        return $oldDigits !== '' && $newDigits !== $oldDigits;
-    }
-
     private function effectiveOldMeterNoForRegularReadingRow($row, int $meterSlot): string
     {
         if ($meterSlot === 2) {
@@ -9601,7 +9588,7 @@ class EstateController extends Controller
         }
 
         // Versioned: a saved reading must drop its house from the list at once, not after the TTL (F-047).
-        $cacheKey = 'estate_umr_oth:v1:' . $this->estateCacheVersion() . ':' . md5(json_encode([
+        $cacheKey = 'estate_umr_oth:v2:' . $this->estateCacheVersion() . ':' . md5(json_encode([
             'bm' => (string) $billMonth,
             'by' => (string) $billYear,
             'campus' => $campusId,
@@ -9965,6 +9952,49 @@ class EstateController extends Controller
         return $pk !== null ? (int) $pk : null;
     }
 
+    /**
+     * F-051: the meter numbers each row's month opened with — those on the same possession's latest earlier
+     * bill-period row. {@see \App\Support\EstateMeterReadingUnits::meterReplaced()} compares the month's own
+     * number with them, so a replacement recorded on one save is still seen by every later save of that month.
+     *
+     * @param  iterable<object>  $rows  each with pk, bill_month, bill_year and $possessionCol
+     * @return array<int, array{1: string, 2: string}>  row pk → [slot => meter no.]; rows without an earlier row are absent
+     */
+    private function meterReadingOpeningMeterNos(string $table, string $possessionCol, iterable $rows): array
+    {
+        $targets = [];
+        foreach ($rows as $r) {
+            $ym = $this->meterReadingYmFromRowColumns($r->bill_month ?? null, $r->bill_year ?? null);
+            if ($ym !== null && (int) ($r->{$possessionCol} ?? 0) > 0) {
+                $targets[] = [(int) $r->pk, (int) $r->{$possessionCol}, $ym];
+            }
+        }
+        if ($targets === []) {
+            return [];
+        }
+        $history = DB::table($table)
+            ->whereIn($possessionCol, array_values(array_unique(array_column($targets, 1))))
+            ->get(['pk', $possessionCol, 'bill_month', 'bill_year', 'meter_one', 'meter_two'])
+            ->groupBy($possessionCol);
+
+        $out = [];
+        foreach ($targets as [$pk, $possessionPk, $ym]) {
+            $previous = null;
+            $previousYm = null;
+            foreach ($history->get($possessionPk, collect()) as $h) {
+                $hYm = (int) $h->pk === $pk ? null : $this->meterReadingYmFromRowColumns($h->bill_month, $h->bill_year);
+                if ($hYm !== null && $hYm < $ym && ($previousYm === null || $hYm > $previousYm)) {
+                    [$previous, $previousYm] = [$h, $hYm];
+                }
+            }
+            if ($previous !== null) {
+                $out[$pk] = [1 => (string) ($previous->meter_one ?? ''), 2 => (string) ($previous->meter_two ?? '')];
+            }
+        }
+
+        return $out;
+    }
+
     private function staleMeterReadingMessage(string $monthName, string $year): string
     {
         return "A reading for {$monthName} {$year} is already saved for this house, so this list is out of date. Reload the list; to correct that reading, open it from List Meter Reading → Edit.";
@@ -10225,8 +10255,17 @@ class EstateController extends Controller
         $emroHasBillNo = \Illuminate\Support\Facades\Schema::hasColumn('estate_month_reading_details_other', 'bill_no');
         $emroHasPayrollRecovery = \Illuminate\Support\Facades\Schema::hasColumn('estate_month_reading_details_other', 'payroll_recovery_head_amount');
 
+        // F-051: read before the transaction, as in storeMeterReadings().
+        $selectedFormPks = $selected->pluck('pk')->map(fn ($x) => (int) $x)->filter()->unique()->values()->all();
+        $openingMeterNosByFormPkOther = $selectedFormPks === [] ? [] : $this->meterReadingOpeningMeterNos(
+            'estate_month_reading_details_other',
+            'estate_possession_other_pk',
+            DB::table('estate_month_reading_details_other')->whereIn('pk', $selectedFormPks)
+                ->get(['pk', 'bill_month', 'bill_year', 'estate_possession_other_pk'])
+        );
+
         // One transaction for the whole save, as in storeMeterReadings() (PR #349 F-048).
-        $this->runAllotmentTransaction(function () use ($selected, $resolvedOtherReadingPkByFormPk, $hasUnitTypeOnSubTypeForOtherElectric, $emroHasWaterCharges, $emroHasLicenceFees, $emroHasBillNo, $emroHasPayrollRecovery, $request, $storeBillMonthNameOther, $storeBillYearStrOther, $readingBillMonthOther, $readingMeterDateForStore) {
+        $this->runAllotmentTransaction(function () use ($selected, $openingMeterNosByFormPkOther, $resolvedOtherReadingPkByFormPk, $hasUnitTypeOnSubTypeForOtherElectric, $emroHasWaterCharges, $emroHasLicenceFees, $emroHasBillNo, $emroHasPayrollRecovery, $request, $storeBillMonthNameOther, $storeBillYearStrOther, $readingBillMonthOther, $readingMeterDateForStore) {
         foreach ($selected as $item) {
             $formPk = (int) ($item['pk'] ?? 0);
             $currVal = $item['curr_month_elec_red'] ?? null;
@@ -10312,19 +10351,17 @@ class EstateController extends Controller
                         'meter_two' => $otherPossessionCtx->ehm_meter_two ?? null,
                     ];
                 }
-                $oldMeterDigitsForUnits = preg_replace('/\D/', '', $this->effectiveOldMeterNoForOtherReadingRow(
-                    $row,
-                    $meterSlot,
-                    $ehmForOldMeter
-                ));
-                $meterReplacedForUnits = $newMeterNoDigits !== ''
-                    && $oldMeterDigitsForUnits !== ''
-                    && $newMeterNoDigits !== $oldMeterDigitsForUnits;
-
                 // F-049 Rule A (decision 6814733034): re-saving a month's own row keeps its opening reading. A row this
                 // request just inserted for a new month (second meter line) is not "own": its reading is last month's.
                 $ownMonthOther = $resolvePk === $formPk && $readingBillMonthOther !== ''
                     && $this->meterReadingYmFromRowColumns($row->bill_month, $row->bill_year) === $readingBillMonthOther;
+                // F-051: an own-month save compares with the meter number the month opened with, as storeMeterReadings() does.
+                $openingMeterNosOther = $ownMonthOther ? ($openingMeterNosByFormPkOther[$formPk] ?? null) : null;
+                $meterReplacedForUnits = \App\Support\EstateMeterReadingUnits::meterReplaced(
+                    $newMeterNoDigits,
+                    $this->effectiveOldMeterNoForOtherReadingRow($row, $meterSlot, $ehmForOldMeter),
+                    $openingMeterNosOther[$meterSlot === 2 ? 2 : 1] ?? null
+                );
 
                 if ($meterSlot === 2) {
                     $oldCurr2 = $ownMonthOther ? null : $row->curr_month_elec_red2;

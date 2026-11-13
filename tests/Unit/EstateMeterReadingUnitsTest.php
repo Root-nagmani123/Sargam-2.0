@@ -69,6 +69,38 @@ class EstateMeterReadingUnitsTest extends TestCase
         $this->assertSame(45, $this->units(5000, 45, true));
     }
 
+    /** F-051: the save that records a new meter number is a replacement. */
+    public function test_a_changed_meter_number_is_a_replacement(): void
+    {
+        $this->assertTrue(Units::meterReplaced('222', '111', '111'));
+        $this->assertTrue(Units::meterReplaced('222', '111'), 'no earlier month to compare with');
+    }
+
+    /** F-051: a later save of that month carries the stored new number and is still measured from the new meter's start. */
+    public function test_a_later_save_of_a_replaced_month_is_still_a_replacement(): void
+    {
+        $this->assertTrue(Units::meterReplaced('222', '222', '111'));
+        $this->assertTrue(Units::meterReplaced('', '222', '111'), 'no number posted');
+    }
+
+    /** F-051: no change, or a change back to the number the month opened with, is not a replacement. */
+    public function test_an_unchanged_or_restored_meter_number_is_not_a_replacement(): void
+    {
+        $this->assertFalse(Units::meterReplaced('111', '111', '111'));
+        $this->assertFalse(Units::meterReplaced('111', '222', '111'), 'undoing a mistaken replacement');
+        $this->assertFalse(Units::meterReplaced('', '111'));
+        $this->assertFalse(Units::meterReplaced('222', '', ''), 'no stored number to compare with');
+    }
+
+    /** F-051: 0 is the column default ("not recorded"), not a different meter. */
+    public function test_a_zero_meter_number_is_not_recorded_rather_than_a_different_meter(): void
+    {
+        $this->assertFalse(Units::meterReplaced('', '0', '111'), 'row inserted without a number');
+        $this->assertFalse(Units::meterReplaced('111', '0', '111'));
+        $this->assertTrue(Units::meterReplaced('222', '0', ''), 'a number recorded where none was: unchanged rule');
+        $this->assertFalse(Units::meterReplaced('222', '222', '0'), 'month opened with no number: unchanged rule');
+    }
+
     /** Below the previous-period baseline on a first entry also floors at zero. */
     public function test_reading_below_baseline_floors_at_zero(): void
     {

@@ -16,6 +16,10 @@ use Tests\TestCase;
  * The second operator is a second database connection that commits its row from a DB::listen hook on the
  * first house's write-loop fetch (after validation, before any write). Its row is really committed, so run
  * this against a scratch copy of the database, not a shared one; the hook's rows are deleted afterwards.
+ * It is skipped unless SARGAM_ALLOW_COMMITTED_PROBES names the database (PR #349 F-055):
+ *
+ *   SARGAM_ALLOW_COMMITTED_PROBES=<db> \
+ *     php vendor/bin/phpunit tests/Feature/EstateMeterReadingAtomicSaveTest.php
  */
 class EstateMeterReadingAtomicSaveTest extends TestCase
 {
@@ -31,6 +35,10 @@ class EstateMeterReadingAtomicSaveTest extends TestCase
     protected function setUp(): void
     {
         $this->setUpRollback();
+        $db = DB::connection()->getDatabaseName();
+        if (env('SARGAM_ALLOW_COMMITTED_PROBES') !== $db) {
+            $this->markTestSkipped("commits probe rows; set SARGAM_ALLOW_COMMITTED_PROBES={$db} to run");
+        }
         // Production runs these saves at READ COMMITTED (runAllotmentTransaction); the test transaction must
         // too, or its snapshot hides the other operator's commit. The level can only change between transactions.
         DB::rollBack();

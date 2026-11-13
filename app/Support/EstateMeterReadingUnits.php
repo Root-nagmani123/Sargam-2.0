@@ -29,6 +29,33 @@ class EstateMeterReadingUnits
     }
 
     /**
+     * Whether the slot's meter was replaced in the month being saved (PR #349 F-051).
+     *
+     * The month opened with $openingMeterNo, the number on the possession's previous bill-period row. When
+     * the number the save leaves on the row differs, the new meter started at 0 — on the save that records
+     * the new number and on every later save of that month. A number of 0 is "not recorded" (the column
+     * default), never a different meter. Without both numbers (no earlier row, a new month being created from
+     * this row, or 0 on either side) only a save that changes the stored number is a replacement.
+     *
+     * @param  string|null  $submittedMeterNo  New Meter No. posted for the slot ('' or null = unchanged)
+     * @param  string  $storedMeterNo  number already on the row
+     * @param  string|null  $openingMeterNo  number the month opened with, null when not known
+     */
+    public static function meterReplaced(?string $submittedMeterNo, string $storedMeterNo, ?string $openingMeterNo = null): bool
+    {
+        $submitted = preg_replace('/\D/', '', (string) $submittedMeterNo);
+        $stored = preg_replace('/\D/', '', $storedMeterNo);
+        $recorded = static fn (string $digits): string => ltrim($digits, '0') === '' ? '' : $digits;
+        $opening = $recorded(preg_replace('/\D/', '', (string) $openingMeterNo));
+        $final = $recorded($submitted !== '' ? $submitted : $stored);
+        if ($opening !== '' && $final !== '') {
+            return $final !== $opening;
+        }
+
+        return $submitted !== '' && $stored !== '' && $submitted !== $stored;
+    }
+
+    /**
      * Units consumed in the period.
      *
      * A replaced meter starts from zero, so its reading *is* the consumption. Otherwise units are the
