@@ -516,7 +516,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                          same code rather than a second AJAX path. --}}
                                     <select class="form-select form-select-sm dashboard-house-course" id="housePerformanceCourse"
                                         aria-label="Filter house wise performance by course"
-                                        onchange="window.location = '{{ route('admin.dashboard') }}' + (this.value ? ('?house_course=' + encodeURIComponent(this.value)) : '') + '#house-wise-performance';">
+                                        onchange="var u = new URL(window.location.href); if (this.value) { u.searchParams.set('house_course', this.value); } else { u.searchParams.delete('house_course'); } u.hash = 'house-wise-performance'; window.location = u.toString();">
                                         <option value="">All Courses</option>
                                         @foreach($houseCourses as $pk => $name)
                                             <option value="{{ $pk }}" {{ (string) ($houseCourseFilter ?? '') === (string) $pk ? 'selected' : '' }}>

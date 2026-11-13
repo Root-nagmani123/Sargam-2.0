@@ -530,18 +530,14 @@ class UserController extends Controller
             // 'my_card_key' => SomeModel::where('status', 'pending')->count(),
         ];
 
-        // Fetch which cards are enabled for this user's role
-        $userRoles = Auth::user()->roles ?? collect();
-        if ($userRoles->isNotEmpty()) {
-            $roleIds = $userRoles->pluck('id')->toArray();
-            $enabledCards = DashboardCard::whereHas('roles', function ($q) use ($roleIds) {
-                $q->whereIn('roles.id', $roleIds);
-            })
-                ->orderBy('sort_order')
-                ->get();
-        } else {
-            $enabledCards = collect();
-        }
+        // The cards this user's roles have on the requested header module's
+        // dashboard (?category=, the same parameter that selects the header tab);
+        // no or an unknown module is Home.
+        $dashboardModule = DashboardCard::resolveModule($request->query('category'));
+        $roleIds = (Auth::user()->roles ?? collect())->pluck('id')->all();
+        $enabledCards = ($roleIds !== [] && $dashboardModule)
+            ? DashboardCard::assignedTo($roleIds, $dashboardModule->id)->orderBy('sort_order')->get()
+            : collect();
 
         $baseCards = $enabledCards;
 
@@ -636,7 +632,8 @@ class UserController extends Controller
             'housePerformance',
             'houseCourses',
             'houseCourseFilter',
-            'issueReportModules'
+            'issueReportModules',
+            'dashboardModule'
         ));
     }
 

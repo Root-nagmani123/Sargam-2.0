@@ -8,7 +8,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Dashboard Cards — {{ $role->name }} — LBSNAA</title>
+    <title>Dashboard Cards — {{ $role->name }}@isset($module) — {{ $module->name }}@endisset — LBSNAA</title>
     <style>
         @page { size: A4 portrait; margin: 12mm 10mm; }
 
@@ -133,7 +133,7 @@
 
     <div class="rp-print-rule"></div>
 
-    <div class="rp-print-title">Dashboard Cards — {{ $role->name }}</div>
+    <div class="rp-print-title">Dashboard Cards — {{ $role->name }}@isset($module) — {{ $module->name }}@endisset</div>
     <div class="rp-print-meta">Generated: {{ $exportDate }}</div>
 
     @if (filled($filterLine))

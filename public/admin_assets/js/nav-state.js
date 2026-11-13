@@ -59,9 +59,23 @@
 
     /**
      * URL to open when switching to a tab whose pane is empty on this page.
-     * Priority: last visited for tab → category landing → dashboard (home only).
+     * Priority: module dashboard → last visited for tab → category landing → dashboard (home only).
      */
+    /**
+     * The tab's module dashboard (/dashboard?category=N, set by master.blade.php
+     * when the module has cards for one of the user's roles), or null.
+     */
+    function moduleDashboardUrlForTab(tabHash) {
+        var url = (global.SARGAM_CATEGORY_LANDING_URLS || {})[tabHash];
+        var dash = global.SARGAM_DASHBOARD_URL;
+        return url && dash && url.indexOf(dash + '?') === 0 ? url : null;
+    }
+
     function getNavigateUrlForTab(tabHash) {
+        var dashboard = moduleDashboardUrlForTab(tabHash);
+        if (dashboard) {
+            return dashboard;
+        }
         var last = getLastVisitedUrl(tabHash);
         if (last) {
             return last;
@@ -131,6 +145,14 @@
             if (categoryId && typeof global.loadSidebarGroupsForCategory === 'function') {
                 global.loadSidebarGroupsForCategory(categoryId, loadLastVisitedGroupForTab.bind(null, '#home'));
             }
+            return;
+        }
+
+        // A module with its own dashboard always opens on it, like Home does.
+        var moduleDashboard = moduleDashboardUrlForTab(target);
+        if (moduleDashboard && normalizeUrlForCompare(global.location.href) !== normalizeUrlForCompare(moduleDashboard)) {
+            persistTabState(target, link.getAttribute('data-id') || resolveCategoryIdForTab(target), null);
+            global.location.assign(moduleDashboard);
             return;
         }
 
