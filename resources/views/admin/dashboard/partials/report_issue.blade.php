@@ -1,25 +1,17 @@
 {{-- Floating "Report Issue" launcher + "Report a problem" modal (dashboard only) --}}
 @push('styles')
+@include('admin.layouts.partials.select2-assets')
 <link rel="stylesheet" href="{{ asset('css/issue-reports-admin.css') }}?v={{ @filemtime(public_path('css/issue-reports-admin.css')) ?: time() }}">
 @endpush
 
+{{-- Labelled launcher: visible text (never icon-only), large type, 56px+ target — readable at any age. --}}
 <button type="button" class="dash-report-fab" data-bs-toggle="modal" data-bs-target="#reportIssueModal"
-    aria-label="Report an issue" title="Report Issue">
-    {{-- Sticker badge: warning mark over "Report Issue" wrapped on the disc's bottom arc. --}}
-    <svg class="dash-report-fab-art" viewBox="0 0 96 96" aria-hidden="true" focusable="false">
-        <defs>
-            <path id="dashReportArc" d="M 12,48 A 36,36 0 0 0 84,48" />
-        </defs>
-        <g class="dash-report-fab-mark">
-            <circle cx="48" cy="34" r="15" />
-            <path d="M48 26.5V37" />
-        </g>
-        <circle class="dash-report-fab-dot" cx="48" cy="42.6" r="2.1" />
-        <text class="dash-report-fab-text">
-            <textPath href="#dashReportArc" xlink:href="#dashReportArc" startOffset="50%"
-                text-anchor="middle">Report Issue</textPath>
-        </text>
-    </svg>
+    title="Report a problem with this application">
+    <span class="dash-report-fab__icon" aria-hidden="true"><i class="bi bi-exclamation-triangle-fill"></i></span>
+    <span class="dash-report-fab__text">
+        <span class="dash-report-fab__label">Report a Problem</span>
+        <span class="dash-report-fab__hint">Tell us what isn't working</span>
+    </span>
 </button>
 
 {{-- Same modal language as the Reported Issues screens — docs/new-design-index-page.md §3c --}}
@@ -36,12 +28,13 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <div class="ir-modal-body">
+                <div class="modal-body ir-modal-body">
                     <div class="ir-field-card">
                         <div class="ir-field">
                             <label for="reportIssueModule" class="ir-form-label">Department that you are facing
                                 issues with<span class="ir-req">*</span></label>
-                            <select class="form-select ir-control" id="reportIssueModule" name="menu_group_id" required>
+                            <select class="form-select ir-control" id="reportIssueModule" name="menu_group_id" required
+                                data-searchable="true" data-placeholder="Select Department">
                                 <option value="">Select Department</option>
                                 @foreach ($issueReportModules ?? [] as $module)
                                     <option value="{{ $module['id'] }}">{{ $module['name'] }}</option>
@@ -111,6 +104,7 @@
 
             modalEl.addEventListener('hidden.bs.modal', function() {
                 form.reset();
+                $('#reportIssueModule').trigger('change.select2');
                 clearErrors();
             });
 

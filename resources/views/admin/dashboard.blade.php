@@ -71,55 +71,132 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
 
     <div class="container-fluid">
         @if($isMyBirthday ?? false)
-        {{-- Birthday Banner with Confetti (reference design) --}}
-        <div class="dashboard-birthday-banner rounded-4 shadow-sm mb-3 position-relative overflow-hidden"
-            id="birthday-banner">
-            <div class="birthday-banner-accent" aria-hidden="true"></div>
+        {{-- Birthday banner — design-system card (.ds-card + .ds-card--accent, docs/design.md) --}}
+        <div class="ds-card ds-card--accent dashboard-birthday-banner mb-3 position-relative"
+            id="birthday-banner" role="region" aria-label="Birthday greeting">
             <canvas id="confetti-canvas" aria-hidden="true"></canvas>
             <button type="button" class="birthday-banner-close" id="birthday-banner-dismiss"
                 aria-label="Dismiss birthday message">
-                <span aria-hidden="true">&times;</span>
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
             </button>
             <div class="birthday-banner-inner">
+                <span class="birthday-banner-icon" aria-hidden="true"><i class="bi bi-gift-fill"></i></span>
                 <div class="birthday-banner-text">
-                    <h2 class="birthday-banner-title mb-2">Happy Birthday {{ $userName }}</h2>
+                    <p class="birthday-banner-eyebrow mb-0">
+                        <i class="bi bi-stars" aria-hidden="true"></i> Today is your special day
+                    </p>
+                    <h2 class="birthday-banner-title">
+                        Happy Birthday, <span class="birthday-banner-name">{{ $userName }}</span>!
+                    </h2>
                     <p class="birthday-banner-subtitle mb-0">
-                        Wishing you a fantastic year ahead 🎉
+                        Wishing you a wonderful year ahead, filled with good health and happiness.
                         @if(!empty($myBirthdayWishesSummary))
                         {{ ' ' . $myBirthdayWishesSummary }}
                         @endif
-                        @if(($myBirthdayWishCount ?? 0) > 0)
-                        <a href="{{ route('admin.dashboard.feed', ['tab' => 'wishes']) }}" class="birthday-banner-link"
-                            id="btn-view-birthday-wishes">View all wishes →</a>
-                        @endif
                     </p>
+                    @if(($myBirthdayWishCount ?? 0) > 0)
+                    <div class="birthday-banner-actions">
+                        <span class="birthday-banner-count">
+                            <i class="bi bi-envelope-heart-fill" aria-hidden="true"></i>
+                            {{ $myBirthdayWishCount }} {{ \Illuminate\Support\Str::plural('wish', (int) $myBirthdayWishCount) }} received
+                        </span>
+                        <a href="{{ route('admin.dashboard.feed', ['tab' => 'wishes']) }}" class="birthday-banner-link"
+                            id="btn-view-birthday-wishes">View all wishes <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                    </div>
+                    @endif
                 </div>
+
+                {{-- Animated cake: candle flames flicker, stars twinkle, sparkles drift up (CSS only). --}}
                 <div class="birthday-banner-illustration d-none d-sm-block" aria-hidden="true">
-                    <svg viewBox="0 0 152 88" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="">
-                        <ellipse cx="118" cy="72" rx="28" ry="6" fill="#E8EDF3" opacity="0.9" />
-                        <rect x="98" y="52" width="22" height="18" rx="3" fill="#F4C430" />
-                        <rect x="98" y="52" width="22" height="5" rx="2" fill="#E5A820" />
-                        <path d="M99 52h20v3H99z" fill="#D4921A" />
-                        <rect x="124" y="48" width="18" height="16" rx="3" fill="#E74C3C" />
-                        <rect x="124" y="48" width="18" height="4" rx="2" fill="#C0392B" />
-                        <path d="M108 38c0-8 6-14 14-14s14 6 14 14c0 6-4 11-10 13l-4 10-4-10c-6-2-10-7-10-13z"
-                            fill="#3498DB" />
-                        <path d="M108 38c0-8 6-14 14-14" stroke="#2980B9" stroke-width="1.5" stroke-linecap="round" />
-                        <line x1="122" y1="24" x2="122" y2="14" stroke="#7f8c8d" stroke-width="1.2"
-                            stroke-linecap="round" />
-                        <circle cx="88" cy="30" r="11" fill="#2ECC71" />
-                        <line x1="88" y1="19" x2="88" y2="11" stroke="#7f8c8d" stroke-width="1.2"
-                            stroke-linecap="round" />
-                        <circle cx="72" cy="36" r="10" fill="#F1C40F" />
-                        <line x1="72" y1="26" x2="72" y2="18" stroke="#7f8c8d" stroke-width="1.2"
-                            stroke-linecap="round" />
-                        <circle cx="56" cy="28" r="9" fill="#E74C3C" />
-                        <line x1="56" y1="19" x2="56" y2="12" stroke="#7f8c8d" stroke-width="1.2"
-                            stroke-linecap="round" />
-                        <rect x="78" y="58" width="16" height="14" rx="2.5" fill="#9B59B6" />
-                        <rect x="78" y="58" width="16" height="4" rx="1.5" fill="#8E44AD" />
+                    <svg class="bday-cake" viewBox="0 0 160 124" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                        <circle class="bday-cake__halo" cx="80" cy="66" r="54" />
+
+                        <path class="bday-cake__spark bday-cake__spark--1" d="M24 26 L26 32 L32 34 L26 36 L24 42 L22 36 L16 34 L22 32 Z" />
+                        <path class="bday-cake__spark bday-cake__spark--2" d="M138 21 L139.75 26.25 L145 28 L139.75 29.75 L138 35 L136.25 29.75 L131 28 L136.25 26.25 Z" />
+                        <path class="bday-cake__spark bday-cake__spark--3" d="M146 73 L147.25 76.75 L151 78 L147.25 79.25 L146 83 L144.75 79.25 L141 78 L144.75 76.75 Z" />
+                        <path class="bday-cake__spark bday-cake__spark--4" d="M14 77 L15.25 80.75 L19 82 L15.25 83.25 L14 87 L12.75 83.25 L9 82 L12.75 80.75 Z" />
+                        <path class="bday-cake__spark bday-cake__spark--5" d="M112 4 L113 7 L116 8 L113 9 L112 12 L111 9 L108 8 L111 7 Z" />
+
+                        <circle class="bday-cake__dot bday-cake__dot--1" cx="40" cy="100" r="2.5" />
+                        <circle class="bday-cake__dot bday-cake__dot--2" cx="122" cy="104" r="2" />
+                        <circle class="bday-cake__dot bday-cake__dot--3" cx="30" cy="64" r="2" />
+                        <circle class="bday-cake__dot bday-cake__dot--4" cx="132" cy="58" r="2.5" />
+
+                        <ellipse cx="80" cy="114" rx="60" ry="6" fill="#e5e7eb" />
+
+                        {{-- Bottom tier --}}
+                        <rect x="28" y="78" width="104" height="34" rx="6" fill="#004a93" />
+                        <rect x="28" y="98" width="104" height="4" fill="#f5b301" />
+                        <g fill="#ffffff" opacity="0.85">
+                            <circle cx="40" cy="90" r="2.2" /><circle cx="56" cy="90" r="2.2" /><circle cx="72" cy="90" r="2.2" />
+                            <circle cx="88" cy="90" r="2.2" /><circle cx="104" cy="90" r="2.2" /><circle cx="120" cy="90" r="2.2" />
+                        </g>
+                        <g fill="#ffffff">
+                            <rect x="28" y="76" width="104" height="8" rx="4" />
+                            <rect x="36" y="80" width="6" height="10" rx="3" /><rect x="56" y="80" width="6" height="7" rx="3" />
+                            <rect x="78" y="80" width="6" height="11" rx="3" /><rect x="100" y="80" width="6" height="8" rx="3" />
+                            <rect x="120" y="80" width="6" height="9" rx="3" />
+                        </g>
+
+                        {{-- Top tier --}}
+                        <rect x="44" y="50" width="72" height="30" rx="6" fill="#b12923" />
+                        <g fill="#ffd666">
+                            <circle cx="56" cy="68" r="2" /><circle cx="72" cy="68" r="2" /><circle cx="88" cy="68" r="2" /><circle cx="104" cy="68" r="2" />
+                        </g>
+                        <g fill="#ffffff">
+                            <rect x="44" y="48" width="72" height="8" rx="4" />
+                            <rect x="52" y="52" width="6" height="8" rx="3" /><rect x="72" y="52" width="6" height="10" rx="3" />
+                            <rect x="94" y="52" width="6" height="7" rx="3" /><rect x="106" y="52" width="6" height="9" rx="3" />
+                        </g>
+
+                        {{-- Candles --}}
+                        <g>
+                            <rect x="62" y="26" width="6" height="22" rx="2" fill="#ffd666" />
+                            <rect x="77" y="26" width="6" height="22" rx="2" fill="#ffd666" />
+                            <rect x="92" y="26" width="6" height="22" rx="2" fill="#ffd666" />
+                            <rect x="63" y="28" width="1.5" height="18" fill="#ffffff" opacity="0.6" />
+                            <rect x="78" y="28" width="1.5" height="18" fill="#ffffff" opacity="0.6" />
+                            <rect x="93" y="28" width="1.5" height="18" fill="#ffffff" opacity="0.6" />
+                            <path d="M65 22v4M80 22v4M95 22v4" stroke="#4b5563" stroke-width="1.2" stroke-linecap="round" />
+                        </g>
+
+                        {{-- Flames --}}
+                        <circle class="bday-cake__glow" cx="65" cy="16" r="7" />
+                        <circle class="bday-cake__glow bday-cake__glow--2" cx="80" cy="16" r="7" />
+                        <circle class="bday-cake__glow bday-cake__glow--3" cx="95" cy="16" r="7" />
+                        <g class="bday-cake__flame">
+                            <path d="M65 8 C69 13 70 17 70 19.5 A5 5 0 0 1 60 19.5 C60 17 61 13 65 8Z" fill="#f59e0b" />
+                            <path d="M65 13 C67 16 67.5 18 67.5 19.6 A2.5 2.5 0 0 1 62.5 19.6 C62.5 18 63 16 65 13Z" fill="#fffbeb" />
+                        </g>
+                        <g class="bday-cake__flame bday-cake__flame--2">
+                            <path d="M80 8 C84 13 85 17 85 19.5 A5 5 0 0 1 75 19.5 C75 17 76 13 80 8Z" fill="#f59e0b" />
+                            <path d="M80 13 C82 16 82.5 18 82.5 19.6 A2.5 2.5 0 0 1 77.5 19.6 C77.5 18 78 16 80 13Z" fill="#fffbeb" />
+                        </g>
+                        <g class="bday-cake__flame bday-cake__flame--3">
+                            <path d="M95 8 C99 13 100 17 100 19.5 A5 5 0 0 1 90 19.5 C90 17 91 13 95 8Z" fill="#f59e0b" />
+                            <path d="M95 13 C97 16 97.5 18 97.5 19.6 A2.5 2.5 0 0 1 92.5 19.6 C92.5 18 93 16 95 13Z" fill="#fffbeb" />
+                        </g>
                     </svg>
                 </div>
+            </div>
+        </div>
+
+        {{-- Full-screen birthday celebration: first dashboard visit of the birthday only,
+             auto-closes after 5s (JS: "Birthday celebration overlay"). --}}
+        <div class="bday-celebration" id="bday-celebration" hidden
+            data-celebrate-key="sargam.bdayCelebrated.{{ auth()->id() }}.{{ now()->toDateString() }}">
+            <canvas class="bday-celebration__confetti" id="bday-celebration-canvas" aria-hidden="true"></canvas>
+            <div class="bday-celebration__balloons" id="bday-celebration-balloons" aria-hidden="true"></div>
+            <span class="bday-celebration__popper bday-celebration__popper--left" aria-hidden="true">🎉</span>
+            <span class="bday-celebration__popper bday-celebration__popper--right" aria-hidden="true">🎉</span>
+
+            <div class="bday-celebration__card" role="status" aria-live="polite">
+                <span class="bday-celebration__cake" aria-hidden="true">🎂</span>
+                <p class="bday-celebration__eyebrow">Today is your special day</p>
+                <h2 class="bday-celebration__title">Happy Birthday, <span>{{ $userName }}</span>!</h2>
+                <p class="bday-celebration__text">Wishing you good health, happiness and a wonderful year ahead.</p>
+                <button type="button" class="bday-celebration__skip" id="bday-celebration-skip">Continue to Dashboard</button>
+                <div class="bday-celebration__timer" aria-hidden="true"><span></span></div>
             </div>
         </div>
         @endif
@@ -1346,72 +1423,187 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
         });
     })();
 
-    // ── Confetti Effect for Birthday Banner ──
+    // ── Birthday banner: party poppers firing continuously ──
+    // Both bottom corners burst confetti up and inward every BURST_EVERY ms for as
+    // long as the banner is on screen. Bursts are timed inside the rAF loop, so a
+    // background tab (where rAF pauses) doesn't pile up queued bursts.
     (function() {
         var canvas = document.getElementById('confetti-canvas');
         var banner = document.getElementById('birthday-banner');
         if (!canvas || !banner || banner.classList.contains('is-dismissed')) return;
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
         var ctx = canvas.getContext('2d');
-        var W, H, particles = [],
-            colors = ['#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#00bcd4', '#4caf50',
-                '#ffeb3b', '#ff9800', '#ff5722', '#fff'
-            ];
+        var BURST_EVERY = 2500;
+        var GRAVITY = 0.15;
+        var colors = ['#004a93', '#3498db', '#b12923', '#e74c3c', '#f5b301', '#ffd666', '#2ecc71', '#9b59b6', '#ff7aa2'];
+        var W = 0, H = 0, pieces = [], lastBurst = -Infinity, animFrame;
 
         function resize() {
-            W = canvas.width = canvas.parentElement.offsetWidth;
-            H = canvas.height = canvas.parentElement.offsetHeight;
+            W = canvas.width = banner.offsetWidth;
+            H = canvas.height = banner.offsetHeight;
         }
         resize();
         window.addEventListener('resize', resize);
 
-        for (var i = 0; i < 80; i++) {
-            particles.push({
-                x: Math.random() * W,
-                y: Math.random() * H - H,
-                r: Math.random() * 5 + 2,
-                d: Math.random() * 80,
-                color: colors[Math.floor(Math.random() * colors.length)],
-                tilt: Math.random() * 10 - 5,
-                tiltAngle: 0,
-                tiltAngleInc: Math.random() * 0.07 + 0.05
-            });
+        // One popper: a cone of confetti from a bottom corner, peaking near the banner's top.
+        function pop(fromLeft) {
+            var peak = Math.sqrt(2 * GRAVITY * H * 0.95);
+            for (var i = 0; i < 100; i++) {
+                pieces.push({
+                    x: fromLeft ? 4 : W - 4,
+                    y: H,
+                    vx: (fromLeft ? 1 : -1) * (2 + Math.random() * 5),
+                    vy: -peak * (0.65 + Math.random() * 0.35),
+                    w: 5 + Math.random() * 5,
+                    h: 3 + Math.random() * 3,
+                    rot: Math.random() * 360,
+                    vr: Math.random() * 14 - 7,
+                    color: colors[Math.floor(Math.random() * colors.length)]
+                });
+            }
         }
 
-        var animFrame;
+        function frame(now) {
+            if (banner.classList.contains('is-dismissed')) {   // closed → stop for good
+                cancelAnimationFrame(animFrame);
+                window.removeEventListener('resize', resize);
+                return;
+            }
+            if (now - lastBurst >= BURST_EVERY) {
+                lastBurst = now;
+                pop(true);
+                pop(false);
+            }
 
-        function draw() {
             ctx.clearRect(0, 0, W, H);
-            particles.forEach(function(p) {
-                ctx.beginPath();
-                ctx.lineWidth = p.r;
-                ctx.strokeStyle = p.color;
-                ctx.moveTo(p.x + p.tilt + p.r / 2, p.y);
-                ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 2);
-                ctx.stroke();
+            pieces = pieces.filter(function(p) { return p.y < H + 12; });
+            pieces.forEach(function(p) {
+                p.vy += GRAVITY;
+                p.vx *= 0.99;
+                p.x += p.vx;
+                p.y += p.vy;
+                p.rot += p.vr;
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rot * Math.PI / 180);
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+                ctx.restore();
             });
-            update();
-            animFrame = requestAnimationFrame(draw);
+            animFrame = requestAnimationFrame(frame);
         }
 
-        function update() {
-            particles.forEach(function(p) {
-                p.tiltAngle += p.tiltAngleInc;
-                p.y += (Math.cos(p.d) + 1 + p.r / 2) * 0.6;
-                p.x += Math.sin(p.d) * 0.5;
-                p.tilt = Math.sin(p.tiltAngle) * 12;
-                if (p.y > H) {
-                    p.y = -10;
-                    p.x = Math.random() * W;
-                }
-            });
+        animFrame = requestAnimationFrame(frame);
+    })();
+
+    // ── Birthday celebration overlay (first visit of the birthday, 5s) ──
+    // shortcut: "first visit" is remembered per browser (localStorage), so a second
+    // device shows it once more; move to a server flag if that matters.
+    (function() {
+        var overlay = document.getElementById('bday-celebration');
+        if (!overlay) return;
+
+        var key = overlay.getAttribute('data-celebrate-key');
+        try {
+            if (localStorage.getItem(key) === '1') return;
+            localStorage.setItem(key, '1');
+        } catch (e) { /* storage blocked: celebrate anyway, it's harmless */ }
+
+        var DURATION = 5000;
+        var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var canvas = document.getElementById('bday-celebration-canvas');
+        var ctx = canvas.getContext('2d');
+        var colors = ['#f5b301', '#ffd666', '#b12923', '#e74c3c', '#004a93', '#3498db', '#2ecc71', '#9b59b6', '#ff7aa2', '#ffffff'];
+        var pieces = [], raf = null, closed = false, W = 0, H = 0;
+
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
         }
 
-        draw();
-        // Stop confetti after 8 seconds
-        setTimeout(function() {
-            cancelAnimationFrame(animFrame);
-            if (ctx) ctx.clearRect(0, 0, W, H);
-        }, 8000);
+        // Party popper: a cone of confetti fired up and inward from a bottom corner.
+        function pop(fromLeft) {
+            var x = fromLeft ? 0 : W, y = H;
+            for (var i = 0; i < 110; i++) {
+                var angle = (fromLeft ? -60 : -120) + (Math.random() * 40 - 20);
+                var speed = 12 + Math.random() * 12;
+                var rad = angle * Math.PI / 180;
+                pieces.push({
+                    x: x, y: y,
+                    vx: Math.cos(rad) * speed, vy: Math.sin(rad) * speed,
+                    w: 6 + Math.random() * 6, h: 3 + Math.random() * 4,
+                    rot: Math.random() * 360, vr: Math.random() * 12 - 6,
+                    color: colors[Math.floor(Math.random() * colors.length)]
+                });
+            }
+        }
+
+        function frame() {
+            ctx.clearRect(0, 0, W, H);
+            pieces = pieces.filter(function(p) { return p.y < H + 20; });
+            pieces.forEach(function(p) {
+                p.vy += 0.28;           // gravity
+                p.vx *= 0.985;          // air drag
+                p.x += p.vx;
+                p.y += p.vy;
+                p.rot += p.vr;
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rot * Math.PI / 180);
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+                ctx.restore();
+            });
+            raf = requestAnimationFrame(frame);
+        }
+
+        function spawnBalloons() {
+            var box = document.getElementById('bday-celebration-balloons');
+            for (var i = 0; i < 16; i++) {
+                var b = document.createElement('span');
+                b.className = 'bday-balloon';
+                b.style.left = (Math.random() * 94) + '%';
+                b.style.setProperty('--balloon-color', colors[i % 9]);
+                b.style.animationDuration = (3.6 + Math.random() * 1.6) + 's';
+                b.style.animationDelay = (Math.random() * 1.2) + 's';
+                b.style.setProperty('--balloon-scale', (0.75 + Math.random() * 0.5).toFixed(2));
+                box.appendChild(b);
+            }
+        }
+
+        function close() {
+            if (closed) return;
+            closed = true;
+            overlay.classList.add('is-leaving');
+            setTimeout(function() {
+                if (raf) cancelAnimationFrame(raf);
+                overlay.hidden = true;
+                overlay.remove();
+            }, 500);
+            document.removeEventListener('keydown', onKey);
+        }
+
+        function onKey(e) { if (e.key === 'Escape') close(); }
+
+        document.body.appendChild(overlay); // escape any transformed ancestor so position:fixed covers the viewport
+        overlay.hidden = false;
+        overlay.style.setProperty('--bday-duration', DURATION + 'ms');
+        document.getElementById('bday-celebration-skip').addEventListener('click', close);
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) close(); });
+        document.addEventListener('keydown', onKey);
+
+        if (!reduceMotion) {
+            resize();
+            window.addEventListener('resize', resize);
+            spawnBalloons();
+            pop(true);
+            pop(false);
+            setTimeout(function() { if (!closed) { pop(true); pop(false); } }, 1400);
+            frame();
+        }
+
+        setTimeout(close, DURATION);
     })();
 
     // ── Quick Wish All Button ──

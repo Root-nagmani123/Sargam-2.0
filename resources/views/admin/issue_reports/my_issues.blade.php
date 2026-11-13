@@ -2,6 +2,7 @@
 @section('title', 'My Reported Issues')
 
 @push('styles')
+@include('admin.layouts.partials.select2-assets')
 <link rel="stylesheet" href="{{ asset('css/issue-reports-admin.css') }}?v={{ @filemtime(public_path('css/issue-reports-admin.css')) ?: time() }}">
 @endpush
 
@@ -65,13 +66,13 @@
                     <span class="programme-dt-filters-label">Filters</span>
 
                     <div class="programme-dt-filter-select">
-                        <select id="myDeptFilter" class="form-select" aria-label="Filter by department">
+                        <select id="myDeptFilter" class="form-select" data-searchable="true" data-placeholder="Department" aria-label="Filter by department">
                             <option value="">Department</option>
                         </select>
                     </div>
 
                     <div class="programme-dt-filter-select">
-                        <select id="mySubmoduleFilter" class="form-select" aria-label="Filter by submodule">
+                        <select id="mySubmoduleFilter" class="form-select" data-searchable="true" data-placeholder="Submodule" aria-label="Filter by submodule">
                             <option value="">Submodule</option>
                         </select>
                     </div>
@@ -111,19 +112,19 @@
 </div>
 
 {{-- ── Column visibility ── --}}
-<div class="modal fade ir-modal" id="myIssueReportColumnVisibilityModal" tabindex="-1"
-     aria-labelledby="myIssueReportColumnVisibilityLabel" aria-hidden="true">
+<div class="modal fade" id="myIssueReportColumnVisibilityModal" tabindex="-1" aria-labelledby="myIssueReportColumnVisibilityLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="ir-modal-header">
-                <h5 class="ir-modal-title" id="myIssueReportColumnVisibilityLabel">Column Visibility</h5>
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="myIssueReportColumnVisibilityLabel">Column Visibility</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="ir-modal-body">
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
                 <div class="row g-3" id="myIssueReportColumnToggleGrid"></div>
             </div>
-            <div class="ir-modal-footer">
-                <button type="button" class="btn ir-btn-submit" data-bs-dismiss="modal">Close</button>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -408,6 +409,7 @@ $(document).ready(function () {
     $('#myRemoveFilterBtn').on('click', function () {
         $('#myDeptFilter').val('');
         $('#mySubmoduleFilter').val('');
+        $('#myDeptFilter, #mySubmoduleFilter').trigger('change.select2');
         $('#myDateFrom').val('');
         $('#myDateTo').val('');
         updateDownloadLink();

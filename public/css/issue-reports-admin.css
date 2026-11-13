@@ -5,8 +5,8 @@
 
      .ir-page   → admin/issue_reports/index.blade.php      (Reported Issues)
                   admin/issue_reports/my_issues.blade.php  (My Reported Issues)
-     .ir-modal  → the dashboard "Report a problem" modal, the Column Visibility
-                  modal and the Delete confirmation modal
+     .ir-modal  → the dashboard "Report a problem" modal and the Delete
+                  confirmation modal (Column Visibility uses the house shell)
 
    Page chrome (toolbar / panel / footer) comes from the shared programme-dt
    layer in custom.css — see docs/new-design-index-page.md. Only what that layer
@@ -184,13 +184,6 @@
     padding: var(--ds-space-4, 1.5rem);
 }
 
-/* One tinted card per record / per field group. */
-.ir-modal .ir-field-card {
-    background: #eef1fc;
-    border-radius: 10px;
-    padding: var(--ds-space-3, 1rem);
-}
-
 .ir-modal .ir-field-card + .ir-field-card {
     margin-top: var(--ds-space-3, 1rem);
 }
@@ -228,6 +221,24 @@
 .ir-modal textarea.ir-control {
     min-height: 96px;
     resize: vertical;
+}
+
+/* Searchable Department select — Select2 replaces the native control, so give
+   its box the same skin as .ir-control (height comes from select2-sargam.css). */
+.ir-modal .select2-container--default .select2-selection--single {
+    background-color: var(--ds-surface, #fff);
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+
+.ir-modal .select2-container--default.select2-container--focus .select2-selection--single,
+.ir-modal .select2-container--default.select2-container--open .select2-selection--single {
+    border-color: var(--ds-primary, #004a93);
+    box-shadow: var(--ds-focus-ring, 0 0 0 0.2rem rgba(0, 74, 147, 0.2));
+}
+
+.ir-modal select.is-invalid + .select2-container--default .select2-selection--single {
+    border-color: var(--bs-danger, #dc3545);
 }
 
 .ir-modal .ir-field + .ir-field {
