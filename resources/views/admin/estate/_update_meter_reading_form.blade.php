@@ -377,7 +377,7 @@ $(document).ready(function() {
                     window.meterReadingRowData[row.pk + '_2'] = {
                         pk: row.pk, meter_slot: 2, new_meter_no: nm2, curr_month_elec_red: '', original_curr_month_elec_red: ''
                     };
-                    const trDual = '<tr class="other-dual-stacked" data-dual="1" data-pk="'+ row.pk +'">' +
+                    const trDual = '<tr class="other-dual-stacked" data-dual="1" data-pk="'+ row.pk +'" data-later-month="'+ escAttr(row.later_month_ym || '') +'">' +
                         '<td class="text-center align-middle position-relative">' +
                             '<input type="checkbox" class="form-check-input row-check row-check-master" name="readings['+i0+'][selected]" value="1" data-pair-sel-id="permPairSel_'+i1+'">' +
                             '<input type="checkbox" class="form-check-input row-check visually-hidden" name="readings['+i1+'][selected]" value="1" id="permPairSel_'+i1+'" tabindex="-1" aria-hidden="true">' +
@@ -438,7 +438,7 @@ $(document).ready(function() {
                     curr_month_elec_red: '',
                     original_curr_month_elec_red: ''
                 };
-                const tr = '<tr data-last-reading="'+ escAttr(baselineMin) +'" data-opening-reading="'+ escAttr(openingReading) +'" data-existing-curr="" data-pk="'+ row.pk +'" data-meter-slot="'+ meterSlot +'">' +
+                const tr = '<tr data-last-reading="'+ escAttr(baselineMin) +'" data-opening-reading="'+ escAttr(openingReading) +'" data-existing-curr="" data-pk="'+ row.pk +'" data-meter-slot="'+ meterSlot +'" data-later-month="'+ escAttr(row.later_month_ym || '') +'">' +
                     '<td><input type="checkbox" class="form-check-input row-check row-check-master" name="readings['+idx+'][selected]" value="1"></td>' +
                     '<td>'+ escAttr(row.house_no || 'N/A') +'</td>' +
                     '<td>'+ escAttr(row.name || 'N/A') +'</td>' +
@@ -557,9 +557,10 @@ $(document).ready(function() {
             return;
         }
 
+        const monthLabel = function(ym) { return new Date(ym + '-01T00:00:00').toLocaleString('en-GB', { month: 'long', year: 'numeric' }); };
         if (isListEditMode && editRowBillYm && billMonthVal !== editRowBillYm) {
             e.preventDefault();
-            const editMonth = new Date(editRowBillYm + '-01T00:00:00').toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+            const editMonth = monthLabel(editRowBillYm);
             alert('This Edit corrects the ' + editMonth + ' reading only. Set Meter Change Month back to ' + editMonth + '; to record another month, use Update Meter Reading without Edit.');
             $('#bill_month').trigger('focus');
             return;
@@ -569,6 +570,19 @@ $(document).ready(function() {
         if (selectedCount === 0) {
             e.preventDefault();
             alert('Please select at least one record by clicking the checkbox before saving.');
+            return;
+        }
+
+        // F-052 (Option A): the store refuses a month's own row once a later month is saved.
+        let laterMonth = '';
+        $('#updateMeterReadingTable .row-check-master:checked').each(function() {
+            laterMonth = String($(this).closest('tr').attr('data-later-month') || '');
+            return laterMonth === '';
+        });
+        if (laterMonth !== '') {
+            e.preventDefault();
+            const later = monthLabel(laterMonth);
+            alert('A reading for ' + later + ' is already saved for this house, so an earlier month cannot be corrected. Correct or remove ' + later + ' first.');
             return;
         }
 

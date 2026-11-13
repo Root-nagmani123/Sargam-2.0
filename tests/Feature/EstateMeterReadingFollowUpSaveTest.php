@@ -19,6 +19,8 @@ use Tests\TestCase;
  *    month it used to create that month below its opening reading at 0 units, reported as success.
  *  - F-054: for a month's own row the screen's minimum is the store's minimum (the saved reading); the
  *    opening reading is offered separately, for the Unit preview only.
+ *  - F-052, decision 6845841302 (Option A): a month cannot be corrected while a later month is saved. It used to
+ *    be corrected alone, leaving the later month's opening stale and moving the possession's reading back.
  */
 class EstateMeterReadingFollowUpSaveTest extends TestCase
 {
@@ -174,6 +176,92 @@ class EstateMeterReadingFollowUpSaveTest extends TestCase
 
         $this->other($m['pk'], $saved - 1, $m['target'], $m['meter'])->assertStatus(422);
         $this->other($m['pk'], $saved, $m['target'], $m['meter'])->assertRedirect()->assertSessionHas('success');
+    }
+
+    /**
+     * F-052, decision 6845841302 (Option A): once December is saved, November cannot be corrected — not through Edit,
+     * not through the dialog, and not once December's bill is issued. December and the possession's reading stay as they were.
+     */
+    public function test_correcting_a_month_after_the_next_month_is_saved_is_refused(): void
+    {
+        $m = $this->savedRegularMonth();
+        $dec = $this->savedRegularNextMonth($m);
+
+        $this->regular($m['pk'], $m['opening'] + 60, $m['target'], $m['meter'], true)
+            ->assertStatus(422)->assertJsonValidationErrors(['readings.0.pk']);
+        $this->regular($m['pk'], $m['opening'] + 150, $m['target'], $m['meter'], false)
+            ->assertStatus(422)->assertJsonValidationErrors(['readings.0.pk']);
+        DB::table('estate_month_reading_details')->where('pk', $dec)->update(['notify_employee_status' => 1]);
+        $this->regular($m['pk'], $m['opening'] + 60, $m['target'], $m['meter'], true)
+            ->assertStatus(422)->assertJsonValidationErrors(['readings.0.pk']);
+
+        $nov = $this->regularRow($m['pk']);
+        $this->assertSame($m['opening'] + 100, (int) $nov->curr_month_elec_red, 'November is not corrected');
+        $this->assertSame(100, (int) $nov->meter_one_consume_unit);
+        $decRow = $this->regularRow($dec);
+        $this->assertSame($m['opening'] + 100, (int) $decRow->last_month_elec_red, 'December still opens at November\'s saved reading');
+        $this->assertSame(100, (int) $decRow->meter_one_consume_unit);
+        $this->assertSame($m['opening'] + 200, (int) DB::table('estate_possession_details')->where('pk', $m['poss'])->value('electric_meter_reading'),
+            'the possession keeps December\'s reading');
+    }
+
+    /** F-052 in Update Meter Reading of Other: the same refusal; December and the possession's reading unchanged. */
+    public function test_other_correcting_a_month_after_the_next_month_is_saved_is_refused(): void
+    {
+        $m = $this->savedOtherMonth();
+        $next = $m['target']->copy()->addMonthNoOverflow();
+        if ($this->otherMonthPk($m['poss'], $next) !== null) {
+            $this->markTestSkipped('the month after the saved one already exists');
+        }
+        $this->other($m['pk'], $m['opening'] + 200, $next, $m['meter'])->assertRedirect()->assertSessionHas('success');
+        $dec = $this->otherMonthPk($m['poss'], $next);
+        $this->assertNotNull($dec, 'precondition: December is saved');
+
+        $this->other($m['pk'], $m['opening'] + 150, $m['target'], $m['meter'])
+            ->assertStatus(422)->assertJsonValidationErrors(['readings.0.pk']);
+
+        $this->assertSame($m['opening'] + 100, (int) $this->otherRow($m['pk'])->curr_month_elec_red, 'November is not corrected');
+        $decRow = $this->otherRow($dec);
+        $this->assertSame($m['opening'] + 100, (int) $decRow->last_month_elec_red, 'December still opens at November\'s saved reading');
+        $this->assertSame(100, (int) $decRow->per_unit);
+        $this->assertSame($m['opening'] + 200, (int) DB::table('estate_possession_other')->where('pk', $m['poss'])->value('meter_reading_oth'),
+            'the possession keeps December\'s reading');
+    }
+
+    /** F-052: both lists tell the screen which later month blocks a save of the month's own row. */
+    public function test_the_lists_name_the_later_month_that_blocks_a_correction(): void
+    {
+        $m = $this->savedRegularMonth();
+        $this->savedRegularNextMonth($m);
+        $data = $this->actor()->getJson(route('admin.estate.update-meter-reading.list', [
+            'bill_month' => $m['target']->format('F'), 'bill_year' => $m['target']->year,
+            'possession_pk' => $m['poss'], 'reading_pk' => $m['pk'],
+        ]))->assertOk()->json('data');
+        $this->assertSame($m['target']->copy()->addMonthNoOverflow()->format('Y-m'), $data[0]['later_month_ym'] ?? null);
+
+        $o = $this->savedOtherMonth();
+        $next = $o['target']->copy()->addMonthNoOverflow();
+        $this->other($o['pk'], $o['opening'] + 200, $next, $o['meter'])->assertRedirect()->assertSessionHas('success');
+        $own = collect($this->actor()->getJson(route('admin.estate.update-meter-reading-of-other.list', [
+            'bill_month' => $o['target']->month, 'bill_year' => $o['target']->year, 'possession_pks' => (string) $o['poss'],
+        ]))->assertOk()->json('data'))->firstWhere('pk', $o['pk']);
+        $this->assertNotNull($own, 'the month\'s own row is listed');
+        $this->assertSame($next->format('Y-m'), $own['later_month_ym'] ?? null);
+    }
+
+    /** Saves the month after $m from $m's row (+100 over it), as the dialog does; returns the new row's pk. */
+    private function savedRegularNextMonth(array $m): int
+    {
+        $next = $m['target']->copy()->addMonthNoOverflow();
+        if ($this->regularMonthPk($m['poss'], $next) !== null) {
+            $this->markTestSkipped('the month after the saved one already exists');
+        }
+        $this->regular($m['pk'], $m['opening'] + 200, $next, $m['meter'], false)->assertOk()->assertJson(['success' => true]);
+        $pk = $this->regularMonthPk($m['poss'], $next);
+        $this->assertNotNull($pk, 'precondition: the next month is saved');
+        $this->assertSame(100, (int) $this->regularRow($pk)->meter_one_consume_unit, 'precondition: the next month bills 100 units');
+
+        return $pk;
     }
 
     /**

@@ -326,7 +326,7 @@ function init() {
                     window.otherMeterRowData[row.pk + '_1'] = { curr_month_elec_red: '', new_meter_no: nm1 };
                     window.otherMeterRowData[row.pk + '_2'] = { curr_month_elec_red: '', new_meter_no: nm2 };
 
-                    tbody.append('<tr class="other-reading-row other-dual-stacked" data-dual="1" data-pk="' + row.pk + '">' +
+                    tbody.append('<tr class="other-reading-row other-dual-stacked" data-dual="1" data-pk="' + row.pk + '" data-later-month="' + escAttr(row.later_month_ym || '') + '">' +
                         '<td class="text-center align-middle position-relative">' +
                             '<input type="checkbox" class="form-check-input row-check row-check-master" name="readings[' + i0 + '][selected]" value="1" data-pair-sel-id="otherPairSel_' + i1 + '">' +
                             '<input type="checkbox" class="form-check-input other-pair-cb" name="readings[' + i1 + '][selected]" value="1" id="otherPairSel_' + i1 + '" tabindex="-1" aria-hidden="true">' +
@@ -386,7 +386,7 @@ function init() {
                 var oldDisp = (row.old_meter_no != null && String(row.old_meter_no).trim() !== '') ? row.old_meter_no : (row.meter_no || 'N/A');
                 var lastElecDisp = (row.last_month_reading != null && row.last_month_reading !== '') ? row.last_month_reading : 'N/A';
 
-                tbody.append('<tr class="other-reading-row other-reading-row-single" data-dual="0" data-pk="' + row.pk + '" data-meter-slot="' + slot + '">' +
+                tbody.append('<tr class="other-reading-row other-reading-row-single" data-dual="0" data-pk="' + row.pk + '" data-meter-slot="' + slot + '" data-later-month="' + escAttr(row.later_month_ym || '') + '">' +
                     '<td><input type="checkbox" class="form-check-input row-check row-check-master" name="readings[' + idx + '][selected]" value="1"></td>' +
                     '<td>' + escAttr(row.house_no || 'N/A') + '</td>' +
                     '<td>' + escAttr(row.name || 'N/A') + '</td>' +
@@ -582,6 +582,18 @@ function init() {
         var $checked = $root.find('#updateMeterReadingOtherTable .row-check-master:checked');
         if ($checked.length === 0) {
             showError('Please select at least one record by ticking its checkbox before saving.');
+            return false;
+        }
+
+        // F-052 (Option A): the store refuses a month's own row once a later month is saved.
+        var laterMonth = '';
+        $checked.each(function() {
+            laterMonth = String($(this).closest('tr').attr('data-later-month') || '');
+            return laterMonth === '';
+        });
+        if (laterMonth !== '') {
+            var later = new Date(laterMonth + '-01T00:00:00').toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+            showError('A reading for ' + later + ' is already saved for this house, so an earlier month cannot be corrected. Correct or remove ' + later + ' first.');
             return false;
         }
 
