@@ -34,6 +34,23 @@ class CentcomEscalationAndToggleTest extends TestCase
         return $user;
     }
 
+    /** The matrix routes sit behind issue.reports.admin, i.e. hasRole('Super Admin'). */
+    private function superAdmin(): User
+    {
+        $user = User::query()
+            ->whereIn('pk', fn ($q) => $q->select('model_id')
+                ->from('model_has_roles')
+                ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+                ->where('roles.name', 'Super Admin'))
+            ->first();
+
+        if (! $user) {
+            $this->markTestSkipped('No Super Admin user to save the escalation matrix as.');
+        }
+
+        return $user;
+    }
+
     /** @return array{0:int, 1:array<int,int>} category pk + three employee pks */
     private function categoryAndEmployees(): array
     {
@@ -61,7 +78,7 @@ class CentcomEscalationAndToggleTest extends TestCase
 
         // The category already has a hierarchy in this dataset, so store() would
         // bounce with "use Edit"; the update route is the one that rewrites.
-        $this->actingAs($this->actor())
+        $this->actingAs($this->superAdmin())
             ->put(route('admin.issue-escalation-matrix.update', $categoryPk), [
                 'issue_category_master_pk' => $categoryPk,
                 'level1_employee_pk' => $employees[0], 'level1_days' => 5,
@@ -86,7 +103,7 @@ class CentcomEscalationAndToggleTest extends TestCase
 
         $before = IssueCategoryEmployeeMap::where('issue_category_master_pk', $categoryPk)->count();
 
-        $this->actingAs($this->actor())
+        $this->actingAs($this->superAdmin())
             ->put(route('admin.issue-escalation-matrix.update', $categoryPk), [
                 'issue_category_master_pk' => $categoryPk,
                 'level1_employee_pk' => 999999999, 'level1_days' => 1,

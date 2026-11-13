@@ -175,6 +175,13 @@ $(document).on('change', '.status-toggle', function () {
     let id = $checkbox.data('id');
     let id_column = $checkbox.data('id_column');
     let status = $checkbox.is(':checked') ? 1 : 0;
+    // A master with its own guarded status route marks the switch
+    // .status-toggle-own-route and carries the route in data-url. Pages that
+    // bind their own handler to .status-toggle are left alone, and every
+    // other master keeps the generic table/column endpoint.
+    let url = $checkbox.hasClass('status-toggle-own-route')
+        ? $checkbox.data('url')
+        : null;
 
     table = $(this).data('table');
     column = $(this).data('column');
@@ -189,7 +196,7 @@ $(document).on('change', '.status-toggle', function () {
     if (typeof Swal === 'undefined' || typeof Swal.fire !== 'function') {
         const ok = window.confirm(`Are you sure? You want to ${actionText} this item?`);
         if (ok) {
-            updateStatus(table, column, id, id_column, status, $checkbox);
+            updateStatus(table, column, id, id_column, status, $checkbox, url);
         } else {
             $checkbox.prop('checked', !status);
         }
@@ -207,25 +214,34 @@ $(document).on('change', '.status-toggle', function () {
     }).then((result) => {
         if (result.isConfirmed) {
             // Proceed with AJAX call
-            updateStatus(table, column, id, id_column, status, $checkbox);
+            updateStatus(table, column, id, id_column, status, $checkbox, url);
         } else {
             // Revert checkbox back
             $checkbox.prop('checked', !status);
         }
     });
 
-    function updateStatus(table, column, id, id_column, status, $checkbox) {
-        $.ajax({
-            url: routes.toggleStatus, // Laravel route name define hona chahiye JS me
-            type: 'POST',
-            data: {
+    function updateStatus(table, column, id, id_column, status, $checkbox, url) {
+        // A master that supplied data-url posts only its own value to its own
+        // route; everything else keeps the generic table/column payload.
+        var payload = url
+            ? {
+                _token: $('meta[name="csrf-token"]').attr('content'),
+                active_inactive: status === 1 ? 1 : 2
+            }
+            : {
                 _token: $('meta[name="csrf-token"]').attr('content'),
                 table: table,
                 column: column,
                 id: id,
                 id_column: id_column,
                 status: status
-            },
+            };
+
+        $.ajax({
+            url: url || routes.toggleStatus,
+            type: 'POST',
+            data: payload,
             success: function (response) {
                 $('#status-msg').html(`
                     <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -233,9 +249,40 @@ $(document).on('change', '.status-toggle', function () {
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 `);
-                 setTimeout(function() {
-                 $('.dataTable ').DataTable().ajax.reload();
-                }, 500);
+
+                // Only a server-side grid has a feed to reload. A table rendered
+                // into the page (e.g. Subject Master) has none: ajax.reload() on it
+                // fetches the page HTML as JSON and raises DataTables' "Invalid
+                // JSON response" alert. Where its status badge and Delete button
+                // are drawn by the server, the toggle opts in to a page reload
+                // with data-reload-page; any other page is not reloaded (it keeps
+                // its unsaved input) and updates its own row.
+                var $feedTables = $('table.dataTable').filter(function () {
+                    var s = $.fn.dataTable.isDataTable(this) ? $(this).DataTable().settings()[0] : null;
+                    return !!s && (s.ajax != null || s.sAjaxSource != null);
+                });
+
+                if ($feedTables.length) {
+                    setTimeout(function () {
+                        $feedTables.each(function () {
+                            $(this).DataTable().ajax.reload();
+                        });
+                    }, 500);
+                } else if (!$checkbox.is('[data-reload-page]')) {
+                    return;
+                } else if (typeof Swal !== 'undefined' && typeof Swal.fire === 'function') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: response.message || 'Status updated successfully',
+                        timer: 1200,
+                        showConfirmButton: false
+                    }).then(function () {
+                        window.location.reload();
+                    });
+                } else {
+                    window.location.reload();
+                }
             },
             error: function () {
                 Swal.fire('Error', 'Status update failed', 'error');

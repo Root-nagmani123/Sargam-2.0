@@ -27,7 +27,7 @@
         <th>Activity slot</th>
         <th>Mode of journey</th>
         <th>Flight No / Train No /<br>Vehicle No</th>
-        <th>Arrival time at Dehradun<br>Airport/Railway Station</th>
+        <th>Arrival time at<br>Airport/Railway Station (24-hour)</th>
         <th>Whether Require Academy Vehicle<br>From Dehradun Airport/Railway Station to Academy</th>
         <th>Service</th>
         <th>Submitted</th>

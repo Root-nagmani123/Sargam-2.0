@@ -10,9 +10,15 @@
 
 @section('setup_content')
 @php
-    $isNodalOrAssigned = $issue->employee_master_pk == Auth::user()->user_id || $issue->assigned_to == Auth::user()->user_id;
-    $isComplainant = $issue->created_by == Auth::user()->user_id;
-    $isLogger = $issue->issue_logger == Auth::user()->user_id;
+    // $viewerIds: every employee id (pk and pk_old) the signed-in user goes by,
+    // from show() — the same set status_update() checks — so the controls
+    // shown here are the ones the server will accept. Comparing with user_id
+    // alone hid them from an officer whose complaint is keyed by their pk_old.
+    // Empty for a login with no user_id, so it matches no NULL field.
+    $isNodalOfficer = in_array((string) $issue->employee_master_pk, $viewerIds);
+    $isNodalOrAssigned = $isNodalOfficer || in_array((string) $issue->assigned_to, $viewerIds);
+    $isComplainant = in_array((string) $issue->created_by, $viewerIds);
+    $isLogger = in_array((string) $issue->issue_logger, $viewerIds);
     $isCompleted = (int) $issue->issue_status === 2;
     $canUpdateStatus = $isNodalOrAssigned || ($isComplainant && $isCompleted) || ($isLogger && $isCompleted);
     $showReopenOnly = ($isComplainant || $isLogger) && $isCompleted;
@@ -353,18 +359,18 @@
                 </div>
                 <div class="modal-body">
                     @php
-                        $usedStatuses = $issue->statusHistory->pluck('issue_status')->toArray();
+                        // Statuses already used SINCE the last Reopen. A reopened complaint
+                        // starts its cycle again: counting the whole history left the
+                        // assignee unable to mark it Completed, because it had been
+                        // completed once before the reopen. status_update() enforces the
+                        // same list, so this is not only markup.
+                        $usedStatuses = $issue->statusesUsedThisCycle();
                         $isAssigned = !empty($issue->assigned_to);
-                        $isNodalOfficer = ($issue->employee_master_pk == Auth::user()->user_id);
                         $canReassign = $isNodalOfficer && !$isCompleted; // Re-assign not allowed for closed (Completed) issues
                         $canOnlyReopen = $isComplainant && $isCompleted;
-
-                        // Determine latest status from history (most recent first),
-                        // fall back to main issue_status if no history exists.
-                        $latestStatus = (int) ($issue->statusHistory->first()->issue_status ?? $issue->issue_status);
                     @endphp
 
-                    @if(($issue->created_by == Auth::user()->user_id || $issue->issue_logger == Auth::user()->user_id) && $issue->issue_status === 2)
+                    @if(($isComplainant || $isLogger) && $issue->issue_status === 2)
                     <div class="alert alert-info mb-3">
                         <i class="bi bi-info-circle"></i>
                         <strong>Reopen:</strong> As the complainant, you can reopen this completed issue. Add a remark (optional) and submit.
@@ -390,10 +396,12 @@
                     @endif
 
                     @php
-                        // After Reopen (6), all status options stay enabled so user can set any status again.
-                        // Use the latest status from history so this works even if the main column lags.
-                        // Additionally, allow Nodal Officer to always change to any status.
-                        $disableStatusOptions = !$isNodalOfficer && $latestStatus !== 6;
+                        // A status already used in the current cycle cannot be picked again,
+                        // so the complaint only moves forward. $usedStatuses is scoped to
+                        // the run since the last Reopen, which is what lets a reopened
+                        // complaint be worked and completed afresh.
+                        // The Nodal Officer is exempt and may set any status.
+                        $disableStatusOptions = !$isNodalOfficer;
                     @endphp
                     <div class="mb-3">
                         <label for="issue_status" class="form-label">Status <span class="text-danger">*</span></label>
@@ -403,7 +411,8 @@
                             <option value="1" {{ $issue->issue_status == 1 ? 'selected' : '' }} {{ $disableStatusOptions && in_array(1, $usedStatuses) && $issue->issue_status != 1 ? 'disabled' : '' }}>In Progress</option>
                             <option value="2" {{ $issue->issue_status == 2 ? 'selected' : '' }} {{ $disableStatusOptions && in_array(2, $usedStatuses) && $issue->issue_status != 2 ? 'disabled' : '' }}>Completed</option>
                             <option value="3" {{ $issue->issue_status == 3 ? 'selected' : '' }} {{ $disableStatusOptions && in_array(3, $usedStatuses) && $issue->issue_status != 3 ? 'disabled' : '' }}>Pending</option>
-                            <option value="6" {{ $issue->issue_status == 6 ? 'selected' : '' }} {{ $disableStatusOptions && in_array(6, $usedStatuses) && $issue->issue_status != 6 ? 'disabled' : '' }}>Reopened</option>
+                            {{-- Reopen goes through the complainant/logger branch above; status_update() refuses it from other non-nodal users. --}}
+                            <option value="6" {{ $issue->issue_status == 6 ? 'selected' : '' }} {{ $disableStatusOptions && $issue->issue_status != 6 ? 'disabled' : '' }}>Reopened</option>
                         </select>
                     </div>
 
@@ -425,11 +434,21 @@
                             <option value="other">Other Employee</option>
                             @if(isset($employees) && count($employees) > 0)
                                 @foreach($employees as $employee)
-                                    <option value="{{ $employee->employee_pk }}" 
+                                    @php
+                                        // Accounts that cannot sign in stay listed but cannot be
+                                        // picked: work handed to one of them reaches nobody. The
+                                        // current assignee stays selectable-looking so an existing
+                                        // assignment still shows when the status form reopens.
+                                        $isCurrentAssignee = $isAssigned
+                                            && (string) $issue->assigned_to === (string) $employee->employee_pk;
+                                        $cannotSignIn = ! ($employee->can_login ?? 1) && ! $isCurrentAssignee;
+                                    @endphp
+                                    <option value="{{ $employee->employee_pk }}"
                                         data-name="{{ $employee->employee_name }}"
                                         data-mobile="{{ $employee->mobile ?? '' }}"
-                                        @if($isAssigned && (string)$issue->assigned_to === (string)$employee->employee_pk) selected @endif>
-                                        {{ $employee->employee_name }}
+                                        @if($cannotSignIn) disabled @endif
+                                        @if($isCurrentAssignee) selected @endif>
+                                        {{ $employee->employee_name }}@if($cannotSignIn) — inactive, cannot sign in @endif
                                     </option>
                                 @endforeach
                             @else

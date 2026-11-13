@@ -1,72 +1,88 @@
-<div class="card shadow-sm border-0 mb-4">
-    <div class="card-body pb-2">
+{{--
+    Student Details — the body of #studentDetailsModal, re-rendered by
+    custom.js on open, on search and on every pagination click.
 
-        {{-- Search with AJAX --}}
-        <!-- <div class="row g-3 align-items-center mb-3">
-            <div class="col-md-6">
-                <label for="studentSearch" class="form-label fw-semibold">Search Students</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-light">
-                        <i class="material-icons material-symbols-rounded">search</i>
-                    </span>
-                    <input type="text" id="studentSearch" class="form-control"
-                        placeholder="Search by name, email or contact">
+    New design (docs/new-design-index-page.md): §3 table panel, §3b action
+    stacks, §4 variant B footer. Nothing here carries its own <style> — the old
+    version shipped one, and because it was injected into the page on every AJAX
+    load its unscoped `.btn-outline-primary` / `.table-hover tr:hover` rules
+    restyled the whole screen behind the modal. The styling lives in
+    public/css/programme-admin.css under :is(.prog-page, .prog-modal).
+
+    JS hooks this partial must keep (custom.js 1050-1560):
+      #groupMappingEncryptedId  reload/pagination re-read the mapping id here
+      #selectAllOts             header select-all
+      .student-select           per-row checkbox + data-email/phone/name
+      .student-table-wrapper    updateSearchResultsCount() counts tbody rows
+      "No students found."      that same helper matches this exact text
+      .student-list-pagination  delegated pagination click
+      .edit-student             data-student-id/name/email/contact
+      .delete-student           data-mapping-id/name
+      .student-action-btn       initStudentActionTooltips() — the old markup
+                                never carried this class, so the tooltips it
+                                builds had nothing to attach to
+--}}
+
+{{-- The reload path reads the mapping id from here and falls back to
+     window.currentGroupMappingId; studentList() decrypts it, so it must be
+     encrypted exactly as the row's View button sends it. --}}
+<input type="hidden" id="groupMappingEncryptedId" value="{{ encrypt($groupMappingPk) }}">
+
+@if (!empty($groupName) || !empty($facilityName) || !empty($courseName))
+    <div class="prog-field-card mb-3">
+        <div class="prog-facts">
+            <div class="prog-fact">
+                <span class="prog-fact__label">Course Name</span>
+                <div class="prog-fact__value {{ filled($courseName) ? '' : 'is-empty' }}">
+                    {{ filled($courseName) ? $courseName : '—' }}
                 </div>
-                <small class="text-muted">Search updates dynamically (AJAX enabled).</small>
             </div>
-        </div> -->
-
-        {{-- Group Info --}}
-        @if(!empty($groupName) || !empty($facilityName) || !empty($courseName))
-        <div class="bg-light p-3 rounded-3 border mb-3">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <strong>Course Name:</strong>
-                    <span class="text-muted">{{ $courseName ?? 'N/A' }}</span>
+            <div class="prog-fact">
+                <span class="prog-fact__label">Group Name</span>
+                <div class="prog-fact__value {{ filled($groupName) ? '' : 'is-empty' }}">
+                    {{ filled($groupName) ? $groupName : '—' }}
                 </div>
-                <div class="col-md-4">
-                    <strong>Group Name:</strong>
-                    <span class="text-muted">{{ $groupName ?? 'N/A' }}</span>
-                </div>
-                <div class="col-md-4">
-                    <strong>Faculty:</strong>
-                    <span class="text-muted">{{ $facilityName ?? 'N/A' }}</span>
+            </div>
+            <div class="prog-fact">
+                <span class="prog-fact__label">Faculty</span>
+                <div class="prog-fact__value {{ filled($facilityName) ? '' : 'is-empty' }}">
+                    {{ filled($facilityName) ? $facilityName : '—' }}
                 </div>
             </div>
         </div>
-        @endif
-        <div class="table-responsive student-table-wrapper">
-            <table class="table table-hover align-middle text-nowrap modern-table">
-                <thead>
-                    <tr>
-                        <th style="width: 45px;">
-                            <div class="form-check m-0">
-                                <input type="checkbox" class="form-check-input" id="selectAllOts"
-                                    aria-label="Select all students">
-                            </div>
-                        </th>
-                        <th>#</th>
-                        <th>Name</th>
-                        <th>OT Code</th>
-                        <th>Email</th>
-                        <th>Contact No</th>
-                        <th class="text-center">Actions</th>
-                    </tr>
-                </thead>
+    </div>
+@endif
 
-                <tbody>
-                    @forelse($students as $index => $studentMap)
+<div class="programme-dt-panel prog-student-panel">
+    <div class="table-responsive student-table-wrapper">
+        <table class="table table-hover align-middle mb-0 w-100 programme-dt-table prog-student-table">
+            <thead>
+                <tr>
+                    <th class="prog-student-check" scope="col">
+                        <input type="checkbox" class="form-check-input" id="selectAllOts"
+                            aria-label="Select all students on this page">
+                    </th>
+                    <th scope="col">S. No.</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">OT Code</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Contact No</th>
+                    <th scope="col" class="text-center">Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @forelse ($students as $studentMap)
                     @php $student = $studentMap->studentsMaster; @endphp
-
                     <tr>
-                        <td>
-                            @if($student && $student->pk)
-                            <div class="form-check m-0">
+                        <td class="prog-student-check">
+                            @if ($student && $student->pk)
                                 <input type="checkbox" class="form-check-input student-select"
-                                    value="{{ encrypt($student->pk) }}" data-email="{{ $student->email }}"
-                                    data-phone="{{ $student->contact_no }}" data-name="{{ $student->display_name }}"
+                                    value="{{ encrypt($student->pk) }}"
+                                    data-email="{{ $student->email }}"
+                                    data-phone="{{ $student->contact_no }}"
+                                    data-name="{{ $student->display_name }}"
                                     aria-label="Select {{ $student->display_name }}">
-                            </div>
                             @endif
                         </td>
 
@@ -76,142 +92,61 @@
                         <td>{{ $student->email ?? 'N/A' }}</td>
                         <td>{{ $student->contact_no ?? 'N/A' }}</td>
 
-                        <td class="text-center">
-                            @if($student && $student->pk)
-                            <div class="btn-group gap-2" role="group" aria-label="Student Actions">
+                        <td>
+                            @if ($student && $student->pk)
+                                {{-- §3b: icon over caption, every stack the same width. --}}
+                                <div class="prog-act-group" role="group" aria-label="Student actions">
+                                    <button type="button"
+                                        class="prog-act prog-act--edit edit-student student-action-btn"
+                                        data-student-id="{{ encrypt($student->pk) }}"
+                                        data-name="{{ e($student->display_name) }}"
+                                        data-email="{{ e($student->email) }}"
+                                        data-contact="{{ e($student->contact_no) }}"
+                                        title="Edit student details" aria-label="Edit student details">
+                                        <span class="prog-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
+                                        <span class="prog-act__label">Edit</span>
+                                    </button>
 
-                                <button type="button"
-                                    class="btn btn-outline-primary btn-sm rounded-pill px-3 edit-student"
-                                    data-student-id="{{ encrypt($student->pk) }}"
-                                    data-name="{{ e($student->display_name) }}" data-email="{{ e($student->email) }}"
-                                    data-contact="{{ e($student->contact_no) }}" title="Edit student details">
-                                    <i class="material-icons material-symbols-rounded me-1">edit</i> Edit
-                                </button>
-
-                                <button type="button"
-                                    class="btn btn-outline-danger btn-sm rounded-pill px-3 delete-student"
-                                    data-mapping-id="{{ encrypt($studentMap->pk) }}"
-                                    data-name="{{ e($student->display_name ?? 'this student') }}"
-                                    title="Remove from group">
-                                    <i class="material-icons material-symbols-rounded me-1">delete</i> Remove
-                                </button>
-
-                            </div>
+                                    <button type="button"
+                                        class="prog-act prog-act--del delete-student student-action-btn"
+                                        data-mapping-id="{{ encrypt($studentMap->pk) }}"
+                                        data-name="{{ e($student->display_name ?? 'this student') }}"
+                                        title="Remove from group" aria-label="Remove from group">
+                                        <span class="prog-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
+                                        <span class="prog-act__label">Remove</span>
+                                    </button>
+                                </div>
                             @endif
                         </td>
                     </tr>
-
-                    @empty
+                @empty
                     <tr>
                         <td colspan="7" class="text-center text-muted py-4">
                             No students found.
                         </td>
                     </tr>
-                    @endforelse
-                </tbody>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
 
-            </table>
+    {{-- §4 variant B: a Laravel paginator dressed in the DataTables chrome, so
+         it matches the footer on the index page behind this modal. It sits
+         INSIDE the panel, so its border-top reads as the table's own divider
+         rather than a second floating strip. --}}
+    <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div class="programme-dt-pagination student-list-pagination">
+            {{ $students->links('vendor.pagination.custom') }}
         </div>
-        <div class="d-flex justify-content-between align-items-center flex-wrap mt-3">
-            <div class="text-muted small mb-2">
-                <strong>Total Students:</strong> {{ $students->total() }} |
-                <strong>Page:</strong> {{ $students->currentPage() }} of {{ $students->lastPage() }} |
-                <strong>Per Page:</strong> {{ $students->perPage() }}
-            </div>
-
-            <div class="student-list-pagination">
-                {!! $students->links('pagination::bootstrap-5') !!}
+        <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+            <div class="dataTables_info">
+                @if ($students->total() > 0)
+                    Showing {{ number_format($students->firstItem()) }} to {{ number_format($students->lastItem()) }}
+                    of {{ number_format($students->total()) }} students
+                @else
+                    Showing 0 students
+                @endif
             </div>
         </div>
-        <style>
-        .modern-table th,
-        .modern-table td {
-            padding: 0.75rem 1rem;
-        }
-
-        .sticky-header {
-            position: sticky;
-            top: 0;
-            z-index: 5;
-        }
-
-        .btn-outline-primary,
-        .btn-outline-danger {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .student-table-wrapper {
-            border-radius: 8px;
-            overflow-x: auto;
-            overflow-y: visible;
-            border: 1px solid #e6e6e6;
-            max-width: 100%;
-        }
-
-        .table-hover tbody tr:hover {
-            background-color: #f7faff;
-        }
-
-        .input-group-text {
-            border-right: none;
-        }
-
-        #studentSearch {
-            border-left: none;
-        }
-
-        /* Responsive table styles */
-        @media (max-width: 768px) {
-            .modern-table {
-                font-size: 0.875rem;
-            }
-
-            .modern-table th,
-            .modern-table td {
-                padding: 0.5rem;
-                white-space: nowrap;
-            }
-
-            .btn-group {
-                flex-direction: column;
-                gap: 0.25rem;
-            }
-
-            .btn-sm {
-                font-size: 0.75rem;
-                padding: 0.25rem 0.5rem;
-            }
-
-            .material-icons.material-symbols-rounded {
-                font-size: 16px;
-            }
-
-            .d-flex.justify-content-between {
-                flex-direction: column;
-                gap: 1rem;
-            }
-        }
-
-        @media (max-width: 576px) {
-            .modern-table th:first-child,
-            .modern-table td:first-child {
-                position: sticky;
-                left: 0;
-                background: white;
-                z-index: 1;
-            }
-
-            .modern-table thead th {
-                position: sticky;
-                top: 0;
-                background: #f8f9fa;
-                z-index: 2;
-            }
-
-            .modern-table thead th:first-child {
-                z-index: 3;
-            }
-        }
-        </style>
+    </div>
+</div>

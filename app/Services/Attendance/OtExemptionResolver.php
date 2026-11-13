@@ -91,6 +91,108 @@ class OtExemptionResolver
         return $this->reasonFor($studentId) !== null;
     }
 
+    /** The key {@see coveredSessions()} answers under. */
+    public static function sessionKey(int $studentId, int $coursePk, int $timetablePk): string
+    {
+        return $studentId . '|' . $coursePk . '|' . $timetablePk;
+    }
+
+    /**
+     * Batch counterpart to {@see isExempt()}: which of the given saved sessions the
+     * OT named on each is on duty or exempt for.
+     *
+     * One instance answers one session for ~5 queries. The callers here re-check
+     * whole result sets — every saved row an OT has (the profile summary), every
+     * OT on a session (the defaulter list), every counselee's absences — where
+     * that per-row cost is not affordable. This answers the whole set with a fixed
+     * number of queries and the same rules.
+     *
+     * @param  array<int, array{student: int, course: int, timetable: int}> $sessions
+     * @return array<string, true> {@see sessionKey()} keys, covered sessions only
+     */
+    public static function coveredSessions(array $sessions): array
+    {
+        if (empty($sessions)) {
+            return [];
+        }
+
+        $studentPks = array_values(array_unique(array_column($sessions, 'student')));
+        $timetablePks = array_values(array_unique(array_column($sessions, 'timetable')));
+        $coursePks = array_values(array_unique(array_column($sessions, 'course')));
+
+        $timetables = Timetable::select('pk', 'START_DATE', 'class_session')
+            ->whereIn('pk', $timetablePks)
+            ->get()
+            ->keyBy('pk');
+
+        $dates = $timetables->pluck('START_DATE')->filter()
+            ->map(fn ($d) => substr((string) $d, 0, 10))
+            ->unique()->values()->all();
+
+        if (empty($dates)) {
+            return [];
+        }
+
+        $dutyTypes = array_filter(MDOEscotDutyMap::getMdoDutyTypes());
+
+        // Grouped by student|type|course|date so the lookup below is a hash hit.
+        $duties = empty($dutyTypes) ? collect() : MDOEscotDutyMap::whereIn('selected_student_list', $studentPks)
+            ->whereIn('course_master_pk', $coursePks)
+            ->whereIn('mdo_duty_type_master_pk', array_values($dutyTypes))
+            ->where(function ($q) use ($dates) {
+                // Full-day ranges, so the index on mdo_date is not defeated by a cast.
+                foreach ($dates as $d) {
+                    $q->orWhereBetween('mdo_date', [$d . ' 00:00:00', $d . ' 23:59:59']);
+                }
+            })
+            ->get()
+            ->groupBy(fn ($r) => $r->selected_student_list . '|' . $r->mdo_duty_type_master_pk . '|'
+                . $r->course_master_pk . '|' . substr((string) $r->mdo_date, 0, 10));
+
+        $medicals = StudentMedicalExemption::whereIn('student_master_pk', $studentPks)
+            ->whereIn('course_master_pk', $coursePks)
+            ->where('active_inactive', 1)
+            ->get()
+            ->groupBy(fn ($e) => $e->student_master_pk . '|' . $e->course_master_pk);
+
+        $covered = [];
+
+        foreach ($sessions as $session) {
+            $key = self::sessionKey((int) $session['student'], (int) $session['course'], (int) $session['timetable']);
+            if (isset($covered[$key])) {
+                continue;
+            }
+
+            $timetable = $timetables->get($session['timetable']);
+            if (!$timetable || empty($timetable->START_DATE)) {
+                continue;
+            }
+
+            $date = substr((string) $timetable->START_DATE, 0, 10);
+
+            foreach ($dutyTypes as $typePk) {
+                $group = $duties->get($session['student'] . '|' . $typePk . '|' . $session['course'] . '|' . $date, collect());
+
+                // Every duty of the day, not the first: a morning and an afternoon
+                // duty of one type both exist (PR #334 F-061).
+                if ($group->contains(fn ($duty) => self::overlapsSession($timetable->class_session, $duty->Time_from, $duty->Time_to))) {
+                    $covered[$key] = true;
+                    continue 2;
+                }
+            }
+
+            if (self::coveringMedicalExemption(
+                $medicals->get($session['student'] . '|' . $session['course'], collect()),
+                $timetable->START_DATE,
+                $timetable->class_session
+            )) {
+                $covered[$key] = true;
+            }
+        }
+
+        return $covered;
+    }
+
     private function hasDuty(int $studentId, string $key): bool
     {
         return $this->remember($studentId, 'duty:' . $key, function () use ($studentId, $key) {
@@ -101,13 +203,12 @@ class OtExemptionResolver
                 return false;
             }
 
-            $duty = MDOEscotDutyMap::where([
+            return MDOEscotDutyMap::where([
                 ['course_master_pk', '=', $this->coursePk],
                 ['mdo_duty_type_master_pk', '=', $typePk],
                 ['selected_student_list', '=', $studentId],
-            ])->whereDate('mdo_date', '=', $timetable->START_DATE)->first();
-
-            return $duty && $this->overlapsSession($timetable->class_session, $duty->Time_from, $duty->Time_to);
+            ])->whereDate('mdo_date', '=', $timetable->START_DATE)->get()
+                ->contains(fn ($duty) => self::overlapsSession($timetable->class_session, $duty->Time_from, $duty->Time_to));
         });
     }
 
@@ -120,7 +221,11 @@ class OtExemptionResolver
 
         $date = $timetable->START_DATE;
 
-        $exemption = StudentMedicalExemption::where([
+        // Every exemption spanning the date, not ->first(): with a timed one that
+        // misses this session and a whole-day one that covers it, first() could
+        // pick the miss, and save() / the admin grid would then disagree with
+        // coveredSessions() (the defaulter list), which checks them all.
+        $candidates = StudentMedicalExemption::where([
             ['course_master_pk', '=', $this->coursePk],
             ['student_master_pk', '=', $studentId],
             ['active_inactive', '=', 1],
@@ -130,14 +235,56 @@ class OtExemptionResolver
                 // An open-ended exemption (no to_date) has not expired.
                 $q->whereNull('to_date')->orWhereDate('to_date', '>=', $date);
             })
-            ->first();
+            ->get();
 
-        if (!$exemption) {
-            return false;
+        return self::coveringMedicalExemption($candidates, $date, $timetable->class_session) !== null;
+    }
+
+    /**
+     * The first of $exemptions that covers one session, or null.
+     *
+     * THE medical-exemption rule, public so every screen asks the same question:
+     * isExempt() (save() and the admin grid), coveredSessions() (the defaulter
+     * list), the OT's own attendance view and its export, and the attendance
+     * Excel all decide through here (PR #334 F-004). The date span is compared on
+     * dates — from_date / to_date are datetimes, so comparing them raw against a
+     * midnight session date dropped an exemption starting later that day and kept
+     * one ending earlier — and the time-of-day question is medicalCovers().
+     *
+     * @param  iterable<object>  $exemptions  active rows for the session's student and course
+     */
+    public static function coveringMedicalExemption(iterable $exemptions, $startDate, ?string $classSession): ?object
+    {
+        if (empty($startDate)) {
+            return null;
         }
 
-        // No end date → still running, and the date filter already put this session
-        // inside it.
+        $date = substr((string) $startDate, 0, 10);
+        $window = self::windowFor((string) $startDate, $classSession);
+
+        foreach ($exemptions as $exemption) {
+            $inRange = substr((string) $exemption->from_date, 0, 10) <= $date
+                && (empty($exemption->to_date) || substr((string) $exemption->to_date, 0, 10) >= $date);
+
+            if ($inRange && self::medicalCovers($exemption, $window)) {
+                return $exemption;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Whether a medical exemption already known to span this session's DATE also
+     * covers the session itself. Shared with {@see coveredSessions()} so the
+     * batch path and the per-session path cannot drift.
+     *
+     * @param array{start: int, end: int}|null $session
+     */
+    private static function medicalCovers(object $exemption, ?array $session): bool
+    {
+        // No end date → still running, and the caller's date filter already put this
+        // session inside it.
         if (empty($exemption->to_date)) {
             return true;
         }
@@ -154,7 +301,7 @@ class OtExemptionResolver
            plain dates, which store midnight ("15 Dec 00:00" → "16 Dec 00:00").
 
            Both endpoints at midnight means dates were entered, so the exemption
-           covers those days whole — and the date filter above has already
+           covers those days whole — and the caller's date filter has already
            established this session falls inside them. Reading 00:00→00:00 as a pair
            of clock times instead (as this did before) makes a zero-length window
            that overlaps no session, so half of the exemptions on record — every
@@ -165,31 +312,25 @@ class OtExemptionResolver
 
         // A timed exemption only covers the sessions it actually overlaps. Compared
         // as absolute datetimes so a multi-day window still spans the days between.
-        $session = $this->sessionWindow();
-
         return $session === null
             ? true // Session times unreadable — honour the exemption rather than drop it.
             : $session['start'] <= $to && $session['end'] >= $from;
     }
 
     /**
-     * This session as absolute timestamps on its own date.
+     * A session as absolute timestamps on its own date, built from the two raw
+     * columns so the batch path can make one without a resolver instance.
      *
      * @return array{start: int, end: int}|null
      */
-    private function sessionWindow(): ?array
+    private static function windowFor(?string $startDate, ?string $classSession): ?array
     {
-        $timetable = $this->timetable();
-        if (!$timetable) {
+        $parsed = self::parseClassSession($classSession);
+        if (!$parsed || empty($startDate)) {
             return null;
         }
 
-        $parsed = $this->parseClassSession($timetable->class_session);
-        if (!$parsed) {
-            return null;
-        }
-
-        $day = date('Y-m-d', strtotime((string) $timetable->START_DATE));
+        $day = date('Y-m-d', strtotime((string) $startDate));
         $start = strtotime($day . ' ' . $parsed['start']);
         $end = strtotime($day . ' ' . $parsed['end']);
 
@@ -231,21 +372,21 @@ class OtExemptionResolver
      * 10:35–11:30 does not overlap a duty at 14:05–15:07, so that duty must not
      * lock it; a session at 14:10–14:50 does.
      */
-    private function overlapsSession(?string $classSession, ?string $dutyFrom, ?string $dutyTo): bool
+    private static function overlapsSession(?string $classSession, ?string $dutyFrom, ?string $dutyTo): bool
     {
         if (empty($classSession) || empty($dutyFrom) || empty($dutyTo)) {
             return false;
         }
 
-        $session = $this->parseClassSession($classSession);
+        $session = self::parseClassSession($classSession);
         if (!$session) {
             return false;
         }
 
-        $sessionStart = $this->toSeconds($session['start']);
-        $sessionEnd = $this->toSeconds($session['end']);
-        $dutyStart = $this->toSeconds($dutyFrom);
-        $dutyEnd = $this->toSeconds($dutyTo);
+        $sessionStart = self::toSeconds($session['start']);
+        $sessionEnd = self::toSeconds($session['end']);
+        $dutyStart = self::toSeconds($dutyFrom);
+        $dutyEnd = self::toSeconds($dutyTo);
 
         if ($sessionStart === false || $sessionEnd === false || $dutyStart === false || $dutyEnd === false) {
             return false;
@@ -260,14 +401,20 @@ class OtExemptionResolver
      *
      * @return array{start: string, end: string}|null
      */
-    private function parseClassSession(?string $classSession): ?array
+    private static function parseClassSession(?string $classSession): ?array
     {
         if (empty($classSession)) {
             return null;
         }
 
         if (is_numeric($classSession)) {
-            $master = ClassSessionMaster::find($classSession);
+            // The same shift PK repeats on nearly every row the batch path walks;
+            // one lookup per distinct PK per request is plenty.
+            static $masters = [];
+            if (!array_key_exists($classSession, $masters)) {
+                $masters[$classSession] = ClassSessionMaster::find($classSession);
+            }
+            $master = $masters[$classSession];
 
             return ($master && $master->start_time && $master->end_time)
                 ? ['start' => date('H:i', strtotime($master->start_time)), 'end' => date('H:i', strtotime($master->end_time))]
@@ -296,7 +443,7 @@ class OtExemptionResolver
     }
 
     /** Seconds since midnight, or false when the value cannot be read as a time. */
-    private function toSeconds(?string $time): int|false
+    private static function toSeconds(?string $time): int|false
     {
         if (empty($time)) {
             return false;

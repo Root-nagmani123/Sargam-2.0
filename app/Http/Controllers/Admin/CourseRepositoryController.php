@@ -13,14 +13,37 @@ use App\Models\FacultyMaster;
 use App\Models\SectorMaster;
 use App\Models\MinistryMaster;
 use App\Models\Timetable;
-use Illuminate\Http\Request; 
+use App\Rules\SafeUploadedDocument;
+use App\Support\CourseRepositorySearch;
+use App\Support\DataTableSearchHelper;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Exception;
 
- 
+
 class CourseRepositoryController extends Controller
 {
+    /** The sidebar permission of the Central Course Repository admin screen. */
+    public const ADMIN_PERMISSION = 'course_repository';
+
+    public function __construct()
+    {
+        // Every repository write — folders and documents — was open to any login,
+        // officer trainees included (PR #334 F-041). Gated on the same rule the
+        // sidebar uses for the admin screen that offers these actions, so the route
+        // and the menu agree; the read-only user screens are unaffected.
+        $this->middleware(function ($request, $next) {
+            if (! canUseStaffMenu(self::ADMIN_PERMISSION)) {
+                abort(403);
+            }
+
+            return $next($request);
+        })->only(['store', 'update', 'destroy', 'uploadDocument', 'updateDocument', 'deleteDocument']);
+    }
+
     /**
      * Display listing of all course repositories
      * GET /course-repository
@@ -261,7 +284,7 @@ class CourseRepositoryController extends Controller
             // Handle image upload
             if ($request->hasFile('category_image')) {
                 $image = $request->file('category_image');
-                $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $imageName = time() . '_' . uniqid() . '.' . safe_upload_extension($image);
                 $image->storeAs('course-repository/categories', $imageName, 'public');
                 $validated['category_image'] = 'course-repository/categories/' . $imageName;
             }
@@ -269,7 +292,7 @@ class CourseRepositoryController extends Controller
             // Handle attachment upload
             if ($request->hasFile('category_attachment')) {
                 $attachment = $request->file('category_attachment');
-                $attachmentName = time() . '_' . uniqid() . '.' . $attachment->getClientOriginalExtension();
+                $attachmentName = time() . '_' . uniqid() . '.' . safe_upload_extension($attachment);
                 $attachment->storeAs('course-repository/attachments', $attachmentName, 'public');
                 $validated['category_attachment'] = 'course-repository/attachments/' . $attachmentName;
             }
@@ -356,7 +379,7 @@ class CourseRepositoryController extends Controller
                 
                 // Store new image
                 $image = $request->file('category_image');
-                $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $imageName = time() . '_' . uniqid() . '.' . safe_upload_extension($image);
                 $image->storeAs('course-repository/categories', $imageName, 'public');
                 $validated['category_image'] = 'course-repository/categories/' . $imageName;
             }
@@ -370,7 +393,7 @@ class CourseRepositoryController extends Controller
 
                 // Store new attachment
                 $attachment = $request->file('category_attachment');
-                $attachmentName = time() . '_' . uniqid() . '.' . $attachment->getClientOriginalExtension();
+                $attachmentName = time() . '_' . uniqid() . '.' . safe_upload_extension($attachment);
                 $attachment->storeAs('course-repository/attachments', $attachmentName, 'public');
                 $validated['category_attachment'] = 'course-repository/attachments/' . $attachmentName;
             }
@@ -436,9 +459,62 @@ class CourseRepositoryController extends Controller
      * - Inserts metadata into course_repository_details
      * - Uploads files and inserts into course_repository_documents
      */
+    /**
+     * Per-file upload ceiling in kilobytes, as Laravel's `max:` rule measures it.
+     * Applied on both submit (uploadDocument) and update (updateDocument).
+     *
+     * Note this is the application's limit only. PHP's own upload_max_filesize still
+     * applies first and discards a larger file before the request reaches Laravel, so
+     * raising this above that ini value has no effect until php.ini is raised too.
+     */
+    private function uploadMaxKb(): int
+    {
+        // PHP discards an over-size file before Laravel runs, and because
+        // `attachments.*` is nullable the request that arrives then passes
+        // validation with no file at all. Configuring a ceiling above what php.ini
+        // accepts therefore does not raise the real limit — it just opens a band
+        // where the upload silently does nothing.
+        //
+        // SafeUploadedDocument::maxKilobytes() is the project's existing clamp and
+        // is stricter than a bare upload_max_filesize check: it also bounds by
+        // post_max_size and leaves 5% headroom for the other multipart fields.
+        return SafeUploadedDocument::maxKilobytes((int) config('course_repository.max_file_kb', 25600));
+    }
+
+    /** Extensions for the `mimes:` rule, e.g. "pdf". */
+    private function uploadAllowedMimes(): string
+    {
+        return implode(',', (array) config('course_repository.allowed_extensions', []));
+    }
+
+    /** Human form of the same list for error messages, e.g. "PDF". */
+    private function uploadAllowedTypesLabel(): string
+    {
+        $types = array_map('strtoupper', (array) config('course_repository.allowed_extensions', []));
+        if (count($types) < 2) {
+            return implode('', $types);
+        }
+        $last = array_pop($types);
+
+        return implode(', ', $types) . ' or ' . $last;
+    }
+
+    /** Human form of the size cap for error messages, e.g. "19 MB". */
+    private function uploadMaxSizeLabel(): string
+    {
+        // Same helper as uploadMaxKb(), so the number in the message can never
+        // disagree with the number the `max:` rule enforces.
+        return SafeUploadedDocument::maxLabel((int) config('course_repository.max_file_kb', 25600));
+    }
+
     public function uploadDocument($pk, Request $request)
     {
         try {
+            $maxKb = $this->uploadMaxKb();
+            $mimes = $this->uploadAllowedMimes();
+            $sizeLabel = $this->uploadMaxSizeLabel();
+            $typesLabel = $this->uploadAllowedTypesLabel();
+
             $validated = $request->validate([
                 'category' => 'required|string|in:Course,Other,Institutional',
                 'course_name' => 'nullable|string',
@@ -449,13 +525,28 @@ class CourseRepositoryController extends Controller
                 'sector_master' => 'nullable|numeric',
                 'ministry_master' => 'nullable|numeric',
                 'attachments' => 'nullable|array',
-                'attachments.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:10120', // Max 10MB per file
+                'attachments.*' => 'nullable|file|mimes:' . $mimes . '|max:' . $maxKb,
                 'attachment_titles' => 'nullable|array',
                 'attachment_titles.*' => 'nullable|string|max:5000',
                 'keywords' => 'nullable|string|max:4000',
                 'video_link' => 'nullable|string|max:2000',
+                // 1 or 0 from a form with the switch; absent when the form has none.
+                'video_download_enabled' => 'nullable|boolean',
+            ], [
+                // Default messages name the raw input ("attachments.0"), which tells the
+                // uploader nothing. :position is 1-based and matches the row they filled in.
+                'category.required' => 'Please select a category (Course, Other or Institutional).',
+                'category.in' => 'Please select a valid category (Course, Other or Institutional).',
+                'attachments.*.file' => 'Attachment :position could not be read. Please select the file again.',
+                'attachments.*.mimes' => 'Attachment :position must be a ' . $typesLabel . ' file.',
+                'attachments.*.max' => 'Attachment :position is larger than ' . $sizeLabel . '. Please upload a smaller file.',
+                'attachment_titles.*.max' => 'The title for attachment :position must be 5000 characters or less.',
+                'keywords.max' => 'Keywords must be 4000 characters or less.',
+                'video_link.max' => 'Video link must be 2000 characters or less.',
+                'sector_master.numeric' => 'Please select a valid Sector.',
+                'ministry_master.numeric' => 'Please select a valid Ministry.',
             ]);
-            
+
             // Get the category
             $category = $validated['category'];
             
@@ -478,6 +569,13 @@ class CourseRepositoryController extends Controller
                 'ministry_master_pk' => $validated['ministry_master'] ?? null,
                 'keyword' => $validated['keywords'] ?? null,
                 'videolink' => $validated['video_link'] ?? null,
+                // Whether the user side may download that video. The Course and
+                // Other forms always post 1 or 0; a form without the switch
+                // (Institutional) posts nothing and gets the column default, on —
+                // not off, which hid downloads it never offered to change (PR #334 F-017).
+                'video_download_enabled' => $request->has('video_download_enabled')
+                    ? $request->boolean('video_download_enabled')
+                    : true,
                 'created_date' => now(),
                 'created_by' => auth()->id(),
                 'status' => 1,
@@ -494,9 +592,12 @@ class CourseRepositoryController extends Controller
                         // Generate unique filename
                         $fileName = $this->buildDocumentFileName($file);
                         
-                        // Store file in hierarchical folder structure under admin root
+                        // Store file in hierarchical folder structure under admin root.
+                        // Private disk: these documents are access-controlled and must not
+                        // be reachable through public/storage. Reads go through
+                        // streamDocument()/downloadDocument().
                         $storageFolder = trim($folderPath, '/');
-                        $filePath = $file->storeAs($storageFolder, $fileName, 'public');
+                        $filePath = $file->storeAs($storageFolder, $fileName, self::documentDisk());
                         
                         // Insert into course_repository_documents
                         CourseRepositoryDocument::create([
@@ -653,6 +754,7 @@ class CourseRepositoryController extends Controller
                         'ministry_resolved' => $ministryResolved,
                         'keyword' => $detail->keyword,
                         'videolink' => $detail->videolink,
+                        'video_download_enabled' => (bool) $detail->video_download_enabled,
                     ] : null,
                 ],
             ]);
@@ -672,10 +774,15 @@ class CourseRepositoryController extends Controller
     public function updateDocument($pk, Request $request)
     {
         try {
+            $maxKb = $this->uploadMaxKb();
+            $mimes = $this->uploadAllowedMimes();
+            $sizeLabel = $this->uploadMaxSizeLabel();
+            $typesLabel = $this->uploadAllowedTypesLabel();
+
             $validated = $request->validate([
                 'category' => 'nullable|string|in:Course,Other,Institutional',
                 'file_title' => 'nullable|string|max:5000',
-                'document_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:10120', // Max 10MB
+                'document_file' => 'nullable|file|mimes:' . $mimes . '|max:' . $maxKb,
                 'course_name' => 'nullable|string',
                 'subject_name' => 'nullable|string',
                 'timetable_name' => 'nullable|string',
@@ -685,6 +792,18 @@ class CourseRepositoryController extends Controller
                 'ministry_master' => 'nullable|numeric',
                 'keywords' => 'nullable|string|max:4000',
                 'video_link' => 'nullable|string|max:2000',
+                // 1 or 0 from a form with the switch; absent when the form has none.
+                'video_download_enabled' => 'nullable|boolean',
+            ], [
+                'category.in' => 'Please select a valid category (Course, Other or Institutional).',
+                'document_file.file' => 'The document could not be read. Please select the file again.',
+                'document_file.mimes' => 'The document must be a ' . $typesLabel . ' file.',
+                'document_file.max' => 'The document is larger than ' . $sizeLabel . '. Please upload a smaller file.',
+                'file_title.max' => 'The document title must be 5000 characters or less.',
+                'keywords.max' => 'Keywords must be 4000 characters or less.',
+                'video_link.max' => 'Video link must be 2000 characters or less.',
+                'sector_master.numeric' => 'Please select a valid Sector.',
+                'ministry_master.numeric' => 'Please select a valid Ministry.',
             ]);
 
             $document = CourseRepositoryDocument::findOrFail($pk);
@@ -702,12 +821,15 @@ class CourseRepositoryController extends Controller
                         : 'course_repository';
 
                     $fileName = $this->buildDocumentFileName($file);
-                    $filePath = $file->storeAs($storageFolder, $fileName, 'public');
+                    $filePath = $file->storeAs($storageFolder, $fileName, self::documentDisk());
 
-                    // Remove the old physical file if we can resolve it
-                    $oldRelative = $this->resolveDocumentRelativePath($document);
-                    if ($oldRelative && Storage::disk('public')->exists($oldRelative)) {
-                        Storage::disk('public')->delete($oldRelative);
+                    // Remove the old physical file if we can resolve it. Resolved by
+                    // location, not by a fixed disk name — a replaced document may still
+                    // have its previous copy on the legacy public disk, and leaving that
+                    // behind would keep the old version publicly readable forever.
+                    $old = $this->resolveDocumentLocation($document);
+                    if ($old) {
+                        Storage::disk($old['disk'])->delete($old['path']);
                     }
 
                     $document->upload_document = $fileName;
@@ -738,7 +860,17 @@ class CourseRepositoryController extends Controller
                     ? $validated['ministry_master']
                     : $detail->ministry_master_pk;
                 $detail->keyword = $validated['keywords'] ?? $detail->keyword;
-                $detail->videolink = $validated['video_link'] ?? $detail->videolink;
+                // Clearable like Sector / Ministry above: a submitted empty field
+                // (null via ConvertEmptyStringsToNull) removes the link; only an absent
+                // key keeps it (PR #334 F-033).
+                $detail->videolink = array_key_exists('video_link', $validated)
+                    ? $validated['video_link']
+                    : $detail->videolink;
+                // Only an edit form that shows the switch posts it (always 1 or 0);
+                // without it the stored choice stands (PR #334 F-017).
+                if ($request->has('video_download_enabled')) {
+                    $detail->video_download_enabled = $request->boolean('video_download_enabled');
+                }
                 if ($category && isset($typeMap[$category])) {
                     $detail->type = $typeMap[$category];
                 }
@@ -774,14 +906,16 @@ class CourseRepositoryController extends Controller
     public function downloadDocument($pk)
     {
         try {
-            $document = CourseRepositoryDocument::findOrFail($pk);
-            
+            $document = $this->findReadableDocument($pk);
+
             if (!$document->full_path && !$document->normalized_full_path) {
                 return redirect()->back()->with('error', 'File not found');
             }
 
-            $relativePath = $this->resolveDocumentRelativePath($document);
-            if (!$relativePath) {
+            $this->logDocumentRead($document, 'download');
+
+            $location = $this->resolveDocumentLocation($document);
+            if (!$location) {
                 Log::error('Course repository file not found', [
                     'document_pk' => $document->pk,
                     'full_path' => $document->full_path,
@@ -789,11 +923,11 @@ class CourseRepositoryController extends Controller
                 ]);
                 return redirect()->back()->with('error', 'File not found in storage');
             }
-            
+
             // Get original filename without timestamp prefix
             $originalName = preg_replace('/^\d+_[a-f0-9]+_/', '', $document->upload_document);
-            
-            return Storage::disk('public')->download($relativePath, $originalName);
+
+            return Storage::disk($location['disk'])->download($location['path'], $originalName);
         } catch (Exception $e) {
             Log::error('Error downloading document: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Download failed: ' . $e->getMessage());
@@ -809,7 +943,7 @@ class CourseRepositoryController extends Controller
         $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
         $safeName = trim(preg_replace('/[^A-Za-z0-9_\-]+/', '_', $originalName), '_');
         $safeName = $safeName !== '' ? $safeName : 'file';
-        $extension = $file->getClientOriginalExtension();
+        $extension = safe_upload_extension($file, '');
 
         return $safeName . '_' . time() . ($extension ? '.' . $extension : '');
     }
@@ -817,8 +951,193 @@ class CourseRepositoryController extends Controller
     /**
      * Resolve file path variations and return a valid relative path for public disk.
      */
-    private function resolveDocumentRelativePath(CourseRepositoryDocument $document): ?string
+    /**
+     * Stream a document inline for the in-page PDF viewer.
+     *
+     * This exists so the viewer never needs a /storage URL. The old iframe pointed at
+     * asset('storage/…'), which the web server serves before Laravel loads — meaning the
+     * document was readable by anyone with the link, logged in or not. Routed through the
+     * controller, the request at least passes the `auth` middleware first.
+     *
+     * NOTE: authentication only. Whether a given user may read a given document is a
+     * separate object-level question this controller has never answered — see the
+     * follow-up raised with the Course Repository module owner.
+     */
+    public function streamDocument($pk)
     {
+        try {
+            $document = $this->findReadableDocument($pk);
+
+            $location = $this->resolveDocumentLocation($document);
+            if (!$location) {
+                abort(404);
+            }
+
+            $this->logDocumentRead($document, 'stream');
+
+            $name = preg_replace('/^\d+_[a-f0-9]+_/', '', (string) $document->upload_document);
+
+            // Inline, so the browser's PDF viewer renders it in place rather than
+            // downloading. Content-Type is forced: guessing from a stored filename is
+            // how an uploaded file ends up executing as something else.
+            return Storage::disk($location['disk'])->response($location['path'], $name, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . addslashes($name) . '"',
+                'X-Content-Type-Options' => 'nosniff',
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error streaming document: ' . $e->getMessage());
+            abort(404);
+        }
+    }
+
+    /**
+     * Resolve a document for a read action, or 404.
+     *
+     * Enforces `del_type = 1`. Every other read path in this controller filters on it
+     * (the listings at :138, :1053, :1506, :1814 and the counters at :1921, :1931), but
+     * the two file-serving actions used a bare findOrFail() — so a document an admin had
+     * deleted stayed downloadable indefinitely. deleteDocument() is a soft delete; the
+     * file is never removed from disk, which is what made that gap silent.
+     */
+    private function findReadableDocument($pk): CourseRepositoryDocument
+    {
+        return CourseRepositoryDocument::where('pk', $pk)
+            ->where('del_type', 1)
+            ->firstOrFail();
+    }
+
+    /**
+     * Record who read which document.
+     *
+     * These routes serve institutional material to every authenticated user, so without
+     * a log there is no way to tell ordinary use from someone walking the id range. This
+     * does not restrict anything — it makes the reading visible.
+     */
+    private function logDocumentRead(CourseRepositoryDocument $document, string $via): void
+    {
+        Log::info('course_repository.document.read', [
+            'document_pk' => $document->pk,
+            'via' => $via,
+            'user_id' => auth()->id(),
+            'ip' => request()->ip(),
+        ]);
+    }
+
+    /** Disk new uploads are written to. Private — see config/course_repository.php. */
+    public static function documentDisk(): string
+    {
+        return (string) config('course_repository.disk', 'local');
+    }
+
+    /** Disk documents uploaded before the private-disk change still live on. */
+    public static function legacyDocumentDisk(): string
+    {
+        return (string) config('course_repository.legacy_disk', 'public');
+    }
+
+    /**
+     * Where a document's file actually is, as ['disk' => …, 'path' => …], or null.
+     *
+     * The private disk is checked first so a migrated file is never served from the
+     * public one; the legacy disk is the fallback for documents uploaded before the
+     * move. Callers must stream through this rather than building a /storage URL.
+     */
+    private function resolveDocumentLocation(CourseRepositoryDocument $document): ?array
+    {
+        $private = self::documentDisk();
+        $legacy = self::legacyDocumentDisk();
+
+        $path = $this->resolveDocumentRelativePath($document, $private);
+        if ($path !== null) {
+            return ['disk' => $private, 'path' => $path];
+        }
+
+        $path = $this->resolveDocumentRelativePath($document, $legacy);
+        if ($path === null) {
+            return null;
+        }
+
+        // Found on the public disk. Move it before serving.
+        //
+        // The bulk move runs as a migration, but that only helps where `migrate` is
+        // actually run on deploy, and the console command only helps if someone
+        // remembers it. Neither is a property of the code. Relocating on read means any
+        // document reachable through the application secures itself the first time it is
+        // opened, with no operational step at all.
+        //
+        // Best-effort: if the move fails the file is still served from where it is, so a
+        // read never breaks because of a housekeeping failure.
+        if ($this->relocateLegacyDocument($legacy, $private, $path)) {
+            return ['disk' => $private, 'path' => $path];
+        }
+
+        // A failed move has two very different causes and they need different answers.
+        //
+        // The copy genuinely failed        -> the file is still on the legacy disk, serve it.
+        // A CONCURRENT request already     -> the legacy copy is gone. Falling back to it
+        // finished its own move               would hand the caller a path to a file that
+        //                                     no longer exists, i.e. a 500 on a read.
+        //
+        // Re-checking the private disk distinguishes them. Ordered private-first so the
+        // secured copy always wins.
+        if (Storage::disk($private)->exists($path)) {
+            return ['disk' => $private, 'path' => $path];
+        }
+
+        return Storage::disk($legacy)->exists($path)
+            ? ['disk' => $legacy, 'path' => $path]
+            : null;
+    }
+
+    /**
+     * Copy a legacy file onto the private disk and drop the public copy.
+     *
+     * Size is verified before the delete: a truncated or empty write must not be allowed
+     * to destroy the only remaining copy.
+     */
+    private function relocateLegacyDocument(string $from, string $to, string $path): bool
+    {
+        try {
+            $stream = Storage::disk($from)->readStream($path);
+            if (! is_resource($stream)) {
+                return false;
+            }
+
+            Storage::disk($to)->writeStream($path, $stream);
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+
+            // Both sizes are read defensively: a concurrent mover may have deleted the
+            // source between the copy and this check, and size() on a missing file
+            // throws rather than returning null.
+            if (! Storage::disk($to)->exists($path) || ! Storage::disk($from)->exists($path)) {
+                return false;
+            }
+
+            if (Storage::disk($to)->size($path) !== Storage::disk($from)->size($path)) {
+                return false;
+            }
+
+            Storage::disk($from)->delete($path);
+
+            Log::info('course_repository.document.relocated', ['path' => $path]);
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::warning('course_repository.document.relocate_failed', [
+                'path' => $path,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    private function resolveDocumentRelativePath(CourseRepositoryDocument $document, ?string $disk = null): ?string
+    {
+        $disk = $disk ?: self::legacyDocumentDisk();
         $candidates = [];
 
         if ($document->normalized_full_path) {
@@ -863,7 +1182,7 @@ class CourseRepositoryController extends Controller
             if (!is_string($candidate) || trim($candidate) === '') {
                 continue;
             }
-            if (Storage::disk('public')->exists($candidate)) {
+            if (Storage::disk($disk)->exists($candidate)) {
                 return $candidate;
             }
         }
@@ -933,11 +1252,11 @@ class CourseRepositoryController extends Controller
      * Get subjects by course (AJAX endpoint)
      * GET /course-repository/subjects/{coursePk}
      */
-    public function getSubjectsByCourse($coursePk = null, Request $request = null)
+    public function getSubjectsByCourse($coursePk, Request $request)
     {
         try {
             // Support both route parameter and query parameter for flexibility
-            if (!$coursePk && $request) {
+            if (!$coursePk) {
                 $coursePk = $request->query('course_pk');
             }
             
@@ -964,32 +1283,35 @@ class CourseRepositoryController extends Controller
      * Get topics by subject (AJAX endpoint)
      * GET /course-repository/topics/{subjectPk}?course_master_pk={coursePk}
      */
-    public function getTopicsBySubject($subjectPk = null, Request $request = null)
+    public function getTopicsBySubject($subjectPk, Request $request)
     {
         try {
             // Support both route parameter and query parameter for flexibility
-            if (!$subjectPk && $request) {
+            if (!$subjectPk) {
                 $subjectPk = $request->query('subject_pk');
             }
-            
+
             // Get coursePk from query parameter
-            $coursePk = $request ? $request->query('course_master_pk') : null;
-            
+            $coursePk = $request->query('course_master_pk');
+
             if (!$subjectPk) {
                 return response()->json(['success' => false, 'data' => []], 422);
             }
 
-            // Get all topics that are mapped to this subject in course_repository_details
-            $query = Timetable::distinct()
-                ->leftJoin('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
-                ->where('timetable.subject_master_pk', $subjectPk);
-            
-            // Only filter by course if provided
-            if ($coursePk) {
-                $query->where('timetable.course_master_pk', $coursePk);
+            // A subject can be shared across many courses in the timetable table, so
+            // without the course scope this would return every topic ever taught under
+            // this subject, regardless of course. Fail closed (empty list) rather than
+            // silently falling back to the unscoped, cross-course result.
+            if (!$coursePk) {
+                return response()->json(['success' => true, 'data' => []]);
             }
-            
-            $topics = $query->select('timetable.pk', 'timetable.subject_topic', 'faculty_master.full_name as faculty_name', 'timetable.START_DATE')
+
+            // Get all topics that are mapped to this subject AND course in the timetable
+            $topics = Timetable::distinct()
+                ->leftJoin('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
+                ->where('timetable.subject_master_pk', $subjectPk)
+                ->where('timetable.course_master_pk', $coursePk)
+                ->select('timetable.pk', 'timetable.subject_topic', 'faculty_master.full_name as faculty_name', 'timetable.START_DATE')
                 ->get();
 
             return response()->json(['success' => true, 'data' => $topics]);
@@ -1560,29 +1882,29 @@ class CourseRepositoryController extends Controller
     /**
      * Document view (PDF viewer)
      */
-    public function documentView($documentId)
+    public function documentView(Request $request, $documentId)
     {
         try {
             $document = CourseRepositoryDetail::with(['documents', 'author', 'subject'])
                 ->findOrFail($documentId);
 
-            $pdfDocument = $document->documents->first();
+            // One session can carry several attachments: ?doc= names the one the
+            // caller listed, and only a live attachment of this session is shown.
+            $live = $document->documents->where('del_type', 1)->sortBy('pk');
+            $pdfDocument = $request->filled('doc')
+                ? $live->firstWhere('pk', (int) $request->query('doc'))
+                : $live->first();
             if (!$pdfDocument) {
                 return redirect()->back()->with('error', 'Document not found');
             }
 
-            $pdfRelativePath = $this->resolveDocumentRelativePath($pdfDocument);
-            // asset(), not Storage::disk('public')->url(): the disk's url is built from
-            // APP_URL, so it always pointed at http://localhost/storage/... no matter
-            // which host/port/subfolder the app was actually served from — the iframe
-            // then loaded nothing. asset() follows the current request's base, and is
-            // what CourseRepositoryDocument::public_file_url already uses.
-            // When the path resolves to nothing the file is not on the public disk at
-            // all, so public_file_url would only give the iframe a URL that 404s —
-            // i.e. a blank viewer with no explanation. Pass null instead and let the
-            // view show its "PDF document not available" state.
-            $pdfViewUrl = $pdfRelativePath
-                ? asset('storage/' . $pdfRelativePath)
+            // Route through the authenticated stream action rather than a /storage URL.
+            // The previous asset('storage/…') link was served by the web server before
+            // Laravel loaded, so the PDF was readable by anyone holding the link.
+            // Still null when the file cannot be found, so the view keeps showing its
+            // "PDF document not available" state instead of an iframe that 404s.
+            $pdfViewUrl = $this->resolveDocumentLocation($pdfDocument)
+                ? route('course-repository.document.stream', ['pk' => $pdfDocument->pk])
                 : null;
 
             return view('admin.course-repository.user.document-view', [
@@ -1681,9 +2003,8 @@ class CourseRepositoryController extends Controller
             // mismatches between DB and disk) so view/download links work, matching
             // the resolution already used by the admin panel's downloadDocument().
             $documents->each(function (CourseRepositoryDocument $doc) {
-                $relativePath = $this->resolveDocumentRelativePath($doc);
-                $doc->resolved_file_url = $relativePath
-                    ? Storage::disk('public')->url($relativePath)
+                $doc->resolved_file_url = $this->resolveDocumentLocation($doc)
+                    ? route('course-repository.document.stream', ['pk' => $doc->pk])
                     : null;
 
                 // Legacy imported rows store subject/topic/author foreign keys from the
@@ -1890,6 +2211,194 @@ class CourseRepositoryController extends Controller
                         $a->where('full_name', 'like', $term);
                     });
             });
+        }
+    }
+
+    /**
+     * Universal search across the whole Course Repository (user end).
+     *
+     * One page that answers "find me anything in here": documents, video sessions and
+     * category folders, from a single box, with optional refinements. Everything the
+     * query needs lives in App\Support\CourseRepositorySearch — including why it reads
+     * the raw text columns instead of the model relations.
+     *
+     * GET /course-repository-user/search
+     */
+    public function userSearch(Request $request)
+    {
+        try {
+            $criteria = CourseRepositorySearch::criteria($request);
+            $hasQuery = CourseRepositorySearch::hasQuery($criteria);
+
+            $documents = null;
+            $documentTotal = 0;
+            $categories = null;
+            $categoryPreview = collect();
+            $categoryCounts = [];
+            $categoryTotal = 0;
+
+            if ($hasQuery && ! $criteria['token_limit_exceeded']) {
+                if ($criteria['type'] !== CourseRepositorySearch::TYPE_CATEGORIES) {
+                    $documents = CourseRepositorySearch::documentQuery($criteria)
+                        ->paginate($criteria['per_page'])
+                        ->withQueryString();
+
+                    CourseRepositorySearch::decorate($documents);
+                    $documentTotal = $documents->total();
+                }
+
+                if ($criteria['type'] === CourseRepositorySearch::TYPE_CATEGORIES) {
+                    $matches = CourseRepositorySearch::categoryMatches($criteria);
+                    $categoryTotal = $matches->count();
+                    $categories = CourseRepositorySearch::paginateCollection($matches, $criteria['per_page'])
+                        ->withQueryString();
+                    $categoryCounts = CourseRepositorySearch::documentCounts(
+                        collect($categories->items())->pluck('pk')->all()
+                    );
+                } elseif ($criteria['type'] === CourseRepositorySearch::TYPE_ALL) {
+                    // A preview strip only. Document hits are the answer most of the
+                    // time; the Categories tab shows the full list.
+                    $matches = CourseRepositorySearch::categoryMatches($criteria);
+                    $categoryTotal = $matches->count();
+                    $categoryPreview = $matches->take(CourseRepositorySearch::CATEGORY_PREVIEW_LIMIT);
+                    $categoryCounts = CourseRepositorySearch::documentCounts(
+                        $categoryPreview->pluck('pk')->all()
+                    );
+                }
+            }
+
+            return view('admin.course-repository.user.search', [
+                'criteria' => $criteria,
+                'tokens' => $criteria['tokens'],
+                'hasQuery' => $hasQuery,
+                'documents' => $documents,
+                'documentTotal' => $documentTotal,
+                'categories' => $categories,
+                'categoryPreview' => $categoryPreview,
+                'categoryCounts' => $categoryCounts,
+                'categoryTotal' => $categoryTotal,
+                'chips' => CourseRepositorySearch::activeChips($criteria),
+                'facets' => CourseRepositorySearch::facets(),
+                'folderTrail' => $criteria['folder'] !== null
+                    ? CourseRepositorySearch::folderPath($criteria['folder'])
+                    : [],
+            ]);
+        } catch (Exception $e) {
+            // Never the message: a QueryException carries the SQL with the user's
+            // search in it, newlines and all, which forged log lines (PR #334 F-080).
+            Log::error('Course repository universal search failed', ['exception' => get_class($e)]);
+
+            return redirect()
+                ->route('admin.course-repository.user.index')
+                ->with('error', 'Search is unavailable right now. Please try again.');
+        }
+    }
+
+    /**
+     * Type-ahead suggestions for the universal search box.
+     *
+     * Suggests the values people actually search by — topic, subject, author, batch,
+     * document title — rather than whole result rows, so picking one narrows the
+     * search instead of jumping straight to a single file.
+     *
+     * GET /course-repository-user/search/suggest
+     */
+    public function userSearchSuggest(Request $request)
+    {
+        // ?q[] would make the cast below a PHP error, so anything that is not a
+        // plain scalar is treated as no term at all.
+        $raw = $request->query('q', '');
+        $term = is_scalar($raw) ? DataTableSearchHelper::normalizeRaw((string) $raw) : '';
+
+        if (mb_strlen($term) < 2) {
+            return response()->json(['suggestions' => []]);
+        }
+
+        $like = DataTableSearchHelper::likePattern($term);
+        $suggestions = [];
+        $seen = [];
+
+        $push = function ($value, string $type) use (&$suggestions, &$seen) {
+            $value = trim((string) $value);
+
+            // Bare numbers are legacy ids from the imported system; they mean nothing
+            // to a reader and would never be typed as a search.
+            if ($value === '' || ctype_digit($value)) {
+                return;
+            }
+
+            $key = mb_strtolower($type . '|' . $value);
+            if (isset($seen[$key])) {
+                return;
+            }
+            $seen[$key] = true;
+
+            $suggestions[] = [
+                'label' => Str::limit($value, 90),
+                'value' => $value,
+                'type' => $type,
+            ];
+        };
+
+        try {
+            $columns = [
+                ['topic_pk', 'Topic', 5],
+                ['subject_pk', 'Subject', 4],
+                ['author_name', 'Author', 4],
+                ['course_master_pk', 'Course', 3],
+            ];
+
+            // Suggestions follow the same folder rule as the results: nothing filed
+            // in a deleted folder, or beneath one, is offered (PR #334 F-013).
+            foreach ($columns as [$column, $label, $limit]) {
+                if (in_array($column, ['author_name', 'course_master_pk'], true)) {
+                    CourseRepositorySearch::displayLabelSuggestions($column, $like, $limit)
+                        ->each(fn ($value) => $push($value, $label));
+                    continue;
+                }
+
+                CourseRepositorySearch::excludeHiddenFolders(DB::table('course_repository_details'), 'course_repository_master_pk')
+                    ->whereRaw(CourseRepositorySearch::likeSql($column), [$like])
+                    ->whereRaw("{$column} not regexp '^[0-9]+$'")
+                    ->distinct()
+                    ->orderBy($column)
+                    ->limit($limit)
+                    ->pluck($column)
+                    ->each(fn ($value) => $push($value, $label));
+            }
+
+            CourseRepositorySearch::excludeHiddenFolders(
+                CourseRepositoryDocument::query()
+                    ->from('course_repository_documents as doc')
+                    ->leftJoin('course_repository_details as dt', 'dt.pk', '=', 'doc.course_repository_details_pk'),
+                'coalesce(dt.course_repository_master_pk, doc.course_repository_master_pk)'
+            )
+                ->where('doc.del_type', 1)
+                ->whereRaw(CourseRepositorySearch::likeSql('doc.file_title'), [$like])
+                ->distinct()
+                ->orderBy('doc.file_title')
+                ->limit(5)
+                ->pluck('doc.file_title')
+                ->each(fn ($value) => $push($value, 'Document'));
+
+            $hiddenFolders = array_flip(CourseRepositorySearch::hiddenFolderPks());
+            foreach (CourseRepositorySearch::folderTree() as $pk => $node) {
+                if (count($suggestions) >= 40) {
+                    break;
+                }
+                if (isset($hiddenFolders[$pk])) {
+                    continue;
+                }
+                if (stripos($node['name'], $term) !== false) {
+                    $push($node['name'], 'Category');
+                }
+            }
+
+            return response()->json(['suggestions' => array_slice($suggestions, 0, 12)]);
+        } catch (Exception $e) {
+            Log::error('Course repository search suggest failed', ['exception' => get_class($e)]);
+
+            return response()->json(['suggestions' => []]);
         }
     }
 }

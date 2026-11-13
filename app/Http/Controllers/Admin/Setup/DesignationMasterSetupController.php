@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\DesignationMaster;
 use Illuminate\Validation\Rule;
+use App\DataTables\MemberDataTable;
 
 class DesignationMasterSetupController extends Controller
 {
@@ -42,6 +43,13 @@ class DesignationMasterSetupController extends Controller
         $model->designation_name = $validated['designation_name'];
         $model->active_inactive = 1;
         $model->save();
+        // PR #319 re-review F-059: MemberDataTable does NOT currently read or display
+        // designation_master in any form (verified: grep "designation" against
+        // app/DataTables/MemberDataTable.php returns zero matches) — this bump (and
+        // the two further calls below, in update()/delete()) is therefore a harmless
+        // no-op today, kept in case a future column add restores the dependency the
+        // original comment here assumed.
+        MemberDataTable::bumpListingCacheEpoch();
         if($request->ajax()) {
             return response()->json([
                 'success'=>true,
@@ -66,6 +74,7 @@ class DesignationMasterSetupController extends Controller
         ]);
         $model->designation_name = $validated['designation_name'];
         $model->save();
+        MemberDataTable::bumpListingCacheEpoch();
         if($request->ajax()) {
             return response()->json([
                 'success'=>true,
@@ -86,6 +95,7 @@ class DesignationMasterSetupController extends Controller
         try { $pk = decrypt($id); } catch(\Exception $e){ abort(404); }
         $model = DesignationMaster::findOrFail($pk);
         $model->delete();
+        MemberDataTable::bumpListingCacheEpoch();
         if($request->ajax()) { return response()->json(['success'=>true,'deleted'=>true]); }
         return redirect()->route('admin.setup.designation_master.index')->with('success','Deleted');
     }

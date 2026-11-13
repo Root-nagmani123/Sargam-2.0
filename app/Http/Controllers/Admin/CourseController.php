@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\ExportsBrandedGrid;
 use App\Http\Controllers\Controller;
 use App\Models\CoursesMaster;
 use App\Models\CourseTeamMaster;
@@ -20,8 +21,138 @@ use App\Services\CourseService;
 
 class CourseController extends Controller
 {
+    use ExportsBrandedGrid;
+
     /** Cache TTL (seconds) for programme course-filter listings. */
     private const COURSE_LIST_CACHE_TTL = 3600; // 1 hour
+
+    /**
+     * The listing's export columns — the same six the grid shows (Status is a
+     * badge on screen and its label here; the Action cell has no export column),
+     * so a download reconciles against the screen it came from.
+     *
+     * One definition feeds CSV, Excel, PDF and Print; none of them may build
+     * their own column list.
+     *
+     * @return array<string, array{heading:string, class:string, value:callable}>
+     */
+    private function exportColumnDefs(): array
+    {
+        $date = fn ($value) => filled($value) ? Carbon::parse($value)->format('d-m-Y') : '-';
+
+        return [
+            'sno' => [
+                'heading' => 'S. No.',
+                'class' => 'col-sno',
+                'value' => fn ($row, int $index) => $index + 1,
+            ],
+            'course_name' => [
+                'heading' => 'Course Name',
+                'class' => 'col-name',
+                'value' => fn ($row) => (string) ($row->course_name ?: '-'),
+            ],
+            'couse_short_name' => [
+                'heading' => 'Short Name',
+                'class' => 'col-short',
+                'value' => fn ($row) => (string) ($row->couse_short_name ?: '-'),
+            ],
+            'course_year' => [
+                'heading' => 'Course Year',
+                'class' => 'col-year',
+                'value' => fn ($row) => (string) ($row->course_year ?: '-'),
+            ],
+            'start_year' => [
+                'heading' => 'Start Date',
+                'class' => 'col-date',
+                'value' => fn ($row) => $date($row->start_year),
+            ],
+            'end_date' => [
+                'heading' => 'End Date',
+                'class' => 'col-date',
+                'value' => fn ($row) => $date($row->end_date),
+            ],
+            'status' => [
+                'heading' => 'Status',
+                'class' => 'col-status',
+                'value' => fn ($row) => ((int) $row->active_inactive === 1) ? 'Active' : 'Inactive',
+            ],
+        ];
+    }
+
+    /**
+     * Course Master → CSV / Excel / PDF / Print, all four off one query and one
+     * column list via {@see ExportsBrandedGrid}.
+     *
+     * Honours everything the grid is showing: the Active/Archived pill, the
+     * Course Name filter, the search box and the Columns modal — and the same
+     * role scoping, because the query goes through
+     * {@see CourseMasterDataTable::applyListingScope()}.
+     */
+    public function export(Request $request, string $format = 'csv')
+    {
+        $format = strtolower($format);
+        abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
+
+        $statusFilter = $request->query('status_filter') === 'archive' ? 'archive' : 'active';
+        // Normalised once, the way applyListingScope() reads it: a value it
+        // ignores ("", "0") filters no rows and so must name no course either.
+        // A non-string value (course_filter[]=x) is treated as absent rather
+        // than cast, which would raise "Array to string conversion".
+        $courseFilter = $request->query('course_filter', '');
+        $courseFilter = is_string($courseFilter) ? trim($courseFilter) : '';
+        $courseFilter = empty($courseFilter) ? null : $courseFilter;
+        $search = $request->query('q', '');
+        $search = is_string($search) ? trim($search) : '';
+
+        $query = CourseMaster::query();
+        CourseMasterDataTable::applyListingScope($query, $statusFilter, $courseFilter);
+
+        if ($search !== '') {
+            // The same columns the grid's own search covers.
+            $query->where(function ($sub) use ($search) {
+                $sub->where('course_name', 'like', "%{$search}%")
+                    ->orWhere('couse_short_name', 'like', "%{$search}%")
+                    ->orWhere('course_year', 'like', "%{$search}%");
+            });
+        }
+
+        $rows = $query->orderBy('pk', 'desc')->get();
+
+        // The label is resolved through the same scope as the rows, so a
+        // course_filter outside the actor's courses names nothing (and a
+        // non-numeric value is never echoed back).
+        $courseLabel = $courseFilter !== null
+            ? CourseMasterDataTable::applyListingScope(CourseMaster::query(), $statusFilter, $courseFilter)
+                ->value('course_name')
+            : null;
+
+        $filterParts = array_filter([
+            'Status: ' . ($statusFilter === 'archive' ? 'Archived' : 'Active'),
+            $courseLabel !== null ? 'Course: ' . $courseLabel : null,
+            $search !== '' ? 'Search: ' . $search : null,
+        ]);
+
+        return $this->brandedGridResponse(
+            $format,
+            'Course Master',
+            'CourseMaster',
+            $rows,
+            $this->resolveExportColumns($this->exportColumnDefs(), $request),
+            implode('  |  ', $filterParts),
+            [
+                'emptyText' => 'No courses to export',
+                'centeredKeys' => ['sno', 'course_year', 'start_year', 'end_date', 'status'],
+                'textKeys' => ['course_year'],
+                'columnStyles' => '
+        .col-sno    { width: 6%;  text-align: center; }
+        .col-name   { width: 32%; }
+        .col-short  { width: 16%; }
+        .col-year   { width: 11%; text-align: center; }
+        .col-date   { width: 12%; text-align: center; }
+        .col-status { width: 11%; text-align: center; }',
+            ]
+        );
+    }
 
     public function index(CourseMasterDataTable $dataTable)
     {

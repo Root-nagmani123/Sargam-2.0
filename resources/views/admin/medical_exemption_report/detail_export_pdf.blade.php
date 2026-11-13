@@ -57,15 +57,6 @@
     </style>
 </head>
 <body>
-    <script type="text/php">
-        if (isset($pdf)) {
-            $text = "Page {PAGE_NUM} of {PAGE_COUNT}";
-            $size = 7;
-            $font = $fontMetrics->getFont("DejaVu Sans", "normal");
-            $w    = $fontMetrics->getTextWidth($text, $font, $size);
-            $pdf->page_text($pdf->get_width() - $w - 20, $pdf->get_height() - 18, $text, $font, $size, array(0.4, 0.4, 0.4));
-        }
-    </script>
 
     <table class="pdf-hdr">
         <tr>

@@ -20,6 +20,9 @@ class AvailableQuantityService
 
     private const CACHE_KEY_PREFIX = 'mess_available_qty:';
 
+    /** Fallback Redis TTL (seconds) when MESS_AVAILABLE_QTY_CACHE_SECONDS is unset. Write-time validation always passes $fresh=true and bypasses this cache, so this only bounds display staleness, not overselling risk. */
+    private const DEFAULT_CACHE_TTL = 300;
+
     /**
      * Get available quantities by item_subcategory_id for a store/sub-store.
      * Subtracts issued quantities from BOTH Selling Voucher (kitchen_issue) and Selling Voucher with Date Range.
@@ -29,6 +32,12 @@ class AvailableQuantityService
     public static function availableQuantitiesForStore(string $storeType, int $storeId, bool $fresh = false): array
     {
         if ($fresh) {
+            // $fresh is the write-validation read. Inside a transaction, lock the store so two
+            // stock-changing requests for the same store cannot both pass the check on the same stock.
+            // Callers that run other queries first lock up front with lockStoresForStockChange().
+            if (DB::transactionLevel() > 0) {
+                self::lockStoreForStockChange($storeType, $storeId);
+            }
             $map = self::computeAvailableQuantitiesForStore($storeType, $storeId);
             self::putCache($storeType, $storeId, $map);
 
@@ -62,6 +71,44 @@ class AvailableQuantityService
     }
 
     /**
+     * Row-lock the store until the surrounding transaction ends; a second request for the same store
+     * waits here. Under REPEATABLE READ a transaction's snapshot is fixed by its first plain read, so
+     * the lock must come before any other query in the transaction, or the waiting request still
+     * checks the stock as it was before the first request committed.
+     */
+    public static function lockStoreForStockChange(string $storeType, int $storeId): void
+    {
+        if ($storeId <= 0) {
+            return;
+        }
+        DB::table($storeType === 'sub_store' ? 'mess_sub_stores' : 'mess_stores')
+            ->where('id', $storeId)
+            ->lockForUpdate()
+            ->value('id');
+    }
+
+    /**
+     * Lock several stores as the first statements of a transaction, always in the same order
+     * (main stores, then sub-stores, each by id), so two multi-store writes cannot deadlock.
+     *
+     * @param  array<int, array{0: string, 1: int}>  $stores  [store type, store id] pairs; duplicates are fine
+     */
+    public static function lockStoresForStockChange(array $stores): void
+    {
+        $keyed = [];
+        foreach ($stores as [$storeType, $storeId]) {
+            $type = $storeType === 'sub_store' ? 'sub_store' : 'store';
+            if ((int) $storeId > 0) {
+                $keyed[$type.':'.(int) $storeId] = [$type, (int) $storeId];
+            }
+        }
+        uasort($keyed, fn ($a, $b) => [$a[0] === 'sub_store', $a[1]] <=> [$b[0] === 'sub_store', $b[1]]);
+        foreach ($keyed as [$type, $id]) {
+            self::lockStoreForStockChange($type, $id);
+        }
+    }
+
+    /**
      * Invalidate all cached available-quantity maps (issue / return / stock mutations).
      */
     public static function bumpCacheEpoch(): void
@@ -74,6 +121,46 @@ class AvailableQuantityService
                 'message' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Lowering or cancelling a return adds that quantity back to the sale, so it has to be in
+     * stock now: the returned goods may already have been sold to another buyer.
+     *
+     * @param  array<int, float>  $available  from availableQuantitiesForStore(), read before the returns change
+     * @param  array<int, array{qty: float, name: string}>  $reductions  item_subcategory_id => net quantity the returns go down by
+     * @return array<int, string>  one message per item that is short of stock
+     */
+    public static function returnReductionShortfalls(array $available, array $reductions): array
+    {
+        return array_values(array_map(
+            fn (array $s) => "{$s['name']}: return cannot be reduced by {$s['qty']}, only {$s['in_stock']} is in stock (the returned quantity has already been issued).",
+            self::stockShortfalls($available, $reductions)
+        ));
+    }
+
+    /**
+     * Items that do not have enough stock for the quantity about to be taken out of the store.
+     *
+     * @param  array<int, float>  $available  from availableQuantitiesForStore(), read before the change
+     * @param  array<int, array{qty: float, name: string}>  $reductions  item_subcategory_id => net quantity taken out (zero or negative: none)
+     * @return array<int, array{name: string, qty: float, in_stock: float}>
+     */
+    public static function stockShortfalls(array $available, array $reductions): array
+    {
+        $shortfalls = [];
+        foreach ($reductions as $itemId => $reduction) {
+            $qty = round((float) $reduction['qty'], 4);
+            if ($qty <= 0) {
+                continue;
+            }
+            $inStock = round((float) ($available[$itemId] ?? 0), 4);
+            if ($qty > $inStock) {
+                $shortfalls[$itemId] = ['name' => $reduction['name'], 'qty' => $qty, 'in_stock' => $inStock];
+            }
+        }
+
+        return $shortfalls;
     }
 
     /**
@@ -183,6 +270,6 @@ class AvailableQuantityService
 
     private static function cacheTtlSeconds(): int
     {
-        return max(0, (int) env('MESS_AVAILABLE_QTY_CACHE_SECONDS', 90));
+        return max(0, (int) env('MESS_AVAILABLE_QTY_CACHE_SECONDS', self::DEFAULT_CACHE_TTL));
     }
 }

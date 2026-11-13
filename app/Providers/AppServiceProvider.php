@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\CalendarEvent;
+use App\Models\FacultyMaster;
+use App\Models\Timetable;
+use App\Support\FeedbackReportCache;
 use App\Support\FeedbackReportRouteRegistry;
 use App\Services\FC\FcPostArrivalAccessService;
 use App\Services\NotificationService;
@@ -39,6 +43,50 @@ class AppServiceProvider extends ServiceProvider
     {
         Paginator::useBootstrap();
 
+        /*
+         * The session-feedback report lookups (topic list, faculty dropdown, typeahead) are
+         * cached under a generation counter that only submitFeedback() used to bump. Those
+         * lists derive from timetable and faculty_master, not from topic_feedback, so adding
+         * a session or renaming a faculty left the dropdowns stale until the TTL expired —
+         * before the caching went in they were always fresh.
+         *
+         * Hooked on the models rather than the write call sites, so a write added later is covered
+         * without anyone remembering to bust. Today every timetable write is an Eloquent
+         * CalendarEvent instance call in CalendarController - save() in store() and
+         * update_event(), delete() in delete_event() - and faculty_master is written from several
+         * controllers.
+         *
+         * Model events do NOT see query-builder writes. faculty_master has some:
+         * FacultyController updates faculty_code through FacultyMaster::where(...)->update()
+         * after saving, and UserController::toggleStatus() can update any table. These are safe
+         * today only because no cached lookup selects faculty_code or the toggled status column.
+         * A builder write to a column the cached lookups DO read (full_name, faculty_type,
+         * timetable fields) must call FeedbackReportCache::bust() itself.
+         *
+         * CalendarEvent is listed because Eloquent events are per model CLASS, not per table,
+         * and TWO classes map to `timetable`: Timetable (app/Models/Timetable.php) and
+         * CalendarEvent (app/Models/CalendarEvent.php). Every session write goes through
+         * CalendarEvent — create/update/delete in CalendarController — while Timetable is
+         * only ever read from. Hooking Timetable alone therefore registered on a class
+         * nothing writes, and session changes left the topic dropdown stale for the full
+         * TTL. Timetable stays in the list so the coverage survives if a write path is ever
+         * added through it.
+         *
+         * The bust is deferred to after commit. saved/deleted fire inside the caller's
+         * transaction (FacultyController saves inside one and keeps working before it
+         * commits), so an immediate bust let a concurrent read cache the still-committed
+         * old row under the new generation, where it stayed for the full TTL. afterCommit()
+         * runs the callback at once when no transaction is open, and drops it on rollback,
+         * when nothing changed.
+         */
+        $bustAfterCommit = static function ($model) {
+            $model->getConnection()->afterCommit(static fn () => FeedbackReportCache::bust());
+        };
+        foreach ([CalendarEvent::class, Timetable::class, FacultyMaster::class] as $model) {
+            $model::saved($bustAfterCommit);
+            $model::deleted($bustAfterCommit);
+        }
+
         // Schema introspection (Schema::hasTable/hasColumn) is cached across requests
         // by fc_schema_columns() because information_schema reads contend badly under
         // load. Migrations are the only thing that can invalidate it, so flush there.
@@ -54,6 +102,20 @@ class AppServiceProvider extends ServiceProvider
         Validator::extend('no_html', function ($attribute, $value) {
             return ! is_string($value) || preg_match('/[<>]/', $value) === 0;
         }, 'The :attribute field must not contain HTML or the characters < and >.');
+
+        // Word-count limits for free-text answers, e.g. `required|string|min_words:100|max_words:1200`
+        // in the FC form builder. Laravel's min/max count CHARACTERS, which admins kept mistaking
+        // for words. A word is any run of non-whitespace (Unicode-aware, so Hindi counts too);
+        // fc_word_count() is the single definition, shared with the live counter on the form.
+        Validator::extend('min_words', function ($attribute, $value, $parameters) {
+            return ! is_string($value) || fc_word_count($value) >= (int) ($parameters[0] ?? 0);
+        }, 'The :attribute must be at least :min words.');
+        Validator::replacer('min_words', fn ($message, $attribute, $rule, $parameters) => str_replace(':min', (string) (int) ($parameters[0] ?? 0), $message));
+
+        Validator::extend('max_words', function ($attribute, $value, $parameters) {
+            return ! is_string($value) || fc_word_count($value) <= (int) ($parameters[0] ?? PHP_INT_MAX);
+        }, 'The :attribute must not be more than :max words.');
+        Validator::replacer('max_words', fn ($message, $attribute, $rule, $parameters) => str_replace(':max', (string) (int) ($parameters[0] ?? 0), $message));
 
         view()->composer('*', function ($view) use ($menuService) {
             if (! auth()->check()) {

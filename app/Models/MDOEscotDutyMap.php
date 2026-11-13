@@ -69,10 +69,30 @@ class MDOEscotDutyMap extends Model
     public function facultyPks(): array
     {
         if (!empty($this->faculty_master_pks)) {
-            return array_values(array_filter(array_map('intval', explode(',', $this->faculty_master_pks))));
+            return array_values(array_unique(array_filter(array_map('intval', explode(',', $this->faculty_master_pks)))));
         }
 
         return $this->faculty_master_pk ? [(int) $this->faculty_master_pk] : [];
+    }
+
+    /**
+     * Duties the given faculty is associated with — any position in
+     * faculty_master_pks, not only the first (faculty_master_pk). Legacy rows
+     * with no faculty_master_pks match on faculty_master_pk, as facultyPks() does.
+     */
+    public function scopeAssociatedWithFaculty($query, int $facultyPk)
+    {
+        $pks = $query->qualifyColumn('faculty_master_pks');
+        $pk = $query->qualifyColumn('faculty_master_pk');
+
+        return $query->where(function ($q) use ($facultyPk, $pks, $pk) {
+            $q->whereRaw("FIND_IN_SET(?, {$pks}) > 0", [$facultyPk])
+              ->orWhere(function ($legacy) use ($facultyPk, $pks, $pk) {
+                  $legacy->where(function ($none) use ($pks) {
+                      $none->whereNull($pks)->orWhere($pks, '');
+                  })->where($pk, $facultyPk);
+              });
+        });
     }
 
     /**

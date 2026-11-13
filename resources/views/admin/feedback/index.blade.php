@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'My Session Feedback - Sargam | Lal Bahadur')
+@section('title', 'My Session Feedback')
 
 @section('setup_content')
 <style>

@@ -22,8 +22,8 @@
     $storeDetails = $selectedStores->isEmpty()
         ? 'All Stores'
         : $selectedStores->pluck('store_name')->implode(', ');
-    $emblemSrc = $emblemSrc ?? 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
-    $lbsnaaLogoSrc = $lbsnaaLogoSrc ?? 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
+    $emblemSrc = $emblemSrc ?? pdf_emblem_src();
+    $lbsnaaLogoSrc = $lbsnaaLogoSrc ?? pdf_lbsnaa_logo_src();
 @endphp
 <!doctype html>
 <html lang="en">

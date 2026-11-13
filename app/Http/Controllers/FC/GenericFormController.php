@@ -71,7 +71,10 @@ class GenericFormController extends Controller
         // v2: fc_form_steps gained applicability_rule. Entries cached under v1 predate the
         // column, and a step payload without it silently falls back to the legacy
         // step-name match — bump rather than wait out the TTL.
-        $cacheKey = 'fc_form_structure:v2:' . md5(json_encode([
+        // v3: fc_form_group_fields gained condition_field / condition_value. A group payload
+        // cached under v2 has neither, so a conditional field would render permanently
+        // visible until the entry expired.
+        $cacheKey = 'fc_form_structure:v3:' . md5(json_encode([
             'epoch'  => $epoch,
             'form'   => $formId,
             'suffix' => $suffix,
@@ -665,11 +668,12 @@ class GenericFormController extends Controller
 
     /**
      * Travel Plan is not an admin-configurable step, but it closes the flow for any
-     * form that has a Bank Details step — the same rule the dashboard card uses.
+     * form with an anchor step (FcRegistrationFlowService::travelAnchorStep) — the same
+     * rule the dashboard card uses.
      */
     private function travelPlanPending(FcForm $form, $userId): bool
     {
-        if (! $form->activeSteps->firstWhere('tracker_column', 'bank_done')) {
+        if (! app(FcRegistrationFlowService::class)->travelAnchorStep($form, $form->activeSteps)) {
             return false;
         }
 

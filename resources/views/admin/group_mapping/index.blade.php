@@ -4,10 +4,11 @@
 
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css" />
+<link rel="stylesheet" href="{{ asset('css/programme-admin.css') }}?v={{ @filemtime(public_path('css/programme-admin.css')) ?: time() }}">
 @endpush
 
 @section('setup_content')
-<div class="container-fluid gm-master-page">
+<div class="container-fluid prog-page gm-master-page">
     <x-breadcrum title="Course Group Mapping" :showBack="false">
         <div class="d-flex flex-wrap justify-content-end align-items-center gap-2">
             <div class="dropdown gm-add-student-hover">
@@ -85,8 +86,8 @@
             <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-1 py-2" aria-labelledby="gmDownloadBtn">
                 <li>
                     <button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="gmDownloadCsv">
-                        <i class="bi bi-filetype-csv text-success" aria-hidden="true"></i>
-                        <span>Download CSV</span>
+                        <i class="bi bi-filetype-xlsx text-success" aria-hidden="true"></i>
+                        <span>Download Excel</span>
                     </button>
                 </li>
                 <li>
@@ -162,25 +163,25 @@
 </div>
 
 <!-- Add / Edit Group Mapping Modal -->
-<div class="modal fade gm-mapping-modal" id="gmAddGroupMappingModal" tabindex="-1"
+<div class="modal fade prog-modal gm-mapping-modal" id="gmAddGroupMappingModal" tabindex="-1"
     aria-labelledby="gmAddGroupMappingModalLabel" aria-hidden="true" data-bs-backdrop="static"
     data-bs-keyboard="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content cgt-form-modal border-0">
+        <div class="modal-content">
             <form action="{{ route('group.mapping.store') }}" method="POST" id="classSessionForm" novalidate>
                 @csrf
                 <input type="hidden" name="pk" id="gmMappingPk" value="">
-                <div class="modal-header">
-                    <h5 class="modal-title mb-0" id="gmAddGroupMappingModalLabel">Add Group Mapping</h5>
+                <div class="prog-modal-header">
+                    <h5 class="prog-modal-title" id="gmAddGroupMappingModalLabel">Add Group Mapping</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="prog-modal-body">
                     <div id="gmAddGroupMappingAlert" class="alert d-none mb-3" role="alert"></div>
 
-                    <div class="gm-mapping-form-fields">
-                        <div class="mb-3">
-                            <label for="gmCourseId" class="form-label cgt-field-label mb-2">Course Name <span class="text-danger">*</span></label>
-                            <select class="form-select" id="gmCourseId" name="course_id" required>
+                    <div class="gm-mapping-form-fields prog-field-card">
+                        <div class="prog-field">
+                            <label for="gmCourseId" class="prog-field-label">Course Name <span class="prog-req">*</span></label>
+                            <select class="prog-control" id="gmCourseId" name="course_id" required>
                                 <option value="">Select Course Name</option>
                                 @foreach($allCourses ?? [] as $pk => $name)
                                 <option value="{{ $pk }}" {{ count($allCourses ?? []) === 1 ? 'selected' : '' }}>{{ $name }}</option>
@@ -188,9 +189,9 @@
                             </select>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="gmTypeId" class="form-label cgt-field-label mb-2">Group Type <span class="text-danger">*</span></label>
-                            <select class="form-select" id="gmTypeId" name="type_id" required>
+                        <div class="prog-field">
+                            <label for="gmTypeId" class="prog-field-label">Group Type <span class="prog-req">*</span></label>
+                            <select class="prog-control" id="gmTypeId" name="type_id" required>
                                 <option value="">Select Group Type</option>
                                 @foreach($groupTypes ?? [] as $pk => $name)
                                 <option value="{{ $pk }}">{{ $name }}</option>
@@ -198,15 +199,15 @@
                             </select>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="gmGroupName" class="form-label cgt-field-label mb-2">Group Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="gmGroupName" name="group_name"
+                        <div class="prog-field">
+                            <label for="gmGroupName" class="prog-field-label">Group Name <span class="prog-req">*</span></label>
+                            <input type="text" class="prog-control" id="gmGroupName" name="group_name"
                                 placeholder="eg. IAS Course" required maxlength="255" autocomplete="off">
                         </div>
 
-                        <div class="mb-0">
-                            <label for="gmFacilityId" class="form-label cgt-field-label mb-2">Faculty</label>
-                            <select class="form-select js-gm-faculty-choice" id="gmFacilityId" name="facility_id">
+                        <div class="prog-field">
+                            <label for="gmFacilityId" class="prog-field-label">Faculty</label>
+                            <select class="prog-control js-gm-faculty-choice" id="gmFacilityId" name="facility_id">
                                 <option value="">Select</option>
                                 @foreach($facilities ?? [] as $pk => $name)
                                 <option value="{{ $pk }}">{{ $name }}</option>
@@ -215,9 +216,9 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 gap-2 justify-content-end">
-                    <button type="button" class="btn btn-outline-primary rounded-1 btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary rounded-1 px-4" id="saveClassSessionForm">
+                <div class="prog-modal-footer">
+                    <button type="button" class="btn prog-btn-cancel btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn prog-btn-submit" id="saveClassSessionForm">
                         Create Group Mapping
                     </button>
                 </div>
@@ -227,40 +228,41 @@
 </div>
 
 <!-- Add Student Modal (Single) -->
-<div class="modal fade" id="addStudentModal" tabindex="-1"
+<div class="modal fade prog-modal" id="addStudentModal" tabindex="-1"
     aria-labelledby="addStudentModalLabel" aria-hidden="true" data-bs-backdrop="static"
     data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content cgt-form-modal border-0 shadow-lg rounded-4">
+        <div class="modal-content shadow-lg">
             <form id="addStudentForm">
                 @csrf
-                <div class="modal-header border-bottom">
-                    <h5 class="modal-title fw-bold mb-0" id="addStudentModalLabel">Add Student</h5>
+                <div class="prog-modal-header">
+                    <h5 class="prog-modal-title" id="addStudentModalLabel">Add Student</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="prog-modal-body">
                     <div id="addStudentAlert" class="alert d-none" role="alert"></div>
 
-                    <div class="mb-3">
-                        <label for="studentOtCode" class="form-label cgt-field-label">OT Code <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control rounded-1" id="studentOtCode" name="otcode"
-                            placeholder="eg. OT1344" required maxlength="255">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="studentName" class="form-label cgt-field-label">OT Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control rounded-1" id="studentName" name="name"
-                            placeholder="eg. John Doe" required maxlength="255">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="studentCourse" class="form-label cgt-field-label">Course Name <span class="text-danger">*</span></label>
-                        <select class="form-select rounded-1" id="studentCourse" name="course_master_pk" required>
+                    <div class="prog-field">
+                        <label for="studentCourse" class="prog-field-label">Course Name <span class="prog-req">*</span></label>
+                        <select class="prog-control" id="studentCourse" name="course_master_pk" required>
                             <option value="">Select Course Name</option>
                             @foreach($allCourses ?? [] as $pk => $name)
                             <option value="{{ $pk }}" {{ count($allCourses ?? []) === 1 ? 'selected' : '' }}>{{ $name }}</option>
                             @endforeach
                         </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="studentOtCode" class="form-label cgt-field-label">OT Code <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control rounded-1" id="studentOtCode" name="otcode"
+                            placeholder="eg. OT1344" required maxlength="255" disabled>
+                        <small class="text-muted d-block mt-1" id="studentOtCodeHelp">Please select a course first</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="studentName" class="form-label cgt-field-label">OT Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control rounded-1 bg-light" id="studentName" name="name"
+                            placeholder="Auto-filled from OT code" maxlength="255" readonly tabindex="-1">
                     </div>
 
                     <div class="mb-3">
@@ -273,17 +275,17 @@
                         </select>
                     </div>
 
-                    <div class="mb-0">
-                        <label for="studentGroupName" class="form-label cgt-field-label">Group Name</label>
-                        <select class="form-select rounded-1" id="studentGroupName" name="group_name" required disabled>
+                    <div class="prog-field">
+                        <label for="studentGroupName" class="prog-field-label">Group Name</label>
+                        <select class="prog-control" id="studentGroupName" name="group_name" required disabled>
                             <option value="">Select</option>
                         </select>
                         <small class="text-muted d-block mt-1" id="groupNameHelp">Please select a group type first</small>
                     </div>
                 </div>
-                <div class="modal-footer border-top gap-2">
-                    <button type="button" class="btn btn-outline-primary rounded-1 btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary rounded-1 px-4">
+                <div class="prog-modal-footer">
+                    <button type="button" class="btn prog-btn-cancel btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn prog-btn-submit">
                         Add Student
                     </button>
                 </div>
@@ -293,18 +295,18 @@
 </div>
 
 <!-- Add in Bulk Modal -->
-<div class="modal fade" id="importModal" tabindex="-1"
+<div class="modal fade prog-modal" id="importModal" tabindex="-1"
     aria-labelledby="importModalLabel" aria-hidden="true" data-bs-backdrop="static"
     data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content cgt-form-modal gm-bulk-modal border-0 shadow-lg rounded-4">
+        <div class="modal-content gm-bulk-modal shadow-lg">
             <form method="POST" enctype="multipart/form-data" id="importExcelForm">
                 @csrf
-                <div class="modal-header border-bottom">
-                    <h5 class="modal-title fw-bold mb-0" id="importModalLabel">Add in Bulk</h5>
+                <div class="prog-modal-header">
+                    <h5 class="prog-modal-title" id="importModalLabel">Add in Bulk</h5>
                     <button type="button" class="btn-close btn-cancel" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="prog-modal-body">
                     <div class="gm-import-progress-wrap mb-4">
                         <div class="progress rounded-1" style="height: 6px;" role="progressbar"
                             aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
@@ -332,9 +334,9 @@
                             <i class="bi bi-info-circle-fill flex-shrink-0 mt-1" aria-hidden="true"></i>
                             <span id="importBulkInfoText">Your file is ready. Select a course to complete the import.</span>
                         </div>
-                        <div class="mb-0">
-                            <label for="course_master_pk_model" class="form-label cgt-field-label">Course Name <span class="text-danger">*</span></label>
-                            <select name="course_master_pk" id="course_master_pk_model" class="form-select rounded-1" required>
+                        <div class="prog-field-card">
+                            <label for="course_master_pk_model" class="prog-field-label">Course Name <span class="prog-req">*</span></label>
+                            <select name="course_master_pk" id="course_master_pk_model" class="prog-control" required>
                                 <option value="">Select</option>
                                 @foreach($allCourses ?? [] as $pk => $name)
                                 <option value="{{ $pk }}" {{ count($allCourses ?? []) === 1 ? 'selected' : '' }}>{{ $name }}</option>
@@ -343,10 +345,10 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top gap-2 justify-content-end">
-                    <button type="button" class="btn btn-outline-primary rounded-1 btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary rounded-1 px-4" id="gmImportNext">Next</button>
-                    <button type="button" class="btn btn-primary rounded-1 px-4 d-none" id="upload_import">
+                <div class="prog-modal-footer">
+                    <button type="button" class="btn prog-btn-cancel btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn prog-btn-submit" id="gmImportNext">Next</button>
+                    <button type="button" class="btn prog-btn-submit d-none" id="upload_import">
                         Add Course Group Mapping
                     </button>
                 </div>
@@ -373,17 +375,17 @@
 </div>
 
 <!-- Student Details Modal -->
-<div class="modal fade" id="studentDetailsModal" tabindex="-1"
+<div class="modal fade prog-modal" id="studentDetailsModal" tabindex="-1"
     aria-labelledby="studentDetailsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <div class="modal-header border-bottom px-4 py-3">
-                <h5 class="modal-title fw-semibold mb-0" id="studentDetailsModalLabel">
+        <div class="modal-content shadow-lg overflow-hidden">
+            <div class="prog-modal-header">
+                <h5 class="prog-modal-title" id="studentDetailsModalLabel">
                     <i class="bi bi-person-vcard me-2 text-primary" aria-hidden="true"></i> Student Details
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-4">
+            <div class="prog-modal-body">
                 <div class="mb-3">
                     <div class="programme-dt-search w-100">
                         <div class="input-group">
@@ -405,7 +407,10 @@
                         <span id="studentSearchResultsCount"></span>
                     </small>
                 </div>
-                <div id="studentDetailsContent" class="rounded-1 bg-body-tertiary border p-3">
+                {{-- No box of its own: the partial brings its own .programme-dt-panel,
+                     and the old tinted-bordered-padded wrapper drew a second frame
+                     around it. --}}
+                <div id="studentDetailsContent">
                     <p class="text-muted mb-0">Loading student details...</p>
                 </div>
                 <div id="bulkMessageContainer" class="mt-4 d-none">
@@ -446,10 +451,17 @@
             <div class="modal-footer border-top justify-content-between align-items-center px-4 py-3">
                 <div class="text-muted small" id="selectedOtCount">0 OT(s) selected</div>
                 <div class="d-flex gap-2 flex-wrap">
+                    {{-- Same student-list report as the row Download icons: an LBSNAA-branded
+                         sheet/PDF headed by Course Name, Course Duration and Group Type. --}}
+                    <button type="button" class="btn btn-outline-success rounded-1" id="gmStudentListExcel">
+                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Download Excel
+                    </button>
+                    <button type="button" class="btn btn-outline-danger rounded-1" id="gmStudentListPdf">
+                        <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> Download PDF
+                    </button>
                     <button type="button" class="btn btn-outline-primary rounded-1" id="toggleBulkMessage">
                         <i class="bi bi-send-check me-1" aria-hidden="true"></i> Send SMS / Send Email
                     </button>
-                    <button type="button" class="btn btn-secondary rounded-1" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -476,40 +488,40 @@
 </div>
 
 <!-- Edit Student Modal -->
-<div class="modal fade" id="editStudentModal" tabindex="-1"
+<div class="modal fade prog-modal" id="editStudentModal" tabindex="-1"
     aria-labelledby="editStudentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content cgt-form-modal border-0 shadow-lg rounded-4">
+        <div class="modal-content shadow-lg">
             <form id="editStudentForm">
                 @csrf
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="editStudentModalLabel">Edit Student</h5>
+                <div class="prog-modal-header">
+                    <h5 class="prog-modal-title" id="editStudentModalLabel">Edit Student</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="prog-modal-body">
                     <div id="editStudentAlert" class="alert d-none" role="alert"></div>
                     <input type="hidden" name="student_id" id="editStudentId">
-                    <div class="mb-3">
-                        <label for="editStudentName" class="form-label cgt-field-label">Display Name</label>
-                        <input type="text" class="form-control rounded-1" id="editStudentName"
-                            name="display_name" required maxlength="255">
-                    </div>
-                    <div class="mb-3">
-                        <label for="editStudentEmail" class="form-label cgt-field-label">Email</label>
-                        <input type="email" class="form-control rounded-1" id="editStudentEmail"
-                            name="email" maxlength="255">
-                    </div>
-                    <div class="mb-0">
-                        <label for="editStudentContact" class="form-label cgt-field-label">Contact No</label>
-                        <input type="text" class="form-control rounded-1" id="editStudentContact"
-                            name="contact_no" maxlength="20">
+                    <div class="prog-field-card">
+                        <div class="prog-field">
+                            <label for="editStudentName" class="prog-field-label">Display Name <span class="prog-req">*</span></label>
+                            <input type="text" class="prog-control" id="editStudentName"
+                                name="display_name" required maxlength="255">
+                        </div>
+                        <div class="prog-field">
+                            <label for="editStudentEmail" class="prog-field-label">Email</label>
+                            <input type="email" class="prog-control" id="editStudentEmail"
+                                name="email" maxlength="255">
+                        </div>
+                        <div class="prog-field">
+                            <label for="editStudentContact" class="prog-field-label">Contact No</label>
+                            <input type="text" class="prog-control" id="editStudentContact"
+                                name="contact_no" maxlength="20">
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 gap-2">
-                    <button type="button" class="btn btn-outline-primary rounded-1" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary rounded-1">
-                        <i class="bi bi-check-lg me-1" aria-hidden="true"></i> Save Changes
-                    </button>
+                <div class="prog-modal-footer">
+                    <button type="button" class="btn prog-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn prog-btn-submit">Save Changes</button>
                 </div>
             </form>
         </div>
@@ -814,6 +826,25 @@ $(document).ready(function() {
         window.open(url, '_blank');
     });
 
+    /* ---------- Student-list report for the group open in the View modal ----------
+       window.currentGroupMappingId is the encrypted mapping id set by the .view-student
+       handler (custom.js). Encoded the same way route() encodes it in the row links. */
+    function gmDownloadStudentList(urlTemplate) {
+        var id = window.currentGroupMappingId;
+        if (!id) {
+            return;
+        }
+        window.open(urlTemplate.replace('__GM_ID__', encodeURIComponent(id)), '_blank');
+    }
+
+    $('#gmStudentListExcel').on('click', function() {
+        gmDownloadStudentList('{{ route('group.mapping.export.student.list', '__GM_ID__') }}');
+    });
+
+    $('#gmStudentListPdf').on('click', function() {
+        gmDownloadStudentList('{{ route('group.mapping.export.student.list.pdf', '__GM_ID__') }}');
+    });
+
     $('#studentGroupType').on('change', function() {
         const groupTypeSelect = $(this);
         const groupNameSelect = $('#studentGroupName');
@@ -861,6 +892,97 @@ $(document).ready(function() {
                 groupNameHelp.text(errorMessage).removeClass('text-success text-muted').addClass('text-danger');
             }
         });
+    });
+
+    // Add Student (Single): Course must be picked before OT Code is usable, and
+    // OT Name is always resolved server-side from OT Code + Course (never
+    // free-typed) — OT codes repeat across different courses/batches, so the
+    // name has to be looked up scoped to the selected course, not guessed.
+    const studentOtCodeInput = $('#studentOtCode');
+    const studentNameInput = $('#studentName');
+    const studentOtCodeHelp = $('#studentOtCodeHelp');
+    let studentOtCodeLookupTimer = null;
+    let studentOtCodeXhr = null;
+    // Bumped on every course change / OT-code edit so an in-flight request's
+    // callback can tell it's been superseded and must not touch the DOM —
+    // clearing the debounce timer only stops requests that haven't fired yet,
+    // not ones already on the wire, so a slow, stale response could otherwise
+    // land after a newer one and overwrite the Name field with the wrong
+    // (previous course's) student.
+    let studentOtCodeRequestId = 0;
+
+    function abortPendingStudentLookup() {
+        clearTimeout(studentOtCodeLookupTimer);
+        if (studentOtCodeXhr) {
+            studentOtCodeXhr.abort();
+            studentOtCodeXhr = null;
+        }
+    }
+
+    function resetStudentOtCodeAndName(courseSelected) {
+        studentOtCodeRequestId++;
+        abortPendingStudentLookup();
+        studentOtCodeInput.val('').prop('disabled', !courseSelected);
+        studentNameInput.val('');
+        studentOtCodeHelp.text(courseSelected ? '' : 'Please select a course first')
+            .removeClass('text-success text-danger').addClass('text-muted');
+    }
+
+    $('#studentCourse').on('change', function() {
+        resetStudentOtCodeAndName(!!$(this).val());
+    });
+
+    // Covers the case where only one active course exists and its <option>
+    // is pre-selected server-side (no 'change' event fires for that).
+    $('#addStudentModal').on('show.bs.modal', function() {
+        resetStudentOtCodeAndName(!!$('#studentCourse').val());
+    });
+
+    studentOtCodeInput.on('input', function() {
+        const otcode = $(this).val().trim();
+        const coursePk = $('#studentCourse').val();
+        const requestId = ++studentOtCodeRequestId;
+
+        studentNameInput.val('');
+        abortPendingStudentLookup();
+
+        if (!otcode || !coursePk) {
+            studentOtCodeHelp.text('').removeClass('text-success text-danger').addClass('text-muted');
+            return;
+        }
+
+        studentOtCodeHelp.text('Looking up...').removeClass('text-success text-danger').addClass('text-muted');
+
+        studentOtCodeLookupTimer = setTimeout(function() {
+            studentOtCodeXhr = $.ajax({
+                url: routes.groupMappingGetStudentByOtCode,
+                type: 'POST',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    otcode: otcode,
+                    course_master_pk: coursePk
+                },
+                success: function(response) {
+                    if (requestId !== studentOtCodeRequestId) return; // superseded
+
+                    if (response.status === 'success') {
+                        studentNameInput.val(response.name);
+                        studentOtCodeHelp.text('Student found').removeClass('text-muted text-danger').addClass('text-success');
+                    } else {
+                        studentNameInput.val('');
+                        studentOtCodeHelp.text(response.message || 'Student not found')
+                            .removeClass('text-muted text-success').addClass('text-danger');
+                    }
+                },
+                error: function(xhr) {
+                    if (requestId !== studentOtCodeRequestId || xhr.statusText === 'abort') return; // superseded/cancelled
+
+                    studentNameInput.val('');
+                    const message = (xhr.responseJSON && xhr.responseJSON.message) || 'Student not found for this course.';
+                    studentOtCodeHelp.text(message).removeClass('text-muted text-success').addClass('text-danger');
+                }
+            });
+        }, 400);
     });
 
     function resetGmImportWizard() {
@@ -951,6 +1073,7 @@ $(document).ready(function() {
         $('#addStudentAlert').addClass('d-none');
         $('#studentGroupName').html('<option value="">Select</option>').prop('disabled', true);
         $('#groupNameHelp').text('Please select a group type first').removeClass('text-success text-danger').addClass('text-muted');
+        resetStudentOtCodeAndName(!!$('#studentCourse').val());
     });
 
     const gmAddGroupMappingModalEl = document.getElementById('gmAddGroupMappingModal');
@@ -1232,6 +1355,13 @@ $(document).ready(function() {
         const form = $(this);
         const submitBtn = form.find('button[type="submit"]');
         const alertBox = $('#addStudentAlert');
+
+        if (!studentNameInput.val()) {
+            alertBox.removeClass('d-none alert-success')
+                .addClass('alert-danger')
+                .html('<i class="bi bi-exclamation-circle me-1"></i>Enter a valid OT code for the selected course — the name must be auto-filled before adding.');
+            return;
+        }
 
         submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Adding...');
         alertBox.addClass('d-none');

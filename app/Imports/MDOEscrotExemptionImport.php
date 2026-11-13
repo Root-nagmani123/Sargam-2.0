@@ -88,6 +88,10 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
                 }
 
                 $mdoDate = $this->parseDate($dateRaw);
+                // Same 2000–2099 window as the Add / Edit forms (no year-0025 rows).
+                if ($mdoDate && ((int) substr($mdoDate, 0, 4) < 2000 || (int) substr($mdoDate, 0, 4) > 2099)) {
+                    $mdoDate = null;
+                }
                 if (!$mdoDate) {
                     $this->fail($rowNumber, 'Date is missing or invalid (use DD-MM-YYYY).');
                     continue;

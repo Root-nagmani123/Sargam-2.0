@@ -13,6 +13,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -32,8 +33,7 @@ class StudentImportController extends Controller
     public function __construct(
         private FcMigrateStudentsExportService $exports,
         private OfficerTraineeRoleService $officerTraineeRole,
-    ) {
-    }
+    ) {}
 
     public function index(
         FcMigrateStudentsDataTable $migrateDataTable,
@@ -98,7 +98,7 @@ class StudentImportController extends Controller
             ->setOptions([
                 'defaultFont' => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => true,
+                'isRemoteEnabled' => false,
                 'dpi' => 96,
             ]);
 
@@ -169,7 +169,7 @@ class StudentImportController extends Controller
                     // Usernames must be strings (OT codes like 4117353 are numeric in DB).
                     $userIds = [];
                     foreach ($chunkedRecords as $chunkRecord) {
-                        if (!empty($chunkRecord->user_id)) {
+                        if (! empty($chunkRecord->user_id)) {
                             $userIds[] = $this->normalizeLoginUsername($chunkRecord->user_id);
                         }
                     }
@@ -251,7 +251,7 @@ class StudentImportController extends Controller
                         // 1. Handle student_master table
                         $existingStudent = $existingStudents[$userName] ?? null;
 
-                        if (!$existingStudent) {
+                        if (! $existingStudent) {
                             $studentsToInsert[$userName] = $this->buildStudentDataFromRoster(
                                 $record,
                                 $now,
@@ -263,37 +263,37 @@ class StudentImportController extends Controller
 
                             // Define fields to check for changes
                             $fieldsToCheck = [
-                            'email', 'contact_no', 'display_name', 'password', 'schema_id', 
-                            'final_submit', 'submit_date', 'first_name', 'middle_name', 
-                            'last_name', 'admission_status', 'rank', 'exam_year', 
-                            'service_master_pk', 'web_auth', 'dob', 'status', 'course_master_pk',
-                            'finance_bookEntityCode', 'refund_status', 'enrollment', 'admission_category_pk',
-                            'gender', 'photo_path', 'address', 'country_master_pk', 'state_master_pk',
-                            'city', 'pin_code', 'merital_status', 'religion_master_pk', 'background',
-                            'father_fname', 'father_mname', 'father_lname', 'father_profession',
-                            'mother_name', 'family_annual_income', 'university_medium', 'pre_university_medium',
-                            'upsc_exam_medium', 'upsc_viva_medium', 'academic_medium', 'height', 'weight',
-                            'blood_group', 'dietary', 'signature_path', 'postal_address', 'postal_country_pk',
-                            'postal_state_pk', 'postal_city', 'postal_pin_code', 'fax', 'domicile_state_pk',
-                            'state_district_mapping_pk', 'town_village', 'pcontact_no', 'pemail_id', 'pfax',
-                            'generated_OT_code', 'enrollment_no', 'anniversary_date', 'cadre_master_pk',
-                            'current_sem', 'spouse_name', 'spouse_dob', 'designation', 'department',
-                            'passport_no', 'rr_scs', 'last_service_pk', 'birth_place', 'birth_city_village_name',
-                            'city_type', 'pcity_type', 'pass_in_char', 'highest_stream_pk', 'emergency_contact_person',
-                            'emergency_contact_person_mobile', 'passport_issue_date', 'passport_expire_date',
-                            'fc_exemption_master_pk', 'conform_student', 'father_husband', 'csestatus',
-                            'aadhar_card', 'pan_card', 'instagram_id', 'twitter_id', 'guardian_contact',
-                            'guardian_email', 'birth_state', 'medical_history', 'guardian_firstname',
-                            'guardian_middlename', 'guardian_lastname', 'highattitude_trek', 'mother_firstname',
-                            'mother_middlename', 'mother_lastname', 'mother_qualification', 'mother_profession',
-                            'father_qualification', 'nationality', 'pdistrict_id', 'mdistrict_id', 'highattremarks',
-                            'isspouse', 'hindiname', 'id_card', 'idcard_created_by', 'idcard_date', 'cgname',
-                            'ph', 'cgno', 'no_of_attempt', 'birth_distict', 'mother_annualincom', 'mother_Lang', 'status', 'course_master_pk',
+                                'email', 'contact_no', 'display_name', 'password', 'schema_id',
+                                'final_submit', 'submit_date', 'first_name', 'middle_name',
+                                'last_name', 'admission_status', 'rank', 'exam_year',
+                                'service_master_pk', 'web_auth', 'dob', 'status', 'course_master_pk',
+                                'finance_bookEntityCode', 'refund_status', 'enrollment', 'admission_category_pk',
+                                'gender', 'photo_path', 'address', 'country_master_pk', 'state_master_pk',
+                                'city', 'pin_code', 'merital_status', 'religion_master_pk', 'background',
+                                'father_fname', 'father_mname', 'father_lname', 'father_profession',
+                                'mother_name', 'family_annual_income', 'university_medium', 'pre_university_medium',
+                                'upsc_exam_medium', 'upsc_viva_medium', 'academic_medium', 'height', 'weight',
+                                'blood_group', 'dietary', 'signature_path', 'postal_address', 'postal_country_pk',
+                                'postal_state_pk', 'postal_city', 'postal_pin_code', 'fax', 'domicile_state_pk',
+                                'state_district_mapping_pk', 'town_village', 'pcontact_no', 'pemail_id', 'pfax',
+                                'generated_OT_code', 'enrollment_no', 'anniversary_date', 'cadre_master_pk',
+                                'current_sem', 'spouse_name', 'spouse_dob', 'designation', 'department',
+                                'passport_no', 'rr_scs', 'last_service_pk', 'birth_place', 'birth_city_village_name',
+                                'city_type', 'pcity_type', 'pass_in_char', 'highest_stream_pk', 'emergency_contact_person',
+                                'emergency_contact_person_mobile', 'passport_issue_date', 'passport_expire_date',
+                                'fc_exemption_master_pk', 'conform_student', 'father_husband', 'csestatus',
+                                'aadhar_card', 'pan_card', 'instagram_id', 'twitter_id', 'guardian_contact',
+                                'guardian_email', 'birth_state', 'medical_history', 'guardian_firstname',
+                                'guardian_middlename', 'guardian_lastname', 'highattitude_trek', 'mother_firstname',
+                                'mother_middlename', 'mother_lastname', 'mother_qualification', 'mother_profession',
+                                'father_qualification', 'nationality', 'pdistrict_id', 'mdistrict_id', 'highattremarks',
+                                'isspouse', 'hindiname', 'id_card', 'idcard_created_by', 'idcard_date', 'cgname',
+                                'ph', 'cgno', 'no_of_attempt', 'birth_distict', 'mother_annualincom', 'mother_Lang', 'status', 'course_master_pk',
                                 // Add other fields as needed...
                             ];
 
                             foreach ($fieldsToCheck as $field) {
-                                if (!property_exists($record, $field)) {
+                                if (! property_exists($record, $field)) {
                                     continue;
                                 }
                                 if ($record->{$field} != ($existingStudent->{$field} ?? null)) {
@@ -302,7 +302,7 @@ class StudentImportController extends Controller
                             }
 
                             // If there are changes, add to update array
-                            if (!empty($updateData)) {
+                            if (! empty($updateData)) {
                                 $studentsToUpdate[$existingStudent->pk] = $updateData;
                             }
                         }
@@ -315,7 +315,7 @@ class StudentImportController extends Controller
                             $existingCredentialsByEmail
                         );
 
-                        if (!$existingCredential) {
+                        if (! $existingCredential) {
                             // fc_registration_master → user_credentials (created at migration only)
                             $credentialsToInsert[$userName] = [
                                 'user_name' => $userName,
@@ -352,7 +352,7 @@ class StudentImportController extends Controller
                                 'mobile_no',
                                 'alternate_mailid',
                                 'security_answer',
-                                'image_path'
+                                'image_path',
                             ];
 
                             foreach ($credentialFieldsToCheck as $field) {
@@ -376,7 +376,7 @@ class StudentImportController extends Controller
                             }
 
                             // If there are changes, add to update array (keyed by credentials pk — may differ from roster user_id)
-                            if (!empty($updateCredentialData)) {
+                            if (! empty($updateCredentialData)) {
                                 $credentialsToUpdate[(int) $existingCredential->pk] = $updateCredentialData;
                             }
                         }
@@ -400,7 +400,7 @@ class StudentImportController extends Controller
 
                     // Batch insert students
                     $insertedStudents = [];
-                    if (!empty($studentsToInsert)) {
+                    if (! empty($studentsToInsert)) {
                         foreach ($studentsToInsert as $userId => $studentData) {
                             try {
                                 $studentId = DB::table('student_master')->insertGetId($studentData);
@@ -447,9 +447,9 @@ class StudentImportController extends Controller
                     }
 
                     // Batch insert credentials only when student_master row exists
-                    if (!empty($credentialsToInsert)) {
+                    if (! empty($credentialsToInsert)) {
                         foreach ($credentialsToInsert as $userId => $credentialData) {
-                            if (!isset($studentPkByUserId[$userId])) {
+                            if (! isset($studentPkByUserId[$userId])) {
                                 continue;
                             }
                             $credentialData['user_id'] = $studentPkByUserId[$userId];
@@ -475,7 +475,7 @@ class StudentImportController extends Controller
                     // Link user_credentials.user_id → student_master.pk (roster username → student row)
                     foreach ($studentPkByUserId as $userId => $studentPk) {
                         $loginName = $this->normalizeLoginUsername($userId);
-                        if ($loginName === '' || !is_numeric($studentPk)) {
+                        if ($loginName === '' || ! is_numeric($studentPk)) {
                             continue;
                         }
 
@@ -548,7 +548,7 @@ class StudentImportController extends Controller
                     // single query instead of an exists() lookup per mapping. Outcome is identical
                     // — the same existing combinations are skipped — but N SELECTs collapse to 1.
                     $existingCourseMaps = [];
-                    if (!empty($validCourseMaps)) {
+                    if (! empty($validCourseMaps)) {
                         $mapStudentPks = array_values(array_unique(array_map(
                             static fn ($map) => (int) $map['student_master_pk'],
                             $validCourseMaps
@@ -563,7 +563,7 @@ class StudentImportController extends Controller
                             ->whereIn('course_master_pk', $mapCoursePks)
                             ->get(['student_master_pk', 'course_master_pk'])
                             ->each(function ($row) use (&$existingCourseMaps) {
-                                $existingCourseMaps[$row->student_master_pk . '_' . $row->course_master_pk] = true;
+                                $existingCourseMaps[$row->student_master_pk.'_'.$row->course_master_pk] = true;
                             });
                     }
 
@@ -572,7 +572,7 @@ class StudentImportController extends Controller
                     $processedMappings = []; // Track processed combinations to avoid duplicates
 
                     foreach ($validCourseMaps as $map) {
-                        $mapKey = $map['student_master_pk'] . '_' . $map['course_master_pk'];
+                        $mapKey = $map['student_master_pk'].'_'.$map['course_master_pk'];
 
                         // Skip if we've already processed this combination in the current batch
                         if (isset($processedMappings[$mapKey])) {
@@ -593,7 +593,7 @@ class StudentImportController extends Controller
                     // the final safety net against a concurrent duplicate. If the bulk insert
                     // fails for any reason, fall back to per-row inserts so one bad row cannot
                     // drop the whole batch (preserving the previous behaviour).
-                    if (!empty($finalCourseMaps)) {
+                    if (! empty($finalCourseMaps)) {
                         try {
                             DB::table('student_master_course__map')->insertOrIgnore($finalCourseMaps);
                         } catch (\Exception $e) {
@@ -606,7 +606,6 @@ class StudentImportController extends Controller
                             }
                         }
                     }
-
 
                 });
 
@@ -622,7 +621,7 @@ class StudentImportController extends Controller
                 try {
                     $this->officerTraineeRole->assignToUserPks($affectedCredentialPks);
                 } catch (\Throwable $e) {
-                    Log::warning('FC migration: Officer Trainee role assignment failed: ' . $e->getMessage());
+                    Log::warning('FC migration: Officer Trainee role assignment failed: '.$e->getMessage());
                 }
             }
 
@@ -632,7 +631,7 @@ class StudentImportController extends Controller
 
             // Credentials were just written, so the cached roster↔credentials match
             // set is stale — drop it so both tabs recount immediately.
-            \App\Services\FC\FcMigrateStudentsExportService::flushMatchedRosterPks();
+            FcMigrateStudentsExportService::flushMatchedRosterPks();
 
             return back()->with('success', "Migration completed successfully for {$migratedCount} record(s).");
         } catch (\Throwable $e) {
@@ -640,7 +639,7 @@ class StudentImportController extends Controller
             // roster data still rolls the transaction back instead of escaping with locks held.
             DB::rollBack();
 
-            return back()->with('error', 'Migration failed: ' . $e->getMessage());
+            return back()->with('error', 'Migration failed: '.$e->getMessage());
         }
     }
 
@@ -671,9 +670,9 @@ class StudentImportController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<string, object>  $byUserName
-     * @param  \Illuminate\Support\Collection<string, object>  $byMobile
-     * @param  \Illuminate\Support\Collection<string, object>  $byEmail
+     * @param  Collection<string, object>  $byUserName
+     * @param  Collection<string, object>  $byMobile
+     * @param  Collection<string, object>  $byEmail
      */
     private function resolveExistingCredential(
         object $record,
@@ -803,8 +802,8 @@ class StudentImportController extends Controller
         return $this->rekeyTablesResolved = array_values(array_filter(
             $candidates,
             static function ($table) {
-                return \Illuminate\Support\Facades\Schema::hasTable($table)
-                    && \Illuminate\Support\Facades\Schema::hasColumn($table, 'user_id');
+                return Schema::hasTable($table)
+                    && Schema::hasColumn($table, 'user_id');
             }
         ));
     }
@@ -820,13 +819,13 @@ class StudentImportController extends Controller
             return $this->courseBackfillFlagsResolved;
         }
 
-        $enabled = \Illuminate\Support\Facades\Schema::hasTable('fc_registration_master')
-            && \Illuminate\Support\Facades\Schema::hasTable('course_master');
+        $enabled = Schema::hasTable('fc_registration_master')
+            && Schema::hasTable('course_master');
 
         return $this->courseBackfillFlagsResolved = [
             'enabled' => $enabled,
-            'pre_history' => $enabled && \Illuminate\Support\Facades\Schema::hasTable('fc_pre_history'),
-            'ot_details' => $enabled && \Illuminate\Support\Facades\Schema::hasTable('fc_ot_details'),
+            'pre_history' => $enabled && Schema::hasTable('fc_pre_history'),
+            'ot_details' => $enabled && Schema::hasTable('fc_ot_details'),
         ];
     }
 
@@ -879,7 +878,7 @@ class StudentImportController extends Controller
         $data = array_intersect_key($data, array_flip($studentMasterColumns));
         $data = array_filter($data, static fn ($value) => $value !== null);
 
-        if (in_array('service_master_pk', $studentMasterColumns, true) && !isset($data['service_master_pk'])) {
+        if (in_array('service_master_pk', $studentMasterColumns, true) && ! isset($data['service_master_pk'])) {
             $data['service_master_pk'] = (int) ($this->rosterValue($record, 'service_master_pk', 0) ?? 0);
         }
 

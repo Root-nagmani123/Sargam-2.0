@@ -116,8 +116,30 @@ class IssueLogManagement extends Model
     public function statusHistory()
     {
         return $this->hasMany(IssueLogStatus::class, 'issue_log_management_pk', 'pk')
-                    
-                    ->orderBy('issue_date', 'desc');
+                    ->orderBy('issue_date', 'desc')
+                    // issue_date is second-resolution, so two updates in the same
+                    // second tie. The detail page reads this order to find the last
+                    // Reopen; an arbitrary tie-break there would re-lock the status
+                    // options. pk is monotonic, so it settles the order.
+                    ->orderBy('pk', 'desc');
+    }
+
+    /**
+     * Statuses already used since the last Reopen — the ones a non-nodal user
+     * may not pick again (other than the current status). History is newest
+     * first, so counting stops at the most recent Reopen row: a reopened
+     * complaint starts its cycle afresh. Read by the status modal and enforced
+     * by status_update(), so the two cannot drift.
+     *
+     * @return array<int, int>
+     */
+    public function statusesUsedThisCycle(): array
+    {
+        return $this->statusHistory
+            ->takeWhile(fn ($h) => (int) $h->issue_status !== self::STATUS_REOPENED)
+            ->map(fn ($h) => (int) $h->issue_status)
+            ->values()
+            ->all();
     }
 
     /**

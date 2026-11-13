@@ -193,7 +193,7 @@
                 <dt class="col-sm-3">Mode of journey</dt><dd class="col-sm-9">{{ $plan->mode_of_journey ?? '—' }}</dd>
                 <dt class="col-sm-3">Flight / Train / Vehicle no.</dt><dd class="col-sm-9">{{ $plan->journey_vehicle_no ?? '—' }}</dd>
                 <dt class="col-sm-3">Date of arrival at Academy</dt><dd class="col-sm-9">{{ $plan->academy_arrival_date?->format('d M Y') ?? '—' }}</dd>
-                <dt class="col-sm-3">Arrival time at Dehradun</dt><dd class="col-sm-9">{{ $plan->arrival_time_dehradun ?? '—' }}</dd>
+                <dt class="col-sm-3">Arrival time at Airport/Railway Station</dt><dd class="col-sm-9">{{ $plan->arrival_time_dehradun ?? '—' }}</dd>
                 <dt class="col-sm-3">Require academy vehicle</dt>
                 <dd class="col-sm-9">{{ $plan->requiresAcademyVehicleYes() ? 'Yes' : 'No' }}</dd>
             </dl>
@@ -243,7 +243,7 @@
                         }
                         $arrivalTimeInList = $currentArrivalTime !== '' && in_array($currentArrivalTime, $arrivalTimeOptions, true);
                     @endphp
-                    <label class="form-label">Arrival time at Dehradun Airport/Railway Station (24-hour)<span class="text-danger">*</span></label>
+                    <label class="form-label">Arrival time at Airport/Railway Station (24-hour)<span class="text-danger">*</span></label>
                     <select name="arrival_time_dehradun" id="arrivalTimeDehradun" class="form-select" required>
                         <option value="">-- Select arrival time --</option>
                         @if($currentArrivalTime !== '' && ! $arrivalTimeInList)
@@ -293,12 +293,35 @@
                     <label class="form-label">Mode of journey <span class="text-danger">*</span></label>
                     {{-- Options come from mctp_travel_mode_masters (active rows). The plan
                          still stores the NAME string in mode_of_journey, as before. --}}
-                    <select name="mode_of_journey" class="form-select" required>
+                    <select name="mode_of_journey" id="modeOfJourneySelect" class="form-select" required>
                         <option value="">-- Select --</option>
                         @foreach(($travelModes ?? []) as $m)
-                            <option value="{{ $m }}" {{ old('mode_of_journey', $plan?->mode_of_journey) === $m ? 'selected' : '' }}>{{ $m }}</option>
+                            <option value="{{ $m }}" data-message="{{ $travelModeMessages[$m] ?? '' }}" {{ old('mode_of_journey', $plan?->mode_of_journey) === $m ? 'selected' : '' }}>{{ $m }}</option>
                         @endforeach
                     </select>
+                    {{-- Guidance for the selected mode (mctp_travel_mode_masters.message); display only. --}}
+                    <div id="modeOfJourneyMessage" class="alert d-none py-2 px-3 mt-2 mb-0 fw-bold" role="status"
+                         style="background:#fff3cd; color:#7a4a00; border:1px solid #f0ad4e; border-left:6px solid #e67e00; border-radius:8px; font-size:0.95rem; box-shadow:0 2px 6px rgba(230,126,0,.25);">
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="bi bi-exclamation-triangle-fill fs-5" style="color:#e67e00; line-height:1.2;"></i>
+                            <div><div class="text-uppercase small" style="letter-spacing:.04em; color:#b35c00;">Important</div><span></span></div>
+                        </div>
+                    </div>
+                    <script>
+                        (function () {
+                            const select = document.getElementById('modeOfJourneySelect');
+                            const box = document.getElementById('modeOfJourneyMessage');
+                            if (!select || !box) return;
+                            function showModeMessage() {
+                                const opt = select.options[select.selectedIndex];
+                                const msg = opt ? (opt.getAttribute('data-message') || '').trim() : '';
+                                box.querySelector('span').textContent = msg;
+                                box.classList.toggle('d-none', msg === '');
+                            }
+                            select.addEventListener('change', showModeMessage);
+                            showModeMessage();
+                        })();
+                    </script>
                 </div>
                 {{-- Keep for future use (currently hidden):
                 <div class="col-md-3">
@@ -374,7 +397,7 @@
                             <dt class="col-sm-4">Slot time</dt><dd class="col-sm-8 preview-highlight" data-preview="slot_time">—</dd>
                             <dt class="col-sm-4">Mode of journey</dt><dd class="col-sm-8 preview-highlight" data-preview="mode_of_journey">—</dd>
                             <dt class="col-sm-4">Flight/Train/Vehicle no.</dt><dd class="col-sm-8 preview-highlight" data-preview="journey_vehicle_no">—</dd>
-                            <dt class="col-sm-4">Arrival time at Dehradun</dt><dd class="col-sm-8 preview-highlight" data-preview="arrival_time_dehradun">—</dd>
+                            <dt class="col-sm-4">Arrival time at Airport/Railway Station</dt><dd class="col-sm-8 preview-highlight" data-preview="arrival_time_dehradun">—</dd>
                             <dt class="col-sm-4">Require academy vehicle</dt><dd class="col-sm-8 preview-highlight" data-preview="require_academy_vehicle">—</dd>
                             <dt class="col-sm-4">Remarks</dt><dd class="col-sm-8 preview-highlight" data-preview="special_requirements">—</dd>
                         </dl>
@@ -427,14 +450,14 @@
                 function arrivalSlotGapMessage() {
                     const arrivalMinutes = parseTimeToMinutes(arrivalTimeInput ? arrivalTimeInput.value : '');
                     if (arrivalMinutes === null) {
-                        return 'Please enter your arrival time at Dehradun in a valid format (e.g. 06:00 or 18:30).';
+                        return 'Please enter your arrival time at the Airport/Railway Station in a valid format (e.g. 06:00 or 18:30).';
                     }
                     const slotOpt = slotSelect.options[slotSelect.selectedIndex];
                     const slotStart = slotOpt ? slotOpt.getAttribute('data-slot-start') : '';
                     const slotMinutes = parseTimeToMinutes(slotStart);
                     if (slotMinutes === null) return null; // slot has no start time to compare against
                     if (slotMinutes - arrivalMinutes < MIN_GAP_MINUTES) {
-                        return 'The activity slot must be at least 2 hours after your arrival time at Dehradun. Please choose a later slot or adjust your Dehradun arrival time.';
+                        return 'The activity slot must be at least 2 hours after your arrival time at the Airport/Railway Station. Please choose a later slot or adjust your arrival time.';
                     }
                     return null;
                 }

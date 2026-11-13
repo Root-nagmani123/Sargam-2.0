@@ -2,18 +2,22 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\WhosWhoExport;
 use App\Http\Controllers\Controller;
 use App\Models\CadreMaster;
 use App\Models\CourseMaster;
 use App\Models\ServiceMaster;
-use App\Models\StudentMaster;
-use App\Models\StudentMasterCourseMap;
 use App\Models\State;
+use App\Models\StudentMasterCourseMap;
 use App\Support\DataTableRedisCache;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Excel as ExcelWriter;
+use Maatwebsite\Excel\Facades\Excel;
 
 class WhosWhoController extends Controller
 {
@@ -22,7 +26,7 @@ class WhosWhoController extends Controller
      */
     public function index()
     {
-        $cacheKey = 'whos_who_courses:v1:' . Carbon::now()->format('Y-m-d');
+        $cacheKey = 'whos_who_courses:v1:active:' . Carbon::now()->format('Y-m-d');
         $courses = DataTableRedisCache::remember(
             $cacheKey,
             [
@@ -40,36 +44,43 @@ class WhosWhoController extends Controller
     }
 
     /**
-     * Get courses list (AJAX)
+     * Get courses list (AJAX). Pass status=archive to get ended courses instead of running ones.
      */
-    public function getCourses()
+    public function getCourses(Request $request)
     {
         try {
-            $cacheKey = 'whos_who_courses:v1:' . Carbon::now()->format('Y-m-d');
+            $status = $request->input('status', 'active') === 'archive' ? 'archive' : 'active';
+            $cacheKey = 'whos_who_courses:v1:' . $status . ':' . Carbon::now()->format('Y-m-d');
             $courses = DataTableRedisCache::remember(
                 $cacheKey,
                 [
                     'enabled' => 'FACULTY_WHOS_WHO_CACHE_ENABLED',
                     'seconds' => 'FACULTY_WHOS_WHO_CACHE_SECONDS',
                 ],
-                'WhosWhoController@getCourses',
-                fn () => $this->queryActiveCoursesForWhosWho()
+                'WhosWhoController@getCourses:' . $status,
+                fn () => $status === 'archive'
+                    ? $this->queryArchivedCoursesForWhosWho()
+                    : $this->queryActiveCoursesForWhosWho()
             );
 
             return response()->json([
                 'success' => true,
-                'courses' => $courses
+                'courses' => $courses,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error fetching courses: ' . $e->getMessage()
+                'message' => 'Error fetching courses: '.$e->getMessage(),
             ], 500);
         }
     }
 
     /**
      * Active courses for Who's Who (shared cache key with {@see getCourses}).
+     *
+     * "Active" means genuinely ongoing: enabled, already started, and not yet
+     * ended. Without the start_year check, courses that haven't started yet
+     * (e.g. an upcoming batch) would leak into the dropdown alongside running ones.
      *
      * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\CourseMaster>
      */
@@ -78,19 +89,34 @@ class WhosWhoController extends Controller
         $currentDate = Carbon::now()->format('Y-m-d');
 
         return CourseMaster::where('active_inactive', 1)
+            ->where('start_year', '<=', $currentDate)
             ->where('end_date', '>=', $currentDate)
             ->orderBy('course_name')
             ->get(['pk', 'course_name', 'couse_short_name']);
     }
 
     /**
+     * Archived courses for Who's Who: enabled but already ended.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, \App\Models\CourseMaster>
+     */
+    private function queryArchivedCoursesForWhosWho()
+    {
+        $currentDate = Carbon::now()->format('Y-m-d');
+
+        return CourseMaster::where('active_inactive', 1)
+            ->where('end_date', '<', $currentDate)
+            ->orderBy('course_name')
+            ->get(['pk', 'course_name', 'couse_short_name']);
+    }
+
+    /**
      * Get students by filters (AJAX)
-     * 
+     *
      * This method uses student_master_course__map table to get students enrolled in courses.
      * Each row in student_master_course__map represents a student enrolled in a specific course.
-     * 
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     *
+     * @return JsonResponse
      */
     public function getStudents(Request $request)
     {
@@ -99,12 +125,13 @@ class WhosWhoController extends Controller
             $courseId = $request->input('course_id', '');
             $cadreId = $request->input('cadre_id', '');
             $serviceId = $request->input('service_id', '');
+            $status = $request->input('status', 'active') === 'archive' ? 'archive' : 'active';
             $page = $request->input('page', 1);
             $perPage = $request->input('per_page', 10);
             $sortBy = $request->input('sort_by', 'name_asc');
 
             // Convert course_id to integer if provided and validate
-            if (!empty($courseId)) {
+            if (! empty($courseId)) {
                 $courseId = (int) $courseId;
                 if ($courseId <= 0) {
                     $courseId = '';
@@ -113,20 +140,32 @@ class WhosWhoController extends Controller
                 $courseId = '';
             }
 
-            if (!empty($cadreId) && (int) $cadreId > 0) {
+            if (! empty($cadreId) && (int) $cadreId > 0) {
                 $cadreId = (int) $cadreId;
             } else {
                 $cadreId = '';
             }
 
-            if (!empty($serviceId) && (int) $serviceId > 0) {
+            if (! empty($serviceId) && (int) $serviceId > 0) {
                 $serviceId = (int) $serviceId;
             } else {
                 $serviceId = '';
             }
 
             if (!empty($courseId) && $courseId > 0) {
-                if (! CourseMaster::where('pk', $courseId)->where('active_inactive', 1)->exists()) {
+                $currentDate = Carbon::now()->format('Y-m-d');
+                $courseExists = $status === 'archive'
+                    ? CourseMaster::where('pk', $courseId)
+                        ->where('active_inactive', 1)
+                        ->where('end_date', '<', $currentDate)
+                        ->exists()
+                    : CourseMaster::where('pk', $courseId)
+                        ->where('active_inactive', 1)
+                        ->where('start_year', '<=', $currentDate)
+                        ->where('end_date', '>=', $currentDate)
+                        ->exists();
+
+                if (! $courseExists) {
                     return response()->json([
                         'success' => false,
                         'message' => 'Selected course not found or inactive',
@@ -136,11 +175,12 @@ class WhosWhoController extends Controller
                 }
             }
 
-            $cacheKey = 'whos_who_students:v2:' . md5(json_encode([
+            $cacheKey = 'whos_who_students:v4:' . md5(json_encode([
                 'name' => $name,
                 'course_id' => $courseId,
                 'cadre_id' => $cadreId,
                 'service_id' => $serviceId,
+                'status' => $status,
                 'page' => $page,
                 'per_page' => $perPage,
                 'sort_by' => $sortBy,
@@ -160,10 +200,24 @@ class WhosWhoController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error fetching students: ' . $e->getMessage(),
+                'message' => 'Error fetching students: '.$e->getMessage(),
                 'error' => $e->getTraceAsString(),
             ], 500);
         }
+    }
+
+    /**
+     * Build the LIKE operand for a user-supplied search term.
+     *
+     * % and _ are wildcards to MySQL, not literals: a term of "%" would otherwise match
+     * every row and "a_c" would match "abc". The term is already bound as a parameter,
+     * so this is about matching what the user typed, not about injection.
+     */
+    private function likeTerm(string $term): string
+    {
+        $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $term);
+
+        return '%' . $escaped . '%';
     }
 
     /**
@@ -177,25 +231,27 @@ class WhosWhoController extends Controller
         $courseId = $request->input('course_id', '');
         $cadreId = $request->input('cadre_id', '');
         $serviceId = $request->input('service_id', '');
+        $status = $request->input('status', 'active') === 'archive' ? 'archive' : 'active';
         $page = $request->input('page', 1);
         $perPage = $request->input('per_page', 10);
         $sortBy = $request->input('sort_by', 'name_asc');
         $forExport = filter_var($request->input('for_export'), FILTER_VALIDATE_BOOLEAN);
+        $currentDate = Carbon::now()->format('Y-m-d');
 
         // Convert course_id to integer if provided and validate
-        if (!empty($courseId) && $courseId > 0) {
+        if (! empty($courseId) && $courseId > 0) {
             $courseId = (int) $courseId;
         } else {
             $courseId = '';
         }
 
-        if (!empty($cadreId) && (int) $cadreId > 0) {
+        if (! empty($cadreId) && (int) $cadreId > 0) {
             $cadreId = (int) $cadreId;
         } else {
             $cadreId = '';
         }
 
-        if (!empty($serviceId) && (int) $serviceId > 0) {
+        if (! empty($serviceId) && (int) $serviceId > 0) {
             $serviceId = (int) $serviceId;
         } else {
             $serviceId = '';
@@ -215,8 +271,14 @@ class WhosWhoController extends Controller
             ->whereHas('studentMaster', function ($q) {
                 $q->where('status', 1); // Only active students from student_master
             })
-            ->whereHas('course', function ($q) {
-                $q->where('active_inactive', 1); // Only active courses from course_master
+            ->whereHas('course', function ($q) use ($currentDate, $status) {
+                $q->where('active_inactive', 1); // Only enabled courses from course_master
+                if ($status === 'archive') {
+                    $q->where('end_date', '<', $currentDate); // Only courses that have already ended
+                } else {
+                    $q->where('start_year', '<=', $currentDate) // Exclude upcoming courses not yet started
+                        ->where('end_date', '>=', $currentDate); // Exclude courses that have already ended
+                }
             });
 
         /**
@@ -224,29 +286,48 @@ class WhosWhoController extends Controller
          * When a course is selected, we filter by course_master_pk column in the mapping table
          * This ensures we only get students enrolled in that specific course
          */
-        if (!empty($courseId) && $courseId > 0) {
+        if (! empty($courseId) && $courseId > 0) {
             $query->where('student_master_course__map.course_master_pk', $courseId);
         }
 
-        // Filter by name
+        // Universal search across name, rank, cadre, service, contact, email, room, district/city, category
         if (!empty($name)) {
-            $query->whereHas('studentMaster', function ($q) use ($name) {
-                $q->where('display_name', 'like', '%' . $name . '%')
-                    ->orWhere('first_name', 'like', '%' . $name . '%')
-                    ->orWhere('last_name', 'like', '%' . $name . '%')
-                    ->orWhere('generated_OT_code', 'like', '%' . $name . '%');
+            // admission_category_master has no Eloquent model (schema-only table).
+            $matchingCategoryPks = DB::table('admission_category_master')
+                ->where('Seat_name', 'like', $this->likeTerm($name))
+                ->pluck('pk');
+
+            $query->whereHas('studentMaster', function ($q) use ($name, $matchingCategoryPks) {
+                $q->where('display_name', 'like', $this->likeTerm($name))
+                    ->orWhere('first_name', 'like', $this->likeTerm($name))
+                    ->orWhere('last_name', 'like', $this->likeTerm($name))
+                    ->orWhere('generated_OT_code', 'like', $this->likeTerm($name))
+                    ->orWhere('rank', 'like', $this->likeTerm($name))
+                    ->orWhere('contact_no', 'like', $this->likeTerm($name))
+                    ->orWhere('email', 'like', $this->likeTerm($name))
+                    ->orWhere('city', 'like', $this->likeTerm($name))
+                    ->orWhereHas('cadre', function ($cadreQuery) use ($name) {
+                        $cadreQuery->where('cadre_name', 'like', $this->likeTerm($name));
+                    })
+                    ->orWhereHas('service', function ($serviceQuery) use ($name) {
+                        $serviceQuery->where('service_name', 'like', $this->likeTerm($name));
+                    });
+
+                if ($matchingCategoryPks->isNotEmpty()) {
+                    $q->orWhereIn('admission_category_pk', $matchingCategoryPks);
+                }
             });
         }
 
         // Filter by cadre
-        if (!empty($cadreId)) {
+        if (! empty($cadreId)) {
             $query->whereHas('studentMaster', function ($q) use ($cadreId) {
                 $q->where('cadre_master_pk', $cadreId);
             });
         }
 
         // Filter by service
-        if (!empty($serviceId)) {
+        if (! empty($serviceId)) {
             $query->whereHas('studentMaster', function ($q) use ($serviceId) {
                 $q->where('service_master_pk', $serviceId);
             });
@@ -279,7 +360,7 @@ class WhosWhoController extends Controller
         }
 
         // Ensure current page is valid
-        if (!$forExport && $currentPage > $totalPages && $totalPages > 0) {
+        if (! $forExport && $currentPage > $totalPages && $totalPages > 0) {
             $currentPage = $totalPages;
         }
 
@@ -288,7 +369,7 @@ class WhosWhoController extends Controller
         $sortColumn = 'student_master_pk';
         $sortDirection = 'asc';
 
-        if (!empty($sortBy)) {
+        if (! empty($sortBy)) {
             switch ($sortBy) {
                 case 'name_asc':
                     $query->select('student_master_course__map.*')
@@ -412,7 +493,7 @@ class WhosWhoController extends Controller
             'per_page' => $perPage,
             'total_pages' => $totalPages,
             'returned_count' => $studentMaps->count(),
-            'course_filter_applied' => !empty($courseId),
+            'course_filter_applied' => ! empty($courseId),
         ]);
 
         /**
@@ -431,42 +512,56 @@ class WhosWhoController extends Controller
             $course = $map->course;
 
             // Skip if student data is missing
-            if (!$student) {
+            if (! $student) {
                 continue;
             }
 
             // If course filter is applied but course is missing, skip this record
-            if (!empty($courseId) && !$course) {
+            if (! empty($courseId) && ! $course) {
                 continue;
             }
 
-            // If no course filter and course is missing, try to get first active course for this student
+            // If no course filter and course is missing, try to get first course for this student
+            // matching the current active/archive status
             if (!$course && empty($courseId)) {
                 $firstCourseMap = StudentMasterCourseMap::with('course')
                     ->where('student_master_pk', $student->pk)
                     ->where('active_inactive', 1)
-                    ->whereHas('course', function ($q) {
+                    ->whereHas('course', function ($q) use ($currentDate, $status) {
                         $q->where('active_inactive', 1);
+                        if ($status === 'archive') {
+                            $q->where('end_date', '<', $currentDate);
+                        } else {
+                            $q->where('start_year', '<=', $currentDate)
+                                ->where('end_date', '>=', $currentDate);
+                        }
                     })
                     ->first();
                 $course = $firstCourseMap ? $firstCourseMap->course : null;
             }
 
             // Skip if still no course found
-            if (!$course) {
+            if (! $course) {
                 continue;
             }
 
             /**
              * Get all courses this student is enrolled in from student_master_course__map
+             * matching the current active/archive status
              */
             $enrolledCourses = collect();
-            if (!$forExport) {
+            if (! $forExport) {
                 $enrolledCourses = StudentMasterCourseMap::with('course')
                     ->where('student_master_pk', $student->pk)
                     ->where('active_inactive', 1)
-                    ->whereHas('course', function ($q) {
+                    ->whereHas('course', function ($q) use ($currentDate, $status) {
                         $q->where('active_inactive', 1);
+                        if ($status === 'archive') {
+                            $q->where('end_date', '<', $currentDate);
+                        } else {
+                            $q->where('start_year', '<=', $currentDate)
+                                ->where('end_date', '>=', $currentDate);
+                        }
                     })
                     ->get();
             }
@@ -481,7 +576,7 @@ class WhosWhoController extends Controller
 
             $counsellorName = 'N/A';
             $houseName = 'N/A';
-            $lookupKey = $student->pk . '_' . $map->course_master_pk;
+            $lookupKey = $student->pk.'_'.$map->course_master_pk;
             $groupInfo = $counsellorHouseLookup->get($lookupKey);
             if ($groupInfo) {
                 $counsellorName = filled($groupInfo->counsellor_name)
@@ -516,29 +611,30 @@ class WhosWhoController extends Controller
 
             $cadreName = $student->cadre->cadre_name ?? null;
 
-            // Format batch
+            // Format batch (start_year and end_date are both date columns)
             $batch = 'N/A';
             if ($course && $course->start_year) {
-                $endYear = $course->end_date ? Carbon::parse($course->end_date)->format('Y') : (Carbon::parse($course->start_year)->addYear()->format('Y'));
-                $batch = $course->start_year . '-' . $endYear;
+                $startYear = Carbon::parse($course->start_year)->format('Y');
+                $endYear = $course->end_date ? Carbon::parse($course->end_date)->format('Y') : Carbon::parse($course->start_year)->addYear()->format('Y');
+                $batch = $startYear . '-' . $endYear;
             }
 
             $students[] = [
-                'id' => $student->generated_OT_code ?? ('STU-' . $student->pk),
-                'name' => $student->display_name ?? (trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''))),
+                'id' => $student->generated_OT_code ?? ('STU-'.$student->pk),
+                'name' => $student->display_name ?? (trim(($student->first_name ?? '').' '.($student->last_name ?? ''))),
                 'rank' => $student->rank ?? 'N/A',
                 'cadre' => filled($cadreName) ? $cadreName : 'N/A',
                 'code' => $student->generated_OT_code ?? 'N/A',
                 'counsellor' => $counsellorName,
                 'house' => $houseName,
-                'roll' => 'Roll ' . ($student->rank ?? 'N/A'),
+                'roll' => 'Roll '.($student->rank ?? 'N/A'),
                 'service' => $student->service->service_name ?? 'N/A',
                 'courseName' => $course->course_name ?? 'N/A',
                 'courseCode' => $course->couse_short_name ?? $course->course_name ?? 'N/A',
                 'batch' => $batch,
                 'image' => $student->photo_path
                     ? build_student_photo_url($student->photo_path)
-                    : 'https://via.placeholder.com/180x180?text=' . urlencode(substr($student->display_name ?? 'Student', 0, 1)),
+                    : 'https://via.placeholder.com/180x180?text='.urlencode(substr($student->display_name ?? 'Student', 0, 1)),
                 'image_src' => $forExport ? $this->resolveStudentPhotoDataUri($student->photo_path) : null,
                 'dob' => $student->dob ? Carbon::parse($student->dob)->format('d-M-y') : 'N/A',
                 'domicile' => strtoupper($stateName),
@@ -589,9 +685,11 @@ class WhosWhoController extends Controller
                 'name' => $name,
                 'cadre_id' => $cadreId,
                 'service_id' => $serviceId,
+                'status' => $status,
             ],
         ];
     }
+
     /**
      * Download Who's Who directory PDF (respects current filters).
      */
@@ -629,36 +727,180 @@ class WhosWhoController extends Controller
                 : 'All Services';
 
             $pdf = Pdf::loadView('admin.faculty.whos_who_pdf', [
-                'students'     => $students,
-                'courseLabel'  => $courseLabel,
-                'cadreLabel'   => $cadreLabel,
+                'students' => $students,
+                'courseLabel' => $courseLabel,
+                'cadreLabel' => $cadreLabel,
                 'serviceLabel' => $serviceLabel,
-                'searchLabel'  => $search,
-                'generatedAt'  => Carbon::now()->format('d M Y, h:i A'),
+                'searchLabel' => $search,
+                'generatedAt' => Carbon::now()->format('d M Y, h:i A'),
             ])
                 ->setPaper('a4', 'portrait')
                 ->setOptions([
-                    'defaultFont'          => 'DejaVu Sans',
+                    'defaultFont' => 'DejaVu Sans',
                     'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled'      => true,
-                    'dpi'                  => 96,
+                    'isRemoteEnabled' => false,
+                    'dpi' => 96,
                 ]);
 
-            $filename = 'whos-who-' . now()->format('Y-m-d_H-i-s') . '.pdf';
+            $filename = 'whos-who-'.now()->format('Y-m-d_H-i-s').'.pdf';
 
             return $pdf->download($filename);
         } catch (\Exception $e) {
             return redirect()
                 ->route('admin.faculty.whos-who')
-                ->with('error', 'Error generating PDF: ' . $e->getMessage());
+                ->with('error', 'Error generating PDF: '.$e->getMessage());
         }
+    }
+
+    /**
+     * Download Who's Who directory as a formatted Excel workbook (respects current filters).
+     */
+    public function downloadExcel(Request $request)
+    {
+        try {
+            $export = $this->buildExportData($request);
+            if ($export === null) {
+                return redirect()
+                    ->route('admin.faculty.whos-who')
+                    ->with('error', 'No students found for the selected filters.');
+            }
+
+            $filename = 'whos-who-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+
+            return Excel::download(
+                new WhosWhoExport(
+                    $export['headings'],
+                    $export['rows'],
+                    $export['courseLabel'],
+                    $export['cadreLabel'],
+                    $export['serviceLabel'],
+                    $export['search'],
+                    Carbon::now()->format('d M Y, h:i A'),
+                ),
+                $filename,
+                ExcelWriter::XLSX
+            );
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('admin.faculty.whos-who')
+                ->with('error', 'Error generating Excel: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Download Who's Who directory as a CSV file (respects current filters).
+     */
+    public function downloadCsv(Request $request)
+    {
+        try {
+            $export = $this->buildExportData($request);
+            if ($export === null) {
+                return redirect()
+                    ->route('admin.faculty.whos-who')
+                    ->with('error', 'No students found for the selected filters.');
+            }
+
+            $filename = 'whos-who-' . now()->format('Y-m-d_H-i-s') . '.csv';
+
+            return response()->streamDownload(function () use ($export) {
+                $handle = fopen('php://output', 'w');
+                // UTF-8 BOM so Excel renders non-ASCII names correctly
+                fwrite($handle, "\xEF\xBB\xBF");
+                fputcsv($handle, $export['headings']);
+                foreach ($export['rows'] as $row) {
+                    // Neutralise leading =, +, - and @ so a stored reason or name
+                    // does not open as a live formula in Excel (CWE-1236).
+                    fputcsv($handle, array_map('sanitize_export_cell', $row));
+                }
+                fclose($handle);
+            }, $filename, [
+                'Content-Type' => 'text/csv',
+            ]);
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('admin.faculty.whos-who')
+                ->with('error', 'Error generating CSV: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Shared headings/rows/labels builder for Excel and CSV exports.
+     *
+     * @return array{headings: array, rows: array, courseLabel: string, cadreLabel: string, serviceLabel: string, search: string}|null
+     */
+    private function buildExportData(Request $request): ?array
+    {
+        $exportRequest = $request->duplicate();
+        $exportRequest->merge([
+            'for_export' => true,
+            'sort_by' => 'roll_asc',
+        ]);
+
+        $payload = $this->buildStudentsResponsePayload($exportRequest);
+        $students = $payload['students'] ?? [];
+
+        if (empty($students)) {
+            return null;
+        }
+
+        $courseId = $request->input('course_id', '');
+        $cadreId = $request->input('cadre_id', '');
+        $serviceId = $request->input('service_id', '');
+        $search = trim((string) $request->input('name', ''));
+
+        $courseLabel = $courseId
+            ? (optional(CourseMaster::find((int) $courseId))->course_name ?? 'Selected Course')
+            : '';
+        $cadreLabel = $cadreId
+            ? (optional(CadreMaster::find((int) $cadreId))->cadre_name ?? 'Selected Cadre')
+            : '';
+        $serviceLabel = $serviceId
+            ? (optional(ServiceMaster::find((int) $serviceId))->service_name ?? 'Selected Service')
+            : '';
+
+        $headings = [
+            'Code', 'Name', 'Rank', 'Cadre', 'Service', 'Course', 'Batch',
+            'Counsellor', 'House', 'Contact No', 'Email', 'Room No',
+            'Date of Birth', 'Domicile', 'District', 'Category', 'Address',
+        ];
+
+        $rows = array_map(function ($student) {
+            return [
+                $student['code'] ?? 'N/A',
+                $student['name'] ?? 'N/A',
+                $student['rank'] ?? 'N/A',
+                $student['cadre'] ?? 'N/A',
+                $student['service'] ?? 'N/A',
+                $student['courseName'] ?? 'N/A',
+                $student['batch'] ?? 'N/A',
+                $student['counsellor'] ?? 'N/A',
+                $student['house'] ?? 'N/A',
+                $student['contact'] ?? 'N/A',
+                $student['email'] ?? 'N/A',
+                $student['room'] ?? 'N/A',
+                $student['dob'] ?? 'N/A',
+                $student['domicile'] ?? 'N/A',
+                $student['district'] ?? 'N/A',
+                $student['category'] ?? 'N/A',
+                $student['address'] ?? 'N/A',
+            ];
+        }, $students);
+
+        return [
+            'headings' => $headings,
+            'rows' => $rows,
+            'courseLabel' => $courseLabel,
+            'cadreLabel' => $cadreLabel,
+            'serviceLabel' => $serviceLabel,
+            'search' => $search,
+        ];
     }
 
     /**
      * Counsellor name and house group per student/course (matches Who's Who SQL logic).
      *
-     * @param  \Illuminate\Support\Collection<int, int|string>  $studentPks
-     * @return \Illuminate\Support\Collection<string, object>
+     * @param  Collection<int, int|string>  $studentPks
+     * @return Collection<string, object>
      */
     private function loadCounsellorAndHouseLookup($studentPks)
     {
@@ -686,7 +928,7 @@ class WhosWhoController extends Controller
             }
             $row->counsellor_name = $counsellorName !== '' ? $counsellorName : null;
 
-            return [$row->student_master_pk . '_' . $row->course_master_pk => $row];
+            return [$row->student_master_pk.'_'.$row->course_master_pk => $row];
         });
     }
 
@@ -700,10 +942,10 @@ class WhosWhoController extends Controller
         }
 
         foreach ([
-            storage_path('app/public/' . ltrim($photoPath, '/')),
-            public_path('storage/' . ltrim($photoPath, '/')),
+            storage_path('app/public/'.ltrim($photoPath, '/')),
+            public_path('storage/'.ltrim($photoPath, '/')),
         ] as $fullPath) {
-            if (!is_file($fullPath) || !is_readable($fullPath)) {
+            if (! is_file($fullPath) || ! is_readable($fullPath)) {
                 continue;
             }
 
@@ -720,7 +962,7 @@ class WhosWhoController extends Controller
                 default => 'image/jpeg',
             };
 
-            return 'data:' . $mime . ';base64,' . base64_encode($raw);
+            return 'data:'.$mime.';base64,'.base64_encode($raw);
         }
 
         return null;
@@ -734,7 +976,7 @@ class WhosWhoController extends Controller
     {
         try {
             $courseId = $request->input('course_id', '');
-            $cacheKey = 'whos_who_static:v1:' . md5((string) $courseId) . ':' . Carbon::now()->format('Y-m-d');
+            $cacheKey = 'whos_who_static:v1:'.md5((string) $courseId).':'.Carbon::now()->format('Y-m-d');
 
             $body = DataTableRedisCache::remember(
                 $cacheKey,
@@ -763,7 +1005,7 @@ class WhosWhoController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error fetching static info: ' . $e->getMessage()
+                'message' => 'Error fetching static info: '.$e->getMessage(),
             ], 500);
         }
     }

@@ -27,11 +27,11 @@ class TravelPlanController extends Controller
             $form = $this->registrationFlow->activeFormFromSession();
             if ($form) {
                 return redirect()->route('fc-reg.forms.dashboard', $form)
-                    ->with('error', 'Please complete bank details before the travel plan.');
+                    ->with('error', 'Please complete the earlier registration steps before the travel plan.');
             }
 
             return redirect()->route('fc-reg.registration.bank')
-                ->with('error', 'Please complete bank details before the travel plan.');
+                ->with('error', 'Please complete the earlier registration steps before the travel plan.');
         }
 
         $plan = StudentTravelPlanMaster::forUser($userId)
@@ -73,6 +73,7 @@ class TravelPlanController extends Controller
             'travelModes'    => MctpTravelModeMaster::choicesIncluding(
                 old('mode_of_journey', $plan?->mode_of_journey)
             ),
+            'travelModeMessages' => MctpTravelModeMaster::activeMessages(),
             'availableDates' => $availableDates,
             'step1'          => $step1,
             'master'         => $master,
@@ -90,11 +91,11 @@ class TravelPlanController extends Controller
             $form = $this->registrationFlow->activeFormFromSession();
             if ($form) {
                 return redirect()->route('fc-reg.forms.dashboard', $form)
-                    ->with('error', 'Please complete bank details first.');
+                    ->with('error', 'Please complete the earlier registration steps first.');
             }
 
             return redirect()->route('fc-reg.registration.bank')
-                ->with('error', 'Please complete bank details first.');
+                ->with('error', 'Please complete the earlier registration steps first.');
         }
 
         $existing = StudentTravelPlanMaster::forUser($userId)->first();
@@ -121,7 +122,7 @@ class TravelPlanController extends Controller
             'special_requirements'      => 'nullable|string|max:1000|no_html',
         ], [], [
             'journey_vehicle_no'    => 'Flight No / Train No / Vehicle No',
-            'arrival_time_dehradun' => 'Arrival time at Dehradun',
+            'arrival_time_dehradun' => 'Arrival time at Airport/Railway Station',
             'special_requirements'  => 'Remarks',
         ]);
 
@@ -173,11 +174,11 @@ class TravelPlanController extends Controller
             $form = $this->registrationFlow->activeFormFromSession();
             if ($form) {
                 return redirect()->route('fc-reg.forms.dashboard', $form)
-                    ->with('error', 'Please complete bank details first.');
+                    ->with('error', 'Please complete the earlier registration steps first.');
             }
 
             return redirect()->route('fc-reg.registration.bank')
-                ->with('error', 'Please complete bank details first.');
+                ->with('error', 'Please complete the earlier registration steps first.');
         }
 
         $existing = StudentTravelPlanMaster::forUser($userId)->first();
@@ -197,7 +198,7 @@ class TravelPlanController extends Controller
             'special_requirements'      => 'nullable|string|max:1000|no_html',
         ], [], [
             'journey_vehicle_no'    => 'Flight No / Train No / Vehicle No',
-            'arrival_time_dehradun' => 'Arrival time at Dehradun',
+            'arrival_time_dehradun' => 'Arrival time at Airport/Railway Station',
             'special_requirements'  => 'Remarks',
         ]);
 
@@ -263,7 +264,7 @@ class TravelPlanController extends Controller
         }
 
         if ($slotMinutes - $arrivalMinutes < 120) {
-            return 'The activity slot must be at least 2 hours after your arrival time at Dehradun. Please choose a later slot or adjust your Dehradun arrival time.';
+            return 'The activity slot must be at least 2 hours after your arrival time at the Airport/Railway Station. Please choose a later slot or adjust your arrival time.';
         }
 
         return null;

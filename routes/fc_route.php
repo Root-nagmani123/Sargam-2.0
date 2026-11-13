@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\Registration\FcJoiningDocumentController;
 use App\Http\Controllers\Admin\Registration\StudentImportController;
 use App\Http\Controllers\Admin\Registration\EnrollementController;
 use App\Http\Controllers\Admin\PeerEvaluationController;
+use App\Http\Middleware\EnsureMenuPermission;
 
 
 
@@ -250,14 +251,20 @@ Route::post('/admin/joining-documents/save-remark/{user_id}', [FcJoiningDocument
 Route::redirect('/foundation-course/status', '/fc/status', 301)->name('foundation.course.status');
 
 //admin migration route
-Route::get('/admin/migrate-students', [StudentImportController::class, 'index'])->name('students.index'); // index page
-Route::get('/admin/migrate-students/counts', [StudentImportController::class, 'tabCounts'])->name('students.tab.counts');
-Route::get('/admin/migrate-students/migrated', [StudentImportController::class, 'migratedIndex'])->name('students.migrated.index');
-Route::get('/admin/migrate-students/imported', [StudentImportController::class, 'migratedIndex'])->name('students.imported.index');
-Route::get('/admin/migrate-students/export/{list}/print', [StudentImportController::class, 'exportPrint'])->name('students.export.print');
-Route::get('/admin/migrate-students/export/{list}/pdf', [StudentImportController::class, 'exportPdf'])->name('students.export.pdf');
-Route::get('/admin/migrate-students/export/{list}/excel', [StudentImportController::class, 'exportExcel'])->name('students.export.excel');
-Route::post('/admin/migrate-fc-registration', [StudentImportController::class, 'migrate'])->name('admin.migrate.fc');
+// Signed-in holders of the "Data Migration Students" menu permission only (PR #309
+// review F-082). These routes used to carry `web` alone and the controller checks
+// nothing, so a guest could download the officer-trainee roster (names, emails,
+// mobiles) and post to the migrate endpoint. Super Admin passes EnsureMenuPermission.
+Route::middleware(['auth', EnsureMenuPermission::class.':data_migration_students'])->group(function () {
+    Route::get('/admin/migrate-students', [StudentImportController::class, 'index'])->name('students.index'); // index page
+    Route::get('/admin/migrate-students/counts', [StudentImportController::class, 'tabCounts'])->name('students.tab.counts');
+    Route::get('/admin/migrate-students/migrated', [StudentImportController::class, 'migratedIndex'])->name('students.migrated.index');
+    Route::get('/admin/migrate-students/imported', [StudentImportController::class, 'migratedIndex'])->name('students.imported.index');
+    Route::get('/admin/migrate-students/export/{list}/print', [StudentImportController::class, 'exportPrint'])->name('students.export.print');
+    Route::get('/admin/migrate-students/export/{list}/pdf', [StudentImportController::class, 'exportPdf'])->name('students.export.pdf');
+    Route::get('/admin/migrate-students/export/{list}/excel', [StudentImportController::class, 'exportExcel'])->name('students.export.excel');
+    Route::post('/admin/migrate-fc-registration', [StudentImportController::class, 'migrate'])->name('admin.migrate.fc');
+});
 
 // course enrollment route
 // routes/web.php

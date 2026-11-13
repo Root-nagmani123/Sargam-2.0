@@ -133,6 +133,13 @@
                   @if($textPattern) pattern="{{ $textPattern }}" @endif
                   @if($field->is_required) data-fc-required="1" aria-required="true" @endif
                   {{ $inputLockAttr }}>{{ $value }}</textarea>
+        @php $lenLimits = fc_text_length_limits($field->validation_rules ?? null); @endphp
+        @if(array_filter($lenLimits, fn ($v) => $v !== null) !== [])
+            {{-- Live counter driven by the same rules the server checks (min/max = characters,
+                 min_words/max_words = words). Updated by the script at the end of this partial. --}}
+            <div class="form-text fc-len-counter"
+                 @foreach($lenLimits as $k => $v) @if($v !== null) data-{{ str_replace('_', '-', $k) }}="{{ $v }}" @endif @endforeach></div>
+        @endif
         @break
 
     @case('select')
@@ -295,3 +302,44 @@
 @if($field->help_text && ! $isPanField && $fieldType !== 'file')
     <small class="text-muted d-block mt-1">{{ $field->help_text }}</small>
 @endif
+
+@once
+<script>
+// Live word / character counter for textareas with length rules (see the textarea case above).
+// Word = run of non-whitespace, the same definition as fc_word_count() on the server.
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.fc-len-counter').forEach(function (counter) {
+        var input = counter.previousElementSibling;
+        if (!input || input.tagName !== 'TEXTAREA') return;
+        var d = counter.dataset;
+        var num = function (v) { return v === undefined ? null : parseInt(v, 10); };
+        var lim = { minW: num(d.minWords), maxW: num(d.maxWords), minC: num(d.minChars), maxC: num(d.maxChars) };
+
+        function part(label, n, min, max) {
+            if (min === null && max === null) return null;
+            var ok = (min === null || n >= min) && (max === null || n <= max);
+            var range = max !== null ? ' / ' + max : '';
+            var hint = min !== null ? ' (min ' + min + ')' : '';
+            return { ok: ok, text: label + ': ' + n + range + hint };
+        }
+
+        function update() {
+            var text = input.value.trim();
+            var words = text === '' ? 0 : text.split(/\s+/u).length;
+            // Line breaks are submitted as \r\n and the server's max: counts both characters.
+            var chars = input.value.replace(/\r?\n/g, '\r\n').length;
+            var parts = [part('Words', words, lim.minW, lim.maxW), part('Characters', chars, lim.minC, lim.maxC)]
+                .filter(Boolean);
+            counter.textContent = parts.map(function (p) { return p.text; }).join('  ·  ');
+            var ok = parts.every(function (p) { return p.ok; });
+            counter.classList.toggle('text-danger', text !== '' && !ok);
+            counter.classList.toggle('text-success', text !== '' && ok);
+            counter.classList.toggle('text-muted', text === '');
+        }
+
+        input.addEventListener('input', update);
+        update();
+    });
+});
+</script>
+@endonce
