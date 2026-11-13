@@ -42,6 +42,51 @@ class DashboardCard extends Model
         return self::modules()->firstWhere('id', $id);
     }
 
+    /**
+     * The gated cards and whether the logged-in user may see each: the OT and
+     * faculty-portal cards, whose role mapping alone would show them to a login
+     * the page behind them refuses. Any card not listed shows to whoever's role
+     * has it. dashboard() and the header's module landing both read this, so a
+     * tab never lands on a dashboard whose every card is filtered out.
+     */
+    public static function gatedCardVisibility(): array
+    {
+        $notSecurity = ! (hasRole('Security Card') || hasRole('Admin Security'));
+        $isStudentOT = hasRole('Student-OT');
+        // Student-OT is a session pseudo-role; an OT holding only the Spatie
+        // "Officer Trainee" role does not have it.
+        $isOtUser = $isStudentOT || isOfficerTraineeUser();
+        $faculty = is_faculty_portal_user();
+
+        return [
+            'my_groups' => $notSecurity && $isStudentOT,
+            'discipline_marks_deducted' => $notSecurity && $isOtUser,
+            'pending_feedback' => $notSecurity && $isOtUser,
+            'total_sessions' => $notSecurity && $faculty,
+            'total_feedback' => $notSecurity && $faculty,
+            'my_counsellees' => $notSecurity && $faculty,
+            'house_wise_details' => $notSecurity && $faculty,
+            'whos_who' => $notSecurity && $faculty,
+            // The academy scope refuses trainees (PR #334 F-047).
+            'academic_timetable' => $notSecurity && $faculty && ! $isOtUser,
+            'my_timetable' => $notSecurity && ($faculty || $isOtUser),
+        ];
+    }
+
+    /** Ids of the modules where $roleIds have at least one card the logged-in user can see. */
+    public static function moduleIdsVisibleTo(array $roleIds): array
+    {
+        if ($roleIds === []) {
+            return [];
+        }
+        $hidden = array_keys(array_filter(self::gatedCardVisibility(), fn ($visible) => ! $visible));
+
+        return self::query()->whereNotIn('dashboard_cards.key', $hidden)
+            ->join('role_dashboard_cards', 'role_dashboard_cards.dashboard_card_id', '=', 'dashboard_cards.id')
+            ->whereIn('role_dashboard_cards.role_id', $roleIds)
+            ->distinct()->pluck('role_dashboard_cards.sidebar_category_id')->map(fn ($id) => (int) $id)->all();
+    }
+
     /** Cards any of $roleIds has on module $moduleId's dashboard. */
     public function scopeAssignedTo($query, array $roleIds, int $moduleId)
     {

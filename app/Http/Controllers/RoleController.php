@@ -466,24 +466,29 @@ class RoleController extends Controller
         }
         [$roleId, $toModule] = $to;
         $fromModule = $from[1];
-        $moved = $roleId !== null && $toModule->id !== $fromModule->id;
+        $switched = $roleId !== null && $toModule->id !== $fromModule->id;
 
-        DB::transaction(function () use ($card, $request, $moved, $roleId, $toModule, $fromModule) {
+        $moved = DB::transaction(function () use ($card, $request, $switched, $roleId, $toModule, $fromModule) {
             $card->update($request->only('label', 'icon', 'color_class', 'sort_order'));
 
-            if ($moved) {
-                DB::table('role_dashboard_cards')->where([
-                    'role_id' => $roleId, 'dashboard_card_id' => $card->id, 'sidebar_category_id' => $fromModule->id,
-                ])->delete();
-                DB::table('role_dashboard_cards')->insertOrIgnore([
-                    'role_id' => $roleId, 'dashboard_card_id' => $card->id, 'sidebar_category_id' => $toModule->id,
-                ]);
+            // Only an assignment the role really has on the opened tab moves: a card
+            // that is Disabled there has nothing to move, and must not come out enabled.
+            if (! $switched || DB::table('role_dashboard_cards')->where([
+                'role_id' => $roleId, 'dashboard_card_id' => $card->id, 'sidebar_category_id' => $fromModule->id,
+            ])->delete() === 0) {
+                return false;
             }
+            DB::table('role_dashboard_cards')->insertOrIgnore([
+                'role_id' => $roleId, 'dashboard_card_id' => $card->id, 'sidebar_category_id' => $toModule->id,
+            ]);
+
+            return true;
         });
 
         return response()->json([
             'success' => true,
-            'message' => $moved ? 'Card updated and moved to the '.$toModule->name.' dashboard.' : 'Card updated successfully.',
+            'message' => $moved ? 'Card updated and moved to the '.$toModule->name.' dashboard.'
+                : ($switched ? 'Card updated. It is not enabled for this role on this tab, so it was not moved.' : 'Card updated successfully.'),
             'moved'   => $moved,
             'card'    => $card->fresh(),
         ]);
@@ -520,41 +525,42 @@ class RoleController extends Controller
         // user as a 500 carrying a raw SQL error. Recompute and retry instead: the
         // database stays the authority and the caller gets a card.
         //
-        // One transaction with the role's tab assignment, so a card is never left
-        // behind without the tab it was created for. A duplicate-key failure only
-        // undoes that one INSERT in MySQL, so the retry loop still works inside it.
-        $card = DB::transaction(function () use ($request, $baseKey, $roleId, $module) {
-            $card = null;
+        // Each attempt is its own transaction holding the card and the role's tab
+        // assignment, so a card is never left without the tab it was created for.
+        // Not one transaction around the loop: under REPEATABLE READ its exists()
+        // probes all read the first attempt's snapshot and never see the key a
+        // competing request committed, so every retry would pick the same key.
+        $card = null;
+        for ($attempt = 0; $attempt < 5 && $card === null; $attempt++) {
+            try {
+                $card = DB::transaction(function () use ($request, $baseKey, $roleId, $module) {
+                    $key = $baseKey;
+                    $i = 1;
+                    while (DashboardCard::where('key', $key)->exists()) {
+                        $key = $baseKey . '_' . $i++;
+                    }
 
-            for ($attempt = 0; $attempt < 5 && $card === null; $attempt++) {
-                $key = $baseKey;
-                $i = 1;
-                while (DashboardCard::where('key', $key)->exists()) {
-                    $key = $baseKey . '_' . $i++;
-                }
-
-                try {
                     $card = DashboardCard::create(array_merge(
                         $request->only('label', 'icon', 'color_class', 'sort_order'),
                         ['key' => $key]
                     ));
-                } catch (\Illuminate\Database\QueryException $e) {
-                    // Only a uniqueness collision is worth retrying; anything else is a
-                    // real failure and must not be swallowed.
-                    if ((string) $e->getCode() !== '23000') {
-                        throw $e;
+
+                    if ($roleId !== null) {
+                        DB::table('role_dashboard_cards')->insertOrIgnore([
+                            'role_id' => $roleId, 'dashboard_card_id' => $card->id, 'sidebar_category_id' => $module->id,
+                        ]);
                     }
+
+                    return $card;
+                });
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Only a uniqueness collision is worth retrying; anything else is a
+                // real failure and must not be swallowed.
+                if ((string) $e->getCode() !== '23000') {
+                    throw $e;
                 }
             }
-
-            if ($card !== null && $roleId !== null) {
-                DB::table('role_dashboard_cards')->insertOrIgnore([
-                    'role_id' => $roleId, 'dashboard_card_id' => $card->id, 'sidebar_category_id' => $module->id,
-                ]);
-            }
-
-            return $card;
-        });
+        }
 
         if ($card === null) {
             return response()->json([

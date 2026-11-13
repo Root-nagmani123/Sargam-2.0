@@ -262,4 +262,44 @@ class DashboardModuleAssignmentTest extends TestCase
         $this->assertSame([$this->homeId], $this->tabsOf($this->roleId, $this->cardId));
         $this->assertSame($label, DB::table('dashboard_cards')->where('id', $this->cardId)->value('label'));
     }
+
+    public function test_editing_a_disabled_card_onto_another_tab_does_not_enable_it(): void
+    {
+        $admin = $this->staffWithRole('Super Admin');
+        $label = DB::table('dashboard_cards')->where('id', $this->cardId)->value('label');
+        $this->assertSame([], $this->tabsOf($this->roleId, $this->cardId), 'the card starts Disabled for the role');
+
+        $this->as($admin, ['Super Admin'])->put(route('dashboard.cards.update', $this->cardId),
+            $this->cardForm(['label' => $label, 'role_id' => $this->roleId, 'module' => $this->setupId, 'from_module' => $this->homeId]))
+            ->assertOk()
+            ->assertJson(['success' => true, 'moved' => false])
+            ->assertJsonPath('message', 'Card updated. It is not enabled for this role on this tab, so it was not moved.');
+
+        $this->assertSame([], $this->tabsOf($this->roleId, $this->cardId), 'a Disabled card must not come out enabled on the new tab');
+    }
+
+    public function test_a_module_whose_only_cards_are_gated_from_the_viewer_is_not_a_landing(): void
+    {
+        $gatedId = (int) DB::table('dashboard_cards')->where('key', 'my_groups')->value('id');
+        if (! $gatedId) {
+            $this->markTestSkipped('needs the my_groups card');
+        }
+        // A staff login: my_groups is for Student-OT logins only.
+        $user = $this->staffWithRole('Super Admin');
+        DB::table('model_has_roles')->insert(['role_id' => $this->roleId, 'model_type' => User::class, 'model_id' => $user->pk]);
+        DB::table('role_dashboard_cards')->where('sidebar_category_id', $this->setupId)
+            ->whereIn('role_id', DB::table('model_has_roles')->where('model_type', User::class)->where('model_id', $user->pk)->pluck('role_id'))
+            ->delete();
+        DB::table('role_dashboard_cards')->insert([
+            'role_id' => $this->roleId, 'dashboard_card_id' => $gatedId, 'sidebar_category_id' => $this->setupId,
+        ]);
+        $landing = json_encode(route('admin.dashboard', ['category' => $this->setupId]));
+
+        $this->assertSame([], $this->renderedKeys($user, ['category' => $this->setupId]), 'the gated card is filtered from the dashboard');
+        $this->as($user, [])->get(route('admin.dashboard'))->assertOk()->assertDontSee($landing, false);
+
+        // One card the viewer can see makes it a landing again.
+        $this->assign($this->setupId);
+        $this->as($user, [])->get(route('admin.dashboard'))->assertOk()->assertSee($landing, false);
+    }
 }

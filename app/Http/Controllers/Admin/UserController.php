@@ -469,10 +469,7 @@ class UserController extends Controller
         // the same trap the discipline card documents.
         $isOtUser       = $isStudentOT || isOfficerTraineeUser();
         $isFacultyRole  = hasRole('Internal Faculty') || hasRole('Guest Faculty');
-        // The two faculty cards below key off portal membership, not those two role
-        // names — the only faculty role actually present is "Faculty", which
-        // $isFacultyRole does not match.
-        $isFacultyPortalUser = is_faculty_portal_user();
+        // The OT and faculty cards' visibility is DashboardCard::gatedCardVisibility().
 
         // Role-scoped course IDs for "My Course Participant" ([] = all, [-1] = none, [pks] = restricted)
         $myCourseIds = get_Role_by_course();
@@ -493,35 +490,35 @@ class UserController extends Controller
             'pending_id_approval1'    => ['count' => $todayApproval1IdCardRequests ?? 0,           'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1IdCardRequests ?? 0) > 0],
             'pending_dup_id_approval1'=> ['count' => $todayApproval1DuplicateIdCardRequests ?? 0,  'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1DuplicateIdCardRequests ?? 0) > 0],
             'ot_mdo_escort'           => ['count' => $MDO_count ?? 0,                              'link' => route('ot.mdo.escrot.exemption.view'),                         'visible' => !$isSecurityRole && $isStudentOT],
-            'my_groups'               => ['count' => $myGroupsCount ?? 0,                          'link' => route('admin.dashboard.my-groups'),                            'visible' => !$isSecurityRole && $isStudentOT],
+            'my_groups'               => ['count' => $myGroupsCount ?? 0,                          'link' => route('admin.dashboard.my-groups')],
             'total_inhouse_faculty'   => ['count' => $total_internal_faculty,                      'link' => route('admin.dashboard.inhouse_faculty'),                      'visible' => !$isSecurityRole && !$isStudentOT],
             'session_details'         => ['count' => $totalSessions,                               'link' => route('admin.dashboard.sessions'),                             'visible' => !$isSecurityRole && ($isFacultyRole || $isSuperAdmin)],
             // Faculty-only cards. Both open a report that scopes itself to the
             // logged-in faculty server-side, so the count and the page agree.
-            'total_sessions'          => ['count' => $facultyTotalSessions,                        'link' => route('timetable-report.index', ['course_mode' => 'all', 'faculty_role' => FacultySessionScope::ROLE_TEACHING]), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
-            'total_feedback'          => ['count' => $facultyTotalFeedback,                        'link' => route('faculty.session_feedback.comments', ['course_type' => 'current', 'program_id' => 'all']), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            'total_sessions'          => ['count' => $facultyTotalSessions,                        'link' => route('timetable-report.index', ['course_mode' => 'all', 'faculty_role' => FacultySessionScope::ROLE_TEACHING])],
+            'total_feedback'          => ['count' => $facultyTotalFeedback,                        'link' => route('faculty.session_feedback.comments', ['course_type' => 'current', 'program_id' => 'all'])],
             // No count on the two timetable cards: they open a calendar, not a list
             // whose rows could be counted. Academic = the whole Academy's timetable
             // (?scope=academy), My Timetable = the same page scoped to the viewer,
             // which is what it already does for a faculty login. Faculty only: the
             // academy scope refuses trainees (PR #334 F-047).
-            'academic_timetable'      => [                                                         'link' => route('calendar.index', ['scope' => 'academy']),               'visible' => !$isSecurityRole && $isFacultyPortalUser && !$isOtUser],
+            'academic_timetable'      => [                                                         'link' => route('calendar.index', ['scope' => 'academy'])],
             // An OT's own timetable is their dedicated calendar — the sessions of
             // the groups they are enrolled in. A faculty's is the same page scoped
             // to their classes, which is what it already does for them.
-            'my_timetable'            => ['link' => $isOtUser ? route('calendar.ot.index') : route('calendar.index'),                            'visible' => !$isSecurityRole && ($isFacultyPortalUser || $isOtUser)],
+            'my_timetable'            => ['link' => $isOtUser ? route('calendar.ot.index') : route('calendar.index')],
             // Both open the OT / Participants list — the second ordered by House so it
             // opens house-wise, with the page's House filter to narrow to one.
-            'my_counsellees'          => ['count' => $facultyCounsellees,                          'link' => route('admin.dashboard.ot-participants', ['view' => 'counsellees']), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
-            'house_wise_details'      => ['count' => $facultyHouses,                               'link' => route('admin.dashboard.ot-participants', ['view' => 'house']), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            'my_counsellees'          => ['count' => $facultyCounsellees,                          'link' => route('admin.dashboard.ot-participants', ['view' => 'counsellees'])],
+            'house_wise_details'      => ['count' => $facultyHouses,                               'link' => route('admin.dashboard.ot-participants', ['view' => 'house'])],
             // No count: Who's Who opens on a course picker, so there is no single
             // number the tile could honestly show — same as the timetable cards.
-            'whos_who'                => [                                                         'link' => route('admin.faculty.whos-who'),                               'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            'whos_who'                => [                                                         'link' => route('admin.faculty.whos-who')],
             'total_students'          => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'student_details'         => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'my_course_participant'   => ['count' => StudentMasterCourseMap::query()->when(!empty($myCourseIds), fn($q) => $q->whereIn('course_master_pk', $myCourseIds))->count(), 'link' => route('my.course.participant'),                                'visible' => true],
-            'discipline_marks_deducted' => ['count' => $disciplineMarksDeducted,                   'link' => route('memo.discipline.ot_marks'),                              'visible' => !$isSecurityRole && $isOtUser],
-            'pending_feedback'        => ['count' => $pendingFeedbackCount,                        'link' => route('feedback.get.studentFeedbackUrl'),                      'visible' => !$isSecurityRole && $isOtUser],
+            'discipline_marks_deducted' => ['count' => $disciplineMarksDeducted,                   'link' => route('memo.discipline.ot_marks')],
+            'pending_feedback'        => ['count' => $pendingFeedbackCount,                        'link' => route('feedback.get.studentFeedbackUrl')],
         ];
 
         // Count map for custom cards added via UI.
@@ -557,20 +554,14 @@ class UserController extends Controller
 
         $issueReportModules = \App\Http\Controllers\Admin\IssueReportController::moduleOptions();
 
-        // Cards whose 'visible' flag is enforced: the OT and faculty-portal cards,
-        // whose role mapping alone would show them to a login the page behind them
-        // refuses (an OT card to a non-OT, opening a 403). The older cards' flags
-        // were never applied and their role mappings are what admins have tuned
-        // against, so they are left as they are.
-        $gatedCardKeys = [
-            'my_groups', 'discipline_marks_deducted', 'pending_feedback',
-            'total_sessions', 'total_feedback', 'my_counsellees', 'house_wise_details', 'whos_who',
-            'academic_timetable', 'my_timetable',
-        ];
+        // Only the OT and faculty-portal cards are gated (DashboardCard::gatedCardVisibility(),
+        // shared with the header's module landing). The older cards' 'visible' flags
+        // above were never applied and their role mappings are what admins have
+        // tuned against, so they are left as they are.
+        $gatedCardVisibility = DashboardCard::gatedCardVisibility();
 
-        $cardsToRender = $baseCards->filter(fn ($c) => ! str_starts_with($c->key, 'widget_'))->filter(function ($card) use ($cardDefinitions, $gatedCardKeys) {
-            return ! in_array($card->key, $gatedCardKeys, true)
-                || ($cardDefinitions[$card->key]['visible'] ?? true);
+        $cardsToRender = $baseCards->filter(fn ($c) => ! str_starts_with($c->key, 'widget_'))->filter(function ($card) use ($gatedCardVisibility) {
+            return $gatedCardVisibility[$card->key] ?? true;
         })->map(function ($card) use ($cardDefinitions, $cardCounts) {
             $def = $cardDefinitions[$card->key] ?? null;
 

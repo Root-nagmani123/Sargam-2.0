@@ -226,8 +226,8 @@ This is where the actual dashboard is **built** for the logged-in user.
 3. **Build card data with counts and links:**
    ```php
    $cardDefinitions = [
-       'my_groups' => ['count' => $myGroupsCount, 'link' => route('admin.dashboard.my-groups'), 'visible' => true],
-       'pending_feedback' => ['count' => $feedbackCount, 'link' => route('feedback...'), 'visible' => $isOtUser],
+       'my_groups' => ['count' => $myGroupsCount, 'link' => route('admin.dashboard.my-groups')],
+       'pending_feedback' => ['count' => $feedbackCount, 'link' => route('feedback...')],
        // ... many more cards
    ];
    ```
@@ -236,10 +236,9 @@ This is where the actual dashboard is **built** for the logged-in user.
    ```php
    $cardsToRender = $baseCards
        ->filter(fn ($c) => ! str_starts_with($c->key, 'widget_'))
-       ->filter(function ($card) use ($cardDefinitions, $gatedCardKeys) {
-           return ! in_array($card->key, $gatedCardKeys, true)
-               || ($cardDefinitions[$card->key]['visible'] ?? true);
-       })
+       // DashboardCard::gatedCardVisibility(): gated card key => may this login see it.
+       // Cards not in that map show to whoever's role has them.
+       ->filter(fn ($card) => $gatedCardVisibility[$card->key] ?? true)
        ->map(function ($card) use ($cardDefinitions, $cardCounts) {
            return [
                'key' => $card->key,
@@ -326,7 +325,8 @@ This is where the actual dashboard is **built** for the logged-in user.
   field) it is also switched on for that role on that tab, in the same transaction
 - `PUT /dashboard-cards/{id}` → Edit dashboard card (label/icon/colour/order are shared by every role);
   with `role_id`, `from_module` and a different `module` it moves that role's assignment to the new tab.
-  An unknown tab is refused with 422 and nothing is saved
+  Only an assignment the role has on `from_module` moves: a card Disabled there stays disabled on
+  both tabs (`moved: false`). An unknown tab is refused with 422 and nothing is saved
 - `DELETE /dashboard-cards/{id}` → Delete dashboard card
 
 **User Dashboard:**
@@ -334,8 +334,20 @@ This is where the actual dashboard is **built** for the logged-in user.
 - `GET /dashboard?category=<module id>` → that header module's dashboard
 
 **Header tab landing** (`admin/layouts/master.blade.php`): a header tab whose module has at
-least one card for one of the user's roles opens that module's dashboard; any other tab opens
-its first sidebar menu. `nav-state.js` still prefers the last page visited in a tab.
+least one card the user can see — assigned to one of their roles and not hidden by
+`DashboardCard::gatedCardVisibility()`, the same gate `dashboard()` applies
+(`DashboardCard::moduleIdsVisibleTo()`) — lands on `/dashboard?category=<id>`; any other tab's
+landing is its first sidebar menu.
+
+`nav-state.js`, clicking a header tab:
+1. Home always navigates to `/dashboard` (unless already there).
+2. A tab whose landing is a module dashboard always navigates to it (unless already there) —
+   the module dashboard wins over the last page visited in that tab.
+3. Any other tab switches the sidebar pane in place without navigating.
+
+When a tab's pane is empty and a URL is needed (`getNavigateUrlForTab`), the priority is:
+module dashboard → last page visited in the tab → the tab's landing (first menu) → `/dashboard`
+(Home only).
 
 ---
 
@@ -456,7 +468,7 @@ php artisan test tests/Feature/DashboardCardKeyTest.php
 
 1. **Card Order:** Controlled by `dashboard_cards.sort_order` — one global order per card, the same on every module
 2. **Modules:** A card shows on a module's dashboard only when assigned to the viewer's role *for that module*; panels (`widget_*`) follow the same rule
-3. **Visibility Gates:** Some cards (OT-specific, faculty-specific) have `visible` flags that enforce permission checks beyond role assignment
+3. **Visibility Gates:** Some cards (OT-specific, faculty-specific) are gated beyond role assignment by `DashboardCard::gatedCardVisibility()`; the header landing uses the same gate. The `visible` flags left on the other `$cardDefinitions` rows are not applied
 4. **Widget Cards vs Stat Cards:** 
    - Stat cards = single tile with icon + number + link
    - Widget cards = panels/sections that appear below
@@ -470,7 +482,7 @@ php artisan test tests/Feature/DashboardCardKeyTest.php
 ### Cards not showing up?
 1. Check `dashboard_cards` table has the card
 2. Check `role_dashboard_cards` links the card to the user's role **on the module you are viewing** (`sidebar_category_id`)
-3. Check card `visible` flag in `UserController::dashboard()` isn't gating it
+3. Check `DashboardCard::gatedCardVisibility()` isn't gating it for this login
 4. Check `sort_order` is set
 
 ### New card not appearing after migration?

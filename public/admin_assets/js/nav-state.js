@@ -63,7 +63,7 @@
      */
     /**
      * The tab's module dashboard (/dashboard?category=N, set by master.blade.php
-     * when the module has cards for one of the user's roles), or null.
+     * when the module has a dashboard card this user can see), or null.
      */
     function moduleDashboardUrlForTab(tabHash) {
         var url = (global.SARGAM_CATEGORY_LANDING_URLS || {})[tabHash];

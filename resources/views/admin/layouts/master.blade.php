@@ -35,11 +35,10 @@
 
     $routeMatcher = app(\App\Services\SidebarMenu\MenuRouteMatcher::class);
     $categoryLandingUrls = ['#home' => route('admin.dashboard')];
-    // A module with dashboard cards for one of this user's roles opens on that
-    // module's dashboard; any other module opens on its first menu.
+    // A module with a dashboard card this user can see (same gate as dashboard())
+    // opens on that module's dashboard; any other module opens on its first menu.
     $userRoleIds = auth()->check() ? auth()->user()->roles->pluck('id')->all() : [];
-    $modulesWithDashboard = $userRoleIds === [] ? [] : \Illuminate\Support\Facades\DB::table('role_dashboard_cards')
-        ->whereIn('role_id', $userRoleIds)->distinct()->pluck('sidebar_category_id')->all();
+    $modulesWithDashboard = \App\Models\DashboardCard::moduleIdsVisibleTo($userRoleIds);
     foreach ($sidebarMenus as $cat) {
         $tabHash = $cat->slug === 'home' ? '#home' : '#tab-' . $cat->slug;
         if ($tabHash === '#home') {
