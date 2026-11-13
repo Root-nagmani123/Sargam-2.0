@@ -30,7 +30,7 @@ class FacultyResultEntryController extends Controller
     {
     }
 
-    /** ?course=<pk>&subject=<pk>&tab=pending|completed */
+    /** ?course=<pk>&subject=<pk>&component=<column key>&tab=pending|completed */
     public function index(Request $request)
     {
         $sheet = $this->sheet($request);
@@ -49,16 +49,24 @@ class FacultyResultEntryController extends Controller
         $data = $request->validate([
             'course' => ['required', 'integer'],
             'subject' => ['nullable', 'integer'],
+            'component' => ['nullable', 'string', 'max:64'],
             'marks' => ['array'],
             'remarks' => ['array'],
             'approve' => ['boolean'],
         ]);
 
-        $sheet = $this->results->entrySheet($request->user(), (int) $data['course'], isset($data['subject']) ? (int) $data['subject'] : null);
-        // The sheet falls back to another course or all subjects when the asked one is
-        // not the user's; saving must never land on columns other than those asked for.
-        if ($sheet['coursePk'] !== (int) $data['course'] || (isset($data['subject']) && $sheet['subjectPk'] !== (int) $data['subject'])) {
-            return response()->json(['message' => 'You are not assigned to marks entry on this course or subject.'], 403);
+        $sheet = $this->results->entrySheet(
+            $request->user(),
+            (int) $data['course'],
+            isset($data['subject']) ? (int) $data['subject'] : null,
+            $data['component'] ?? null,
+        );
+        // The sheet falls back to another course, all subjects or all components when the
+        // asked one is not the user's; saving must never land on columns other than those asked for.
+        if ($sheet['coursePk'] !== (int) $data['course']
+            || (isset($data['subject']) && $sheet['subjectPk'] !== (int) $data['subject'])
+            || (isset($data['component']) && $sheet['componentKey'] !== $data['component'])) {
+            return response()->json(['message' => 'You are not assigned to marks entry on this course, subject or component.'], 403);
         }
 
         $approve = (bool) ($data['approve'] ?? false);
@@ -97,6 +105,7 @@ class FacultyResultEntryController extends Controller
             'file' => ['required', 'file', 'mimes:xlsx,xls,csv,txt', 'max:'.(self::IMPORT_MAX_MB * 1024)],
             'course' => ['nullable', 'integer'],
             'subject' => ['nullable', 'integer'],
+            'component' => ['nullable', 'string', 'max:64'],
         ], [
             'file.required' => 'Choose an .xlsx, .xls or .csv file first.',
             'file.mimes' => 'The file must be .xlsx, .xls or .csv.',
@@ -161,6 +170,7 @@ class FacultyResultEntryController extends Controller
             $request->user(),
             $request->integer('course') ?: null,
             $request->integer('subject') ?: null,
+            $request->string('component')->trim()->value() ?: null,
         );
     }
 }

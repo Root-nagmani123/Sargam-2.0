@@ -22,7 +22,7 @@
 @php
     $isArchived = $scope === 'archived';
     $out = fn ($v) => \App\Services\COE\ResultMarksService::number($v);
-    $labels = ['pending' => 'Pending', 'absent' => 'Absent', 'not-moderated' => 'Not Moderated', 'moderated' => 'Moderated'];
+    $labels = ['unassigned' => 'Unassigned', 'pending' => 'Pending', 'absent' => 'Absent', 'not-moderated' => 'Not Moderated', 'moderated' => 'Moderated'];
 @endphp
 <div class="container-fluid coe-page">
     <x-breadcrum title="Result Records and Marks Moderation" :showBack="false"

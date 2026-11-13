@@ -232,7 +232,13 @@ class ResultMarksService
                     continue;
                 }
                 $owners = $this->subjectFacultyPks($drive, (int) $map->subject_master_pk);
-                $isOwner = $all || array_intersect($owners, array_keys($mine)) !== [];
+                // The subject's faculty see every OT of the component, unless they are given
+                // OT codes on it themselves: then, like any evaluator, only those OTs.
+                $hasOwnCodes = array_filter(
+                    array_intersect($map->subCoordinatorNames(), $mine),
+                    fn ($name) => $this->assignedCodes($map, $name) !== []
+                ) !== [];
+                $isOwner = $all || (array_intersect($owners, array_keys($mine)) !== [] && ! $hasOwnCodes);
 
                 $students = [];
                 $tutors = [];
@@ -256,11 +262,12 @@ class ResultMarksService
 
     /**
      * The faculty Result Entry sheet: the user's courses, and on the chosen one
-     * (optionally one subject) their columns, participants and saved marks.
+     * (optionally one subject, and one component of it) their columns, participants
+     * and saved marks. $componentKey is a column key; one not on the sheet is ignored.
      *
-     * @return array{courses:array<int,string>, coursePk:?int, subjects:array, subjectPk:?int, columns:list<array>, rows:array<int,array>, marks:array}
+     * @return array{courses:array<int,string>, coursePk:?int, subjects:array, subjectPk:?int, components:array<string,string>, componentKey:?string, columns:list<array>, rows:array<int,array>, marks:array}
      */
-    public function entrySheet(User $user, ?int $coursePk, ?int $subjectPk): array
+    public function entrySheet(User $user, ?int $coursePk, ?int $subjectPk, ?string $componentKey = null): array
     {
         $all = $this->entryColumns($user);
         $courses = collect($all)->mapWithKeys(fn ($c) => [$c['course_pk'] => $c['course']])
@@ -271,6 +278,17 @@ class ResultMarksService
         $subjects = $this->groupBySubject($courseColumns);
         $subjectPk = isset($subjects[$subjectPk]) ? $subjectPk : null;
         $columns = $subjectPk ? array_values($subjects[$subjectPk]['columns']) : $courseColumns;
+
+        // Component filter: the columns left by Course / Subject, named as the table names them.
+        $components = [];
+        foreach ($columns as $col) {
+            $label = $subjects[$col['subject_pk']]['columns'][$col['key']]['label'] ?? $col['component'];
+            $components[$col['key']] = $subjectPk ? $label : $col['subject'].' — '.$label;
+        }
+        $componentKey = isset($components[$componentKey]) ? $componentKey : null;
+        if ($componentKey !== null) {
+            $columns = array_values(array_filter($columns, fn ($c) => $c['key'] === $componentKey));
+        }
 
         $participants = [];
         foreach (ExaminationDrive::whereIn('id', array_unique(array_column($columns, 'drive_id')))->get() as $drive) {
@@ -295,6 +313,8 @@ class ResultMarksService
             'subjects' => $subjectPk ? [$subjectPk => $subjects[$subjectPk]] : $subjects,
             'allSubjects' => $subjects,
             'subjectPk' => $subjectPk,
+            'components' => $components,
+            'componentKey' => $componentKey,
             'columns' => $columns,
             'rows' => $rows,
             'marks' => $marks,
@@ -1089,9 +1109,10 @@ class ResultMarksService
      *
      * A component is moderated as a whole (MarksModeration): its moderated marks are
      * worked out only once every participant's mark is approved, since one pending
-     * mark would move the means every other OT is moderated against.
+     * mark would move the means every other OT is moderated against. An OT no faculty
+     * is assigned to (and not marked) does not hold the rest back: it is left out.
      *
-     * status: pending (not approved yet) | absent | not-moderated | moderated
+     * status: unassigned | pending (not approved yet) | absent | not-moderated | moderated
      *
      * @return list<array<string, mixed>>
      */
@@ -1110,6 +1131,9 @@ class ResultMarksService
                 }
                 $subjectFaculty = $drive->facultyMaps->where('subject_master_pk', $col['subject_pk'])
                     ->map(fn ($f) => trim((string) ($f->faculty->full_name ?? '')))->filter()->unique()->values()->all();
+                // As on Result Entry (entryColumns): the subject's faculty take every OT only
+                // while they hold no OT codes on the component themselves.
+                $ownersTakeAll = array_filter($subjectFaculty, fn ($name) => $this->assignedCodes($map, $name) === []) !== [];
 
                 $colRows = [];
                 $scores = [];
@@ -1117,8 +1141,12 @@ class ResultMarksService
                 foreach ($this->participants($drive) as $pk => $p) {
                     $m = $marks[$col['key']][$pk] ?? null;
                     $approved = (bool) $m?->isApproved();
-                    $complete = $complete && $approved;
-                    $evaluator = implode(', ', $this->evaluatorNames($map, $p) ?: $subjectFaculty) ?: 'Unassigned';
+                    $names = $this->evaluatorNames($map, $p) ?: ($ownersTakeAll ? $subjectFaculty : []);
+                    // An OT no faculty can enter marks for is left out of the component's
+                    // moderation instead of holding it back; once marked it counts like any other.
+                    $unassigned = $names === [] && ! $approved;
+                    $complete = $complete && ($approved || $unassigned);
+                    $evaluator = implode(', ', $names) ?: 'Unassigned';
                     $moderated = $saved && $m?->moderated_marks !== null ? (float) $m->moderated_marks : null;
                     if ($approved && ! $m->is_absent) {
                         $scores[$pk] = ['marks' => (float) $m->marks, 'evaluator' => $evaluator];
@@ -1129,6 +1157,7 @@ class ResultMarksService
                         'mark_pk' => $m?->pk,
                         'code' => $p['code'],
                         'name' => $p['name'],
+                        'drive' => $col['drive'],
                         'course' => $col['course'],
                         'subject' => $col['subject'],
                         'component' => $col['component'],
@@ -1137,6 +1166,7 @@ class ResultMarksService
                         'evaluator' => $evaluator,
                         'moderated' => $moderated,
                         'status' => match (true) {
+                            $unassigned => 'unassigned',
                             ! $approved => 'pending',
                             $m->is_absent => 'absent',
                             $moderated !== null => 'moderated',
@@ -1161,6 +1191,19 @@ class ResultMarksService
                 }
             }
         }
+
+        // The same component on several drives of a course/subject is told apart by
+        // its drive name, as on the faculty Result Entry sheet.
+        $drivesOf = [];
+        foreach ($rows as $row) {
+            $drivesOf[$row['course']."\0".$row['subject']."\0".$row['component']][strtok($row['key'], ':')] = true;
+        }
+        foreach ($rows as &$row) {
+            if (count($drivesOf[$row['course']."\0".$row['subject']."\0".$row['component']]) > 1) {
+                $row['component'] .= ' · '.$row['drive'];
+            }
+        }
+        unset($row);
 
         usort($rows, fn ($a, $b) => [$a['course'], $a['subject'], $a['component']] <=> [$b['course'], $b['subject'], $b['component']]
             ?: self::compareOtCodes($a['code'], $b['code']));

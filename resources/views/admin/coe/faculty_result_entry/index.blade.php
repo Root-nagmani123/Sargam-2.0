@@ -5,7 +5,7 @@
     $two = fn ($v) => $v === null ? '' : number_format((float) $v, 2, '.', '');
     $isCompleted = $tab === 'completed';
     $shown = array_values(array_filter($entries, fn ($e) => (bool) $e['mark']?->isApproved() === $isCompleted));
-    $filters = array_filter(['course' => $coursePk, 'subject' => $subjectPk]);
+    $filters = array_filter(['course' => $coursePk, 'subject' => $subjectPk, 'component' => $componentKey]);
     $editable = ! $isCompleted && $shown !== [];
     // OT Unique Code, Course, Subject / Component, then Attendance, Marks (and Remarks) are fields.
     $fieldCols = $withRemarks ? [3, 4, 5] : [3, 4];
@@ -69,7 +69,7 @@
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
             <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar coe-toolbar">
-                {{-- Course / Subject change what is on the sheet, so they reload the page. --}}
+                {{-- Course / Subject / Component change what is on the sheet, so they reload the page. --}}
                 <form method="GET" action="{{ route('admin.coe.faculty-result-entry.index') }}" id="rreFilterForm"
                       class="d-flex flex-wrap align-items-center gap-3">
                     @if ($isCompleted)
@@ -90,6 +90,14 @@
                             <option value="">All Subjects</option>
                             @foreach ($allSubjects as $pk => $s)
                                 <option value="{{ $pk }}" @selected($pk === $subjectPk)>{{ $s['name'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="programme-dt-filter-select">
+                        <select name="component" class="form-select rre-filter" aria-label="Component">
+                            <option value="">All Components</option>
+                            @foreach ($components as $key => $label)
+                                <option value="{{ $key }}" @selected($key === $componentKey)>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -312,7 +320,7 @@ $(function () {
             method: 'POST',
             contentType: 'application/json',
             // JSON, not form fields: a full sheet can pass PHP's max_input_vars.
-            data: JSON.stringify({ course: @json($coursePk), subject: @json($subjectPk), marks: marks, remarks: remarks, approve: approve }),
+            data: JSON.stringify({ course: @json($coursePk), subject: @json($subjectPk), component: @json($componentKey), marks: marks, remarks: remarks, approve: approve }),
             headers: CSRF
         }).done(function (res) {
             Swal.fire({ icon: 'success', title: 'Success', text: res.message })
@@ -356,7 +364,11 @@ $(function () {
         });
     });
 
-    $('.rre-filter').on('change', function () { $('#rreFilterForm').submit(); });
+    // A component belongs to one course / subject: changing either starts from All Components.
+    $('.rre-filter').on('change', function () {
+        if (this.name !== 'component') { $('#rreFilterForm select[name="component"]').val(''); }
+        $('#rreFilterForm').submit();
+    });
 
     /* ── Import ──────────────────────────────────────────────────────────── */
     var IMPORT_EXT = @json($importExtensions);
