@@ -9,22 +9,21 @@
     background: #fff;
 }
 
-/* Birthday notification banner — reference design */
-.dashboard-birthday-banner {
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    min-height: 6.25rem;
-}
+/* Birthday banner — shown only to the employee whose birthday it is.
+   Built on the design-system card (.ds-card + .ds-card--accent from
+   sargam-app.css, docs/design.md): white surface, hairline border, 8px radius,
+   brand-blue accent edge, --ds-* tokens throughout. The right-hand cake is an
+   inline SVG animated with CSS only. JS hooks (#birthday-banner,
+   #birthday-banner-dismiss, #confetti-canvas, .is-dismissed) are unchanged. */
 
-.dashboard-birthday-banner .birthday-banner-accent {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 6px;
-    background: linear-gradient(180deg, #1a3354 0%, #0f2340 100%);
-    border-radius: 1rem 0 0 1rem;
-    z-index: 3;
+/* Two classes so the festive wash beats .ds-card's `background` shorthand
+   (sargam-app.css loads last). */
+.ds-card.dashboard-birthday-banner {
+    background:
+        radial-gradient(circle at 100% 0%, rgba(245, 179, 1, 0.14) 0%, transparent 38%),
+        radial-gradient(circle at 82% 100%, rgba(var(--bs-primary-rgb, 0, 74, 147), 0.07) 0%, transparent 45%),
+        var(--ds-surface, #fff);
+    animation: bday-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 .dashboard-birthday-banner .birthday-banner-inner {
@@ -32,83 +31,151 @@
     z-index: 2;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 1.125rem 3.25rem 1.125rem 1.5rem;
-    min-height: 6.25rem;
+    gap: var(--ds-space-3, 1rem);
+    padding: var(--ds-space-3, 1rem) 3.5rem var(--ds-space-3, 1rem) var(--ds-space-4, 1.5rem);
+}
+
+/* Icon tile — the .ds-stat-icon language at banner scale. */
+.dashboard-birthday-banner .birthday-banner-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    font-size: 1.5rem;
+    color: var(--ds-primary, #004a93);
+    background: rgba(var(--bs-primary-rgb, 0, 74, 147), 0.12);
+    border-radius: var(--ds-radius-1, 0.25rem);
 }
 
 .dashboard-birthday-banner .birthday-banner-text {
     flex: 1 1 auto;
     min-width: 0;
-    padding-left: 0.35rem;
+}
+
+.dashboard-birthday-banner .birthday-banner-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-1, 0.25rem);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ds-secondary, #b12923);
 }
 
 .dashboard-birthday-banner .birthday-banner-title {
-    font-size: 1.125rem;
+    margin: var(--ds-space-1, 0.25rem) 0;
+    font-size: clamp(1.25rem, 2vw, 1.5rem);
     font-weight: 700;
-    color: #1a1a1a;
-    letter-spacing: -0.01em;
     line-height: 1.3;
+    letter-spacing: -0.01em;
+    color: var(--ds-ink, #1f2937);
+}
+
+.dashboard-birthday-banner .birthday-banner-name {
+    color: var(--ds-primary, #004a93);
 }
 
 .dashboard-birthday-banner .birthday-banner-subtitle {
     font-size: 0.875rem;
-    color: #5c6670;
     line-height: 1.55;
-    max-width: 42rem;
+    color: var(--ds-ink-muted, #667085);
+    max-width: 44rem;
+}
+
+.dashboard-birthday-banner .birthday-banner-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ds-space-2, 0.5rem);
+    margin-top: var(--ds-space-3, 1rem);
+}
+
+.dashboard-birthday-banner .birthday-banner-count {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-2, 0.5rem);
+    min-height: var(--ds-control-h-sm, 2rem);
+    padding: 0 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ds-ink, #1f2937);
+    background: var(--ds-surface-2, #f8fafc);
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-radius: var(--ds-radius-1, 0.25rem);
+}
+
+.dashboard-birthday-banner .birthday-banner-count .bi {
+    color: var(--ds-secondary, #b12923);
 }
 
 .dashboard-birthday-banner .birthday-banner-link {
-    color: #004a93;
-    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-2, 0.5rem);
+    min-height: var(--ds-control-h-sm, 2rem);
+    padding: 0 var(--ds-space-3, 1rem);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--ds-primary, #004a93);
+    border-radius: var(--ds-radius-1, 0.25rem);
     text-decoration: none;
     white-space: nowrap;
+    transition: background-color 0.15s ease;
+}
+
+.dashboard-birthday-banner .birthday-banner-link .bi {
+    transition: transform 0.15s ease;
 }
 
 .dashboard-birthday-banner .birthday-banner-link:hover {
-    color: #003366;
-    text-decoration: underline;
+    color: #fff;
+    background: #003a75;
+}
+
+.dashboard-birthday-banner .birthday-banner-link:hover .bi {
+    transform: translateX(3px);
+}
+
+.dashboard-birthday-banner .birthday-banner-link:focus-visible,
+.dashboard-birthday-banner .birthday-banner-close:focus-visible {
+    outline: 0;
+    box-shadow: var(--ds-focus-ring, 0 0 0 0.2rem rgba(0, 74, 147, 0.2));
 }
 
 .dashboard-birthday-banner .birthday-banner-close {
     position: absolute;
-    top: 0.75rem;
-    right: 0.75rem;
+    top: var(--ds-space-3, 1rem);
+    right: var(--ds-space-3, 1rem);
     z-index: 4;
-    width: 1.75rem;
-    height: 1.75rem;
-    padding: 0;
-    border: none;
-    border-radius: 0.375rem;
-    background: #eef1f4;
-    color: #dc3545;
-    font-size: 1.125rem;
-    line-height: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: var(--ds-control-h-sm, 2rem);
+    height: var(--ds-control-h-sm, 2rem);
+    padding: 0;
+    font-size: 0.875rem;
+    color: var(--ds-ink-muted, #667085);
+    background: var(--ds-surface-2, #f8fafc);
+    border: 1px solid var(--ds-line, #e5e7eb);
+    border-radius: var(--ds-radius-1, 0.25rem);
     cursor: pointer;
-    transition: background-color 0.15s ease;
+    transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .dashboard-birthday-banner .birthday-banner-close:hover {
-    background: #e2e6ea;
+    color: var(--ds-ink, #1f2937);
+    background: var(--ds-line, #e5e7eb);
 }
 
 .dashboard-birthday-banner .birthday-banner-illustration {
     flex: 0 0 auto;
-    align-self: flex-end;
-    margin-bottom: -0.35rem;
-    margin-right: -0.25rem;
+    margin: calc(-1 * var(--ds-space-2, 0.5rem)) var(--ds-space-2, 0.5rem);
     pointer-events: none;
     user-select: none;
-}
-
-.dashboard-birthday-banner .birthday-banner-illustration svg {
-    display: block;
-    width: clamp(7rem, 14vw, 9.5rem);
-    height: auto;
 }
 
 #confetti-canvas {
@@ -122,6 +189,347 @@
 
 .dashboard-birthday-banner.is-dismissed {
     display: none !important;
+}
+
+/* ── Animated cake ─────────────────────────────────────────────────────── */
+.bday-cake {
+    display: block;
+    width: clamp(8rem, 13vw, 10rem);
+    height: auto;
+    overflow: visible;
+}
+
+.bday-cake__halo,
+.bday-cake__glow,
+.bday-cake__flame,
+.bday-cake__spark,
+.bday-cake__dot {
+    transform-box: fill-box;
+}
+
+.bday-cake__halo {
+    fill: rgba(var(--bs-primary-rgb, 0, 74, 147), 0.06);
+    transform-origin: center;
+    animation: bday-halo 3s ease-in-out infinite;
+}
+
+.bday-cake__flame {
+    transform-origin: 50% 100%;
+    animation: bday-flicker 0.9s ease-in-out infinite alternate;
+}
+
+.bday-cake__flame--2 { animation-delay: -0.3s; }
+.bday-cake__flame--3 { animation-delay: -0.6s; }
+
+.bday-cake__glow {
+    fill: #fde68a;
+    transform-origin: center;
+    animation: bday-glow 0.9s ease-in-out infinite alternate;
+}
+
+.bday-cake__glow--2 { animation-delay: -0.3s; }
+.bday-cake__glow--3 { animation-delay: -0.6s; }
+
+.bday-cake__spark {
+    fill: #f5b301;
+    transform-origin: center;
+    animation: bday-twinkle 2.4s ease-in-out infinite;
+}
+
+.bday-cake__spark--2 { fill: var(--ds-primary, #004a93); animation-delay: -0.5s; }
+.bday-cake__spark--3 { fill: var(--ds-secondary, #b12923); animation-delay: -1.1s; }
+.bday-cake__spark--4 { fill: var(--ds-primary, #004a93); animation-delay: -1.6s; }
+.bday-cake__spark--5 { animation-delay: -2s; }
+
+.bday-cake__dot {
+    fill: #f5b301;
+    animation: bday-rise 3.2s ease-in infinite;
+}
+
+.bday-cake__dot--2 { fill: var(--ds-secondary, #b12923); animation-delay: -0.8s; }
+.bday-cake__dot--3 { fill: var(--ds-primary, #004a93); animation-delay: -1.6s; }
+.bday-cake__dot--4 { animation-delay: -2.4s; }
+
+@keyframes bday-enter {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: none; }
+}
+
+/* Used by the full-screen celebration's cake emoji. */
+@keyframes bday-bounce {
+    0%, 100% { transform: translateY(0) rotate(0); }
+    20%      { transform: translateY(-6px) rotate(-6deg); }
+    40%      { transform: translateY(0) rotate(0); }
+}
+
+@keyframes bday-flicker {
+    0%   { transform: scale(1, 1) rotate(-3deg); }
+    50%  { transform: scale(0.9, 1.1) rotate(2deg); }
+    100% { transform: scale(1.05, 0.92) rotate(-1deg); }
+}
+
+@keyframes bday-glow {
+    from { opacity: 0.3; transform: scale(0.85); }
+    to   { opacity: 0.75; transform: scale(1.2); }
+}
+
+@keyframes bday-twinkle {
+    0%, 100% { opacity: 0.15; transform: scale(0.5) rotate(0deg); }
+    50%      { opacity: 1;    transform: scale(1) rotate(45deg); }
+}
+
+@keyframes bday-rise {
+    0%   { opacity: 0; transform: translateY(0); }
+    20%  { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-40px); }
+}
+
+@keyframes bday-halo {
+    0%, 100% { transform: scale(0.95); }
+    50%      { transform: scale(1.03); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ds-card.dashboard-birthday-banner,
+    .bday-cake__halo,
+    .bday-cake__flame,
+    .bday-cake__glow,
+    .bday-cake__spark,
+    .bday-cake__dot {
+        animation: none !important;
+    }
+}
+
+/* Full-screen birthday celebration — first dashboard visit of the birthday,
+   auto-closes after 5s. Balloons + popper confetti are spawned by JS. */
+.bday-celebration {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--ds-space-3, 1rem);
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 45%, rgba(0, 74, 147, 0.55) 0%, rgba(0, 20, 45, 0.82) 70%);
+    backdrop-filter: blur(3px);
+    animation: bday-overlay-in 0.4s ease-out both;
+}
+
+.bday-celebration[hidden] {
+    display: none;
+}
+
+.bday-celebration.is-leaving {
+    animation: bday-overlay-out 0.5s ease-in forwards;
+}
+
+.bday-celebration__confetti {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.bday-celebration__balloons {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.bday-balloon {
+    --balloon-color: #f5b301;
+    --balloon-scale: 1;
+    position: absolute;
+    bottom: -140px;
+    width: 58px;
+    height: 72px;
+    border-radius: 50% 50% 48% 52% / 58% 58% 42% 42%;
+    background:
+        radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.65) 0 8%, transparent 9%),
+        radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.25), transparent 60%),
+        var(--balloon-color);
+    box-shadow: inset -6px -8px 14px rgba(0, 0, 0, 0.18);
+    animation-name: bday-balloon-rise;
+    animation-timing-function: ease-in;
+    animation-fill-mode: both;
+}
+
+/* Knot */
+.bday-balloon::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -6px;
+    margin-left: -5px;
+    border: 5px solid transparent;
+    border-bottom: 7px solid var(--balloon-color);
+    transform: rotate(180deg);
+}
+
+/* String */
+.bday-balloon::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    width: 1px;
+    height: 70px;
+    margin-top: 6px;
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.bday-celebration__popper {
+    position: absolute;
+    bottom: var(--ds-space-3, 1rem);
+    z-index: 2;
+    font-size: clamp(3rem, 7vw, 5rem);
+    line-height: 1;
+    animation: bday-popper 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.bday-celebration__popper--left {
+    left: var(--ds-space-3, 1rem);
+}
+
+/* Mirror so the right popper fires up-left, towards the centre. */
+.bday-celebration__popper--right {
+    right: var(--ds-space-3, 1rem);
+    --popper-flip: -1;
+}
+
+.bday-celebration__card {
+    position: relative;
+    z-index: 4;
+    width: min(32rem, 100%);
+    padding: var(--ds-space-5, 2rem) var(--ds-space-4, 1.5rem) var(--ds-space-4, 1.5rem);
+    text-align: center;
+    color: var(--ds-ink, #1f2937);
+    background: var(--ds-surface, #fff);
+    border-top: 6px solid #f5b301;
+    border-radius: var(--ds-radius-card, 0.5rem);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    animation: bday-card-in 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both;
+}
+
+.bday-celebration__cake {
+    display: block;
+    font-size: 4rem;
+    line-height: 1;
+    margin-bottom: var(--ds-space-2, 0.5rem);
+    animation: bday-bounce 1.6s ease-in-out infinite;
+}
+
+.bday-celebration__eyebrow {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ds-secondary, #b12923);
+}
+
+.bday-celebration__title {
+    margin: var(--ds-space-2, 0.5rem) 0;
+    font-size: clamp(1.6rem, 4vw, 2.25rem);
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--ds-primary, #004a93);
+}
+
+.bday-celebration__title span {
+    color: var(--ds-secondary, #b12923);
+}
+
+.bday-celebration__text {
+    margin: 0 0 var(--ds-space-4, 1.5rem);
+    font-size: 1rem;
+    line-height: 1.55;
+    color: var(--ds-ink-muted, #667085);
+}
+
+.bday-celebration__skip {
+    min-height: var(--ds-control-h, 2.5rem);
+    padding: 0 var(--ds-space-4, 1.5rem);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--ds-primary, #004a93);
+    border: 0;
+    border-radius: var(--ds-radius-1, 0.25rem);
+    cursor: pointer;
+}
+
+.bday-celebration__skip:hover {
+    background: #003a75;
+}
+
+.bday-celebration__skip:focus-visible {
+    outline: 3px solid #f5b301;
+    outline-offset: 2px;
+}
+
+/* 5-second countdown bar — tells the user it will close by itself. */
+.bday-celebration__timer {
+    height: 4px;
+    margin-top: var(--ds-space-4, 1.5rem);
+    overflow: hidden;
+    background: var(--ds-line, #e5e7eb);
+    border-radius: var(--ds-radius-1, 0.25rem);
+}
+
+.bday-celebration__timer span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, #f5b301, var(--ds-secondary, #b12923));
+    transform-origin: left center;
+    animation: bday-timer var(--bday-duration, 5000ms) linear both;
+}
+
+@keyframes bday-overlay-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes bday-overlay-out {
+    to { opacity: 0; visibility: hidden; }
+}
+
+@keyframes bday-card-in {
+    from { opacity: 0; transform: translateY(30px) scale(0.85); }
+    to   { opacity: 1; transform: none; }
+}
+
+@keyframes bday-balloon-rise {
+    0%   { transform: translate(0, 0) scale(var(--balloon-scale)) rotate(-4deg); opacity: 0; }
+    10%  { opacity: 1; }
+    50%  { transform: translate(18px, -60vh) scale(var(--balloon-scale)) rotate(4deg); }
+    100% { transform: translate(-12px, -125vh) scale(var(--balloon-scale)) rotate(-3deg); opacity: 1; }
+}
+
+@keyframes bday-popper {
+    0%   { opacity: 0; transform: scaleX(var(--popper-flip, 1)) scale(0.3) rotate(-20deg); }
+    60%  { opacity: 1; transform: scaleX(var(--popper-flip, 1)) scale(1.2) rotate(8deg); }
+    100% { opacity: 1; transform: scaleX(var(--popper-flip, 1)) scale(1) rotate(0); }
+}
+
+@keyframes bday-timer {
+    from { transform: scaleX(1); }
+    to   { transform: scaleX(0); }
+}
+
+/* Reduced motion: JS skips balloons + confetti; keep a calm static greeting. */
+@media (prefers-reduced-motion: reduce) {
+    .bday-celebration,
+    .bday-celebration.is-leaving,
+    .bday-celebration__card,
+    .bday-celebration__cake,
+    .bday-celebration__popper {
+        animation: none !important;
+    }
 }
 
 /* Birthday wishes received panel */
@@ -161,7 +569,14 @@
     }
 
     .dashboard-birthday-banner .birthday-banner-inner {
-        padding-right: 2.75rem;
+        align-items: flex-start;
+        padding: var(--ds-space-3, 1rem) 3rem var(--ds-space-3, 1rem) var(--ds-space-3, 1rem);
+    }
+
+    .dashboard-birthday-banner .birthday-banner-icon {
+        width: 2.5rem;
+        height: 2.5rem;
+        font-size: 1.25rem;
     }
 }
 
@@ -1441,143 +1856,154 @@ table>thead {
 }
 
 /* ── Report Issue: floating launcher + modal ─────────────────────────── */
+/* Circular "Report a Problem" launcher — brand blue disc, white inner ring,
+   brand-red outer ring, warning icon over a two-line label. Readable at any
+   age: visible text (not icon-only), 14px bold label, ~8.6:1 contrast, 112px
+   target, thick keyboard focus ring.
+   Circle is a deliberate exception to the no-pill rule (sargam-app.css): it is
+   a floating launcher, not an inline control.
+   Motion: a soft "radar" pulse that repeats continuously (product decision);
+   users who set "reduce motion" get none of it. Icon nudges on hover/focus. */
 .dash-report-fab {
+    --dash-report-size: 112px;
     position: fixed;
     right: var(--ds-space-4, 1.5rem);
     bottom: var(--ds-space-4, 1.5rem);
     z-index: 1030;
-    width: 84px;
-    height: 84px;
-    padding: 0;
-    border: 3px solid #fff;
-    border-radius: 50%;
-    background: var(--ds-primary, #004a93);
-    color: #fff;
-    box-shadow: var(--ds-shadow-lg, 0 4px 12px rgba(16, 24, 40, .18));
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
-    transition: transform .15s ease, box-shadow .15s ease;
+    gap: var(--ds-space-1, .25rem);
+    width: var(--dash-report-size);
+    height: var(--dash-report-size);
+    padding: var(--ds-space-2, .5rem);
+    color: #fff;
+    text-align: center;
+    background: var(--ds-primary, #004a93);
+    border: 3px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px var(--ds-secondary, #b12923), var(--ds-shadow-lg, 0 10px 28px rgba(16, 24, 40, .18));
+    cursor: pointer;
+    animation: dash-report-pop .45s cubic-bezier(.34, 1.56, .64, 1) backwards; /* not "both": a held transform would block the hover lift */
+    transition: background-color .15s ease, transform .2s ease;
+}
+
+/* Pulse ring — sits behind the disc, expands and fades. */
+.dash-report-fab::before {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    z-index: -1;
+    border-radius: 50%;
+    border: 3px solid var(--ds-secondary, #b12923);
+    opacity: 0;
+    pointer-events: none;
+    animation: dash-report-pulse 2.2s ease-out .6s infinite;
 }
 
 .dash-report-fab:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(16, 24, 40, .28);
+    color: #fff;
+    background: #003a75;
+    transform: translateY(-3px) scale(1.04);
 }
 
+.dash-report-fab:active {
+    transform: scale(.97);
+}
+
+/* Thick two-tone ring: visible on the blue disc AND on any page background. */
 .dash-report-fab:focus-visible {
-    outline: none;
-    box-shadow: var(--ds-focus-ring, 0 0 0 .2rem rgba(0, 74, 147, .35)), var(--ds-shadow-lg, 0 4px 12px rgba(16, 24, 40, .18));
+    outline: 3px solid var(--ds-ink, #1f2937);
+    outline-offset: 5px;
 }
 
-.dash-report-fab-icon {
-    position: relative;
-    font-size: 1.5rem;
-    line-height: 1;
-    border: 2px solid #fff;
-    border-radius: 50%;
-    width: 26px;
-    height: 26px;
-    display: flex;
+.dash-report-fab__icon {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    animation: dash-report-attention 2.4s ease-in-out infinite;
-}
-
-/* Expanding ring that radiates out from the icon to draw the eye. */
-.dash-report-fab-icon::after {
-    content: "";
-    position: absolute;
-    inset: -2px;
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: 1.15rem;
+    color: var(--ds-secondary, #b12923);
+    background: #fff;
     border-radius: 50%;
-    border: 2px solid #fff;
-    animation: dash-report-ring 2.4s ease-out infinite;
-    pointer-events: none;
 }
 
-/* Gentle nudge of the whole button so the ring reads as intentional. */
-@keyframes dash-report-attention {
-    0%, 60%, 100% {
-        transform: scale(1);
-    }
-    30% {
-        transform: scale(1.12);
-    }
+.dash-report-fab:hover .dash-report-fab__icon,
+.dash-report-fab:focus-visible .dash-report-fab__icon {
+    animation: dash-report-nudge .5s ease-in-out;
 }
 
-@keyframes dash-report-ring {
-    0% {
-        opacity: .55;
-        transform: scale(1);
-    }
-    70%, 100% {
-        opacity: 0;
-        transform: scale(2.1);
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .dash-report-fab-icon,
-    .dash-report-fab-icon::after {
-        animation: none;
-    }
-}
-
-.dash-report-fab-label {
-    font-size: .625rem;
-    font-weight: 600;
+.dash-report-fab__text {
+    display: flex;
+    flex-direction: column;
     line-height: 1.15;
-    letter-spacing: .02em;
-    text-align: center;
+}
+
+.dash-report-fab__label {
+    max-width: 5.5rem;
+    font-size: .875rem;
+    font-weight: 700;
+    letter-spacing: .01em;
+}
+
+/* The hint doesn't fit a disc — kept for screen readers, the title tooltip
+   carries it for mouse users. */
+.dash-report-fab__hint {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
     white-space: nowrap;
 }
 
-.dash-report-modal .modal-content {
-    border: 0;
-    border-radius: var(--ds-radius-2, .5rem);
+@keyframes dash-report-pop {
+    from { opacity: 0; transform: scale(.6); }
+    to   { opacity: 1; transform: scale(1); }
 }
 
-.dash-report-modal .modal-header,
-.dash-report-modal .modal-footer {
-    border: 0;
+@keyframes dash-report-pulse {
+    0%   { opacity: .7; transform: scale(1); }
+    100% { opacity: 0;  transform: scale(1.35); }
 }
 
-.dash-report-modal .modal-header {
-    padding-bottom: var(--ds-space-2, .5rem);
+@keyframes dash-report-nudge {
+    0%, 100% { transform: rotate(0); }
+    25%      { transform: rotate(-12deg); }
+    75%      { transform: rotate(12deg); }
 }
 
-.dash-report-modal .modal-title {
-    font-weight: 600;
-    color: var(--ds-ink, #1f2937);
-}
+@media (prefers-reduced-motion: reduce) {
+    .dash-report-fab,
+    .dash-report-fab::before,
+    .dash-report-fab__icon {
+        animation: none !important;
+    }
 
-.dash-report-modal .form-label {
-    font-size: .875rem;
-    font-weight: 500;
-    color: var(--ds-ink, #1f2937);
-}
-
-.dash-report-modal .modal-footer .btn {
-    min-width: 104px;
-}
-
-.dash-report-hint {
-    margin-top: var(--ds-space-2, .5rem);
-    font-size: .75rem;
-    color: var(--ds-primary, #004a93);
+    .dash-report-fab,
+    .dash-report-fab:hover {
+        transition: none;
+        transform: none;
+    }
 }
 
 @media (max-width: 575.98px) {
     .dash-report-fab {
-        width: 68px;
-        height: 68px;
+        --dash-report-size: 96px;
         right: var(--ds-space-3, 1rem);
         bottom: var(--ds-space-3, 1rem);
     }
 
-    .dash-report-fab-label {
-        font-size: .5rem;
+    .dash-report-fab__label {
+        font-size: .8125rem;
+    }
+}
+
+/* Windows High Contrast / forced colours: keep a visible button edge. */
+@media (forced-colors: active) {
+    .dash-report-fab {
+        border: 2px solid ButtonText;
     }
 }
