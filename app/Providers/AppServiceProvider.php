@@ -103,6 +103,20 @@ class AppServiceProvider extends ServiceProvider
             return ! is_string($value) || preg_match('/[<>]/', $value) === 0;
         }, 'The :attribute field must not contain HTML or the characters < and >.');
 
+        // Word-count limits for free-text answers, e.g. `required|string|min_words:100|max_words:1200`
+        // in the FC form builder. Laravel's min/max count CHARACTERS, which admins kept mistaking
+        // for words. A word is any run of non-whitespace (Unicode-aware, so Hindi counts too);
+        // fc_word_count() is the single definition, shared with the live counter on the form.
+        Validator::extend('min_words', function ($attribute, $value, $parameters) {
+            return ! is_string($value) || fc_word_count($value) >= (int) ($parameters[0] ?? 0);
+        }, 'The :attribute must be at least :min words.');
+        Validator::replacer('min_words', fn ($message, $attribute, $rule, $parameters) => str_replace(':min', (string) (int) ($parameters[0] ?? 0), $message));
+
+        Validator::extend('max_words', function ($attribute, $value, $parameters) {
+            return ! is_string($value) || fc_word_count($value) <= (int) ($parameters[0] ?? PHP_INT_MAX);
+        }, 'The :attribute must not be more than :max words.');
+        Validator::replacer('max_words', fn ($message, $attribute, $rule, $parameters) => str_replace(':max', (string) (int) ($parameters[0] ?? 0), $message));
+
         view()->composer('*', function ($view) use ($menuService) {
             if (! auth()->check()) {
                 return;

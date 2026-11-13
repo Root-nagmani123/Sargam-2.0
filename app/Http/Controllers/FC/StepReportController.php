@@ -11,6 +11,7 @@ use App\Services\FC\FcPreMedicalHistoryReport;
 use App\Services\FC\FcRosterAuthService;
 use App\Services\FC\FcSpecialAssistantReport;
 use App\Services\FC\FcStepReport;
+use App\Services\FC\FcTravelPlanReport;
 use App\Services\FC\FcVisionStatementReport;
 use App\Support\FC\FcUploadFile;
 use App\Support\FC\FcUploadUrl;
@@ -59,6 +60,7 @@ class StepReportController extends Controller
         'special-assistant' => FcSpecialAssistantReport::class,
         'bank-report' => FcBankDetailsReport::class,
         'pre-medical-history' => FcPreMedicalHistoryReport::class,
+        'travel-plan' => FcTravelPlanReport::class,
     ];
 
     private function report(string $key): FcStepReport
@@ -208,7 +210,9 @@ class StepReportController extends Controller
             return back()->with('error', 'No trainees match the current filters. Nothing to export.');
         }
 
-        $html = view('fc.report.step-report-pdf', [
+        $tableLayout = $service->pdfLayout() === 'table';
+
+        $html = view($tableLayout ? 'fc.report.step-report-pdf-table' : 'fc.report.step-report-pdf', [
             'report' => $service,
             'form' => $form,
             'columns' => $columns,
@@ -223,11 +227,12 @@ class StepReportController extends Controller
             @mkdir($tempDir, 0775, true);
         }
 
-        // Portrait, not landscape: these reports are a few narrow identity columns plus blocks
-        // of prose, which read better in a column than stretched across a landscape page.
+        // Portrait for the block layout: a few narrow identity columns plus blocks of prose,
+        // which read better in a column than stretched across a landscape page. The table
+        // layout is a grid of ~15 short columns, which only fits landscape.
         $mpdf = new \Mpdf\Mpdf([
             'mode' => 'utf-8',
-            'format' => 'A4',
+            'format' => $tableLayout ? 'A4-L' : 'A4',
             'tempDir' => $tempDir,
             'autoScriptToLang' => true,
             'autoLangToFont' => true,
