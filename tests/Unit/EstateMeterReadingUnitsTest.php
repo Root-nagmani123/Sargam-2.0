@@ -8,9 +8,9 @@ use PHPUnit\Framework\TestCase;
 /**
  * Pins the consumed-unit rules for estate electricity bills.
  *
- * The rule the screen shows: Unit = New Meter Reading − Electric Meter Reading, where the
- * "Electric Meter Reading" column is the reading already saved on the row. Only when nothing is
- * saved yet does the previous period (last month / possession opening) supply the baseline.
+ * A new month is measured from the previous month's saved reading; with nothing saved, the previous
+ * period (last month / possession opening) supplies the baseline. Saving a month's own row again —
+ * Edit or the Update Meter Reading dialog — measures from that month's opening reading (F-049 Rule A).
  */
 class EstateMeterReadingUnitsTest extends TestCase
 {
@@ -27,24 +27,36 @@ class EstateMeterReadingUnitsTest extends TestCase
         $this->assertSame(500, $this->units(null, 4500));
     }
 
-    /** A saved reading is the baseline, so re-saving bills only the rise above it. */
-    public function test_resave_bills_the_rise_above_the_saved_reading(): void
+    /** A new month saved from the previous month's row bills the rise above that row's saved reading. */
+    public function test_new_month_bills_the_rise_above_the_previous_months_reading(): void
     {
         $this->assertSame(200, $this->units(5000, 5200));
     }
 
-    /**
-     * Editing from List Meter Reading uses the same rule — the flag only relaxes the input
-     * validation, it does not change how units are measured.
-     */
-    public function test_edit_uses_the_same_saved_reading_baseline(): void
+    /** Rule A, upward re-save of a month's own row: 5000 raised to 5200 bills 1200 from the 4000 opening, not 200. */
+    public function test_upward_resave_of_own_month_bills_from_its_opening_reading(): void
     {
-        $this->assertSame(300, $this->units(5000, 5300));
+        $this->assertSame(1200, Units::consumed(5200, Units::baseline(5000, self::PREV, true), false));
     }
 
     /**
-     * Documented consequence of that rule: entering a value below the saved reading yields zero
-     * units, not a negative charge. Correcting 5000 down to 4500 therefore bills nothing.
+     * PR #349 F-049 Rule A: correcting a month's own saved reading through List Meter Reading → Edit
+     * replaces it, so the month is measured from its opening reading (4000), not the replaced 5000.
+     */
+    public function test_edit_correction_measures_from_the_months_opening_reading(): void
+    {
+        $this->assertSame(1300, Units::consumed(5300, Units::baseline(5000, self::PREV, true), false));
+    }
+
+    /** Rule A, downward: correcting 5000 down to 4500 bills 500 units, not 0. */
+    public function test_downward_edit_correction_bills_the_rise_above_the_opening_reading(): void
+    {
+        $this->assertSame(500, Units::consumed(4500, Units::baseline(5000, self::PREV, true), false));
+    }
+
+    /**
+     * A new month entered below the previous month's reading yields zero units, not a negative charge
+     * (the validator refuses such a save before it gets here).
      */
     public function test_entering_below_the_saved_reading_yields_zero_units(): void
     {
@@ -55,6 +67,38 @@ class EstateMeterReadingUnitsTest extends TestCase
     public function test_replaced_meter_bills_the_reading_itself(): void
     {
         $this->assertSame(45, $this->units(5000, 45, true));
+    }
+
+    /** F-051: the save that records a new meter number is a replacement. */
+    public function test_a_changed_meter_number_is_a_replacement(): void
+    {
+        $this->assertTrue(Units::meterReplaced('222', '111', '111'));
+        $this->assertTrue(Units::meterReplaced('222', '111'), 'no earlier month to compare with');
+    }
+
+    /** F-051: a later save of that month carries the stored new number and is still measured from the new meter's start. */
+    public function test_a_later_save_of_a_replaced_month_is_still_a_replacement(): void
+    {
+        $this->assertTrue(Units::meterReplaced('222', '222', '111'));
+        $this->assertTrue(Units::meterReplaced('', '222', '111'), 'no number posted');
+    }
+
+    /** F-051: no change, or a change back to the number the month opened with, is not a replacement. */
+    public function test_an_unchanged_or_restored_meter_number_is_not_a_replacement(): void
+    {
+        $this->assertFalse(Units::meterReplaced('111', '111', '111'));
+        $this->assertFalse(Units::meterReplaced('111', '222', '111'), 'undoing a mistaken replacement');
+        $this->assertFalse(Units::meterReplaced('', '111'));
+        $this->assertFalse(Units::meterReplaced('222', '', ''), 'no stored number to compare with');
+    }
+
+    /** F-051: 0 is the column default ("not recorded"), not a different meter. */
+    public function test_a_zero_meter_number_is_not_recorded_rather_than_a_different_meter(): void
+    {
+        $this->assertFalse(Units::meterReplaced('', '0', '111'), 'row inserted without a number');
+        $this->assertFalse(Units::meterReplaced('111', '0', '111'));
+        $this->assertTrue(Units::meterReplaced('222', '0', ''), 'a number recorded where none was: unchanged rule');
+        $this->assertFalse(Units::meterReplaced('222', '222', '0'), 'month opened with no number: unchanged rule');
     }
 
     /** Below the previous-period baseline on a first entry also floors at zero. */

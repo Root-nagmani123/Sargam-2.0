@@ -33,8 +33,16 @@ docker-compose.yml
 tools/phpstan/vendor/
 # Playwright writes these on every run; they are generated artifacts, not source.
 /test-results/
+# Saved authenticated pages (PR #349 F-002): never commit page dumps
+__rfh*
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+# Debug captures (rendered-page snapshots, test videos/screenshots) hold real
+# personal data; they must never land in the repo or the public web root.
+/public/__*.html
+*.webm
+/tests/e2e/**/*-snapshots/
+/tests/e2e/**/screenshots/
 bootstrap/
 tools/phpstan/

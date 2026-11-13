@@ -1845,12 +1845,17 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
 Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->group(function () {
     // Estate Request for Others
     Route::get('request-for-others', [EstateController::class, 'requestForOthers'])->name('request-for-others');
+    Route::get('request-for-others/export', [EstateController::class, 'exportRequestForOthers'])->name('request-for-others.export');
+    Route::get('request-for-others/print', [EstateController::class, 'printRequestForOthers'])->name('request-for-others.print');
 
     // Request For Estate (estate_home_request_details + possession)
     Route::get('request-for-estate', [EstateController::class, 'requestForEstate'])->name('request-for-estate');
     Route::get('request-for-estate/next-req-id', [EstateController::class, 'getNextRequestForEstateId'])->name('request-for-estate.next-req-id');
+    Route::get('request-for-estate/export', [EstateController::class, 'exportRequestForEstate'])->name('request-for-estate.export');
+    Route::get('request-for-estate/print', [EstateController::class, 'printRequestForEstate'])->name('request-for-estate.print');
     // Put In HAC workflow
     Route::get('put-in-hac', [EstateController::class, 'putInHac'])->name('put-in-hac');
+    Route::get('put-in-hac/export', [EstateController::class, 'exportPutInHac'])->name('put-in-hac.export');
     Route::post('put-in-hac', [EstateController::class, 'putInHacAction'])->name('put-in-hac.action');
     Route::get('request-for-estate/employees', [EstateController::class, 'getRequestForEstateEmployees'])->name('request-for-estate.employees');
     Route::get('request-for-estate/employee-details/{pk}', [EstateController::class, 'getRequestForEstateEmployeeDetails'])->name('request-for-estate.employee-details');
@@ -1873,6 +1878,8 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     // Change Requests (HAC Approved) + New requests
     // Change Requests (HAC Approved) + New requests
     Route::get('change-request-hac-approved', [EstateController::class, 'changeRequestHacApproved'])->name('change-request-hac-approved');
+    Route::get('change-request-hac-approved/export', [EstateController::class, 'exportHacApproved'])->name('change-request-hac-approved.export');
+    Route::get('change-request-hac-approved/print', [EstateController::class, 'printHacApproved'])->name('change-request-hac-approved.print');
     Route::get('change-request/approve-details/{id}', [EstateController::class, 'getChangeRequestApproveDetails'])->name('change-request.approve-details');
     Route::get('change-request/vacant-houses', [EstateController::class, 'getChangeRequestVacantHouses'])->name('change-request.vacant-houses');
     Route::post('change-request/approve/{id}', [EstateController::class, 'approveChangeRequest'])->name('change-request.approve');
@@ -1880,15 +1887,20 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     Route::get('change-request/details/{id?}', [EstateController::class, 'changeRequestDetails'])->name('change-request-details');
     Route::post('change-request/details/{id}', [EstateController::class, 'updateChangeRequestDetails'])->name('change-request-details.update');
     Route::get('change-request/details/modal/{id}', [EstateController::class, 'changeRequestDetailsModal'])->name('change-request-details.modal');
+    Route::get('raise-change-request/modal/{id}', [EstateController::class, 'raiseChangeRequestModal'])->name('raise-change-request.modal');
     Route::get('raise-change-request/{id}', [EstateController::class, 'raiseChangeRequest'])->name('raise-change-request');
     Route::post('raise-change-request', [EstateController::class, 'storeRaiseChangeRequest'])->name('raise-change-request.store');
     Route::get('request-for-house', [EstateController::class, 'requestForHouse'])->name('request-for-house');
+    Route::get('request-for-house/download', [EstateController::class, 'downloadRequestForHouse'])->name('request-for-house.download');
+    Route::get('request-for-house/print', [EstateController::class, 'printRequestForHouse'])->name('request-for-house.print');
     Route::get('change-request/details/{id?}', [EstateController::class, 'changeRequestDetails'])->name('change-request-details');
     Route::post('change-request/details/{id}', [EstateController::class, 'updateChangeRequestDetails'])->name('change-request-details.update');
     Route::get('change-request/details/modal/{id}', [EstateController::class, 'changeRequestDetailsModal'])->name('change-request-details.modal');
     Route::get('raise-change-request/{id}', [EstateController::class, 'raiseChangeRequest'])->name('raise-change-request');
     Route::post('raise-change-request', [EstateController::class, 'storeRaiseChangeRequest'])->name('raise-change-request.store');
     Route::get('request-for-house', [EstateController::class, 'requestForHouse'])->name('request-for-house');
+    Route::get('request-for-house/download', [EstateController::class, 'downloadRequestForHouse'])->name('request-for-house.download');
+    Route::get('request-for-house/print', [EstateController::class, 'printRequestForHouse'])->name('request-for-house.print');
     Route::get('new-request/allot-details/{id}', [EstateController::class, 'getNewRequestAllotDetails'])->name('new-request.allot-details');
     Route::post('new-request/allot/{id}', [EstateController::class, 'allotNewRequest'])->name('new-request.allot');
 
@@ -1907,6 +1919,8 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     Route::post('possession-details/store', [EstateController::class, 'storePossessionDetails'])->name('possession-details.store');
     Route::delete('possession-details/{id}', [EstateController::class, 'destroyPossessionDetails'])->name('possession-details.delete');
     Route::get('possession-for-others', [EstateController::class, 'possessionForOthers'])->name('possession-for-others');
+    Route::get('possession-for-others/export', [EstateController::class, 'exportPossessionForOthers'])->name('possession-for-others.export');
+    Route::get('possession-for-others/print', [EstateController::class, 'printPossessionForOthers'])->name('possession-for-others.print');
     Route::delete('possession/{id}', [EstateController::class, 'destroyPossession'])->name('possession-delete');
     Route::post('possession/bulk-delete', [EstateController::class, 'destroyPossessionBulk'])->name('possession-bulk-delete');
 
@@ -1917,11 +1931,15 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     Route::get('possession/houses', [EstateController::class, 'getPossessionHouses'])->name('possession.houses');
 
     Route::post('possession-details/bulk-delete', [EstateController::class, 'destroyPossessionDetailsBulk'])->name('possession-details.bulk-delete');
+    Route::get('possession-details/export', [EstateController::class, 'exportPossessionDetails'])->name('possession-details.export');
+    Route::get('possession-details/print', [EstateController::class, 'printPossessionDetails'])->name('possession-details.print');
 
     // Update Meter
     Route::get('update-meter-reading', [EstateController::class, 'updateMeterReading'])->name('update-meter-reading');
     Route::get('list-meter-reading', [EstateController::class, 'listMeterReading'])->name('list-meter-reading');
     Route::get('list-meter-reading/data', [EstateController::class, 'getListMeterReadingData'])->name('list-meter-reading.data');
+    Route::get('list-meter-reading/download', [EstateController::class, 'exportListMeterReading'])->name('list-meter-reading.download');
+    Route::get('list-meter-reading/print', [EstateController::class, 'printListMeterReading'])->name('list-meter-reading.print');
     Route::get('update-meter-reading/list', [EstateController::class, 'getMeterReadingList'])->name('update-meter-reading.list');
     Route::get('update-meter-reading/meter-reading-dates', [EstateController::class, 'getMeterReadingDates'])->name('update-meter-reading.meter-reading-dates');
     Route::get('update-meter-reading/blocks', [EstateController::class, 'getMeterReadingBlocks'])->name('update-meter-reading.blocks');
@@ -1937,6 +1955,8 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
 
     Route::get('update-meter-no', [EstateController::class, 'updateMeterNo'])->name('update-meter-no');
     Route::get('update-meter-no/list', [EstateController::class, 'getUpdateMeterNoList'])->name('update-meter-no.list');
+    Route::get('update-meter-no/export', [EstateController::class, 'exportUpdateMeterNo'])->name('update-meter-no.export');
+    Route::get('update-meter-no/print', [EstateController::class, 'printUpdateMeterNo'])->name('update-meter-no.print');
 
     // Generate Estate Bill / Estate Bill Summary (permanent/LBSNAA)
     // Generate Estate Bill / Estate Bill Summary (permanent/LBSNAA)
@@ -1947,10 +1967,14 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     // Generate Estate Bill for Other (contract employees)
     Route::get('generate-estate-bill-for-other', [EstateController::class, 'generateEstateBillForOther'])->name('generate-estate-bill-for-other');
     Route::get('generate-estate-bill-for-other/data', [EstateController::class, 'getGenerateEstateBillForOtherData'])->name('generate-estate-bill-for-other.data');
+    Route::get('generate-estate-bill-for-other/download', [EstateController::class, 'exportGenerateEstateBillForOther'])->name('generate-estate-bill-for-other.download');
+    Route::get('generate-estate-bill-for-other/print', [EstateController::class, 'printGenerateEstateBillForOther'])->name('generate-estate-bill-for-other.print');
     Route::post('generate-estate-bill-for-other/verify-selected', [EstateController::class, 'verifySelectedBillsForOther'])->name('generate-estate-bill-for-other.verify-selected');
     Route::post('generate-estate-bill-for-other/save-as-draft', [EstateController::class, 'saveAsDraftBillsForOther'])->name('generate-estate-bill-for-other.save-as-draft');
 
     Route::get('return-house', [EstateController::class, 'returnHouse'])->name('return-house');
+    Route::get('return-house/download', [EstateController::class, 'downloadReturnHouse'])->name('return-house.download');
+    Route::get('return-house/print', [EstateController::class, 'printReturnHouse'])->name('return-house.print');
     Route::get('return-house/employees', [EstateController::class, 'getReturnHouseEmployees'])->name('return-house.employees');
     Route::get('return-house/request-details', [EstateController::class, 'getReturnHouseRequestDetails'])->name('return-house.request-details');
     Route::post('return-house/mark-return/{id}', [EstateController::class, 'markReturnHouse'])->name('return-house.mark-return');
@@ -1960,10 +1984,14 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     // Generate Estate Bill for Other (contract employees)
     Route::get('generate-estate-bill-for-other', [EstateController::class, 'generateEstateBillForOther'])->name('generate-estate-bill-for-other');
     Route::get('generate-estate-bill-for-other/data', [EstateController::class, 'getGenerateEstateBillForOtherData'])->name('generate-estate-bill-for-other.data');
+    Route::get('generate-estate-bill-for-other/download', [EstateController::class, 'exportGenerateEstateBillForOther'])->name('generate-estate-bill-for-other.download');
+    Route::get('generate-estate-bill-for-other/print', [EstateController::class, 'printGenerateEstateBillForOther'])->name('generate-estate-bill-for-other.print');
     Route::post('generate-estate-bill-for-other/verify-selected', [EstateController::class, 'verifySelectedBillsForOther'])->name('generate-estate-bill-for-other.verify-selected');
     Route::post('generate-estate-bill-for-other/save-as-draft', [EstateController::class, 'saveAsDraftBillsForOther'])->name('generate-estate-bill-for-other.save-as-draft');
 
     Route::get('return-house', [EstateController::class, 'returnHouse'])->name('return-house');
+    Route::get('return-house/download', [EstateController::class, 'downloadReturnHouse'])->name('return-house.download');
+    Route::get('return-house/print', [EstateController::class, 'printReturnHouse'])->name('return-house.print');
     Route::get('return-house/employees', [EstateController::class, 'getReturnHouseEmployees'])->name('return-house.employees');
     Route::get('return-house/request-details', [EstateController::class, 'getReturnHouseRequestDetails'])->name('return-house.request-details');
     Route::post('return-house/mark-return/{id}', [EstateController::class, 'markReturnHouse'])->name('return-house.mark-return');
@@ -1973,12 +2001,19 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     Route::post('define-house', [EstateController::class, 'storeDefineHouse'])->name('define-house.store');
     Route::get('define-house/data', [EstateController::class, 'getDefineHouseData'])->name('define-house.data');
     Route::get('define-house/blocks', [EstateController::class, 'getDefineHouseBlocks'])->name('define-house.blocks');
+    // Both must stay ABOVE define-house/{id} or the wildcard swallows them.
+    Route::get('define-house/download', [EstateController::class, 'exportDefineHouse'])->name('define-house.download');
+    Route::get('define-house/print', [EstateController::class, 'printDefineHouse'])->name('define-house.print');
+    Route::get('define-house/create', [EstateController::class, 'createDefineHouse'])->name('define-house.create');
+    Route::get('define-house/{id}/edit', [EstateController::class, 'editDefineHouse'])->name('define-house.edit');
     Route::get('define-house/{id}', [EstateController::class, 'showDefineHouse'])->name('define-house.show');
     Route::put('define-house/{id}', [EstateController::class, 'updateDefineHouse'])->name('define-house.update');
     Route::delete('define-house/{id}', [EstateController::class, 'destroyDefineHouse'])->name('define-house.destroy');
 
     // Define Electric Slab
     Route::get('define-electric-slab', [EstateElectricSlabController::class, 'index'])->name('define-electric-slab.index');
+    Route::get('define-electric-slab/download', [EstateElectricSlabController::class, 'download'])->name('define-electric-slab.download');
+    Route::get('define-electric-slab/print', [EstateElectricSlabController::class, 'print'])->name('define-electric-slab.print');
     Route::get('define-electric-slab/create', [EstateElectricSlabController::class, 'create'])->name('define-electric-slab.create');
     Route::post('define-electric-slab', [EstateElectricSlabController::class, 'store'])->name('define-electric-slab.store');
     Route::get('define-electric-slab/{id}/edit', [EstateElectricSlabController::class, 'edit'])->name('define-electric-slab.edit');
@@ -1986,6 +2021,8 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     Route::delete('define-electric-slab/{id}', [EstateElectricSlabController::class, 'destroy'])->name('define-electric-slab.destroy');
     // Define Electric Slab
     Route::get('define-electric-slab', [EstateElectricSlabController::class, 'index'])->name('define-electric-slab.index');
+    Route::get('define-electric-slab/download', [EstateElectricSlabController::class, 'download'])->name('define-electric-slab.download');
+    Route::get('define-electric-slab/print', [EstateElectricSlabController::class, 'print'])->name('define-electric-slab.print');
     Route::get('define-electric-slab/create', [EstateElectricSlabController::class, 'create'])->name('define-electric-slab.create');
     Route::post('define-electric-slab', [EstateElectricSlabController::class, 'store'])->name('define-electric-slab.store');
     Route::get('define-electric-slab/{id}/edit', [EstateElectricSlabController::class, 'edit'])->name('define-electric-slab.edit');

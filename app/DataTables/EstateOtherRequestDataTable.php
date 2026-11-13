@@ -2,8 +2,14 @@
 
 namespace App\DataTables;
 
+use App\DataTables\Concerns\AppliesHeaderSort;
+use App\DataTables\Concerns\RendersEstateRowActions;
 use App\Models\EstateOtherRequest;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
@@ -11,100 +17,242 @@ use Yajra\DataTables\Services\DataTable;
 
 class EstateOtherRequestDataTable extends DataTable
 {
+    use AppliesHeaderSort;
+    use RendersEstateRowActions;
+
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
             ->editColumn('request_no_oth', function ($row) {
-                $val = $row->request_no_oth ?? 'N/A';
-                return '<span title="' . e($val) . '">' . e($val) . '</span>';
-            })
-            ->editColumn('emp_name', fn($row) => $row->emp_name ?? 'N/A')
-            ->editColumn('employee_master_emp_id', fn($row) => $row->employee_master_emp_id ?: '-')
-            ->filter(function ($query) {
-                $searchValue = request()->input('search.value');
+                $val = trim((string) ($row->request_no_oth ?? ''));
 
-                if (!empty($searchValue)) {
-                    $query->where(function ($subQuery) use ($searchValue) {
-                        $subQuery->where('emp_name', 'like', "%{$searchValue}%")
-                            ->orWhere('f_name', 'like', "%{$searchValue}%")
-                            ->orWhere('section', 'like', "%{$searchValue}%")
-                            ->orWhere('request_no_oth', 'like', "%{$searchValue}%")
-                            ->orWhere('employee_master_emp_id', 'like', "%{$searchValue}%");
-                    });
-                }
-            }, true)
-            ->orderColumn('DT_RowIndex', 'estate_other_req.pk $1')
+                return $val !== '' ? '<span title="' . e($val) . '">' . e($val) . '</span>' : '—';
+            })
+            // Name & ID: name, with the linked employee id (employee_master_emp_id) beneath.
+            ->editColumn('emp_name', fn ($row) => self::nameWithId($row->emp_name, $row->employee_master_emp_id ?? null))
+            ->editColumn('section', fn ($row) => self::plainOrDash($row->section))
+            ->editColumn('doj_acad', fn ($row) => self::dateOrDash($row->doj_acad))
             ->addColumn('actions', function ($row) {
-                $viewUrl = route('admin.estate.possession-view', ['requester_id' => $row->pk]);
                 $deleteUrl = route('admin.estate.other-estate-request.destroy', ['id' => $row->pk]);
                 $doj = $row->doj_acad ? $row->doj_acad->format('Y-m-d') : '';
 
-                return '<div class="d-inline-flex align-items-center gap-1" role="group">
-                    <a href="javascript:void(0);" class="text-primary btn-edit-other-request" title="Edit"
-                        data-id="' . (int) $row->pk . '"
-                        data-employee_name="' . e($row->emp_name ?? '') . '"
-                        data-father_name="' . e($row->f_name ?? '') . '"
-                        data-section="' . e($row->section ?? '') . '"
-                        data-doj_academy="' . e($doj) . '"
-                        data-employee_master_emp_id="' . e($row->employee_master_emp_id ?? '') . '">
-                        <i class="material-symbols-rounded" style="font-size:18px;">edit</i>
-                    </a>
-                    <a href="javascript:void(0);" class="text-primary btn-delete-other-request" data-url="' . e($deleteUrl) . '" data-id="' . $row->pk . '" title="Delete">
-                        <i class="material-symbols-rounded" style="font-size:18px;">delete</i>
-                    </a>
-                </div>';
+                $attrs = [
+                    'data-id' => (int) $row->pk,
+                    'data-employee_name' => e($row->emp_name ?? ''),
+                    'data-father_name' => e($row->f_name ?? ''),
+                    'data-section' => e($row->section ?? ''),
+                    'data-doj_academy' => $doj,
+                    'data-employee_master_emp_id' => e($row->employee_master_emp_id ?? ''),
+                ];
+                $dataAttrs = implode(' ', array_map(fn ($k, $v) => $k . '="' . $v . '"', array_keys($attrs), $attrs));
+
+                return '<div class="rfe-actions" role="group" aria-label="Row actions">'
+                    . self::actionLink('edit', 'Edit', 'edit', [
+                        'class' => 'btn-edit-other-request',
+                        'title' => 'Edit',
+                        'attrs' => $dataAttrs,
+                    ])
+                    . self::actionLink('delete', 'Delete', 'delete', [
+                        'class' => 'btn-delete-other-request',
+                        'title' => 'Delete',
+                        'attrs' => 'data-url="' . e($deleteUrl) . '"',
+                    ])
+                    . '</div>';
             })
-            ->rawColumns(['actions', 'request_no_oth']);
+            ->rawColumns(['request_no_oth', 'emp_name', 'actions'])
+            ->filter(function ($query) {
+                static::applyFilters(
+                    $query,
+                    (string) request()->input('search.value', ''),
+                    static::filterText('bill_year_filter'),
+                    static::filterText('bill_date_filter')
+                );
+            }, false)
+            // One ORDER BY in place of listingQuery()'s orderByDesc(pk); Download / Print reuse it.
+            ->order(fn ($query) => $this->sortQuery($query))
+            ->setRowId('pk');
     }
 
     public function query(EstateOtherRequest $model): QueryBuilder
     {
-        return $model->newQuery()->orderBy('pk', 'desc');
+        return static::listingQuery($model);
+    }
+
+    /**
+     * The listing query, shared with the Download / Print exports so what a user
+     * downloads is exactly the list they were looking at.
+     */
+    public static function listingQuery(?EstateOtherRequest $model = null): QueryBuilder
+    {
+        $model = $model ?: new EstateOtherRequest;
+
+        return $model->newQuery()
+            ->select([
+                'estate_other_req.pk',
+                'estate_other_req.request_no_oth',
+                'estate_other_req.emp_name',
+                'estate_other_req.f_name',
+                // Links an Other request to employee_master.emp_id (My Estate Bill, scope=self).
+                // Not every database has the column yet, so fall back to a NULL of the same name.
+                static::hasEmpIdColumn()
+                    ? 'estate_other_req.employee_master_emp_id'
+                    : DB::raw('NULL as employee_master_emp_id'),
+                'estate_other_req.section',
+                'estate_other_req.doj_acad',
+            ])
+            ->orderByDesc('estate_other_req.pk');
+    }
+
+    private static ?bool $hasEmpIdColumn = null;
+
+    public static function hasEmpIdColumn(): bool
+    {
+        return static::$hasEmpIdColumn ??= Schema::hasColumn('estate_other_req', 'employee_master_emp_id');
+    }
+
+    /** A toolbar filter as text; an array (key[]=x) reads as no filter instead of an error (F-045, as F-006). */
+    private static function filterText(string $key): string
+    {
+        $value = request()->input($key);
+
+        return is_array($value) ? '' : (string) $value;
+    }
+
+    /**
+     * Toolbar filters + free-text search, in one place so the grid and the
+     * exports can never disagree about which rows are in scope.
+     *
+     * @param  Builder|\Illuminate\Database\Query\Builder  $query
+     */
+    public static function applyFilters($query, string $searchValue, string $billYear = '', string $billDate = ''): void
+    {
+        // Bill filters keep a request when it has a bill (via its possession) that matches:
+        // Bill Year = bill_year, Bill Date = a bill period from_date..to_date covering that day.
+        $billYear = trim($billYear);
+        $billDate = trim($billDate);
+        $hasYear = preg_match('/^\d{4}$/', $billYear) === 1;
+        // Shape AND calendar: 2026-99-99 is no filter, not a query on an impossible date (F-045).
+        $hasDate = preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $billDate, $ymd) === 1 && checkdate((int) $ymd[2], (int) $ymd[3], (int) $ymd[1]);
+        if ($hasYear || $hasDate) {
+            $query->whereExists(function ($q) use ($hasYear, $billYear, $hasDate, $billDate) {
+                $q->selectRaw('1')
+                    ->from('estate_possession_other as epo')
+                    ->join('estate_month_reading_details_other as emr', 'emr.estate_possession_other_pk', '=', 'epo.pk')
+                    ->whereColumn('epo.estate_other_req_pk', 'estate_other_req.pk')
+                    ->when($hasYear, fn ($q) => $q->where('emr.bill_year', $billYear))
+                    ->when($hasDate, fn ($q) => $q->whereDate('emr.from_date', '<=', $billDate)
+                        ->whereDate('emr.to_date', '>=', $billDate));
+            });
+        }
+
+        $searchValue = trim($searchValue);
+        if ($searchValue === '') {
+            return;
+        }
+
+        $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $searchValue) . '%';
+        $query->where(function ($q) use ($like) {
+            $q->where('estate_other_req.request_no_oth', 'like', $like)
+                ->orWhere('estate_other_req.emp_name', 'like', $like)
+                ->orWhere('estate_other_req.f_name', 'like', $like)
+                ->orWhere('estate_other_req.section', 'like', $like);
+            if (static::hasEmpIdColumn()) {
+                $q->orWhere('estate_other_req.employee_master_emp_id', 'like', $like);
+            }
+        });
+    }
+
+    /**
+     * Bill years on record for Others' bills, newest first — the toolbar's Bill Year options.
+     *
+     * @return string[]
+     */
+    public static function billYearOptions(): array
+    {
+        return DB::table('estate_month_reading_details_other')
+            ->whereNotNull('bill_year')
+            ->distinct()
+            ->orderByDesc('bill_year')
+            ->pluck('bill_year')
+            ->map(fn ($year) => trim((string) $year))
+            ->filter(fn ($year) => preg_match('/^\d{4}$/', $year) === 1)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /** Cell text, or the shared muted dash when the column is empty. */
+    public static function plainOrDash(?string $value): string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' || $value === '-' ? '—' : $value;
+    }
+
+    /** d-m-Y, or the shared muted dash. */
+    public static function dateOrDash($value): string
+    {
+        if (empty($value)) {
+            return '—';
+        }
+
+        return Carbon::parse($value)->format('d-m-Y');
+    }
+
+    /** Header sort, shared by the grid and its Download / Print, so both list rows in the same order. */
+    public function sortQuery($query): void
+    {
+        $ci = fn (string $column) => DB::raw('LOWER(COALESCE(estate_other_req.' . $column . ', ""))');
+        $this->applyHeaderSort($query, 'estate_other_req.pk', [
+            'DT_RowIndex' => 'estate_other_req.pk',
+            'request_no_oth' => $ci('request_no_oth'),
+            'emp_name' => $ci('emp_name'),
+            'section' => $ci('section'),
+            'doj_acad' => 'estate_other_req.doj_acad',
+        ]);
     }
 
     public function html(): HtmlBuilder
     {
         return $this->builder()
             ->setTableId('estateRequestTable')
-            ->addTableClass('table text-nowrap w-100')
+            // programme-dt chrome (docs/new-design-index-page.md) — no `dom` and no
+            // `language` here on purpose: datatable-global-ui.js owns both, and a
+            // page-level override would win and break the "Showing N of M items" footer.
+            ->addTableClass('table table-hover align-middle mb-0 w-100 programme-dt-table')
             ->columns($this->getColumns())
-            ->minifiedAjax()
+            ->minifiedAjax('', null, [
+                'bill_year_filter' => '$("#eorBillYearFilter").val()',
+                'bill_date_filter' => '$("#eorBillDateFilter").val()',
+            ])
             ->parameters([
                 'responsive' => false,
                 'autoWidth' => false,
-                'scrollX' => true,
                 'ordering' => true,
+                // Keep DataTables' native (server-side) ordering so a header click
+                // re-sorts the WHOLE list instead of just the loaded page.
+                'sargamServerOrder' => true,
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
                 'order' => [[0, 'desc']],
-                'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
-                'language' => [
-                    'search' => 'Search:',
-                    'lengthMenu' => 'Show _MENU_ entries',
-                    'info' => 'Showing _START_ to _END_ of _TOTAL_ entries',
-                    'infoEmpty' => 'Showing 0 to 0 of 0 entries',
-                    'infoFiltered' => '(filtered from _MAX_ total entries)',
-                    'paginate' => [
-                        'first' => 'First',
-                        'last' => 'Last',
-                        'next' => 'Next',
-                        'previous' => 'Previous',
-                    ],
-                ],
-                'dom' => '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+                'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
             ]);
     }
 
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(true)->searchable(false)->width('80px'),
-            Column::make('request_no_oth')->title('Request ID')->orderable(false)->searchable(true)->width('180px'),
-            Column::make('emp_name')->title('Employee Name')->orderable(false)->searchable(true)->width('220px'),
-            Column::make('employee_master_emp_id')->title('Emp ID')->orderable(false)->searchable(true)->width('160px'),
-            Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false)->width('120px'),
+            Column::computed('DT_RowIndex')->title('S. No.')->orderable(true)->searchable(false)->width('64px'),
+            Column::make('request_no_oth')->title('Request ID')->addClass('eor-col-req')->orderable(true)->searchable(true),
+            Column::make('emp_name')->title('Name & ID')->addClass('rfe-col-name')->orderable(true)->searchable(true),
+            // Father Name is captured on the form but filled on ~10% of the rows, so it
+            // stays in the Add / Edit modal and out of the grid — it is still searchable.
+            Column::make('section')->title('Section')->addClass('eor-col-section')->orderable(true)->searchable(true),
+            Column::make('doj_acad')->title('DOJ in Academy')->addClass('eor-col-doj')->orderable(true)->searchable(false),
+            // Only Edit + Delete here — see .eor-page .rfe-col-action.
+            Column::computed('actions')->title('Action')->addClass('rfe-col-action')->orderable(false)->searchable(false)->width('120px'),
         ];
     }
 

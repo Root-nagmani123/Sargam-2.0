@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class EstateElectricSlab extends Model
 {
@@ -21,7 +22,7 @@ class EstateElectricSlab extends Model
         'estate_unit_type_master_pk' => 'integer',
     ];
 
-    public function unitType()
+    public function unitType(): BelongsTo
     {
         return $this->belongsTo(UnitType::class, 'estate_unit_type_master_pk', 'pk');
     }

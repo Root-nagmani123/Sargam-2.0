@@ -7,7 +7,6 @@ use App\DataTables\CourseMasterDataTable;
 use App\DataTables\FacultyDataTable;
 use App\DataTables\GroupMappingDataTable;
 use App\DataTables\Master\EmployeeTypeMasterDataTable;
-use App\DataTables\MemberDataTable;
 use App\DataTables\RoleDataTable;
 use App\Exports\StudentListReportExport;
 use App\Exports\BrandedGridExport;
@@ -9064,9 +9063,6 @@ class UserController extends Controller
 
             if ($table === 'employee_type_master') {
                 EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
-            }
-            if ($table === 'employee_master') {
-                MemberDataTable::bumpListingCacheEpoch();
             }
             if ($table === 'faculty_expertise_master') {
                 FacultyExpertiseMasterController::bumpListCacheEpoch();
