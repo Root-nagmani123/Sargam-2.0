@@ -452,6 +452,7 @@ class RoleController extends Controller
             'icon'       => 'required|string|max:100',
             'color_class'=> 'required|string|max:100',
             'sort_order' => 'required|integer|min:1',
+            'status'     => 'nullable|boolean',
         ]);
 
         // Label/icon/colour/order are the card's, shared by every role. The tab is
@@ -467,28 +468,38 @@ class RoleController extends Controller
         [$roleId, $toModule] = $to;
         $fromModule = $from[1];
         $switched = $roleId !== null && $toModule->id !== $fromModule->id;
+        // The dialog's Enabled/Disabled field: the role's state on the picked tab.
+        $status = $roleId !== null && $request->filled('status') ? $request->boolean('status') : null;
 
-        $moved = DB::transaction(function () use ($card, $request, $switched, $roleId, $toModule, $fromModule) {
+        $moved = DB::transaction(function () use ($card, $request, $switched, $status, $roleId, $toModule, $fromModule) {
             $card->update($request->only('label', 'icon', 'color_class', 'sort_order'));
 
-            // Only an assignment the role really has on the opened tab moves: a card
-            // that is Disabled there has nothing to move, and must not come out enabled.
-            if (! $switched || DB::table('role_dashboard_cards')->where([
-                'role_id' => $roleId, 'dashboard_card_id' => $card->id, 'sidebar_category_id' => $fromModule->id,
-            ])->delete() === 0) {
-                return false;
+            $moved = false;
+            if ($switched) {
+                // An enabled card leaves the opened tab; a Disabled one is enabled on the
+                // picked tab (Product owner decision, PR #353 comment 6857559080).
+                $moved = DB::table('role_dashboard_cards')->where([
+                    'role_id' => $roleId, 'dashboard_card_id' => $card->id, 'sidebar_category_id' => $fromModule->id,
+                ])->delete() > 0;
             }
-            DB::table('role_dashboard_cards')->insertOrIgnore([
-                'role_id' => $roleId, 'dashboard_card_id' => $card->id, 'sidebar_category_id' => $toModule->id,
-            ]);
+            if ($roleId !== null && ($switched || $status !== null)) {
+                $target = ['role_id' => $roleId, 'dashboard_card_id' => $card->id, 'sidebar_category_id' => $toModule->id];
+                $status === false
+                    ? DB::table('role_dashboard_cards')->where($target)->delete()
+                    : DB::table('role_dashboard_cards')->insertOrIgnore($target);
+            }
 
-            return true;
+            return $moved;
         });
 
         return response()->json([
             'success' => true,
-            'message' => $moved ? 'Card updated and moved to the '.$toModule->name.' dashboard.'
-                : ($switched ? 'Card updated. It is not enabled for this role on this tab, so it was not moved.' : 'Card updated successfully.'),
+            'message' => match (true) {
+                $status !== null => 'Card updated. It is '.($status ? 'enabled' : 'disabled').' on the '.$toModule->name.' dashboard for this role.',
+                $moved => 'Card updated and moved to the '.$toModule->name.' dashboard.',
+                $switched => 'Card updated. It is now on the '.$toModule->name.' dashboard for this role.',
+                default => 'Card updated successfully.',
+            },
             'moved'   => $moved,
             'card'    => $card->fresh(),
         ]);
@@ -501,6 +512,7 @@ class RoleController extends Controller
             'icon'       => 'required|string|max:100',
             'color_class'=> 'required|string|max:100',
             'sort_order' => 'required|integer|min:1',
+            'status'     => 'nullable|boolean',
         ]);
 
         $tab = $this->postedTab($request);
@@ -508,6 +520,8 @@ class RoleController extends Controller
             return $tab;
         }
         [$roleId, $module] = $tab;
+        // No status field posted = the old default: switched on for the role.
+        $enable = ! $request->filled('status') || $request->boolean('status');
 
         $baseKey = trim(preg_replace('/[^a-z0-9]+/', '_', strtolower($request->label)), '_');
 
@@ -533,7 +547,7 @@ class RoleController extends Controller
         $card = null;
         for ($attempt = 0; $attempt < 5 && $card === null; $attempt++) {
             try {
-                $card = DB::transaction(function () use ($request, $baseKey, $roleId, $module) {
+                $card = DB::transaction(function () use ($request, $baseKey, $roleId, $module, $enable) {
                     $key = $baseKey;
                     $i = 1;
                     while (DashboardCard::where('key', $key)->exists()) {
@@ -545,7 +559,7 @@ class RoleController extends Controller
                         ['key' => $key]
                     ));
 
-                    if ($roleId !== null) {
+                    if ($roleId !== null && $enable) {
                         DB::table('role_dashboard_cards')->insertOrIgnore([
                             'role_id' => $roleId, 'dashboard_card_id' => $card->id, 'sidebar_category_id' => $module->id,
                         ]);
@@ -571,7 +585,7 @@ class RoleController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => $roleId !== null ? 'Card created and enabled on the '.$module->name.' dashboard.' : 'Card created successfully.',
+            'message' => $roleId !== null && $enable ? 'Card created and enabled on the '.$module->name.' dashboard.' : 'Card created successfully.',
             'card'    => $card,
         ]);
     }
@@ -586,14 +600,40 @@ class RoleController extends Controller
             ->all();
     }
 
+    /** Card id => "Home, Setup": the tabs whose dashboard shows each card for the role. */
+    private function cardTabNames(int $roleId, ?int $cardId = null): array
+    {
+        $names = DashboardCard::modules()->pluck('name', 'id');
+
+        return DB::table('role_dashboard_cards')->where('role_id', $roleId)
+            ->when($cardId !== null, fn ($q) => $q->where('dashboard_card_id', $cardId))
+            ->get(['dashboard_card_id', 'sidebar_category_id'])
+            ->groupBy('dashboard_card_id')
+            ->map(fn ($rows) => $names->only($rows->pluck('sidebar_category_id')->all())->implode(', '))
+            ->all();
+    }
+
+    /**
+     * One tab's card list: the cards the role has on this tab, plus the ones it has
+     * on no tab yet, so they can be switched on. A card on another tab is listed
+     * only there, rather than as Disabled on every tab.
+     */
+    private function tabCardList(array $assignedCardIds, array $cardTabs)
+    {
+        return DashboardCard::orderBy('id', 'desc')->get()
+            ->filter(fn ($card) => in_array($card->id, $assignedCardIds) || ! isset($cardTabs[$card->id]))
+            ->values();
+    }
+
     public function showDashboard(Request $request, $id)
     {
         $role = Role::findOrFail($id);
         $module = DashboardCard::resolveModule($request->query('module'));
         abort_if($module === null, 404, 'No header module is configured.');
 
-        $allCards = DashboardCard::orderBy('id', 'desc')->get();
         $assignedCardIds = $this->assignedCardIds($role, $module->id);
+        $cardTabs = $this->cardTabNames($role->id);
+        $allCards = $this->tabCardList($assignedCardIds, $cardTabs);
         $materialIcons = $this->materialIconNames();
 
         return view('roles-permissions.assign-dashboard', [
@@ -602,6 +642,7 @@ class RoleController extends Controller
             'module' => $module,
             'allCards' => $allCards,
             'assignedCardIds' => $assignedCardIds,
+            'cardTabs' => $cardTabs,
             'materialIcons' => $materialIcons,
             'enabledCount' => $allCards->whereIn('id', $assignedCardIds)->count(),
         ]);
@@ -622,9 +663,10 @@ class RoleController extends Controller
         $module = DashboardCard::resolveModule($request->input('module'));
         abort_if($module === null, 404);
         $assignedCardIds = $this->assignedCardIds($role, $module->id);
+        $cardTabs = $this->cardTabNames($role->id);
 
         $rows = $this->service->filterDashboardCardRows(
-            $this->service->dashboardCardRows(DashboardCard::orderBy('id', 'desc')->get(), $assignedCardIds),
+            $this->service->dashboardCardRows($this->tabCardList($assignedCardIds, $cardTabs), $assignedCardIds, $cardTabs),
             $request->input('q'),
             $request->input('status')
         );
@@ -665,8 +707,8 @@ class RoleController extends Controller
             empty($plain) ? null : implode('  |  ', $plain),
             // Mirrors assign_dashboard_print.blade.php's column widths.
             [
-                'sno' => '7%', 'label' => '30%', 'icon' => '20%', 'color' => '12%',
-                'sort_order' => '8%', 'created_at' => '12%', 'status' => '11%',
+                'sno' => '6%', 'label' => '24%', 'tabs' => '14%', 'icon' => '16%', 'color' => '11%',
+                'sort_order' => '7%', 'created_at' => '11%', 'status' => '11%',
             ]
         );
     }
@@ -717,7 +759,11 @@ class RoleController extends Controller
             DB::table('role_dashboard_cards')->where($assignment)->delete();
         }
 
-        return response()->json(['success' => true, 'message' => 'Dashboard card updated successfully.']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Dashboard card updated successfully.',
+            'tabs' => $this->cardTabNames($role->id, $card->id)[$card->id] ?? '-',
+        ]);
     }
 
     public function assignPermission(Request $request, $id)

@@ -29,7 +29,7 @@
 
 @section('setup_content')
 @php
-    $cardRows = app(\App\Services\RoleService::class)->dashboardCardRows($allCards, $assignedCardIds);
+    $cardRows = app(\App\Services\RoleService::class)->dashboardCardRows($allCards, $assignedCardIds, $cardTabs);
     $totalCount = count($cardRows);
     $disabledCount = $totalCount - $enabledCount;
 @endphp
@@ -162,6 +162,7 @@
                                      content reads as a misalignment. --}}
                                 <th scope="col" class="text-center">S No.</th>
                                 <th scope="col">Name</th>
+                                <th scope="col">Dashboard Tab</th>
                                 <th scope="col" class="text-center">Icon</th>
                                 <th scope="col">Colour</th>
                                 <th scope="col" class="text-center">Order</th>
@@ -177,6 +178,8 @@
                             <tr data-id="{{ $row['id'] }}">
                                 <td class="text-center">{{ $index + 1 }}</td>
                                 <td>{{ $row['label'] }}</td>
+                                {{-- Every tab this role has the card on, not just this one. --}}
+                                <td class="rp-card-tabs">{{ $row['tabs'] }}</td>
                                 <td class="text-center">
                                     <span class="rp-card-icon {{ $row['color_class'] }}" title="{{ $row['icon'] }}">
                                         <i class="material-icons material-symbols-rounded" aria-hidden="true">{{ $row['icon'] }}</i>
@@ -306,7 +309,7 @@
                             </select>
                             <p class="rp-form-help">
                                 @if ($mode === 'add')
-                                    The card is switched on for {{ ucfirst($role->name) }} on this tab's dashboard.
+                                    The tab whose dashboard shows this card for {{ ucfirst($role->name) }}.
                                 @else
                                     Picking another tab moves this card there for {{ ucfirst($role->name) }} only.
                                 @endif
@@ -342,7 +345,7 @@
                             <p class="rp-form-help">Lower numbers appear first on the dashboard.</p>
                         </div>
 
-                        <div class="form-group rp-form-grid--full">
+                        <div class="form-group">
                             <label class="rp-form-label">Preview</label>
                             <div class="rp-preview-card">
                                 <div class="rp-preview-icon stat-icon-blue rp-preview-chip">
@@ -353,6 +356,18 @@
                                     <p class="rp-preview-count">0</p>
                                 </div>
                             </div>
+                        </div>
+
+                        {{-- Set together with the tab, so a card moved to another tab
+                             can be switched on there in the same save. --}}
+                        <div class="form-group">
+                            <label class="rp-form-label" for="rp{{ ucfirst($mode) }}CardStatus">Status</label>
+                            <select class="form-select rp-control rp-card-status select2" name="status"
+                                    id="rp{{ ucfirst($mode) }}CardStatus" data-placeholder="Status">
+                                <option value="1" selected>Enabled</option>
+                                <option value="0">Disabled</option>
+                            </select>
+                            <p class="rp-form-help">Whether {{ ucfirst($role->name) }} sees this card on the tab picked above.</p>
                         </div>
                     </div>
                 </div>
@@ -441,8 +456,8 @@ $(function () {
            .table-responsive scrolls horizontally instead — §3. */
         responsive: false,
         columnDefs: [
-            { orderable: false, targets: [2, 7] },        // Icon, Action
-            { searchable: false, targets: [0, 4, 5, 6, 7] }
+            { orderable: false, targets: [3, 8] },        // Icon, Action
+            { searchable: false, targets: [0, 5, 6, 7, 8] }
         ],
         language: {
             emptyTable: '<div class="rp-empty">' +
@@ -500,7 +515,7 @@ $(function () {
        that is not in the export at all — here, Action, whose Status twin already
        carries the state.
        ⚠️ Adding a column to the table means adding an entry here too. */
-    var RP_EXPORT_COLUMN_KEYS = ['sno', 'label', 'icon', 'color', 'sort_order', 'created_at', 'status', ''];
+    var RP_EXPORT_COLUMN_KEYS = ['sno', 'label', 'tabs', 'icon', 'color', 'sort_order', 'created_at', 'status', ''];
     var RP_EXPORT_COL_COUNT = RP_EXPORT_COLUMN_KEYS.filter(Boolean).length;
 
     /* Keep Download and Print carrying exactly the columns still on screen, plus
@@ -652,6 +667,11 @@ $(function () {
             success: function (response) {
                 if (response && response.success) {
                     paintCardRow($checkbox, enabled);
+                    if (response.tabs) {
+                        var $tr = $checkbox.closest('tr');
+                        $tr.find('.rp-card-tabs').text(response.tabs);
+                        dt.row($tr).invalidate();
+                    }
                     if (typeof toastr !== 'undefined') { toastr.success(response.message); }
                     // Re-apply the status filter: a row that no longer matches the
                     // active pill should leave the view.
@@ -824,6 +844,7 @@ $(function () {
     var $addModal = $('#rpAddCardModal');
     var $editModal = $('#rpEditCardModal');
     var pendingEditIcon = '';
+    var editOpenedStatus = '';
 
     $('#rpAddCardBtn').on('click', function () {
         var $form = $('#rpAddCardForm');
@@ -831,6 +852,7 @@ $(function () {
         $form.find('.is-invalid').removeClass('is-invalid');
         // reset() puts the <select> back on the tab being viewed; repaint Select2.
         $('#rpAddCardTab').val(String(MODULE_ID)).trigger('change.select2');
+        $('#rpAddCardStatus').val('1').trigger('change.select2');
         bootstrap.Modal.getOrCreateInstance($addModal[0]).show();
     });
 
@@ -859,6 +881,9 @@ $(function () {
         $('#rpEditCardSort').val($btn.attr('data-sort'));
         // Opened from this tab's grid, so this is the tab a switch moves it from.
         $('#rpEditCardTab').val(String(MODULE_ID)).trigger('change.select2');
+        // The row's live switch, so a save that changes nothing changes nothing.
+        editOpenedStatus = $btn.closest('tr').find('.card-toggle').is(':checked') ? '1' : '0';
+        $('#rpEditCardStatus').val(editOpenedStatus).trigger('change.select2');
         // The Choices instance is built in shown.bs.modal, so stash the value
         // for it rather than assigning to a widget that does not exist yet.
         pendingEditIcon = $btn.attr('data-icon') || '';
@@ -867,6 +892,13 @@ $(function () {
         $editModal.find('.rp-preview-glyph').text(pendingEditIcon || 'apps');
 
         bootstrap.Modal.getOrCreateInstance($editModal[0]).show();
+    });
+
+    /* Moving a card to another tab switches it on there by default (PR #353
+       Option B); the Status field can still override it. Select2 fires a jQuery change. */
+    $('#rpEditCardTab').on('change', function () {
+        $('#rpEditCardStatus').val(String(this.value) !== String(MODULE_ID) ? '1' : editOpenedStatus)
+            .trigger('change.select2');
     });
 
     /* ── Add / Update submit ──────────────────────────────────────────────── */
@@ -888,7 +920,8 @@ $(function () {
             color_class: $modal.find('.rp-card-color').val(),
             sort_order: $modal.find('input[name="sort_order"]').val(),
             role_id: ROLE_ID,
-            module: $modal.find('.rp-card-tab').val()
+            module: $modal.find('.rp-card-tab').val(),
+            status: $modal.find('.rp-card-status').val()
         };
     }
 
@@ -955,9 +988,10 @@ $(function () {
                 if (typeof toastr !== 'undefined') { toastr.success(response.message); }
                 bootstrap.Modal.getOrCreateInstance($editModal[0]).hide();
 
-                // Moved to another tab: this tab's Status, toggle and Delete guard
-                // all changed with it, so reload rather than repaint them by hand.
-                if (response.moved) {
+                // Tab or status changed: this tab's Status, toggle, Delete guard and
+                // Dashboard Tab cell all changed with it, so reload rather than
+                // repaint them by hand.
+                if (response.moved || String(data.module) !== String(MODULE_ID) || data.status !== editOpenedStatus) {
                     window.location.reload();
                     return;
                 }

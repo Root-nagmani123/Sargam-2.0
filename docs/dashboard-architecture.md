@@ -318,15 +318,21 @@ This is where the actual dashboard is **built** for the logged-in user.
 ## Routes
 
 **Role-Based Dashboard Management:**
-- `GET /roles/{id}/dashboard?module=<id>` → Show "Assign Dashboard" page for one module
+- `GET /roles/{id}/dashboard?module=<id>` → Show "Assign Dashboard" page for one module; it lists the cards the role has
+  on that module plus those it has on no module yet, never a card that lives only on another module.
+  A Dashboard Tab column names every module the role has each card on
 - `POST /roles/{id}/dashboard` → Update card assignment on a module (AJAX; `card_id`, `module`, `status`)
 - `GET /roles/{id}/dashboard/export?module=<id>` → Export that module's card assignments
 - `POST /dashboard-cards` → Create new dashboard card; with `role_id` + `module` (the "Dashboard tab"
   field) it is also switched on for that role on that tab, in the same transaction
 - `PUT /dashboard-cards/{id}` → Edit dashboard card (label/icon/colour/order are shared by every role);
   with `role_id`, `from_module` and a different `module` it moves that role's assignment to the new tab.
-  Only an assignment the role has on `from_module` moves: a card Disabled there stays disabled on
-  both tabs (`moved: false`). An unknown tab is refused with 422 and nothing is saved
+  An assignment the role has on `from_module` moves (`moved: true`). A card Disabled there is
+  enabled on the new tab for that role only (`moved: false`; Product owner decision, PR #353
+  comment 6857559080). An unknown tab is refused with 422 and nothing is saved
+- Both card routes take an optional `status` (boolean): when posted, it sets the role's state on the
+  picked tab (1 enables, 0 disables) instead of the default above; create defaults to enabled. The Edit
+  dialog pre-fills it from the row's switch and flips it to Enabled when another tab is picked
 - `DELETE /dashboard-cards/{id}` → Delete dashboard card
 
 **User Dashboard:**

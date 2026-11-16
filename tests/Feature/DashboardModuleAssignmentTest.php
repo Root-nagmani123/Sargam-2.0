@@ -263,19 +263,86 @@ class DashboardModuleAssignmentTest extends TestCase
         $this->assertSame($label, DB::table('dashboard_cards')->where('id', $this->cardId)->value('label'));
     }
 
-    public function test_editing_a_disabled_card_onto_another_tab_does_not_enable_it(): void
+    /** Product owner decision, Option B (PR #353 comment 6857559080). */
+    public function test_editing_a_disabled_card_onto_another_tab_enables_it_there(): void
     {
         $admin = $this->staffWithRole('Super Admin');
         $label = DB::table('dashboard_cards')->where('id', $this->cardId)->value('label');
+        $setupName = DB::table('sidebar_categories')->where('id', $this->setupId)->value('name');
         $this->assertSame([], $this->tabsOf($this->roleId, $this->cardId), 'the card starts Disabled for the role');
 
-        $this->as($admin, ['Super Admin'])->put(route('dashboard.cards.update', $this->cardId),
-            $this->cardForm(['label' => $label, 'role_id' => $this->roleId, 'module' => $this->setupId, 'from_module' => $this->homeId]))
-            ->assertOk()
-            ->assertJson(['success' => true, 'moved' => false])
-            ->assertJsonPath('message', 'Card updated. It is not enabled for this role on this tab, so it was not moved.');
+        // Twice: the second edit must not duplicate the assignment.
+        foreach ([1, 2] as $_) {
+            $this->as($admin, ['Super Admin'])->put(route('dashboard.cards.update', $this->cardId),
+                $this->cardForm(['label' => $label, 'role_id' => $this->roleId, 'module' => $this->setupId, 'from_module' => $this->homeId]))
+                ->assertOk()
+                ->assertJson(['success' => true, 'moved' => false])
+                ->assertJsonPath('message', 'Card updated. It is now on the '.$setupName.' dashboard for this role.');
 
-        $this->assertSame([], $this->tabsOf($this->roleId, $this->cardId), 'a Disabled card must not come out enabled on the new tab');
+            $this->assertSame([$this->setupId], $this->tabsOf($this->roleId, $this->cardId), 'enabled on the picked tab only');
+        }
+    }
+
+    public function test_the_card_forms_status_field_sets_the_role_state_on_the_picked_tab(): void
+    {
+        $admin = $this->staffWithRole('Super Admin');
+        $label = DB::table('dashboard_cards')->where('id', $this->cardId)->value('label');
+        $edit = fn (int $module, string $status) => $this->as($admin, ['Super Admin'])->put(route('dashboard.cards.update', $this->cardId),
+            $this->cardForm(['label' => $label, 'role_id' => $this->roleId, 'module' => $module, 'from_module' => $this->homeId, 'status' => $status]))
+            ->assertOk()->assertJson(['success' => true]);
+
+        $edit($this->homeId, '1');
+        $this->assertSame([$this->homeId], $this->tabsOf($this->roleId, $this->cardId), 'same tab, Enabled');
+        $edit($this->homeId, '0');
+        $this->assertSame([], $this->tabsOf($this->roleId, $this->cardId), 'same tab, Disabled');
+
+        $this->assign($this->homeId);
+        $edit($this->setupId, '0');
+        $this->assertSame([], $this->tabsOf($this->roleId, $this->cardId), 'moved off Home and left Disabled on Setup');
+        $edit($this->homeId, '1');
+        $edit($this->setupId, '1')->assertJson(['moved' => true]);
+        $this->assertSame([$this->setupId], $this->tabsOf($this->roleId, $this->cardId), 'moved and Enabled');
+
+        // Add form: Disabled creates the card without switching it on.
+        $created = $this->as($admin, ['Super Admin'])->post(route('dashboard.cards.store'),
+            $this->cardForm(['role_id' => $this->roleId, 'module' => $this->setupId, 'status' => '0']))->assertOk();
+        $this->assertSame([], $this->tabsOf($this->roleId, (int) $created->json('card.id')));
+    }
+
+    public function test_a_tab_lists_its_own_cards_and_unassigned_ones_but_not_another_tabs(): void
+    {
+        $admin = $this->staffWithRole('Super Admin');
+        $label = DB::table('dashboard_cards')->where('id', $this->cardId)->value('label');
+        $list = fn (int $module) => $this->as($admin, ['Super Admin'])
+            ->get(route('roles.dashboard', ['id' => $this->roleId, 'module' => $module]))->assertOk();
+        $csv = fn (int $module) => $this->as($admin, ['Super Admin'])
+            ->get(route('roles.dashboard.export', ['id' => $this->roleId, 'module' => $module, 'format' => 'csv']))->assertOk()->streamedContent();
+
+        // On no tab yet: listed everywhere, so it can be switched on.
+        $list($this->homeId)->assertSee($label);
+        $list($this->setupId)->assertSee($label);
+
+        $this->assign($this->homeId);
+        $list($this->homeId)->assertSee($label);
+        $list($this->setupId)->assertDontSee($label);
+        $this->assertStringContainsString($label, $csv($this->homeId));
+        $this->assertStringNotContainsString($label, $csv($this->setupId));
+    }
+
+    public function test_the_card_list_and_export_name_every_tab_the_role_has_the_card_on(): void
+    {
+        $admin = $this->staffWithRole('Super Admin');
+        $this->assign($this->homeId);
+        $this->assign($this->setupId);
+        $names = DB::table('sidebar_categories')->whereIn('id', [$this->homeId, $this->setupId])->orderBy('order')->pluck('name')->implode(', ');
+
+        $this->as($admin, ['Super Admin'])->get(route('roles.dashboard', ['id' => $this->roleId, 'module' => $this->homeId]))
+            ->assertOk()->assertSee('Dashboard Tab')->assertSee($names);
+
+        $csv = $this->as($admin, ['Super Admin'])->get(route('roles.dashboard.export', ['id' => $this->roleId, 'module' => $this->homeId, 'format' => 'csv']))
+            ->assertOk()->streamedContent();
+        $this->assertStringContainsString('Dashboard Tab', $csv);
+        $this->assertStringContainsString($names, $csv);
     }
 
     public function test_a_module_whose_only_cards_are_gated_from_the_viewer_is_not_a_landing(): void

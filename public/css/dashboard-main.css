@@ -1856,9 +1856,10 @@ table>thead {
 }
 
 /* ── Report Issue: floating launcher + modal ─────────────────────────── */
-/* Circular "Report a Problem" launcher — brand blue disc, white inner ring,
-   brand-red outer ring, warning icon over a two-line label. Readable at any
-   age: visible text (not icon-only), 14px bold label, ~8.6:1 contrast, 112px
+/* Circular "Report a Problem" launcher — brand-red disc so it catches the eye
+   (product request), white inner ring, red outer ring, warning icon over a
+   two-line label. Readable at any age: visible text (not icon-only), 14px
+   bold label, ~6.5:1 white-on-red contrast, 112px
    target, thick keyboard focus ring.
    Circle is a deliberate exception to the no-pill rule (sargam-app.css): it is
    a floating launcher, not an inline control.
@@ -1880,7 +1881,7 @@ table>thead {
     padding: var(--ds-space-2, .5rem);
     color: #fff;
     text-align: center;
-    background: var(--ds-primary, #004a93);
+    background: var(--ds-secondary, #b12923);
     border: 3px solid #fff;
     border-radius: 50%;
     box-shadow: 0 0 0 3px var(--ds-secondary, #b12923), var(--ds-shadow-lg, 0 10px 28px rgba(16, 24, 40, .18));
@@ -1904,7 +1905,7 @@ table>thead {
 
 .dash-report-fab:hover {
     color: #fff;
-    background: #003a75;
+    background: #8f201b;
     transform: translateY(-3px) scale(1.04);
 }
 
@@ -1912,7 +1913,7 @@ table>thead {
     transform: scale(.97);
 }
 
-/* Thick two-tone ring: visible on the blue disc AND on any page background. */
+/* Thick dark ring: visible on the red disc AND on any page background. */
 .dash-report-fab:focus-visible {
     outline: 3px solid var(--ds-ink, #1f2937);
     outline-offset: 5px;
