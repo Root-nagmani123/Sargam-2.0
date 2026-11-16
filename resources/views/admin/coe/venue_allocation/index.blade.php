@@ -612,7 +612,6 @@ $(function () {
             width: '100%', dropdownParent: $body, placeholder: 'Select OT', closeOnSelect: false,
             templateSelection: function (o) { return String(o.text || '').split(' — ')[0]; }
         });
-        fillOts($row);
         syncManualRows();
     }
 
@@ -622,21 +621,23 @@ $(function () {
         return ots.filter(function (o) { return category === '' || category === '0' || (category === '2') === o.ph; });
     }
 
-    function fillOts($row) {
+    // OTs already picked in another row are left out of this row's list.
+    function fillOts($row, taken) {
         var $s = $row.find('.va-man-ots'), keep = vals($s);
         $s.empty();
         eligibleOts().forEach(function (o) {
+            if (taken.indexOf(String(o.pk)) !== -1) { return; }
             $s.append(new Option(o.roll + ' — ' + o.name, o.pk, false, keep.indexOf(String(o.pk)) !== -1));
         });
         $s.trigger('change.select2');
     }
 
     function refreshOts() {
-        $manualRows.children().each(function () { fillOts($(this)); });
+        $manualRows.children().removeData('otsTaken');
         syncManualRows();
     }
 
-    // A room or an OT taken in one row is greyed out in the others; "+" only on the last row.
+    // A room taken in one row is greyed out in the others, an OT is left out of them; "+" only on the last row.
     function syncManualRows() {
         var $rows = $manualRows.children();
         $rows.each(function () {
@@ -647,7 +648,12 @@ $(function () {
                 otherOts = otherOts.concat(vals($(this).find('.va-man-ots')));
             });
             $row.find('.va-man-room option').each(function () { this.disabled = !!this.value && otherRooms.indexOf(this.value) !== -1; });
-            $row.find('.va-man-ots option').each(function () { this.disabled = otherOts.indexOf(this.value) !== -1; });
+            // Rebuild only when the other rows' picks changed, so the list being picked from stays put.
+            var key = otherOts.sort().join(',');
+            if ($row.data('otsTaken') !== key) {
+                $row.data('otsTaken', key);
+                fillOts($row, otherOts);
+            }
         });
         $rows.find('.va-man-btn--add').addClass('d-none');
         $rows.last().find('.va-man-btn--add').removeClass('d-none');
