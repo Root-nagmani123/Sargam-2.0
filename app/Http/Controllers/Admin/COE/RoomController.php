@@ -19,8 +19,8 @@ use Illuminate\Validation\Rule;
  * The shared building_floor_room_mapping, rooms of Classroom buildings only: the
  * building must be a Classroom building_master row, the floor any floor_master
  * row (floors are universal). The room is picked from Venue Master and stored by
- * its venue_short_name in `room_name`, unique across the table; `room_type` one of
- * the table's enum; `capacity` 1..9999; `laptop_count` / `scriber_count` optional,
+ * its venue_short_name in `room_name`, unique across the table; `room_type` is always
+ * Classroom (the COE's only room type); `capacity` 1..9999; `laptop_count` / `scriber_count` optional,
  * each at most the capacity. Once the DBA adds faulty_laptop_count (faultyEnabled()),
  * a room also records its faulty laptops (at most its laptop count) and the grid shows
  * Available = laptop count − faulty. Status is stored as the table does: 1 active, 2 inactive.
@@ -49,7 +49,7 @@ class RoomController extends Controller
             'pinActions' => true,
             'fields' => [
                 // A Venue Master venue, saved by its short name.
-                ['key' => 'name', 'name' => 'room_name', 'label' => 'Room Name', 'column' => 'Room Name',
+                ['key' => 'name', 'name' => 'room_name', 'label' => 'Room Full Name', 'column' => 'Room Full Name',
                     'type' => 'select', 'placeholder' => 'Select Room', 'required' => true,
                     'options' => $this->venueOptions()],
                 ['key' => 'building', 'name' => 'building_master_pk', 'label' => 'Building Name', 'column' => 'Building',
@@ -58,9 +58,9 @@ class RoomController extends Controller
                 ['key' => 'floor', 'name' => 'floor_master_pk', 'label' => 'Floor Name', 'column' => 'Floor',
                     'type' => 'select', 'placeholder' => 'Select Floor', 'required' => true,
                     'options' => $this->floorOptions()],
+                // Frozen: every COE room is a Classroom, shown read-only in the form.
                 ['key' => 'type', 'name' => 'room_type', 'label' => 'Room Type', 'column' => 'Room Type',
-                    'type' => 'select', 'placeholder' => 'Select Type', 'required' => true,
-                    'options' => BuildingFloorRoomMapping::$roomTypes],
+                    'type' => 'text', 'fixed' => BuildingFloorRoomMapping::TYPE_CLASSROOM, 'required' => true],
                 ['key' => 'capacity', 'name' => 'capacity', 'label' => 'Total Capacity', 'column' => 'Total Capacity',
                     'type' => 'number', 'placeholder' => 'eg. 100', 'required' => true, 'maxValue' => 9999, 'step' => 1, 'align' => 'center'],
                 ['key' => 'laptops', 'name' => 'laptop_count', 'label' => 'Laptop Count', 'column' => 'Laptop Count',
@@ -113,7 +113,7 @@ class RoomController extends Controller
                     }
                 }],
             'floor_master_pk' => ['required', 'integer', Rule::exists('floor_master', 'pk')],
-            'room_type' => ['required', Rule::in(array_keys(BuildingFloorRoomMapping::$roomTypes))],
+            'room_type' => ['required', Rule::in([BuildingFloorRoomMapping::TYPE_CLASSROOM])],
             'capacity' => ['required', 'integer', 'min:1', 'max:9999'],
             'laptop_count' => ['nullable', 'integer', 'min:0', 'lte:capacity'],
             'scriber_count' => ['nullable', 'integer', 'min:0', 'lte:capacity'],
@@ -133,7 +133,7 @@ class RoomController extends Controller
             'scriber_count.lte' => 'Scriber count cannot be more than the total capacity.',
             'building_master_pk.exists' => 'Select a Classroom building.',
         ], [
-            'room_name' => 'room name',
+            'room_name' => 'room full name',
             'building_master_pk' => 'building',
             'floor_master_pk' => 'floor',
             'room_type' => 'room type',
@@ -147,7 +147,7 @@ class RoomController extends Controller
         $model->room_name = trim($validated['room_name']);
         $model->building_master_pk = (int) $validated['building_master_pk'];
         $model->floor_master_pk = (int) $validated['floor_master_pk'];
-        $model->room_type = $validated['room_type'];
+        $model->room_type = BuildingFloorRoomMapping::TYPE_CLASSROOM;
         $model->capacity = (int) $validated['capacity'];
         $model->laptop_count = $validated['laptop_count'] ?? null;
         $model->scriber_count = $validated['scriber_count'] ?? null;
@@ -277,7 +277,7 @@ class RoomController extends Controller
                 ->orderBy('building_name')->orderBy('floor_master_pk')->orderBy('room_name'),
             [
                 'sno' => $this->coeSnoColumn(),
-                'name' => ['heading' => 'Room Name', 'width' => '18%', 'align' => 'left', 'value' => fn ($row) => trim((string) $row->room_name)],
+                'name' => ['heading' => 'Room Full Name', 'width' => '18%', 'align' => 'left', 'value' => fn ($row) => CoeRoomMasterDataTable::roomFullName($row)],
                 'building' => ['heading' => 'Building', 'width' => '20%', 'align' => 'left', 'value' => fn ($row) => trim((string) $row->building_name)],
                 'floor' => ['heading' => 'Floor', 'width' => '10%', 'align' => 'center', 'value' => fn ($row) => trim((string) $row->floor_name)],
                 'type' => ['heading' => 'Room Type', 'width' => '16%', 'align' => 'left', 'value' => fn ($row) => (string) $row->room_type],
@@ -292,6 +292,7 @@ class RoomController extends Controller
             ],
             fn ($query, string $term) => $query->where(fn ($q) => $q
                 ->where('room_name', 'like', '%' . $term . '%')
+                ->orWhere('room_full_name', 'like', '%' . $term . '%')
                 ->orWhere('building_name', 'like', '%' . $term . '%')
                 ->orWhere('room_type', 'like', '%' . $term . '%')),
             'Room Master',

@@ -12,6 +12,9 @@ class BuildingFloorRoomMapping extends Model
     protected $guarded = [];
     public $timestamps = false;
 
+    /** The only room type the COE Room Master offers. */
+    public const TYPE_CLASSROOM = 'Classroom';
+
     public static $roomTypes = [
         'Room' => 'Room',
         'Pantry' => 'Pantry',

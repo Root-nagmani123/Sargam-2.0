@@ -86,7 +86,7 @@ class OtLaptopStatusController extends Controller
             'courses' => $rows->pluck('course')->unique()->sort()->values(),
             'services' => $rows->pluck('service')->filter()->unique()->sort()->values(),
             'batches' => $rows->pluck('batch')->unique()->sortDesc()->values(),
-            'singleCourses' => $this->singleCourseOptions(),
+            'singleCourses' => $this->singleCourseOptions($scope),
             'disabilityTypes' => LaptopResponse::disabilityTypes(),
             'scribers' => $this->scriberOptions(),
             'importExtensions' => self::IMPORT_EXTENSIONS,
@@ -459,16 +459,20 @@ class OtLaptopStatusController extends Controller
     }
 
     /**
-     * Courses the Add Single Record dialog offers: every course with roll numbers generated.
+     * Courses the Add Single Record dialog offers: every course in the current scope
+     * (Active / Archived tab) with roll numbers generated.
      *
      * Not restricted to courses already in the grid — the dialog exists to record an
      * answer that is missing, so that would make the first entry for a course impossible.
      */
-    private function singleCourseOptions(): Collection
+    private function singleCourseOptions(string $scope): Collection
     {
+        $today = now()->toDateString();
+
         return DB::table('coe_roll_number_allocations')
             ->join('coe_roll_numbers', 'coe_roll_numbers.roll_number_allocation_pk', '=', 'coe_roll_number_allocations.pk')
             ->join('course_master', 'course_master.pk', '=', 'coe_roll_number_allocations.course_master_pk')
+            ->where(fn ($q) => $this->applyScope($q, $scope, $today))
             ->select('course_master.pk', 'course_master.course_name', 'course_master.couse_short_name')
             ->distinct()
             ->orderBy('course_master.course_name')
