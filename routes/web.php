@@ -2055,6 +2055,9 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
             ->name('faculty-question-paper.index');
         Route::get('faculty-question-paper/{paper}/create', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'create'])
             ->whereNumber('paper')->name('faculty-question-paper.create');
+        // Create multiple paper sets (A-D…): design-first, sample questions, nothing saved yet.
+        Route::get('faculty-question-paper/{paper}/sets', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'sets'])
+            ->whereNumber('paper')->name('faculty-question-paper.sets');
         Route::post('faculty-question-paper/{paper}/upload', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'upload'])
             ->whereNumber('paper')->name('faculty-question-paper.upload');
         Route::post('faculty-question-paper/{paper}/hidden', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'hidden'])
