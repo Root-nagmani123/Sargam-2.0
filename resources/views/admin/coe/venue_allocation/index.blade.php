@@ -24,6 +24,15 @@
 .va-alloc-rules    { margin-top:4px; }
 .va-alloc-rules .form-check-label { color:#344054; }
 .va-gap-box        { border:1px solid var(--ds-line);border-radius:8px;padding:12px 14px;margin-top:10px; }
+/* System generated / Manual seating panel */
+.va-seating        { background:#eaf1fb;border-radius:12px;padding:16px; }
+.va-seating .coe-seg { background:#fff; }
+.va-man-row + .va-man-row { margin-top:12px; }
+.va-man-act        { display:flex;gap:.5rem;min-width:84px; }
+.va-man-btn        { width:36px;height:36px;border:0;border-radius:.5rem;color:#fff;
+                     display:inline-flex;align-items:center;justify-content:center; }
+.va-man-btn--remove { background:var(--coe-danger); }
+.va-man-btn--add    { background:var(--coe-brand); }
 </style>
 @endpush
 
@@ -227,46 +236,70 @@
                          who answered "Laptop Required = Yes" on OT Laptop Status. --}}
                     <input type="hidden" id="vaMapLaptopPolicy" name="laptop_requirement"
                            value="{{ \App\Models\COE\SeatPlan::LAPTOP_REQ_DECLARED_YES }}">
-                    {{-- Row 4: Building + Floor (dependent selects) --}}
-                    <div class="row g-3 mb-3">
-                        <div class="col-sm-6">
-                            <label class="coe-form-label" for="vaMapBuilding">Building Name<span class="coe-req">*</span></label>
-                            <select id="vaMapBuilding" class="form-select coe-control">
-                                <option value="">Select Building</option>
-                                @foreach ($buildings as $b)<option value="{{ $b['id'] }}">{{ $b['name'] }}</option>@endforeach
-                            </select>
-                            @if ($buildings->isEmpty())
-                                <div class="small text-muted mt-1">No examination rooms yet — add rooms with a building, floor and capacity in Venue Master.</div>
-                            @endif
+                    {{-- System generated / Manual seating --}}
+                    <div class="va-seating mb-4">
+                        <div class="coe-seg nav mb-3" role="tablist" aria-label="Seating mode">
+                            <button type="button" class="coe-seg__btn active" id="vaModeSystemTab" data-mode="system"
+                                    data-bs-toggle="tab" data-bs-target="#vaModeSystem" role="tab"
+                                    aria-controls="vaModeSystem" aria-selected="true">System generated Seating</button>
+                            <button type="button" class="coe-seg__btn" id="vaModeManualTab" data-mode="manual"
+                                    data-bs-toggle="tab" data-bs-target="#vaModeManual" role="tab"
+                                    aria-controls="vaModeManual" aria-selected="false">Manual Seating</button>
                         </div>
-                        <div class="col-sm-6">
-                            <label class="coe-form-label" for="vaMapFloor">Floor<span class="coe-req">*</span></label>
-                            <select id="vaMapFloor" class="form-select coe-control" disabled>
-                                <option value="">Select Floor</option>
-                            </select>
-                        </div>
-                    </div>
-                    {{-- Room --}}
-                    <div class="mb-3">
-                        <label class="coe-form-label" for="vaMapRoom">Room<span class="coe-req">*</span></label>
-                        <select id="vaMapRoom" name="venue_id" class="form-select coe-control" disabled>
-                            <option value="">Select Room</option>
-                        </select>
-                    </div>
-                    {{-- Row 5: Room Capacity + Laptop Available (readonly) --}}
-                    <div class="row g-3 mb-4">
-                        <div class="col-sm-6">
-                            <label class="coe-form-label" for="vaMapCapacity">Room Capacity<span class="coe-req">*</span></label>
-                            <input type="text" id="vaMapCapacity" class="form-control coe-control va-readonly" value="-" readonly>
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="coe-form-label" for="vaMapAvailLaptop">Laptop Available<span class="coe-req">*</span></label>
-                            <input type="text" id="vaMapAvailLaptop" class="form-control coe-control va-readonly" value="-" readonly>
+                        @if ($buildings->isEmpty())
+                            <div class="small text-muted mb-2">No examination rooms yet — add rooms with a building, floor and capacity in Room Master.</div>
+                        @endif
+                        <div class="tab-content">
+                            {{-- System generated: any number of buildings → floors → rooms --}}
+                            <div class="tab-pane fade show active" id="vaModeSystem" role="tabpanel" aria-labelledby="vaModeSystemTab">
+                                <div class="row g-3 mb-3">
+                                    <div class="col-sm-6">
+                                        <label class="coe-form-label" for="vaMapBuilding">Building Name<span class="coe-req">*</span></label>
+                                        <select id="vaMapBuilding" class="form-select coe-control" multiple data-placeholder="Select Building">
+                                            @foreach ($buildings as $b)<option value="{{ $b['id'] }}">{{ $b['name'] }}</option>@endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="coe-form-label" for="vaMapFloor">Floor<span class="coe-req">*</span></label>
+                                        <select id="vaMapFloor" class="form-select coe-control" multiple data-placeholder="Select Floor" disabled></select>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="coe-form-label" for="vaMapRoom">Room<span class="coe-req">*</span></label>
+                                    <select id="vaMapRoom" class="form-select coe-control" multiple data-placeholder="Select Room" disabled></select>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-sm-6">
+                                        <label class="coe-form-label" for="vaMapCapacity">Room Capacity<span class="coe-req">*</span></label>
+                                        <input type="text" id="vaMapCapacity" class="form-control coe-control va-readonly" value="-" readonly>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="coe-form-label" for="vaMapAvailLaptop">Laptop Available<span class="coe-req">*</span></label>
+                                        <input type="text" id="vaMapAvailLaptop" class="form-control coe-control va-readonly" value="-" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                            {{-- Manual: one room per row, with the OTs who sit in it --}}
+                            <div class="tab-pane fade" id="vaModeManual" role="tabpanel" aria-labelledby="vaModeManualTab">
+                                <div id="vaManualRows"></div>
+                            </div>
                         </div>
                     </div>
                     {{-- Allocation Rules --}}
                     <div class="va-alloc-rules">
                         <span class="coe-form-label d-block mb-2">Allocation Rules</span>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="vaRuleService" checked>
+                            <label class="form-check-label" for="vaRuleService">Avoid same-service sitting</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="vaRuleCadre" checked>
+                            <label class="form-check-label" for="vaRuleCadre">Avoid consecutive rolls for same Cadre</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="vaRuleGender">
+                            <label class="form-check-label" for="vaRuleGender">Alternate female/male where possible</label>
+                        </div>
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="checkbox" id="vaRuleOddEven" name="rule_odd_even" value="1">
                             <label class="form-check-label" for="vaRuleOddEven">Keep seating according to the odd and even numbers of roll number.</label>
@@ -323,6 +356,7 @@ $(function () {
     var COL = { sno:0,course:1,cat:2,subj:3,comp:4,ot:5,lap:6,scr:7,bld:8,flr:9,room:10,cap:11,avail:12,scrAvail:13,empty:14,status:15,action:16 };
 
     var ROOMS = @json($roomsByBuildingFloor);
+    var BUILDINGS = @json($buildings);
     var COMPONENTS_URL = @json(route('admin.coe.venue-allocation.components'));
     var STORE_URL = @json(route('admin.coe.venue-allocation.store'));
     var POLICY = { YES: 1, NO: 2, ALL: 3, NONE: 4 };
@@ -410,17 +444,33 @@ $(function () {
     var $body     = $('#vaMapModalBody');
     var $course = $('#vaMapCourse'), $category = $('#vaMapCategory'), $subject = $('#vaMapSubject'),
         $component = $('#vaMapComponent'), $policy = $('#vaMapLaptopPolicy'),
-        $building = $('#vaMapBuilding'), $floor = $('#vaMapFloor'), $room = $('#vaMapRoom');
-    var components = [], counts = null;
+        $building = $('#vaMapBuilding'), $floor = $('#vaMapFloor'), $room = $('#vaMapRoom'),
+        $manualRows = $('#vaManualRows');
+    var components = [], counts = null, ots = [];
+    var mode = 'system';
 
-    $mapModal.find('select.coe-control').each(function () {
-        $(this).select2({ width: '100%', dropdownParent: $body });
+    // Multiple selects stay open while picking, so several go in one pass.
+    function select2On($s) {
+        $s.select2({ width: '100%', dropdownParent: $body, placeholder: $s.data('placeholder') || '', closeOnSelect: !$s.prop('multiple') });
+    }
+    $mapModal.find('select.coe-control').each(function () { select2On($(this)); });
+
+    $mapModal.find('[data-mode]').on('shown.bs.tab', function () {
+        mode = $(this).data('mode');
+        $mapModal.find('.coe-field-error').remove();
+        $mapModal.find('.is-invalid').removeClass('is-invalid');
     });
 
     // Reopening the dialog starts from a blank form, as the design shows it.
     $mapModal.on('hidden.bs.modal', function () {
-        $course.add($category).add($building).val('').trigger('change');
-        $('#vaRuleOddEven, #vaRuleGap').prop('checked', false);
+        $course.add($category).val('').trigger('change');
+        $building.val(null).trigger('change');
+        $manualRows.empty();
+        addManualRow();
+        bootstrap.Tab.getOrCreateInstance(document.getElementById('vaModeSystemTab')).show();
+        mode = 'system';
+        $('#vaRuleService, #vaRuleCadre').prop('checked', true);
+        $('#vaRuleGender, #vaRuleOddEven, #vaRuleGap').prop('checked', false);
         $('#vaGapCount').val(1);
         $('#vaGapBox').addClass('d-none');
         $mapModal.find('.coe-field-error').remove();
@@ -448,14 +498,16 @@ $(function () {
     }
 
     $course.on('change', function () {
-        components = []; counts = null;
+        components = []; counts = null; ots = [];
         resetSelect($subject, 'Select Subject', true);
         resetSelect($component, 'Select Component', true);
         paintCounts();
+        refreshOts();
         if (!$course.val()) { return; }
         $.getJSON(COMPONENTS_URL, { course_batch: $course.val() })
             .done(function (r) {
-                components = r.components; counts = r.counts;
+                components = r.components; counts = r.counts; ots = r.ots || [];
+                refreshOts();
                 var subjects = [];
                 components.forEach(function (c) { if (subjects.indexOf(c.subject) === -1) { subjects.push(c.subject); } });
                 subjects.forEach(function (s) { $subject.append(new Option(s, s)); });
@@ -474,33 +526,168 @@ $(function () {
         $component.trigger('change.select2');
     });
 
-    $category.on('change', paintCounts);
+    $category.on('change', function () { paintCounts(); refreshOts(); });
 
-    $building.on('change', function () {
-        var floors = ROOMS[$building.val()] || {};
-        resetSelect($floor, 'Select Floor', !$building.val());
-        Object.keys(floors).forEach(function (id) { $floor.append(new Option(floors[id].name, id)); });
-        $floor.trigger('change.select2');
-        resetSelect($room, 'Select Room', true);
-        $('#vaMapCapacity, #vaMapAvailLaptop').val('-');
-    });
+    function vals($s) { return ($s.val() || []).map(String); }
 
-    function roomsOnFloor() {
-        return (((ROOMS[$building.val()] || {})[$floor.val()] || {}).rooms) || [];
+    function buildingName(id) {
+        var b = BUILDINGS.find(function (x) { return String(x.id) === String(id); });
+        return b ? b.name : '';
     }
 
-    $floor.on('change', function () {
-        resetSelect($room, 'Select Room', !$floor.val());
-        roomsOnFloor().forEach(function (r) { $room.append(new Option(r.name, r.id)); });
-        $room.trigger('change.select2');
-        $('#vaMapCapacity, #vaMapAvailLaptop').val('-');
+    var ROOM_BY_ID = {};
+    Object.keys(ROOMS).forEach(function (b) {
+        Object.keys(ROOMS[b]).forEach(function (f) {
+            ROOMS[b][f].rooms.forEach(function (r) { ROOM_BY_ID[r.id] = r; });
+        });
     });
 
-    $room.on('change', function () {
-        var r = roomsOnFloor().find(function (x) { return String(x.id) === String($room.val()); });
-        $('#vaMapCapacity').val(r ? r.capacity : '-');
-        $('#vaMapAvailLaptop').val(r ? r.laptop : '-');
+    /* ── System generated: buildings → floors → rooms, any number of each ── */
+    // Refill a multiple select, keeping whatever is still on offer; the change cascades down.
+    function refill($s, options) {
+        var keep = vals($s);
+        $s.empty();
+        options.forEach(function (o) { $s.append(new Option(o.text, o.id, false, keep.indexOf(String(o.id)) !== -1)); });
+        $s.prop('disabled', options.length === 0).trigger('change');
+    }
+
+    $building.on('change', function () {
+        var floors = {};
+        vals($building).forEach(function (b) {
+            Object.keys(ROOMS[b] || {}).forEach(function (f) { floors[f] = ROOMS[b][f].name; });
+        });
+        refill($floor, Object.keys(floors).map(function (id) { return { id: id, text: floors[id] }; }));
     });
+
+    $floor.on('change', function () {
+        // With more than one building or floor picked, a room name alone is ambiguous.
+        var many = vals($building).length > 1 || vals($floor).length > 1;
+        var options = [];
+        vals($building).forEach(function (b) {
+            vals($floor).forEach(function (f) {
+                var floor = (ROOMS[b] || {})[f];
+                if (!floor) { return; }
+                floor.rooms.forEach(function (r) {
+                    options.push({ id: r.id, text: many ? r.name + ' (' + buildingName(b) + ', ' + floor.name + ')' : r.name });
+                });
+            });
+        });
+        refill($room, options);
+    });
+
+    // Capacity and laptops of every room picked, added up.
+    $room.on('change', function () {
+        var picked = vals($room).map(function (id) { return ROOM_BY_ID[id]; }).filter(Boolean);
+        var sum = function (key) { return picked.reduce(function (n, r) { return n + (r[key] || 0); }, 0); };
+        $('#vaMapCapacity').val(picked.length ? sum('capacity') : '-');
+        $('#vaMapAvailLaptop').val(picked.length ? sum('laptop') : '-');
+    });
+
+    /* ── Manual: one room per row, and the OTs who sit in it ─────────── */
+    function manualField(label, cls, placeholder, multiple) {
+        return '<div class="col-sm-6 col-lg">' +
+            '<label class="coe-form-label">' + label + '<span class="coe-req">*</span></label>' +
+            '<select class="form-select coe-control ' + cls + '" aria-label="' + label + '"' +
+            (multiple ? ' multiple data-placeholder="' + placeholder + '"' : '') + '></select></div>';
+    }
+
+    function addManualRow() {
+        var $row = $('<div class="row g-2 align-items-end va-man-row">' +
+            manualField('Building Name', 'va-man-building') +
+            manualField('Floor', 'va-man-floor') +
+            manualField('Room', 'va-man-room') +
+            manualField('OT Roll No.', 'va-man-ots', 'Select OT', true) +
+            '<div class="col-auto va-man-act">' +
+                '<button type="button" class="va-man-btn va-man-btn--remove" title="Remove row" aria-label="Remove row"><i class="bi bi-dash-lg" aria-hidden="true"></i></button>' +
+                '<button type="button" class="va-man-btn va-man-btn--add" title="Add row" aria-label="Add row"><i class="bi bi-plus-lg" aria-hidden="true"></i></button>' +
+            '</div></div>').appendTo($manualRows);
+
+        var $b = $row.find('.va-man-building').append(new Option('Select Building', ''));
+        BUILDINGS.forEach(function (b) { $b.append(new Option(b.name, b.id)); });
+        resetSelect($row.find('.va-man-floor'), 'Select Floor', true);
+        resetSelect($row.find('.va-man-room'), 'Select Room', true);
+        $row.find('.va-man-building, .va-man-floor, .va-man-room').each(function () { select2On($(this)); });
+        // The list reads "roll — name"; once picked only the roll number is kept in the box.
+        $row.find('.va-man-ots').select2({
+            width: '100%', dropdownParent: $body, placeholder: 'Select OT', closeOnSelect: false,
+            templateSelection: function (o) { return String(o.text || '').split(' — ')[0]; }
+        });
+        fillOts($row);
+        syncManualRows();
+    }
+
+    function eligibleOts() {
+        var category = String($category.val() || '');
+        // 0 = All, 1 = General (no disability), 2 = PH — as the server reads them.
+        return ots.filter(function (o) { return category === '' || category === '0' || (category === '2') === o.ph; });
+    }
+
+    function fillOts($row) {
+        var $s = $row.find('.va-man-ots'), keep = vals($s);
+        $s.empty();
+        eligibleOts().forEach(function (o) {
+            $s.append(new Option(o.roll + ' — ' + o.name, o.pk, false, keep.indexOf(String(o.pk)) !== -1));
+        });
+        $s.trigger('change.select2');
+    }
+
+    function refreshOts() {
+        $manualRows.children().each(function () { fillOts($(this)); });
+        syncManualRows();
+    }
+
+    // A room or an OT taken in one row is greyed out in the others; "+" only on the last row.
+    function syncManualRows() {
+        var $rows = $manualRows.children();
+        $rows.each(function () {
+            var $row = $(this), otherRooms = [], otherOts = [];
+            $rows.not($row).each(function () {
+                var room = $(this).find('.va-man-room').val();
+                if (room) { otherRooms.push(String(room)); }
+                otherOts = otherOts.concat(vals($(this).find('.va-man-ots')));
+            });
+            $row.find('.va-man-room option').each(function () { this.disabled = !!this.value && otherRooms.indexOf(this.value) !== -1; });
+            $row.find('.va-man-ots option').each(function () { this.disabled = otherOts.indexOf(this.value) !== -1; });
+        });
+        $rows.find('.va-man-btn--add').addClass('d-none');
+        $rows.last().find('.va-man-btn--add').removeClass('d-none');
+    }
+
+    $manualRows.on('change', '.va-man-building', function () {
+        var floors = ROOMS[this.value] || {};
+        var $f = $(this).closest('.va-man-row').find('.va-man-floor');
+        resetSelect($f, 'Select Floor', !this.value);
+        Object.keys(floors).forEach(function (id) { $f.append(new Option(floors[id].name, id)); });
+        $f.trigger('change');
+    });
+
+    $manualRows.on('change', '.va-man-floor', function () {
+        var $row = $(this).closest('.va-man-row');
+        var floor = (ROOMS[$row.find('.va-man-building').val()] || {})[this.value];
+        var $r = $row.find('.va-man-room');
+        resetSelect($r, 'Select Room', !floor);
+        ((floor || {}).rooms || []).forEach(function (r) { $r.append(new Option(r.name, r.id)); });
+        $r.trigger('change.select2');
+        syncManualRows();
+    });
+
+    $manualRows.on('change', '.va-man-room, .va-man-ots', syncManualRows);
+    $manualRows.on('change', 'select', function () { fieldError($(this), ''); });
+    $manualRows.on('click', '.va-man-btn--add', addManualRow);
+    // The last row is cleared rather than removed, so there is always one to fill.
+    $manualRows.on('click', '.va-man-btn--remove', function () {
+        var $row = $(this).closest('.va-man-row');
+        if ($manualRows.children().length > 1) {
+            $row.find('select').select2('destroy');
+            $row.remove();
+        } else {
+            $row.find('.va-man-building').val('').trigger('change');
+            $row.find('.va-man-ots').val(null).trigger('change');
+        }
+        syncManualRows();
+    });
+
+    addManualRow();
 
     /* Show/hide gap box */
     $('#vaRuleGap').on('change', function () {
@@ -515,10 +702,20 @@ $(function () {
 
     function validateMap() {
         var required = [[$course, 'Select a course.'], [$category, 'Select a candidate category.'], [$subject, 'Select a subject.'],
-            [$component, 'Select a component.'], [$building, 'Select a building.'], [$floor, 'Select a floor.'], [$room, 'Select a room.']];
+            [$component, 'Select a component.']];
+        if (mode === 'system') {
+            required.push([$building, 'Select a building.'], [$floor, 'Select a floor.'], [$room, 'Select a room.']);
+        } else {
+            $manualRows.children().each(function () {
+                var $r = $(this);
+                required.push([$r.find('.va-man-building'), 'Select a building.'], [$r.find('.va-man-floor'), 'Select a floor.'],
+                    [$r.find('.va-man-room'), 'Select a room.'], [$r.find('.va-man-ots'), 'Select the OTs for this room.']);
+            });
+        }
         var ok = true;
         required.forEach(function (pair) {
-            var missing = !pair[0].val();
+            var v = pair[0].val();
+            var missing = !v || (Array.isArray(v) && !v.length);
             fieldError(pair[0], missing ? pair[1] : '');
             ok = ok && !missing;
         });
@@ -526,24 +723,42 @@ $(function () {
     }
 
     function mapPayload() {
-        return {
+        var checked = function (id) { return $(id).is(':checked') ? 1 : 0; };
+        var data = {
             course_batch: $course.val(),
             candidate_category: $category.val(),
             component_map_id: $component.val(),
             laptop_requirement: $policy.val(),
-            venue_id: $room.val(),
-            rule_odd_even: $('#vaRuleOddEven').is(':checked') ? 1 : 0,
+            seating_mode: mode,
+            rule_avoid_same_service: checked('#vaRuleService'),
+            rule_avoid_same_cadre: checked('#vaRuleCadre'),
+            rule_alternate_gender: checked('#vaRuleGender'),
+            rule_odd_even: checked('#vaRuleOddEven'),
             seat_gap: $('#vaRuleGap').is(':checked') ? (parseInt($('#vaGapCount').val(), 10) || 1) : 0
         };
+        if (mode === 'system') {
+            data.venue_ids = vals($room);
+        } else {
+            data.rooms = $manualRows.children().map(function () {
+                return { venue_id: $(this).find('.va-man-room').val(), ots: vals($(this).find('.va-man-ots')) };
+            }).get();
+        }
+        return data;
     }
 
     // A 422 goes back under the field it is about; anything else is a dialog.
     function mapFail(xhr, fallback) {
         var errors = (xhr.responseJSON || {}).errors;
         if (xhr.status === 422 && errors) {
-            var fields = { course_batch: $course, candidate_category: $category, component_map_id: $component, venue_id: $room };
-            Object.keys(errors).forEach(function (k) { if (fields[k]) { fieldError(fields[k], errors[k][0]); } });
-            if (Object.keys(errors).some(function (k) { return !fields[k]; })) { fail(xhr, 'Check the form.'); }
+            var fields = { course_batch: $course, candidate_category: $category, component_map_id: $component, venue_ids: $room };
+            var target = function (k) {
+                if (fields[k]) { return fields[k]; }
+                var m = /^rooms\.(\d+)\.(venue_id|ots)/.exec(k);
+                var $row = m ? $manualRows.children().eq(+m[1]) : $();
+                return $row.length ? $row.find(m[2] === 'ots' ? '.va-man-ots' : '.va-man-room') : null;
+            };
+            Object.keys(errors).forEach(function (k) { var $f = target(k); if ($f) { fieldError($f, errors[k][0]); } });
+            if (Object.keys(errors).some(function (k) { return !target(k); })) { fail(xhr, 'Check the form.'); }
             return;
         }
         fail(xhr, fallback);

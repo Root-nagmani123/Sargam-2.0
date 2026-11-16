@@ -27,8 +27,12 @@ use Illuminate\Validation\ValidationException;
  * Built on the seat-plan tables (coe_seat_plans / coe_seat_plan_venues /
  * coe_seat_allocations) and SeatAllocator. One grid row is one ROOM of one plan;
  * a plan is a course + batch + examination component + candidate category, and
- * "Map Seating Plan" adds a room to that plan (creating the plan the first time)
+ * "Map Seating Plan" adds rooms to that plan (creating the plan the first time)
  * and re-runs the allocator over all of its rooms.
+ *
+ *   System generated — any number of rooms; the allocator decides who sits where.
+ *   Manual           — one row per room with the OTs the administrator picked for it;
+ *                      that room seats exactly those OTs.
  *
  *   index           — allocation list (Active / Archived = course still running / finished)
  *   edit/{id}       — seat map of one room, with seat swap
@@ -39,6 +43,9 @@ use Illuminate\Validation\ValidationException;
 class VenueAllocationController extends Controller
 {
     public const SCOPES = ['active', 'archived'];
+
+    /** Map Seating Plan's seating_mode => coe_seat_plan_venues.seating_mode. */
+    private const SEATING_MODES = ['system' => SeatPlanVenue::MODE_SYSTEM, 'manual' => SeatPlanVenue::MODE_MANUAL];
 
     /** Must match public/js/coe-seat-map.js — desks per row, per block. */
     private const SEAT_BLOCKS = ['A' => 4, 'B' => 13, 'C' => 6];
@@ -100,6 +107,18 @@ class VenueAllocationController extends Controller
                     . ($c->exam_date ? ' (' . date('d M Y', strtotime($c->exam_date)) . ')' : ''),
             ]);
 
+        // Manual Seating's OT Roll No. picker; the dialog narrows it to the chosen category.
+        $ots = $this->participantQuery($courseId, $batch, SeatPlan::CATEGORY_ALL)
+            ->orderBy('rn.serial_number')
+            ->orderBy('sm.pk')
+            ->get(['sm.pk', 'rn.roll_number', 'lr.has_disability', 'sm.display_name', 'sm.first_name', 'sm.middle_name', 'sm.last_name'])
+            ->map(fn ($o) => [
+                'pk' => (int) $o->pk,
+                'roll' => (string) $o->roll_number,
+                'name' => $this->studentName($o),
+                'ph' => (int) $o->has_disability === 1,
+            ]);
+
         $counts = [];
         foreach (array_keys(SeatPlan::categories()) as $category) {
             $row = $this->participantQuery($courseId, $batch, $category)
@@ -118,10 +137,10 @@ class VenueAllocationController extends Controller
             ];
         }
 
-        return response()->json(['status' => 'success', 'components' => $components, 'counts' => $counts]);
+        return response()->json(['status' => 'success', 'components' => $components, 'counts' => $counts, 'ots' => $ots]);
     }
 
-    /** Map Seating Plan: add a room to the plan for this course/batch/component/category, then seat everyone. */
+    /** Map Seating Plan: add the rooms to the plan for this course/batch/component/category, then seat everyone. */
     public function store(Request $request, SeatAllocator $allocator): JsonResponse
     {
         $mapping = $this->resolveMapping($request);
@@ -146,24 +165,41 @@ class VenueAllocationController extends Controller
      * Validate a Map Seating Plan request and look up everything it names, refusing it
      * before anything is written.
      *
-     * @return array{validated: array, courseId: int, batch: int, component: object, room: object, category: int, plan: ?SeatPlan}
+     * Rooms come back in the order they are filled: building → floor → room for System
+     * generated, the rows' order for Manual.
+     *
+     * @return array{validated: array, courseId: int, batch: int, component: object, category: int, plan: ?SeatPlan,
+     *     manual: bool, rooms: array<int, array{field: string, room: object, ots: ?array<int, int>}>}
      *
      * @throws ValidationException
      */
     private function resolveMapping(Request $request): array
     {
+        $manual = $request->input('seating_mode') === 'manual';
         $validated = $request->validate([
             'course_batch' => ['required', 'regex:/^\d+:\d+$/'],
             'component_map_id' => ['required', 'integer'],
             'candidate_category' => ['required', Rule::in(array_keys(SeatPlan::categories()))],
             'laptop_requirement' => ['required', Rule::in(array_keys(SeatPlan::laptopRequirements()))],
-            'venue_id' => ['required', 'integer'],
+            'seating_mode' => ['required', Rule::in(array_keys(self::SEATING_MODES))],
+            'venue_ids' => [Rule::requiredIf(! $manual), 'nullable', 'array'],
+            'venue_ids.*' => ['integer'],
+            'rooms' => [Rule::requiredIf($manual), 'nullable', 'array'],
+            'rooms.*.venue_id' => ['required', 'integer'],
+            'rooms.*.ots' => ['required', 'array'],
+            'rooms.*.ots.*' => ['integer'],
+            'rule_avoid_same_service' => ['nullable', 'boolean'],
+            'rule_avoid_same_cadre' => ['nullable', 'boolean'],
+            'rule_alternate_gender' => ['nullable', 'boolean'],
             'rule_odd_even' => ['nullable', 'boolean'],
             'seat_gap' => ['nullable', 'integer', 'min:0', 'max:10'],
         ], [
             'course_batch.required' => 'Select a course.',
             'component_map_id.required' => 'Select a component.',
-            'venue_id.required' => 'Select a room.',
+            'venue_ids.required' => 'Select at least one room.',
+            'rooms.required' => 'Add at least one room.',
+            'rooms.*.venue_id.required' => 'Select a room.',
+            'rooms.*.ots.required' => 'Select the OTs for this room.',
         ]);
 
         [$courseId, $batch] = $this->splitCourseBatch($validated['course_batch']);
@@ -182,10 +218,7 @@ class VenueAllocationController extends Controller
             throw ValidationException::withMessages(['component_map_id' => 'That component is not scheduled for this course.']);
         }
 
-        $room = $this->examRooms()->firstWhere('venue_id', (int) $validated['venue_id']);
-        if ($room === null) {
-            throw ValidationException::withMessages(['venue_id' => 'That room is not an examination room with a capacity.']);
-        }
+        $rooms = $this->resolveRooms($validated, $manual);
 
         $category = (int) $validated['candidate_category'];
         $existing = SeatPlan::where('course_master_pk', $courseId)
@@ -206,29 +239,140 @@ class VenueAllocationController extends Controller
         if ($plan && $plan->isPublished()) {
             throw ValidationException::withMessages(['component_map_id' => 'This seating plan is frozen and cannot take another room.']);
         }
-        if ($plan && SeatPlanVenue::where('seat_plan_pk', $plan->pk)->where('venue_id', $room->venue_id)->exists()) {
-            throw ValidationException::withMessages(['venue_id' => 'This room is already part of this seating plan.']);
-        }
+        foreach ($rooms as $r) {
+            $field = $manual ? $r['field'] . '.venue_id' : 'venue_ids';
+            $name = $r['room']->venue_name;
 
-        // One room, one paper at a time: refuse a room another plan already holds on the same date.
-        if ($component->exam_date) {
-            $busy = DB::table('coe_seat_plan_venues as spv')
-                ->join('coe_seat_plans as sp', 'sp.pk', '=', 'spv.seat_plan_pk')
-                ->where('spv.venue_id', $room->venue_id)
-                ->where('sp.exam_date', $component->exam_date)
-                ->when($plan, fn ($q) => $q->where('sp.pk', '!=', $plan->pk))
-                ->exists();
-            if ($busy) {
-                throw ValidationException::withMessages(['venue_id' => 'This room is already allocated to another examination on '
-                    . date('d M Y', strtotime($component->exam_date)) . '.']);
+            if ($plan && SeatPlanVenue::where('seat_plan_pk', $plan->pk)->where('venue_id', $r['room']->venue_id)->exists()) {
+                throw ValidationException::withMessages([$field => "{$name} is already part of this seating plan."]);
+            }
+
+            // One room, one paper at a time: refuse a room another plan already holds on the same date.
+            if ($component->exam_date) {
+                $busy = DB::table('coe_seat_plan_venues as spv')
+                    ->join('coe_seat_plans as sp', 'sp.pk', '=', 'spv.seat_plan_pk')
+                    ->where('spv.venue_id', $r['room']->venue_id)
+                    ->where('sp.exam_date', $component->exam_date)
+                    ->when($plan, fn ($q) => $q->where('sp.pk', '!=', $plan->pk))
+                    ->exists();
+                if ($busy) {
+                    throw ValidationException::withMessages([$field => "{$name} is already allocated to another examination on "
+                        . date('d M Y', strtotime($component->exam_date)) . '.']);
+                }
             }
         }
 
-        return compact('validated', 'courseId', 'batch', 'component', 'room', 'category', 'plan');
+        if ($manual) {
+            $this->checkManualRooms($rooms, $validated, $courseId, $batch, $category, $plan);
+        }
+
+        return compact('validated', 'courseId', 'batch', 'component', 'rooms', 'category', 'plan', 'manual');
     }
 
     /**
-     * Add the room to the plan (creating the plan if needed) and re-seat everyone.
+     * The examination rooms a Map Seating Plan request names.
+     *
+     * @return array<int, array{field: string, room: object, ots: ?array<int, int>}>
+     *
+     * @throws ValidationException
+     */
+    private function resolveRooms(array $validated, bool $manual): array
+    {
+        $examRooms = $this->examRooms();
+
+        if (! $manual) {
+            $ids = array_unique(array_map('intval', $validated['venue_ids']));
+            // examRooms() is already building → floor → room, which is the fill order.
+            $picked = $examRooms->filter(fn ($r) => in_array((int) $r->venue_id, $ids, true))->values();
+            if ($picked->count() !== count($ids)) {
+                throw ValidationException::withMessages(['venue_ids' => 'A selected room is not an examination room with a capacity.']);
+            }
+
+            return $picked->map(fn ($r) => ['field' => 'venue_ids', 'room' => $r, 'ots' => null])->all();
+        }
+
+        $rooms = [];
+        foreach ($validated['rooms'] as $i => $row) {
+            $room = $examRooms->firstWhere('venue_id', (int) $row['venue_id']);
+            if ($room === null) {
+                throw ValidationException::withMessages(["rooms.{$i}.venue_id" => 'That room is not an examination room with a capacity.']);
+            }
+            if (collect($rooms)->contains(fn ($r) => (int) $r['room']->venue_id === (int) $room->venue_id)) {
+                throw ValidationException::withMessages(["rooms.{$i}.venue_id" => "{$room->venue_name} is already chosen in another row."]);
+            }
+            $rooms[] = ['field' => "rooms.{$i}", 'room' => $room, 'ots' => array_values(array_unique(array_map('intval', $row['ots'])))];
+        }
+
+        return $rooms;
+    }
+
+    /**
+     * Manual Seating: every OT picked belongs to this course + category and has a roll
+     * number, sits in one room only, and each room can hold its OTs — desks (after the
+     * gap) and laptops both.
+     *
+     * @param  array<int, array{field: string, room: object, ots: array<int, int>}>  $rooms
+     *
+     * @throws ValidationException
+     */
+    private function checkManualRooms(array $rooms, array $validated, int $courseId, int $batch, int $category, ?SeatPlan $plan): void
+    {
+        $eligible = $this->participantQuery($courseId, $batch, $category)
+            ->get(['sm.pk', 'rn.roll_number', 'lr.laptop_required'])
+            ->keyBy(fn ($o) => (int) $o->pk);
+        $listedBefore = $plan === null ? collect() : DB::table('coe_seat_plan_venue_ots as o')
+            ->join('coe_seat_plan_venues as spv', 'spv.pk', '=', 'o.seat_plan_venue_pk')
+            ->join('venue_master as vm', 'vm.venue_id', '=', 'spv.venue_id')
+            ->where('o.seat_plan_pk', $plan->pk)
+            ->pluck('vm.venue_name', 'o.student_master_pk');
+
+        $policy = (int) $validated['laptop_requirement'];
+        $step = max($plan?->rule_skip_alternate_seats ? 2 : 1, (int) ($validated['seat_gap'] ?? 0) + 1);
+        $rolls = fn (array $pks) => $this->rollList(array_map(fn (int $pk) => $eligible[$pk]->roll_number ?? ('#' . $pk), $pks));
+        $seen = [];
+
+        foreach ($rooms as $r) {
+            $field = $r['field'] . '.ots';
+            $name = $r['room']->venue_name;
+
+            if ($unknown = array_values(array_diff($r['ots'], $eligible->keys()->all()))) {
+                throw ValidationException::withMessages([$field => count($unknown)
+                    . ' selected OT(s) are not in this course and candidate category, or have no roll number.']);
+            }
+            if ($twice = array_values(array_intersect($r['ots'], array_keys($seen)))) {
+                throw ValidationException::withMessages([$field => 'Roll No. ' . $rolls($twice) . ' is also selected in another room.']);
+            }
+            if ($before = array_values(array_filter($r['ots'], fn (int $pk) => isset($listedBefore[$pk])))) {
+                throw ValidationException::withMessages([$field => 'Roll No. ' . $rolls($before) . ' is already seated in '
+                    . $listedBefore[$before[0]] . ' of this seating plan.']);
+            }
+            $seen += array_flip($r['ots']);
+
+            $capacity = intdiv((int) $r['room']->capacity + $step - 1, $step);
+            if (count($r['ots']) > $capacity) {
+                throw ValidationException::withMessages([$field => sprintf('%s seats %d OT(s)%s, but %d are selected.',
+                    $name, $capacity, $step > 1 ? ' with the gap in seating' : '', count($r['ots']))]);
+            }
+
+            $laptops = $this->roomLaptops($r['room']);
+            $needLaptop = count(array_filter($r['ots'], fn (int $pk) => $this->requiresLaptop($policy, $eligible[$pk]->laptop_required)));
+            if ($needLaptop > $laptops) {
+                throw ValidationException::withMessages([$field => sprintf('%s has %d laptop(s), but %d of the selected OTs need one.',
+                    $name, $laptops, $needLaptop)]);
+            }
+        }
+    }
+
+    /** "VA001, VA002, VA003 and 4 more" */
+    private function rollList(array $rolls): string
+    {
+        $shown = implode(', ', array_slice($rolls, 0, 5));
+
+        return count($rolls) > 5 ? $shown . ' and ' . (count($rolls) - 5) . ' more' : $shown;
+    }
+
+    /**
+     * Add the rooms to the plan (creating the plan if needed) and re-seat everyone.
      * Caller owns the transaction.
      *
      * @param  array<string, mixed>  $mapping  from resolveMapping()
@@ -237,7 +381,7 @@ class VenueAllocationController extends Controller
     private function applyMapping(array $mapping, SeatAllocator $allocator): array
     {
         ['validated' => $validated, 'courseId' => $courseId, 'batch' => $batch, 'component' => $component,
-            'room' => $room, 'category' => $category, 'plan' => $plan] = $mapping;
+            'rooms' => $rooms, 'category' => $category, 'plan' => $plan, 'manual' => $manual] = $mapping;
 
         $now = now();
         $plan ??= new SeatPlan([
@@ -260,21 +404,50 @@ class VenueAllocationController extends Controller
         // The latest dialog's rules apply to the whole plan — it is re-seated below.
         $plan->fill([
             'laptop_requirement' => (int) $validated['laptop_requirement'],
+            'rule_avoid_same_service' => (bool) ($validated['rule_avoid_same_service'] ?? false),
+            'rule_avoid_same_cadre' => (bool) ($validated['rule_avoid_same_cadre'] ?? false),
+            'rule_alternate_gender' => (bool) ($validated['rule_alternate_gender'] ?? false),
             'rule_odd_even' => (bool) ($validated['rule_odd_even'] ?? false),
             'seat_gap' => (int) ($validated['seat_gap'] ?? 0),
             'modified_by' => Auth::id(),
             'modified_date' => $now,
         ])->save();
 
-        SeatPlanVenue::create([
-            'seat_plan_pk' => $plan->pk,
-            'venue_id' => $room->venue_id,
-            'purpose' => SeatPlanVenue::PURPOSE_ANY,
-            'display_order' => (int) SeatPlanVenue::where('seat_plan_pk', $plan->pk)->max('display_order') + 1,
-            'created_by' => Auth::id(),
-            'created_date' => $now,
-            'filled_by' => $this->filledByRole(),
-        ]);
+        $order = (int) SeatPlanVenue::where('seat_plan_pk', $plan->pk)->max('display_order');
+        $filledBy = $this->filledByRole();
+        $listed = [];
+        foreach ($rooms as $r) {
+            $planVenue = SeatPlanVenue::create([
+                'seat_plan_pk' => $plan->pk,
+                'venue_id' => $r['room']->venue_id,
+                'purpose' => SeatPlanVenue::PURPOSE_ANY,
+                'seating_mode' => self::SEATING_MODES[$manual ? 'manual' : 'system'],
+                'display_order' => ++$order,
+                'created_by' => Auth::id(),
+                'created_date' => $now,
+                'filled_by' => $filledBy,
+            ]);
+            foreach ($r['ots'] ?? [] as $studentPk) {
+                $listed[] = [
+                    'seat_plan_venue_pk' => (int) $planVenue->pk,
+                    'seat_plan_pk' => (int) $plan->pk,
+                    'student_master_pk' => $studentPk,
+                    'created_by' => Auth::id(),
+                    'created_date' => $now,
+                ];
+            }
+        }
+
+        if ($listed !== []) {
+            foreach (array_chunk($listed, 500) as $chunk) {
+                DB::table('coe_seat_plan_venue_ots')->insert($chunk);
+            }
+            // A seat swapped by hand in another room would keep the OT there; the room they
+            // were just listed for wins.
+            SeatAllocation::where('seat_plan_pk', $plan->pk)->where('is_manual', true)
+                ->whereIn('student_master_pk', array_column($listed, 'student_master_pk'))
+                ->delete();
+        }
 
         return ['plan' => $plan, 'summary' => $this->reseat($plan, $allocator)];
     }
@@ -395,7 +568,8 @@ class VenueAllocationController extends Controller
             'exam_date' => $plan->exam_date?->format('d M Y'),
             'frozen' => $plan->isPublished(),
             // "System Generated" until an administrator moves someone by hand.
-            'source' => $seats->contains('manual', true) ? 'Manually Adjusted' : 'System Generated',
+            'source' => $planVenue->isManual() ? 'Manual Seating'
+                : ($seats->contains('manual', true) ? 'Manually Adjusted' : 'System Generated'),
             'capacity' => (int) $room->capacity,
             'laptop_seats' => $room->laptop_seats,
             'scriber_seats' => $room->scriber_seats,
@@ -530,8 +704,15 @@ class VenueAllocationController extends Controller
             ->get(['student_master_pk', 'venue_id', 'seat_number'])
             ->mapWithKeys(fn ($s) => [(int) $s->student_master_pk => ['venue_id' => (int) $s->venue_id, 'seat_number' => (int) $s->seat_number]])
             ->all();
+        // Manual Seating rooms and the OTs listed for each.
+        $assignedRooms = DB::table('coe_seat_plan_venue_ots as o')
+            ->join('coe_seat_plan_venues as spv', 'spv.pk', '=', 'o.seat_plan_venue_pk')
+            ->where('o.seat_plan_pk', $plan->pk)
+            ->pluck('spv.venue_id', 'o.student_master_pk')
+            ->map(fn ($venueId) => (int) $venueId)
+            ->all();
 
-        $result = $allocator->allocate($plan, $participants, $planVenues, $venues, $manualSeats);
+        $result = $allocator->allocate($plan, $participants, $planVenues, $venues, $manualSeats, $assignedRooms);
 
         SeatAllocation::where('seat_plan_pk', $plan->pk)->where('is_manual', false)->delete();
 
@@ -582,7 +763,8 @@ class VenueAllocationController extends Controller
     private function allocationInput(SeatPlan $plan): Collection
     {
         return $this->participantQuery((int) $plan->course_master_pk, (int) $plan->batch, (int) $plan->candidate_category)
-            ->select(['sm.pk', 'sm.ph', 'rn.pk as roll_number_pk', 'rn.roll_number', 'rn.serial_number', 'lr.laptop_required', 'lr.scriber_required'])
+            ->select(['sm.pk', 'sm.ph', 'sm.service_master_pk', 'sm.cadre_master_pk', 'sm.gender',
+                'rn.pk as roll_number_pk', 'rn.roll_number', 'rn.serial_number', 'lr.laptop_required', 'lr.scriber_required'])
             ->orderBy('rn.serial_number')
             ->orderBy('sm.pk')
             ->get()
@@ -591,7 +773,11 @@ class VenueAllocationController extends Controller
                 'roll_number_pk' => (int) $row->roll_number_pk,
                 'roll_number' => (string) $row->roll_number,
                 'serial_number' => (int) $row->serial_number,
-                'requires_laptop' => $this->requiresLaptop($plan, $row->laptop_required),
+                // Read by the seating rules: same service / same cadre / female-male.
+                'service_master_pk' => $row->service_master_pk,
+                'cadre_master_pk' => $row->cadre_master_pk,
+                'gender' => $row->gender,
+                'requires_laptop' => $this->requiresLaptop((int) $plan->laptop_requirement, $row->laptop_required),
                 'requires_scriber' => (int) $row->scriber_required === 1 && LaptopDeclarationService::isPwbd($row->ph),
             ]);
     }
@@ -613,9 +799,9 @@ class VenueAllocationController extends Controller
      * Whether a participant needs a laptop desk, by the plan's policy. An OT with no
      * answer is read cautiously each way — see SeatPlan::laptopRequirements().
      */
-    private function requiresLaptop(SeatPlan $plan, $laptopRequired): bool
+    private function requiresLaptop(int $policy, $laptopRequired): bool
     {
-        return match ((int) $plan->laptop_requirement) {
+        return match ($policy) {
             SeatPlan::LAPTOP_REQ_ALL => true,
             SeatPlan::LAPTOP_REQ_NONE => false,
             SeatPlan::LAPTOP_REQ_DECLARED_YES => $laptopRequired !== null && (int) $laptopRequired === 1,
@@ -659,11 +845,12 @@ class VenueAllocationController extends Controller
             return sprintf('Seating mapped — %d OT(s) seated across %d room(s).', $summary['allocated'], $summary['rooms']);
         }
 
+        // Manual rooms leave OTs out by choice, so the capacity is only the reason when it is short.
         return sprintf(
-            '%d OT(s) seated, but %d could not be placed (the rooms hold %d).%s Map another room for them.',
+            '%d OT(s) seated, but %d have no seat yet%s.%s Map another room for them.',
             $summary['allocated'],
             $summary['unallocated'],
-            $summary['capacity'],
+            (int) $summary['capacity'] < (int) $summary['participants'] ? ' (the rooms hold ' . $summary['capacity'] . ')' : '',
             (int) $summary['unallocated_laptop'] > 0
                 ? ' ' . $summary['unallocated_laptop'] . ' of them need a laptop desk.'
                 : ''
@@ -827,18 +1014,25 @@ class VenueAllocationController extends Controller
     {
         $tree = [];
         foreach ($rooms as $r) {
-            $laptopSeats = VenueSeatLayout::normalise(json_decode((string) $r->laptop_seats, true));
             $tree[$r->building_pk][$r->floor_pk]['name'] = $r->floor;
             $tree[$r->building_pk][$r->floor_pk]['rooms'][] = [
                 'id' => (int) $r->venue_id,
                 'name' => $r->venue_name,
                 'capacity' => (int) $r->capacity,
-                'laptop' => $laptopSeats !== [] ? count($laptopSeats) : (int) $r->laptop_capacity,
+                'laptop' => $this->roomLaptops($r),
                 'scriber' => count(VenueSeatLayout::normalise(json_decode((string) $r->scriber_seats, true))),
             ];
         }
 
         return $tree;
+    }
+
+    /** Laptops an examRooms() row offers: the marked laptop desks, else Room Master's laptop count. */
+    private function roomLaptops(object $room): int
+    {
+        $laptopSeats = VenueSeatLayout::normalise(json_decode((string) $room->laptop_seats, true));
+
+        return $laptopSeats !== [] ? count($laptopSeats) : (int) $room->laptop_capacity;
     }
 
     private function roomDetails(int $venueId): ?object

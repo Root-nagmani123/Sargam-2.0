@@ -14,8 +14,9 @@ use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
- * COE → Venue Allocation: map a room, refuse a duplicate, swap two seats, freeze (publish
- * + notify), and the freeze lock on swap / remove. Development database, in a transaction.
+ * COE → Venue Allocation: map rooms (System generated and Manual), refuse a duplicate,
+ * swap two seats, freeze (publish + notify), and the freeze lock on swap / remove.
+ * Development database, in a transaction.
  *
  * Needs an examination drive component already scheduled for a course. Roll numbers are
  * generated here for a batch of that course that has none, and the room is a throwaway
@@ -37,6 +38,10 @@ class CoeVenueAllocationFlowTest extends TestCase
 
     private int $participants;
 
+    private int $building;
+
+    private int $floor;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -46,8 +51,14 @@ class CoeVenueAllocationFlowTest extends TestCase
             ->join('examination_drives as d', 'd.id', '=', 'm.examination_drive_id')
             ->first(['m.id', 'd.course_master_pk']);
         // Rooms come from COE Room Master: an active Classroom building and an active floor.
+        // None on record is fine: a throwaway one, rolled back with the rest.
         $building = DB::table('building_master')->where('building_type', BuildingMaster::TYPE_CLASSROOM)
-            ->where('active_inactive', 1)->value('pk');
+            ->where('active_inactive', 1)->value('pk')
+            ?? DB::table('building_master')->insertGetId([
+                'building_name' => 'PHPUnit Exam Block',
+                'building_type' => BuildingMaster::TYPE_CLASSROOM,
+                'active_inactive' => 1,
+            ], 'pk');
         $floor = DB::table('floor_master')->where('active_inactive', 1)->value('pk');
 
         $cohort = $map === null ? null : DB::table('student_master as sm')
@@ -70,28 +81,10 @@ class CoeVenueAllocationFlowTest extends TestCase
         $this->batch = (int) $cohort->batch;
         $this->participants = (int) $cohort->n;
         $this->componentMapId = (int) $map->id;
+        $this->building = (int) $building;
+        $this->floor = (int) $floor;
 
-        $this->venueId = (int) DB::table('venue_master')->insertGetId([
-            'venue_name' => 'PHPUnit Exam Hall',
-            'venue_short_name' => 'PHPUNIT',
-            'room_number' => 'T-1',
-            'capacity' => $this->participants + 10,
-            'laptop_capacity' => 0,
-            'seating_capacity' => $this->participants + 10,
-            'active_inactive' => 1,
-            'created_date' => now()->toDateString(),
-        ], 'venue_id');
-
-        DB::table('building_floor_room_mapping')->insert([
-            'building_master_pk' => $building,
-            'floor_master_pk' => $floor,
-            'room_name' => 'PHPUNIT',
-            'room_type' => array_key_first(BuildingFloorRoomMapping::$roomTypes),
-            'capacity' => $this->participants + 10,
-            'active_inactive' => 1,
-            'created_date' => now(),
-            'updated_date' => now(),
-        ]);
+        $this->venueId = $this->addRoom('PHPUNIT', $this->participants + 10);
 
         // Roll numbers are generated only for a running course.
         DB::table('course_master')->where('pk', $this->course)
@@ -106,17 +99,62 @@ class CoeVenueAllocationFlowTest extends TestCase
         ])->assertOk();
     }
 
+    /** A throwaway examination room: a venue and its Room Master row, joined by the short name. */
+    private function addRoom(string $code, int $capacity): int
+    {
+        $venueId = (int) DB::table('venue_master')->insertGetId([
+            'venue_name' => 'PHPUnit Exam Hall ' . $code,
+            'venue_short_name' => $code,
+            'room_number' => $code,
+            'capacity' => $capacity,
+            'laptop_capacity' => 0,
+            'seating_capacity' => $capacity,
+            'active_inactive' => 1,
+            'created_date' => now()->toDateString(),
+        ], 'venue_id');
+
+        DB::table('building_floor_room_mapping')->insert([
+            'building_master_pk' => $this->building,
+            'floor_master_pk' => $this->floor,
+            'room_name' => $code,
+            'room_type' => array_key_first(BuildingFloorRoomMapping::$roomTypes),
+            'capacity' => $capacity,
+            'active_inactive' => 1,
+            'created_date' => now(),
+            'updated_date' => now(),
+        ]);
+
+        return $venueId;
+    }
+
     private function map(array $overrides = [])
     {
-        return $this->actingAs($this->admin)->postJson(route('admin.coe.venue-allocation.store'), $overrides + [
+        // A null override leaves the field out of the request.
+        return $this->actingAs($this->admin)->postJson(route('admin.coe.venue-allocation.store'), array_filter($overrides + [
             'course_batch' => $this->course . ':' . $this->batch,
             'component_map_id' => $this->componentMapId,
             'candidate_category' => SeatPlan::CATEGORY_ALL,
             'laptop_requirement' => SeatPlan::LAPTOP_REQ_NONE,
-            'venue_id' => $this->venueId,
+            'seating_mode' => 'system',
+            'venue_ids' => [$this->venueId],
             'rule_odd_even' => 0,
             'seat_gap' => 0,
-        ]);
+        ], fn ($value) => $value !== null));
+    }
+
+    /** @param array<int, array{venue_id: int, ots: array<int, int>}> $rooms */
+    private function mapManual(array $rooms, array $overrides = [])
+    {
+        return $this->map($overrides + ['seating_mode' => 'manual', 'rooms' => $rooms, 'venue_ids' => null]);
+    }
+
+    /** OT pks with a roll number, in roll order — what Manual Seating's picker offers. */
+    private function ots(): array
+    {
+        return collect($this->actingAs($this->admin)
+            ->getJson(route('admin.coe.venue-allocation.components', ['course_batch' => $this->course . ':' . $this->batch]))
+            ->assertOk()
+            ->json('ots'))->pluck('pk')->all();
     }
 
     private function planVenue(): SeatPlanVenue
@@ -141,7 +179,57 @@ class CoeVenueAllocationFlowTest extends TestCase
     public function test_the_same_room_cannot_be_mapped_twice(): void
     {
         $this->map()->assertOk();
-        $this->map()->assertStatus(422)->assertJsonValidationErrors('venue_id');
+        $this->map()->assertStatus(422)->assertJsonValidationErrors('venue_ids');
+    }
+
+    public function test_system_generated_maps_several_rooms_at_once(): void
+    {
+        $second = $this->addRoom('PHPUNIT2', 2);
+
+        $this->map(['venue_ids' => [$this->venueId, $second]])->assertOk()->assertJsonPath('status', 'success');
+
+        $plan = $this->planVenue()->seat_plan_pk;
+        $this->assertSame(2, SeatPlanVenue::where('seat_plan_pk', $plan)->count());
+        $this->assertSame($this->participants, SeatAllocation::where('seat_plan_pk', $plan)->count());
+    }
+
+    public function test_a_manual_room_seats_only_the_ots_picked_for_it(): void
+    {
+        $picked = array_slice($this->ots(), 0, 2);
+
+        $this->mapManual([['venue_id' => $this->venueId, 'ots' => $picked]])
+            ->assertOk()->assertJsonPath('status', 'warning');
+
+        $planVenue = $this->planVenue();
+        $this->assertTrue($planVenue->isManual());
+        $seated = SeatAllocation::where('seat_plan_pk', $planVenue->seat_plan_pk)->pluck('student_master_pk')->map(fn ($pk) => (int) $pk)->sort()->values()->all();
+        $this->assertSame(collect($picked)->sort()->values()->all(), $seated);
+        $this->assertSame($this->participants - 2, (int) SeatPlan::find($planVenue->seat_plan_pk)->unallocated_count);
+    }
+
+    public function test_manual_refuses_more_ots_than_the_room_seats(): void
+    {
+        $small = $this->addRoom('PHPUNIT2', 1);
+
+        $this->mapManual([['venue_id' => $small, 'ots' => array_slice($this->ots(), 0, 2)]])
+            ->assertStatus(422)->assertJsonValidationErrors('rooms.0.ots');
+    }
+
+    public function test_manual_refuses_one_ot_in_two_rooms(): void
+    {
+        $second = $this->addRoom('PHPUNIT2', 5);
+        $ot = $this->ots()[0];
+
+        $this->mapManual([['venue_id' => $this->venueId, 'ots' => [$ot]], ['venue_id' => $second, 'ots' => [$ot]]])
+            ->assertStatus(422)->assertJsonValidationErrors('rooms.1.ots');
+    }
+
+    public function test_manual_refuses_more_laptop_ots_than_the_room_has_laptops(): void
+    {
+        // Every OT needs a laptop; the room has none.
+        $this->mapManual([['venue_id' => $this->venueId, 'ots' => array_slice($this->ots(), 0, 1)]],
+            ['laptop_requirement' => SeatPlan::LAPTOP_REQ_ALL])
+            ->assertStatus(422)->assertJsonValidationErrors('rooms.0.ots');
     }
 
     public function test_a_course_without_roll_numbers_is_refused(): void

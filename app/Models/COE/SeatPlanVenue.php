@@ -22,6 +22,12 @@ class SeatPlanVenue extends Model
     /** Either — the room takes whoever is next. */
     public const PURPOSE_ANY = 3;
 
+    /** System generated — the allocator decides who sits here. */
+    public const MODE_SYSTEM = 1;
+
+    /** Manual — the room seats exactly the OTs listed for it in coe_seat_plan_venue_ots. */
+    public const MODE_MANUAL = 2;
+
     protected $table = 'coe_seat_plan_venues';
 
     protected $primaryKey = 'pk';
@@ -32,6 +38,7 @@ class SeatPlanVenue extends Model
         'seat_plan_pk',
         'venue_id',
         'purpose',
+        'seating_mode',
         'capacity_override',
         'display_order',
         'created_by',
@@ -43,6 +50,7 @@ class SeatPlanVenue extends Model
         'seat_plan_pk' => 'integer',
         'venue_id' => 'integer',
         'purpose' => 'integer',
+        'seating_mode' => 'integer',
         'capacity_override' => 'integer',
         'display_order' => 'integer',
         'created_date' => 'datetime',
@@ -111,6 +119,11 @@ class SeatPlanVenue extends Model
         };
 
         return max(0, (int) ($specific ?? $capacity));
+    }
+
+    public function isManual(): bool
+    {
+        return (int) $this->seating_mode === self::MODE_MANUAL;
     }
 
     /** Can this room take a participant with this laptop requirement? */

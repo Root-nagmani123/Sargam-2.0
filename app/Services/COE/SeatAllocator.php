@@ -29,11 +29,15 @@ use Illuminate\Support\Collection;
  * room is discovered on the morning of the examination; a shortfall reported on screen is
  * discovered while there is still time to add a room.
  *
- * ── The service-separation rule is NOT applied here ──
- * The doc's "participants from the same service are not seated together" is satisfied at
- * roll-number allocation time by RollNumberAllocator, and seats are handed out in
- * roll-number order, so the property carries through to the desks. Re-deriving it here
- * could only disagree with the allocation the roll numbers already encode.
+ * ── The seating rules ──
+ * Avoid same-service sitting, avoid consecutive rolls for the same cadre and alternate
+ * female / male are chosen per plan on Map Seating Plan. Seats go out in sequence, so
+ * the rules reorder each pool before it is seated — see seatingOrder(). With every rule
+ * off the order is plain roll-number order, as before.
+ *
+ * ── System generated and Manual rooms ──
+ * A Manual room seats exactly the OTs the administrator listed for it; everyone else is
+ * shared out over the System generated rooms. Nobody overflows into a Manual room.
  *
  * ── Group ──
  * The doc lists Group among the inputs. This schema has no examination group mapping for
@@ -59,6 +63,8 @@ class SeatAllocator
      * @param  array<int, array{venue_id: int, seat_number: int}>  $manualSeats  keyed by
      *         student_master_pk — seats an administrator placed by hand, which this run
      *         honours rather than overwrites
+     * @param  array<int, int>  $assignedRooms  student_master_pk => venue_id of the Manual
+     *         room the OT is listed for
      * @return array{
      *     seats: array<int, array{student_master_pk:int, roll_number_pk:int|null, venue_id:int, seat_number:int, requires_laptop:bool}>,
      *     unplaced: array<int, object>,
@@ -71,16 +77,10 @@ class SeatAllocator
         Collection $participants,
         Collection $planVenues,
         array $venuesById,
-        array $manualSeats = []
+        array $manualSeats = [],
+        array $assignedRooms = []
     ): array {
         $rooms = $this->buildRooms($plan, $planVenues, $venuesById, $manualSeats);
-
-        if ($plan->rule_odd_even) {
-            // Odd serials first, then even, each half still in roll-number order: two
-            // neighbouring desks then never hold consecutive roll numbers.
-            [$odd, $even] = $participants->partition(fn (object $p) => ((int) ($p->serial_number ?? 0)) % 2 === 1);
-            $participants = $odd->concat($even)->values();
-        }
 
         // Participants an administrator has already placed keep their desk and are not
         // re-seated — that is the whole point of an override (doc: "Allow manual override
@@ -104,31 +104,25 @@ class SeatAllocator
 
         $unplaced = [];
 
-        /*
-         * The doc's worked example, in two passes.
-         *
-         * Laptop-needing participants are placed FIRST, because the rooms that can take
-         * them are the scarce resource: a room with laptop capacity will also take
-         * somebody who does not need one, but not the reverse. Filling the non-laptop half
-         * first would hand those rooms away and strand the candidates who had no
-         * alternative.
-         */
-        if ($plan->rule_split_by_laptop) {
-            [$needLaptop, $rest] = $automatic->partition(fn (object $p) => (bool) $p->requires_laptop);
+        // Each Manual room takes the OTs listed for it; the rest of the cohort goes to the
+        // System generated rooms. A listing for a room no longer in the plan counts for nothing.
+        $manualRooms = array_keys(array_filter($rooms, fn (array $room) => $room['model']->isManual()));
+        $listedIn = fn (object $p) => $assignedRooms[(int) $p->pk] ?? null;
 
-            foreach ([[$needLaptop, true], [$rest, false]] as [$pool, $requiresLaptop]) {
-                $result = $this->place($plan, $pool, $rooms, $requiresLaptop);
-                $rooms = $result['rooms'];
-                $seats = array_merge($seats, $result['seats']);
-                $unplaced = array_merge($unplaced, $result['unplaced']);
-            }
-        } else {
-            // One pool: every room takes whoever is next, and requires_laptop is recorded
-            // against the participant but does not steer the room.
-            $result = $this->place($plan, $automatic, $rooms, null);
+        $groups = [];
+        foreach ($manualRooms as $venueId) {
+            $groups[] = [$automatic->filter(fn (object $p) => $listedIn($p) === $venueId), [$venueId]];
+        }
+        $groups[] = [
+            $automatic->reject(fn (object $p) => in_array($listedIn($p), $manualRooms, true)),
+            array_values(array_diff(array_keys($rooms), $manualRooms)),
+        ];
+
+        foreach ($groups as [$pool, $venueIds]) {
+            $result = $this->seatPool($plan, $pool->values(), $rooms, $venueIds);
             $rooms = $result['rooms'];
             $seats = array_merge($seats, $result['seats']);
-            $unplaced = $result['unplaced'];
+            $unplaced = array_merge($unplaced, $result['unplaced']);
         }
 
         return [
@@ -137,6 +131,157 @@ class SeatAllocator
             'rooms' => $this->roomReport($rooms),
             'summary' => $this->summary($plan, $participants, $seats, $unplaced, $rooms, count($manualSeats)),
         ];
+    }
+
+    /**
+     * Seat one pool in the named rooms only.
+     *
+     * The doc's worked example, in two passes. Laptop-needing participants are placed
+     * FIRST, because the rooms that can take them are the scarce resource: a room with
+     * laptop capacity will also take somebody who does not need one, but not the reverse.
+     * Filling the non-laptop half first would hand those rooms away and strand the
+     * candidates who had no alternative. Without the split it is one pool: every room
+     * takes whoever is next, and requires_laptop is recorded but does not steer the room.
+     *
+     * @param  Collection<int, object>  $pool
+     * @param  array<int, array<string, mixed>>  $rooms  every room of the plan
+     * @param  array<int, int>  $venueIds  the rooms this pool may use
+     * @return array{seats: array<int, array<string, mixed>>, unplaced: array<int, object>, rooms: array<int, array<string, mixed>>}
+     */
+    private function seatPool(SeatPlan $plan, Collection $pool, array $rooms, array $venueIds): array
+    {
+        $usable = array_intersect_key($rooms, array_flip($venueIds));
+        $seats = [];
+        $unplaced = [];
+
+        if ($plan->rule_split_by_laptop) {
+            [$needLaptop, $rest] = $pool->partition(fn (object $p) => (bool) $p->requires_laptop);
+            $passes = [[$needLaptop, true], [$rest, false]];
+        } else {
+            $passes = [[$pool, null]];
+        }
+
+        foreach ($passes as [$group, $requiresLaptop]) {
+            $result = $this->place($plan, $this->seatingOrder($plan, $group->values()), $usable, $requiresLaptop);
+            $usable = $result['rooms'];
+            $seats = array_merge($seats, $result['seats']);
+            $unplaced = array_merge($unplaced, $result['unplaced']);
+        }
+
+        return ['seats' => $seats, 'unplaced' => $unplaced, 'rooms' => array_replace($rooms, $usable)];
+    }
+
+    /**
+     * The order a pool is seated in. Seats go out in sequence, so two OTs next to each
+     * other here sit next to each other in the room.
+     *
+     * Odd / even: odd serials first, then even, so two neighbouring desks never hold
+     * consecutive roll numbers. The other rules then reorder inside each half, so the odd /
+     * even split still holds.
+     *
+     * @param  Collection<int, object>  $pool  in roll-number order
+     * @return Collection<int, object>
+     */
+    private function seatingOrder(SeatPlan $plan, Collection $pool): Collection
+    {
+        $halves = $plan->rule_odd_even
+            ? $pool->partition(fn (object $p) => ((int) ($p->serial_number ?? 0)) % 2 === 1)->all()
+            : [$pool];
+
+        return collect($halves)
+            ->flatMap(fn (Collection $half) => $this->applyRules($plan, $half->values()))
+            ->values();
+    }
+
+    /**
+     * Reorder a group so no two neighbours share a service or a cadre, and female / male
+     * alternate where possible.
+     *
+     * Greedy, and as close to roll-number order as the rules allow: at every step take the
+     * first OT in roll order that
+     *   1. is not of the service / cadre of the OT just seated, while somebody else is left;
+     *   2. belongs to a service / cadre holding more than half of those left, if one does —
+     *      such a group has to be served now or it ends up side by side at the end;
+     *   3. is of the other gender, but only among the OTs 1 and 2 left, because the doc
+     *      says "wherever possible" for this one.
+     * A cohort the roll-number rules already ordered comes back unchanged. Where a clash
+     * cannot be avoided (one service left) it is accepted, not looped on. An OT with no
+     * service / cadre / gender on record clashes with nobody.
+     *
+     * @param  Collection<int, object>  $group  in roll-number order
+     * @return array<int, object>
+     */
+    private function applyRules(SeatPlan $plan, Collection $group): array
+    {
+        $apart = array_keys(array_filter([
+            'service_master_pk' => (bool) $plan->rule_avoid_same_service,
+            'cadre_master_pk' => (bool) $plan->rule_avoid_same_cadre,
+        ]));
+        $alternateGender = (bool) $plan->rule_alternate_gender;
+
+        if ($apart === [] && ! $alternateGender) {
+            return $group->all();
+        }
+
+        $value = fn (object $p, string $field) => strtolower(trim((string) ($p->{$field} ?? '')));
+
+        $waiting = array_fill_keys($apart, []);
+        foreach ($group as $p) {
+            foreach ($apart as $field) {
+                if (($k = $value($p, $field)) !== '') {
+                    $waiting[$field][$k] = ($waiting[$field][$k] ?? 0) + 1;
+                }
+            }
+        }
+
+        $remaining = $group->all();
+        $order = [];
+        $previous = null;
+
+        while ($remaining !== []) {
+            $candidates = array_keys($remaining);
+
+            foreach ($apart as $field) {
+                $was = $previous === null ? '' : $value($previous, $field);
+                if ($was !== '') {
+                    $other = array_filter($candidates, fn ($i) => $value($remaining[$i], $field) !== $was);
+                    if ($other !== []) {
+                        $candidates = $other;
+                    }
+                }
+
+                // A group of more than floor(left / 2) cannot be kept apart unless it goes now.
+                $half = intdiv(count($remaining), 2);
+                $critical = array_keys(array_filter($waiting[$field], fn (int $n) => $n > $half));
+                if ($critical !== []) {
+                    $forced = array_filter($candidates, fn ($i) => $value($remaining[$i], $field) === (string) $critical[0]);
+                    if ($forced !== []) {
+                        $candidates = $forced;
+                    }
+                }
+            }
+
+            $wasGender = $previous === null ? '' : $value($previous, 'gender');
+            if ($alternateGender && $wasGender !== '') {
+                $opposite = array_filter($candidates, fn ($i) => ! in_array($value($remaining[$i], 'gender'), ['', $wasGender], true));
+                if ($opposite !== []) {
+                    $candidates = $opposite;
+                }
+            }
+
+            $pick = reset($candidates);
+            $previous = $remaining[$pick];
+            unset($remaining[$pick]);
+            $order[] = $previous;
+
+            foreach ($apart as $field) {
+                if (($k = $value($previous, $field)) !== '' && --$waiting[$field][$k] === 0) {
+                    unset($waiting[$field][$k]);
+                }
+            }
+        }
+
+        return $order;
     }
 
     /**
@@ -569,6 +714,9 @@ class SeatAllocator
                 'skip_alternate_seats' => (bool) $plan->rule_skip_alternate_seats,
                 'odd_even' => (bool) $plan->rule_odd_even,
                 'seat_gap' => (int) $plan->seat_gap,
+                'avoid_same_service' => (bool) $plan->rule_avoid_same_service,
+                'avoid_same_cadre' => (bool) $plan->rule_avoid_same_cadre,
+                'alternate_gender' => (bool) $plan->rule_alternate_gender,
             ],
         ];
     }
