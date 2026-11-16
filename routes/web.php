@@ -2337,6 +2337,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
     Route::middleware('menu.permission:coe_signature_master')->group(function () {
         Route::get('signature-master', [\App\Http\Controllers\Admin\COE\SignatureMasterController::class, 'index'])
             ->name('signature-master.index');
+        Route::get('signature-master/people', [\App\Http\Controllers\Admin\COE\SignatureMasterController::class, 'people'])
+            ->name('signature-master.people');
         Route::post('signature-master', [\App\Http\Controllers\Admin\COE\SignatureMasterController::class, 'store'])
             ->name('signature-master.store');
         Route::patch('signature-master/{signature}/toggle-status', [\App\Http\Controllers\Admin\COE\SignatureMasterController::class, 'toggleStatus'])

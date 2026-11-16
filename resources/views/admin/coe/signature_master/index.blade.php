@@ -136,13 +136,18 @@
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="coe-form-label" for="sgDesignation">Designation Name<span class="coe-req">*</span></label>
-                            <input type="text" id="sgDesignation" name="designation_name" class="form-control coe-control"
-                                   maxlength="100" placeholder="eg. AAO" autocomplete="off" required>
+                            <select id="sgDesignation" name="designation_name" class="form-select coe-control" required>
+                                <option value="">Select Designation</option>
+                                @foreach ($designations as $designation)
+                                    <option value="{{ $designation }}">{{ $designation }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div class="col-12">
                             <label class="coe-form-label" for="sgPerson">Person Name<span class="coe-req">*</span></label>
-                            <input type="text" id="sgPerson" name="person_name" class="form-control coe-control"
-                                   maxlength="150" placeholder="eg. Ram Kumar" autocomplete="off" required>
+                            <select id="sgPerson" name="person_name" class="form-select coe-control" required disabled>
+                                <option value="">Select Person</option>
+                            </select>
                         </div>
                         <div class="col-12">
                             <label class="coe-form-label" for="sgFile">Upload Signature<span class="coe-req" id="sgFileReq">*</span></label>
@@ -215,6 +220,7 @@ $(function () {
     /* Column indexes — keep in step with the <thead>. */
     var COL = { sno: 0, designation: 1, signature: 3, status: 4, action: 5 };
     var URLS = {
+        people: @json(route('admin.coe.signature-master.people')),
         store: @json(route('admin.coe.signature-master.store')),
         toggle: @json(route('admin.coe.signature-master.toggle-status', ['signature' => '__ID__'])),
         destroy: @json(route('admin.coe.signature-master.destroy', ['signature' => '__ID__']))
@@ -292,14 +298,19 @@ $(function () {
     /* ── Add / Edit ── */
     var formModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('sgFormModal'));
     var $form = $('#sgForm'), $submit = $('#sgSubmit'), $status = $('#sgStatus'), $file = $('#sgFile');
-    var editing = false, busy = false;
+    var $designation = $('#sgDesignation'), $person = $('#sgPerson');
+    var editing = false, busy = false, peopleReq = null;
 
-    $status.select2({ width: '100%', dropdownParent: $('#sgFormModal .modal-body'), minimumResultsForSearch: Infinity });
+    var $formBody = $('#sgFormModal .modal-body');
+    $status.select2({ width: '100%', dropdownParent: $formBody, minimumResultsForSearch: Infinity });
+    $designation.select2({ width: '100%', dropdownParent: $formBody, placeholder: 'Select Designation' });
+    $person.select2({ width: '100%', dropdownParent: $formBody, placeholder: 'Select Person' });
 
     function fieldError($el, msg) {
         var $wrap = $el.closest('[class*="col-"]');
         $wrap.find('.coe-field-error').remove();
         $el.toggleClass('is-invalid', !!msg);
+        $wrap.find('.select2-selection').toggleClass('is-invalid', !!msg);
         if (msg) { $('<div class="coe-field-error"></div>').text(msg).appendTo($wrap); }
         return !msg;
     }
@@ -308,13 +319,44 @@ $(function () {
         $form.find('.is-invalid').removeClass('is-invalid');
     }
 
+    /* A saved value no longer on offer (e.g. a row from before the dropdowns) is kept as an option. */
+    function ensureOption($sel, value) {
+        if (value && !$sel.find('option').filter(function () { return this.value === value; }).length) {
+            $sel.append(new Option(value, value));
+        }
+    }
+
+    /* Person Name: the Active employees of the chosen designation; `keep` is preselected. */
+    function loadPeople(designation, keep) {
+        if (peopleReq) { peopleReq.abort(); }
+        $person.empty().append(new Option('Select Person', '', true, true)).prop('disabled', true).trigger('change.select2');
+        if (!designation) { return; }
+        peopleReq = ajax({ url: URLS.people, method: 'GET', data: { designation: designation } })
+            .done(function (res) {
+                (res.people || []).forEach(function (name) { $person.append(new Option(name, name)); });
+                ensureOption($person, keep);
+                $person.val(keep || '').prop('disabled', false).trigger('change.select2');
+                if ($person.find('option').length <= 1) {
+                    fieldError($person, 'No active employee holds this designation.');
+                }
+            })
+            .fail(function (xhr) { if (xhr.statusText !== 'abort') { showError(xhr); } })
+            .always(function () { peopleReq = null; });
+    }
+
+    $designation.on('change', function () {
+        fieldError($person, '');
+        loadPeople(this.value, null);
+    });
+
     function openForm(row) {
         clearErrors();
         editing = !!row;
         $form[0].reset();
         $('#sgPk').val(row ? row.id : '');
-        $('#sgDesignation').val(row ? row.designation : '');
-        $('#sgPerson').val(row ? row.person : '');
+        ensureOption($designation, row ? row.designation : '');
+        $designation.val(row ? row.designation : '').trigger('change.select2');
+        loadPeople(row ? row.designation : '', row ? row.person : null);
         $status.val(row ? (row.active ? '1' : '0') : '1').trigger('change.select2');
         $('#sgFileReq').toggle(!editing);
         $('#sgFileHint').text(editing ? 'JPG or PNG, up to 2 MB. Leave empty to keep the current signature.' : 'JPG or PNG, up to 2 MB.');
@@ -331,8 +373,8 @@ $(function () {
 
     function validate() {
         var ok = true, f = $file[0].files[0];
-        ok = fieldError($('#sgDesignation'), $.trim($('#sgDesignation').val()) ? '' : 'Enter the designation name.') && ok;
-        ok = fieldError($('#sgPerson'), $.trim($('#sgPerson').val()) ? '' : 'Enter the person name.') && ok;
+        ok = fieldError($designation, $designation.val() ? '' : 'Select the designation name.') && ok;
+        ok = fieldError($person, $person.val() ? '' : 'Select the person name.') && ok;
         var fileMsg = '';
         if (!f && !editing) { fileMsg = 'Upload the signature.'; }
         else if (f && !/\.(jpe?g|png)$/i.test(f.name)) { fileMsg = 'The signature must be a JPG or PNG image.'; }
