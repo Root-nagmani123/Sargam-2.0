@@ -495,7 +495,7 @@ class RoleController extends Controller
         return response()->json([
             'success' => true,
             'message' => match (true) {
-                $status !== null => 'Card updated. It is '.($status ? 'enabled' : 'disabled').' on the '.$toModule->name.' dashboard for this role.',
+                $status !== null => 'Card updated. It is '.($status ? 'active' : 'inactive').' on the '.$toModule->name.' dashboard for this role.',
                 $moved => 'Card updated and moved to the '.$toModule->name.' dashboard.',
                 $switched => 'Card updated. It is now on the '.$toModule->name.' dashboard for this role.',
                 default => 'Card updated successfully.',
@@ -585,7 +585,7 @@ class RoleController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => $roleId !== null && $enable ? 'Card created and enabled on the '.$module->name.' dashboard.' : 'Card created successfully.',
+            'message' => $roleId !== null && $enable ? 'Card created and active on the '.$module->name.' dashboard.' : 'Card created successfully.',
             'card'    => $card,
         ]);
     }
@@ -677,8 +677,9 @@ class RoleController extends Controller
         $bits = ['<strong>Module:</strong> '.e($module->name)];
         $plain = ['Module: '.$module->name];
         if (in_array($request->input('status'), ['enabled', 'disabled'], true)) {
-            $bits[] = '<strong>Status:</strong> '.ucfirst($request->input('status'));
-            $plain[] = 'Status: '.ucfirst($request->input('status'));
+            $label = $request->input('status') === 'enabled' ? 'Active' : 'Inactive';
+            $bits[] = '<strong>Status:</strong> '.$label;
+            $plain[] = 'Status: '.$label;
         }
         if (filled(trim((string) $request->input('q')))) {
             $bits[] = '<strong>Search:</strong> '.e(trim((string) $request->input('q')));

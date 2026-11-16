@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css" />
 <style>
     /* The shared 84px action width is sized for the Roles grid's "Permissions"
-       caption; here the widest is "Disable", and 84px pushed Action past the
+       caption; here the widest is "Deactivate", and 84px pushed Action past the
        panel at 1440px. Still one width for the whole group (§3b trap 2). */
     .rp-dashboard-page .rp-act { min-width: calc(var(--ds-space-6) + var(--ds-space-3)); }
 
@@ -30,8 +30,7 @@
 @section('setup_content')
 @php
     $cardRows = app(\App\Services\RoleService::class)->dashboardCardRows($allCards, $assignedCardIds, $cardTabs);
-    $totalCount = count($cardRows);
-    $disabledCount = $totalCount - $enabledCount;
+    $disabledCount = count($cardRows) - $enabledCount;
 @endphp
 <div class="container-fluid rp-page rp-dashboard-page">
     {{-- No :items — see the note on assign-permission.blade.php; the trail comes
@@ -46,9 +45,8 @@
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
         @php
             $rpPills = [
-                ['value' => '', 'label' => 'All', 'count' => $totalCount],
-                ['value' => 'enabled', 'label' => 'Enabled', 'count' => $enabledCount],
-                ['value' => 'disabled', 'label' => 'Disabled', 'count' => $disabledCount],
+                ['value' => 'enabled', 'label' => 'Active', 'count' => $enabledCount],
+                ['value' => 'disabled', 'label' => 'Inactive', 'count' => $disabledCount],
             ];
         @endphp
         <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0"
@@ -196,7 +194,7 @@
                                      header sort by state (§3b). --}}
                                 <td data-order="{{ $row['enabled'] ? 1 : 0 }}" class="text-center">
                                     <span class="status-pill badge rounded-1 {{ $row['enabled'] ? 'bg-success-subtle' : 'bg-danger-subtle' }}">
-                                        {{ $row['enabled'] ? 'Enabled' : 'Disabled' }}
+                                        {{ $row['enabled'] ? 'Active' : 'Inactive' }}
                                     </span>
                                 </td>
                                 {{-- Action = Edit · switch · Delete. No .form-check/
@@ -226,14 +224,14 @@
                                                        data-label="{{ $row['label'] }}"
                                                        @checked($row['enabled'])>
                                             </span>
-                                            <span class="rp-act__label">{{ $row['enabled'] ? 'Disable' : 'Enable' }}</span>
+                                            <span class="rp-act__label">{{ $row['enabled'] ? 'Deactivate' : 'Activate' }}</span>
                                         </label>
 
                                         {{-- Delete removes the card from EVERY role, so it
                                              is only offered while this role has it switched
                                              off — mirrored as a disabled stack otherwise. --}}
                                         <span class="rp-act rp-act--del rp-delete-guard{{ $row['enabled'] ? '' : ' d-none' }}"
-                                              title="Disable this card for the role before deleting it"
+                                              title="Deactivate this card for the role before deleting it"
                                               aria-disabled="true">
                                             <span class="rp-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
                                             <span class="rp-act__label">Delete</span>
@@ -364,8 +362,8 @@
                             <label class="rp-form-label" for="rp{{ ucfirst($mode) }}CardStatus">Status</label>
                             <select class="form-select rp-control rp-card-status select2" name="status"
                                     id="rp{{ ucfirst($mode) }}CardStatus" data-placeholder="Status">
-                                <option value="1" selected>Enabled</option>
-                                <option value="0">Disabled</option>
+                                <option value="1" selected>Active</option>
+                                <option value="0">Inactive</option>
                             </select>
                             <p class="rp-form-help">Whether {{ ucfirst($role->name) }} sees this card on the tab picked above.</p>
                         </div>
@@ -428,11 +426,12 @@ $(function () {
         catch (e) { return []; }
     })();
 
-    /* Status pills own this; the ext.search predicate below reads it. */
-    var rpStatus = '';
+    /* Status pills own this; the ext.search predicate below reads it. There is
+       no "All" pill, so the grid opens on Active. */
+    var rpStatus = 'enabled';
 
     /* ── Status filter ───────────────────────────────────────────────────────
-       Enabled/Disabled is the live state of the switch, not table text, so it
+       Active/Inactive is the live state of the switch, not table text, so it
        cannot be a column search — it needs a predicate. Registered once and
        scoped by table id so it can't affect other grids. ── */
     $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
@@ -498,7 +497,7 @@ $(function () {
             window.location.assign(HOME_MODULE_URL);
             return;
         }
-        $('.rp-status-pill[data-rp-status=""]').trigger('click');
+        $('.rp-status-pill[data-rp-status="enabled"]').trigger('click');
         dt.search('').draw();
         rpUpdateExportLinks();
     });
@@ -625,7 +624,6 @@ $(function () {
         var total = $toggles.length;
         var enabled = $toggles.filter(':checked').length;
 
-        $('.rp-status-pill[data-rp-status=""] .rp-pill-count').text(total.toLocaleString());
         $('.rp-status-pill[data-rp-status="enabled"] .rp-pill-count').text(enabled.toLocaleString());
         $('.rp-status-pill[data-rp-status="disabled"] .rp-pill-count').text((total - enabled).toLocaleString());
     }
@@ -641,14 +639,14 @@ $(function () {
         $row.find('.status-pill')
             .toggleClass('bg-success-subtle', enabled)
             .toggleClass('bg-danger-subtle', !enabled)
-            .text(enabled ? 'Enabled' : 'Disabled');
+            .text(enabled ? 'Active' : 'Inactive');
 
         // Keep the sort key in step with the badge, or ordering by Status goes
         // stale the moment someone toggles a row.
         $row.find('td[data-order]').attr('data-order', enabled ? 1 : 0);
 
         // The caption names the ACTION, not the state (§3b).
-        $checkbox.closest('.rp-act').find('.rp-act__label').text(enabled ? 'Disable' : 'Enable');
+        $checkbox.closest('.rp-act').find('.rp-act__label').text(enabled ? 'Deactivate' : 'Activate');
 
         $row.find('.rp-delete-card-btn').toggleClass('d-none', enabled);
         $row.find('.rp-delete-guard').toggleClass('d-none', !enabled);

@@ -393,7 +393,7 @@ class RoleService
             ['key' => 'created_at', 'heading' => 'Created', 'class' => 'rp-print-created',
                 'value' => fn (array $row) => $row['created_at']],
             ['key' => 'status', 'heading' => 'Status', 'class' => 'rp-print-status',
-                'value' => fn (array $row) => $row['enabled'] ? 'Enabled' : 'Disabled'],
+                'value' => fn (array $row) => $row['enabled'] ? 'Active' : 'Inactive'],
         ];
     }
 

@@ -332,7 +332,7 @@ This is where the actual dashboard is **built** for the logged-in user.
   comment 6857559080). An unknown tab is refused with 422 and nothing is saved
 - Both card routes take an optional `status` (boolean): when posted, it sets the role's state on the
   picked tab (1 enables, 0 disables) instead of the default above; create defaults to enabled. The Edit
-  dialog pre-fills it from the row's switch and flips it to Enabled when another tab is picked
+  dialog pre-fills it (Active / Inactive) from the row's switch and flips it to Active when another tab is picked
 - `DELETE /dashboard-cards/{id}` → Delete dashboard card
 
 **User Dashboard:**
