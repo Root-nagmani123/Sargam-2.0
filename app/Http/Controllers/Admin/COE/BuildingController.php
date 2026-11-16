@@ -16,7 +16,8 @@ use Illuminate\Validation\Rule;
  *
  * The shared building_master, building_type = Classroom only: the COE lists, adds
  * and edits only those, and every building it adds is a Classroom. `building_name`
- * required|max:255, unique across building_master; Total Floors / Total Rooms are
+ * required|max:255, unique among Classroom buildings (a Hostel etc. of the same name
+ * does not block it);Total Floors / Total Rooms are
  * the building's no_of_floors / no_of_rooms. Status is stored as the table does:
  * 1 active, 2 inactive.
  */
@@ -70,13 +71,17 @@ class BuildingController extends Controller
         $validated = $request->validate([
             'building_name' => [
                 'required', 'string', 'max:255',
-                Rule::unique('building_master', 'building_name')->ignore($id, 'pk'),
+                // Unique among Classroom buildings only: the same name may exist as a
+                // Hostel / Administration / other type and still be added here.
+                Rule::unique('building_master', 'building_name')
+                    ->where('building_type', BuildingMaster::TYPE_CLASSROOM)
+                    ->ignore($id, 'pk'),
             ],
             'no_of_floors' => ['required', 'integer', 'min:0', 'max:999'],
             'no_of_rooms' => ['required', 'integer', 'min:0', 'max:9999'],
             'active_inactive' => ['required', 'in:0,1'],
         ], [
-            'building_name.unique' => 'This building name already exists.',
+            'building_name.unique' => 'A Classroom building with this name already exists.',
         ], [
             'building_name' => 'building name',
             'no_of_floors' => 'total floors',

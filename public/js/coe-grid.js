@@ -1197,6 +1197,8 @@
                         input(f).append(inactiveOptions[f.key].filter(function () { return this.value === value; }).clone());
                     }
                     input(f).val(value).trigger('change.select2');
+                } else if (f.fixed !== undefined) {
+                    input(f).val(f.fixed);   // frozen field: always its fixed value
                 } else {
                     input(f).val(isEdit ? cellText($row, f) : '');
                 }

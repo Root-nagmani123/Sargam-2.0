@@ -172,6 +172,7 @@
                                        class="form-control coe-control"
                                        placeholder="{{ $f['placeholder'] ?? '' }}" autocomplete="off"
                                        maxlength="{{ $f['max'] ?? '' }}"
+                                       @if (isset($f['fixed'])) value="{{ $f['fixed'] }}" readonly tabindex="-1" style="background-color: var(--bs-secondary-bg); pointer-events: none;" @endif
                                        @if (! empty($f['required'])) required @endif>
                                 @endif
                             </div>
