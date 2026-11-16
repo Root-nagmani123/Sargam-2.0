@@ -146,7 +146,17 @@ class VenueAllocationController extends Controller
         $mapping = $this->resolveMapping($request);
 
         try {
-            $summary = DB::transaction(fn () => $this->applyMapping($mapping, $allocator)['summary']);
+            $summary = DB::transaction(function () use ($mapping, $allocator) {
+                $summary = $this->applyMapping($mapping, $allocator)['summary'];
+                // Every OT of the category needs a desk; one left over rolls the whole mapping back.
+                if ($summary['unallocated'] > 0) {
+                    $rooms = $mapping['rooms'];
+                    $field = $mapping['manual'] ? $rooms[array_key_last($rooms)]['field'] . '.ots' : 'venue_ids';
+                    throw ValidationException::withMessages([$field => $this->unseatedMessage($summary, $mapping['manual'])]);
+                }
+
+                return $summary;
+            });
         } catch (ValidationException $e) {
             throw $e;
         } catch (\Throwable $e) {
@@ -156,7 +166,7 @@ class VenueAllocationController extends Controller
         }
 
         return response()->json([
-            'status' => $summary['unallocated'] > 0 ? 'warning' : 'success',
+            'status' => 'success',
             'message' => $this->allocationMessage($summary),
         ]);
     }
@@ -751,7 +761,7 @@ class VenueAllocationController extends Controller
             'allocated_by' => Auth::id(),
         ])->save();
 
-        return $result['summary'];
+        return $result['summary'] + ['unplaced_rolls' => array_map(fn (object $p) => $p->roll_number, $result['unplaced'])];
     }
 
     /**
@@ -854,6 +864,25 @@ class VenueAllocationController extends Controller
             (int) $summary['unallocated_laptop'] > 0
                 ? ' ' . $summary['unallocated_laptop'] . ' of them need a laptop desk.'
                 : ''
+        );
+    }
+
+    /**
+     * Map Seating Plan refused: who has no seat and what to do about it.
+     *
+     * @param  array<string, mixed>  $summary  from reseat()
+     */
+    private function unseatedMessage(array $summary, bool $manual): string
+    {
+        $rolls = $summary['unplaced_rolls'] ?? [];
+
+        return sprintf(
+            'Seating not saved — %s %s no seat%s.%s %s',
+            $rolls ? 'Roll No. ' . $this->rollList($rolls) : $summary['unallocated'] . ' OT(s)',
+            count($rolls) === 1 ? 'has' : 'have',
+            (int) $summary['capacity'] < (int) $summary['participants'] ? ' (the rooms hold ' . $summary['capacity'] . ')' : '',
+            (int) $summary['unallocated_laptop'] > 0 ? ' ' . $summary['unallocated_laptop'] . ' of them need a laptop desk.' : '',
+            $manual ? 'Select every OT in a room, or add another room.' : 'Select another room.'
         );
     }
 
