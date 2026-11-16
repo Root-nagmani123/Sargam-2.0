@@ -730,6 +730,20 @@ class ResultMarksService
     }
 
     /**
+     * A mark Merit & Ranking (and the marksheets) may count: approved, and moderated
+     * by Marks Moderation. An absent mark is never moderated, so approval is enough.
+     * Until moderationEnabled() (DBA DDL) nothing can be moderated, so approval is enough.
+     */
+    public static function isFinal(?EvaluationMark $m): bool
+    {
+        if (! $m?->isApproved()) {
+            return false;
+        }
+
+        return $m->is_absent || ! self::moderationEnabled() || $m->moderated_marks !== null;
+    }
+
+    /**
      * Merit & Ranking in $scope (as courseSheets()) of one course, or of every course
      * ($coursePk null = All; each ranked within its own course).
      *
@@ -742,8 +756,8 @@ class ResultMarksService
      * maps, else Subject Max Marks, else the Figma's (MERIT_SUBJECTS, DIRECTOR_MAX,
      * QUALIFYING_MAX); Total (A) / Grand Total are out of the shown columns.
      *
-     * An OT is ranked once every one of those marks is approved; the rest are only
-     * counted ($pending). Equal Grand Totals share a rank (1, 2, 2, 4), in OT-code order.
+     * An OT is ranked once every one of those marks is approved and moderated
+     * (isFinal()); the rest are only counted ($pending). Equal Grand Totals share a rank (1, 2, 2, 4), in OT-code order.
      * Pass: every qualifying paper at or above its passing marks (absent fails), and
      * Grand Total at or above the OT's service passing marks (Service Passing Marks).
      * With no passing marks set for the service, the result is null (not decided).
@@ -906,7 +920,7 @@ class ResultMarksService
             $approved = [];
             foreach (array_merge(array_keys($partB), ...array_map('array_keys', array_values(array_column($subjects, 'columns'))), ...array_map('array_keys', array_values($qualifying))) as $key) {
                 $m = $marks[$key][$pk] ?? null;
-                if (! $m?->isApproved()) {
+                if (! self::isFinal($m)) {
                     continue 2;
                 }
                 $approved[$key] = $m;
