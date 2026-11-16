@@ -15,27 +15,31 @@
      dropdown looked completely empty. 10.2.0 is what the other views in this app
      pin, so this keeps one version across the codebase. --}}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css" />
+<style>
+    /* The shared 84px action width is sized for the Roles grid's "Permissions"
+       caption; here the widest is "Deactivate", and 84px pushed Action past the
+       panel at 1440px. Still one width for the whole group (§3b trap 2). */
+    .rp-dashboard-page .rp-act { min-width: calc(var(--ds-space-6) + var(--ds-space-3)); }
+
+    /* Card labels run long ("House wise Performance Panel"); let them wrap
+       rather than widen the grid. */
+    .rp-dashboard-page .programme-dt-table tbody td:nth-child(2) { white-space: normal; }
+</style>
 @endpush
 
 @section('setup_content')
 @php
-    $cardRows = app(\App\Services\RoleService::class)->dashboardCardRows($allCards, $assignedCardIds);
-    $totalCount = count($cardRows);
-    $disabledCount = $totalCount - $enabledCount;
+    $cardRows = app(\App\Services\RoleService::class)->dashboardCardRows($allCards, $assignedCardIds, $cardTabs);
+    $disabledCount = count($cardRows) - $enabledCount;
+    // null $module = the All tabs view; dialogs then start on Home.
+    $exportModule = $module->id ?? 'all';
+    $defaultTabId = $module->id ?? ($modules->firstWhere('slug', 'home')->id ?? $modules->first()?->id);
 @endphp
-<div class="container-fluid rp-page">
+<div class="container-fluid rp-page rp-dashboard-page">
     {{-- No :items — see the note on assign-permission.blade.php; the trail comes
          from the menu tree via SidebarNavResolver. --}}
-    <x-breadcrum title="Assign Dashboard - {{ ucfirst($role->name) }}" :showBack="true">
-        <div class="d-flex flex-wrap align-items-center gap-2">
-            <button type="button"
-                    class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
-                    id="rpAddCardBtn">
-                <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
-                <span>Add New Card</span>
-            </button>
-        </div>
-    </x-breadcrum>
+    <x-breadcrum title="Assign Dashboard - {{ ucfirst($role->name) }}" :showBack="true"
+                 buttonText="Add New Card" buttonId="rpAddCardBtn" buttonIcon="add" />
 
     <x-session_message />
 
@@ -44,9 +48,8 @@
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
         @php
             $rpPills = [
-                ['value' => '', 'label' => 'All', 'count' => $totalCount],
-                ['value' => 'enabled', 'label' => 'Enabled', 'count' => $enabledCount],
-                ['value' => 'disabled', 'label' => 'Disabled', 'count' => $disabledCount],
+                ['value' => 'enabled', 'label' => 'Active', 'count' => $enabledCount],
+                ['value' => 'disabled', 'label' => 'Inactive', 'count' => $disabledCount],
             ];
         @endphp
         <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0"
@@ -79,19 +82,19 @@
                     aria-labelledby="rpDownloadMenuBtn">
                     <li>
                         <a class="dropdown-item" id="rpCsvLink"
-                           href="{{ route('roles.dashboard.export', ['id' => $role->id, 'format' => 'csv']) }}">
+                           href="{{ route('roles.dashboard.export', ['id' => $role->id, 'module' => $exportModule, 'format' => 'csv']) }}">
                             <i class="bi bi-filetype-csv" aria-hidden="true"></i><span>CSV</span>
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item" id="rpExcelLink"
-                           href="{{ route('roles.dashboard.export', ['id' => $role->id, 'format' => 'excel']) }}">
+                           href="{{ route('roles.dashboard.export', ['id' => $role->id, 'module' => $exportModule, 'format' => 'excel']) }}">
                             <i class="bi bi-file-earmark-excel" aria-hidden="true"></i><span>Excel</span>
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item" id="rpPdfLink"
-                           href="{{ route('roles.dashboard.export', ['id' => $role->id, 'format' => 'pdf']) }}">
+                           href="{{ route('roles.dashboard.export', ['id' => $role->id, 'module' => $exportModule, 'format' => 'pdf']) }}">
                             <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i><span>PDF</span>
                         </a>
                     </li>
@@ -100,7 +103,7 @@
 
             {{-- Print stays OUTSIDE the dropdown: it opens a sheet rather than
                  saving a file, so it is not one of the download formats. --}}
-            <a href="{{ route('roles.dashboard.export', ['id' => $role->id, 'format' => 'print']) }}"
+            <a href="{{ route('roles.dashboard.export', ['id' => $role->id, 'module' => $exportModule, 'format' => 'print']) }}"
                id="rpPrintLink" target="_blank" rel="noopener"
                class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
                 <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
@@ -111,16 +114,36 @@
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
 
-            {{-- Toolbar: reset left, columns + search right (§2). Status lives in
-                 the pills above, so the only filter left to clear is the search. --}}
+            {{-- Toolbar (§2): filters + reset left, columns + search right. The
+                 module is a server filter: each module has its own assignment, so
+                 picking one reloads the grid for it. --}}
             <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4
                         programme-dt-toolbar">
+
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filters</span>
+
+                    <div class="programme-dt-filter-select">
+                        <select id="rpModuleFilter" class="form-select select2" aria-label="Module dashboard">
+                            <option value="all" data-url="{{ route('roles.dashboard', ['id' => $role->id]) }}"
+                                    @selected($module === null)>All dashboards</option>
+                            @foreach ($modules as $m)
+                                <option value="{{ $m->id }}"
+                                        data-url="{{ route('roles.dashboard', ['id' => $role->id, 'module' => $m->id]) }}"
+                                        @selected($m->id === ($module->id ?? null))>{{ $m->name }} dashboard</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <button type="button" class="btn programme-dt-btn-reset" id="rpResetFilters">
+                        Reset Filters
+                    </button>
+                </div>
 
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
                     <button type="button" class="btn programme-dt-btn-columns" id="rpBtnColumns"
                             data-bs-toggle="modal" data-bs-target="#rpCardColumnVisibilityModal"
-                            title="Show / hide columns"
-                            style="border: 1px solid #d0d5dd; background: #fff; color: #344054;">
+                            title="Show / hide columns">
                         <span>Columns</span><i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
 
@@ -142,6 +165,7 @@
                                      content reads as a misalignment. --}}
                                 <th scope="col" class="text-center">S No.</th>
                                 <th scope="col">Name</th>
+                                <th scope="col">Dashboard Tab</th>
                                 <th scope="col" class="text-center">Icon</th>
                                 <th scope="col">Colour</th>
                                 <th scope="col" class="text-center">Order</th>
@@ -157,6 +181,8 @@
                             <tr data-id="{{ $row['id'] }}">
                                 <td class="text-center">{{ $index + 1 }}</td>
                                 <td>{{ $row['label'] }}</td>
+                                {{-- Every tab this role has the card on, not just this one. --}}
+                                <td class="rp-card-tabs">{{ $row['tabs'] }}</td>
                                 <td class="text-center">
                                     <span class="rp-card-icon {{ $row['color_class'] }}" title="{{ $row['icon'] }}">
                                         <i class="material-icons material-symbols-rounded" aria-hidden="true">{{ $row['icon'] }}</i>
@@ -173,7 +199,7 @@
                                      header sort by state (§3b). --}}
                                 <td data-order="{{ $row['enabled'] ? 1 : 0 }}" class="text-center">
                                     <span class="status-pill badge rounded-1 {{ $row['enabled'] ? 'bg-success-subtle' : 'bg-danger-subtle' }}">
-                                        {{ $row['enabled'] ? 'Enabled' : 'Disabled' }}
+                                        {{ $row['enabled'] ? 'Active' : 'Inactive' }}
                                     </span>
                                 </td>
                                 {{-- Action = Edit · switch · Delete. No .form-check/
@@ -188,6 +214,7 @@
                                                 data-icon="{{ $row['icon'] }}"
                                                 data-color="{{ $row['color_class'] }}"
                                                 data-sort="{{ $row['sort_order'] }}"
+                                                data-tabs="{{ implode(',', $cardTabIds[$row['id']] ?? []) }}"
                                                 title="Edit {{ $row['label'] }}"
                                                 aria-label="Edit card {{ $row['label'] }}">
                                             <span class="rp-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
@@ -203,14 +230,14 @@
                                                        data-label="{{ $row['label'] }}"
                                                        @checked($row['enabled'])>
                                             </span>
-                                            <span class="rp-act__label">{{ $row['enabled'] ? 'Disable' : 'Enable' }}</span>
+                                            <span class="rp-act__label">{{ $row['enabled'] ? 'Deactivate' : 'Activate' }}</span>
                                         </label>
 
                                         {{-- Delete removes the card from EVERY role, so it
                                              is only offered while this role has it switched
                                              off — mirrored as a disabled stack otherwise. --}}
                                         <span class="rp-act rp-act--del rp-delete-guard{{ $row['enabled'] ? '' : ' d-none' }}"
-                                              title="Disable this card for the role before deleting it"
+                                              title="Deactivate this card for the role before deleting it"
                                               aria-disabled="true">
                                             <span class="rp-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
                                             <span class="rp-act__label">Delete</span>
@@ -274,6 +301,25 @@
                                    placeholder="e.g. Pending Leave Applications" autocomplete="off" maxlength="200">
                         </div>
 
+                        {{-- The header tab whose dashboard shows this card for THIS role.
+                             Unlike the fields below it is not shared with other roles. --}}
+                        <div class="form-group rp-form-grid--full">
+                            <label class="rp-form-label" for="rp{{ ucfirst($mode) }}CardTab">Dashboard tab<span class="rp-req">*</span></label>
+                            <select class="form-select rp-control rp-card-tab select2" name="module"
+                                    id="rp{{ ucfirst($mode) }}CardTab" data-placeholder="Dashboard tab">
+                                @foreach ($modules as $m)
+                                    <option value="{{ $m->id }}" @selected($m->id === $defaultTabId)>{{ $m->name }}</option>
+                                @endforeach
+                            </select>
+                            <p class="rp-form-help">
+                                @if ($mode === 'add')
+                                    The tab whose dashboard shows this card for {{ ucfirst($role->name) }}.
+                                @else
+                                    Picking another tab moves this card there for {{ ucfirst($role->name) }} only.
+                                @endif
+                            </p>
+                        </div>
+
                         <div class="form-group rp-form-grid--full">
                             <label class="rp-form-label" for="rp{{ ucfirst($mode) }}CardIcon">Icon<span class="rp-req">*</span></label>
                             {{-- Intentionally EMPTY apart from the placeholder. The
@@ -303,7 +349,7 @@
                             <p class="rp-form-help">Lower numbers appear first on the dashboard.</p>
                         </div>
 
-                        <div class="form-group rp-form-grid--full">
+                        <div class="form-group">
                             <label class="rp-form-label">Preview</label>
                             <div class="rp-preview-card">
                                 <div class="rp-preview-icon stat-icon-blue rp-preview-chip">
@@ -314,6 +360,18 @@
                                     <p class="rp-preview-count">0</p>
                                 </div>
                             </div>
+                        </div>
+
+                        {{-- Set together with the tab, so a card moved to another tab
+                             can be switched on there in the same save. --}}
+                        <div class="form-group">
+                            <label class="rp-form-label" for="rp{{ ucfirst($mode) }}CardStatus">Status</label>
+                            <select class="form-select rp-control rp-card-status select2" name="status"
+                                    id="rp{{ ucfirst($mode) }}CardStatus" data-placeholder="Status">
+                                <option value="1" selected>Active</option>
+                                <option value="0">Inactive</option>
+                            </select>
+                            <p class="rp-form-help">Whether {{ ucfirst($role->name) }} sees this card on the tab picked above.</p>
                         </div>
                     </div>
                 </div>
@@ -332,7 +390,7 @@
 <div class="modal fade" id="rpCardColumnVisibilityModal" tabindex="-1"
      aria-labelledby="rpCardColumnVisibilityLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
+        <div class="modal-content rounded-2 border-0 shadow">
             <div class="modal-header border-0 pb-2">
                 <h5 class="modal-title fw-bold" id="rpCardColumnVisibilityLabel">Column Visibility</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -342,7 +400,7 @@
                 <div class="row g-3" id="rpCardColumnToggleGrid"></div>
             </div>
             <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -364,17 +422,23 @@ $(function () {
     var CARD_BASE = "{{ url('dashboard-cards') }}";
     var ASSIGN_URL = "{{ route('assign.roles.dashboard', $role->id) }}";
     var TOKEN = "{{ csrf_token() }}";
+    /* null on the All dashboards view. */
+    var MODULE_ID = @json($module ? (int) $module->id : null);
+    var DEFAULT_TAB_ID = {{ (int) $defaultTabId }};
+    var ROLE_ID = {{ (int) $role->id }};
+    var ALL_TABS_URL = @json(route('roles.dashboard', ['id' => $role->id]));
 
     var ICON_NAMES = (function () {
         try { return JSON.parse(document.getElementById('rpIconNames').textContent) || []; }
         catch (e) { return []; }
     })();
 
-    /* Status pills own this; the ext.search predicate below reads it. */
-    var rpStatus = '';
+    /* Status pills own this; the ext.search predicate below reads it. There is
+       no "All" pill, so the grid opens on Active. */
+    var rpStatus = 'enabled';
 
     /* ── Status filter ───────────────────────────────────────────────────────
-       Enabled/Disabled is the live state of the switch, not table text, so it
+       Active/Inactive is the live state of the switch, not table text, so it
        cannot be a column search — it needs a predicate. Registered once and
        scoped by table id so it can't affect other grids. ── */
     $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
@@ -398,8 +462,8 @@ $(function () {
            .table-responsive scrolls horizontally instead — §3. */
         responsive: false,
         columnDefs: [
-            { orderable: false, targets: [2, 7] },        // Icon, Action
-            { searchable: false, targets: [0, 4, 5, 6, 7] }
+            { orderable: false, targets: [3, 8] },        // Icon, Action
+            { searchable: false, targets: [0, 5, 6, 7, 8] }
         ],
         language: {
             emptyTable: '<div class="rp-empty">' +
@@ -428,6 +492,24 @@ $(function () {
         rpUpdateExportLinks();
     });
 
+    /* Module: Select2 fires a jQuery change, so bind with jQuery (§3c). */
+    $('#rpModuleFilter').on('change', function () {
+        var url = $(this).find('option:selected').attr('data-url');
+        var picked = this.value === 'all' ? null : Number(this.value);
+        if (url && picked !== MODULE_ID) { window.location.assign(url); }
+    });
+
+    /* Reset: status back to Active, search cleared, and All dashboards. */
+    $('#rpResetFilters').on('click', function () {
+        if (MODULE_ID !== null) {
+            window.location.assign(ALL_TABS_URL);
+            return;
+        }
+        $('.rp-status-pill[data-rp-status="enabled"]').trigger('click');
+        dt.search('').draw();
+        rpUpdateExportLinks();
+    });
+
     /* ── Column visibility (DataTables column API) ────────────────────────────
        Hidden columns are stored by LABEL, not index: an index would point at a
        different column the moment one is added, silently hiding the wrong one.
@@ -440,7 +522,7 @@ $(function () {
        that is not in the export at all — here, Action, whose Status twin already
        carries the state.
        ⚠️ Adding a column to the table means adding an entry here too. */
-    var RP_EXPORT_COLUMN_KEYS = ['sno', 'label', 'icon', 'color', 'sort_order', 'created_at', 'status', ''];
+    var RP_EXPORT_COLUMN_KEYS = ['sno', 'label', 'tabs', 'icon', 'color', 'sort_order', 'created_at', 'status', ''];
     var RP_EXPORT_COL_COUNT = RP_EXPORT_COLUMN_KEYS.filter(Boolean).length;
 
     /* Keep Download and Print carrying exactly the columns still on screen, plus
@@ -550,7 +632,6 @@ $(function () {
         var total = $toggles.length;
         var enabled = $toggles.filter(':checked').length;
 
-        $('.rp-status-pill[data-rp-status=""] .rp-pill-count').text(total.toLocaleString());
         $('.rp-status-pill[data-rp-status="enabled"] .rp-pill-count').text(enabled.toLocaleString());
         $('.rp-status-pill[data-rp-status="disabled"] .rp-pill-count').text((total - enabled).toLocaleString());
     }
@@ -566,14 +647,14 @@ $(function () {
         $row.find('.status-pill')
             .toggleClass('bg-success-subtle', enabled)
             .toggleClass('bg-danger-subtle', !enabled)
-            .text(enabled ? 'Enabled' : 'Disabled');
+            .text(enabled ? 'Active' : 'Inactive');
 
         // Keep the sort key in step with the badge, or ordering by Status goes
         // stale the moment someone toggles a row.
         $row.find('td[data-order]').attr('data-order', enabled ? 1 : 0);
 
         // The caption names the ACTION, not the state (§3b).
-        $checkbox.closest('.rp-act').find('.rp-act__label').text(enabled ? 'Disable' : 'Enable');
+        $checkbox.closest('.rp-act').find('.rp-act__label').text(enabled ? 'Deactivate' : 'Activate');
 
         $row.find('.rp-delete-card-btn').toggleClass('d-none', enabled);
         $row.find('.rp-delete-guard').toggleClass('d-none', !enabled);
@@ -585,13 +666,28 @@ $(function () {
         var $checkbox = $(this);
         var enabled = $checkbox.is(':checked');
 
+        // All dashboards: there is no one tab to switch it on for, so Activate
+        // opens the card's dialog with Status Active to pick the tab.
+        if (MODULE_ID === null && enabled) {
+            $checkbox.prop('checked', false);
+            $checkbox.closest('tr').find('.rp-edit-card-btn').trigger('click');
+            $('#rpEditCardStatus').val('1').trigger('change.select2');
+            return;
+        }
+
         $.ajax({
             url: ASSIGN_URL,
             type: 'POST',
-            data: { _token: TOKEN, card_id: $checkbox.data('id'), status: enabled ? 1 : 0 },
+            data: { _token: TOKEN, card_id: $checkbox.data('id'), module: MODULE_ID === null ? 'all' : MODULE_ID, status: enabled ? 1 : 0 },
             success: function (response) {
                 if (response && response.success) {
                     paintCardRow($checkbox, enabled);
+                    if (response.tabs) {
+                        var $tr = $checkbox.closest('tr');
+                        $tr.find('.rp-card-tabs').text(response.tabs);
+                        if (MODULE_ID === null) { $tr.find('.rp-edit-card-btn').attr('data-tabs', ''); }
+                        dt.row($tr).invalidate();
+                    }
                     if (typeof toastr !== 'undefined') { toastr.success(response.message); }
                     // Re-apply the status filter: a row that no longer matches the
                     // active pill should leave the view.
@@ -764,11 +860,16 @@ $(function () {
     var $addModal = $('#rpAddCardModal');
     var $editModal = $('#rpEditCardModal');
     var pendingEditIcon = '';
+    var editOpenedStatus = '';
+    var editFromTab = DEFAULT_TAB_ID;
 
     $('#rpAddCardBtn').on('click', function () {
         var $form = $('#rpAddCardForm');
         $form[0].reset();
         $form.find('.is-invalid').removeClass('is-invalid');
+        // reset() puts the <select> back on the tab being viewed; repaint Select2.
+        $('#rpAddCardTab').val(String(DEFAULT_TAB_ID)).trigger('change.select2');
+        $('#rpAddCardStatus').val('1').trigger('change.select2');
         bootstrap.Modal.getOrCreateInstance($addModal[0]).show();
     });
 
@@ -795,6 +896,14 @@ $(function () {
         $('#rpEditCardColor').val($btn.attr('data-color') || 'stat-icon-blue')
             .trigger('change.select2');
         $('#rpEditCardSort').val($btn.attr('data-sort'));
+        // The tab a switch moves it from: the one being viewed, or on All
+        // dashboards the card's first tab (Home when it is on none).
+        editFromTab = MODULE_ID !== null ? MODULE_ID
+            : (Number(($btn.attr('data-tabs') || '').split(',')[0]) || DEFAULT_TAB_ID);
+        $('#rpEditCardTab').val(String(editFromTab)).trigger('change.select2');
+        // The row's live switch, so a save that changes nothing changes nothing.
+        editOpenedStatus = $btn.closest('tr').find('.card-toggle').is(':checked') ? '1' : '0';
+        $('#rpEditCardStatus').val(editOpenedStatus).trigger('change.select2');
         // The Choices instance is built in shown.bs.modal, so stash the value
         // for it rather than assigning to a widget that does not exist yet.
         pendingEditIcon = $btn.attr('data-icon') || '';
@@ -803,6 +912,13 @@ $(function () {
         $editModal.find('.rp-preview-glyph').text(pendingEditIcon || 'apps');
 
         bootstrap.Modal.getOrCreateInstance($editModal[0]).show();
+    });
+
+    /* Moving a card to another tab switches it on there by default (PR #353
+       Option B); the Status field can still override it. Select2 fires a jQuery change. */
+    $('#rpEditCardTab').on('change', function () {
+        $('#rpEditCardStatus').val(String(this.value) !== String(editFromTab) ? '1' : editOpenedStatus)
+            .trigger('change.select2');
     });
 
     /* ── Add / Update submit ──────────────────────────────────────────────── */
@@ -822,7 +938,10 @@ $(function () {
             label: ($modal.find('.rp-card-label').val() || '').trim(),
             icon: $modal.find('.rp-icon-select').val() || '',
             color_class: $modal.find('.rp-card-color').val(),
-            sort_order: $modal.find('input[name="sort_order"]').val()
+            sort_order: $modal.find('input[name="sort_order"]').val(),
+            role_id: ROLE_ID,
+            module: $modal.find('.rp-card-tab').val(),
+            status: $modal.find('.rp-card-status').val()
         };
     }
 
@@ -856,9 +975,9 @@ $(function () {
                 }
                 if (typeof toastr !== 'undefined') { toastr.success(response.message); }
                 bootstrap.Modal.getOrCreateInstance($addModal[0]).hide();
-                // A new card starts unassigned, and the row markup is involved
-                // enough (badge + three action stacks) that rebuilding it here
-                // would be a second source of truth. Reload instead.
+                // The row markup is involved enough (badge + three action stacks)
+                // that rebuilding it here would be a second source of truth.
+                // Reload instead.
                 window.location.reload();
             },
             error: reportAjaxError,
@@ -880,7 +999,7 @@ $(function () {
         $.ajax({
             url: CARD_BASE + '/' + id,
             type: 'POST',
-            data: $.extend({ _token: TOKEN, _method: 'PUT' }, data),
+            data: $.extend({ _token: TOKEN, _method: 'PUT', from_module: editFromTab }, data),
             success: function (response) {
                 if (!response || !response.success) {
                     if (typeof toastr !== 'undefined') { toastr.error((response && response.message) || 'Something went wrong'); }
@@ -888,6 +1007,14 @@ $(function () {
                 }
                 if (typeof toastr !== 'undefined') { toastr.success(response.message); }
                 bootstrap.Modal.getOrCreateInstance($editModal[0]).hide();
+
+                // Tab or status changed: this tab's Status, toggle, Delete guard and
+                // Dashboard Tab cell all changed with it, so reload rather than
+                // repaint them by hand.
+                if (response.moved || String(data.module) !== String(editFromTab) || data.status !== editOpenedStatus) {
+                    window.location.reload();
+                    return;
+                }
 
                 var card = response.card;
                 var $row = $('#dashboardCardTable tbody tr[data-id="' + card.id + '"]');

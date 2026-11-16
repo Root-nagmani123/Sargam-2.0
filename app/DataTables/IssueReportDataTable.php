@@ -36,7 +36,7 @@ class IssueReportDataTable extends DataTable
             ->addColumn('attachment', function ($row) {
                 if ($row->attachment) {
                     $url = route('issue-reports.attachment', $row->id);
-                    return '<a href="' . e($url) . '" target="_blank" rel="noopener" class="attachment-view">View</a>';
+                    return '<a href="' . e($url) . '" target="_blank" rel="noopener" class="ir-attachment">View</a>';
                 }
                 return '<span class="text-body-secondary">—</span>';
             })
@@ -46,20 +46,23 @@ class IssueReportDataTable extends DataTable
                 $markFixUrl    = route('admin.issue-reports.status', ['id' => $row->id]);
                 $deleteUrl     = route('admin.issue-reports.destroy', ['id' => $row->id]);
 
-                $html = '<div class="d-inline-flex align-items-center gap-3">';
+                // Icon-over-caption stacks of equal width — docs/new-design-index-page.md §3b.
+                $html = '<div class="ir-act-group" role="group" aria-label="Row actions">';
 
                 if ($isActive) {
-                    $html .= '<button type="button" class="issue-action-btn issue-mark-fix-btn"'
+                    $html .= '<button type="button" class="ir-act ir-act--fix ir-mark-fix-btn"'
                         . ' data-url="' . $markFixUrl . '" data-id="' . $row->id . '"'
                         . ' aria-label="Mark issue #' . $row->id . ' as fixed">'
-                        . '<i class="bi bi-check-lg" aria-hidden="true"></i> Mark fix'
+                        . '<span class="ir-act__icon"><i class="bi bi-check-lg" aria-hidden="true"></i></span>'
+                        . '<span class="ir-act__label">Mark fix</span>'
                         . '</button>';
                 }
 
-                $html .= '<button type="button" class="issue-action-btn issue-delete-btn"'
+                $html .= '<button type="button" class="ir-act ir-act--del ir-delete-btn"'
                     . ' data-url="' . $deleteUrl . '" data-id="' . $row->id . '"'
                     . ' aria-label="Delete issue #' . $row->id . '">'
-                    . '<i class="bi bi-trash" aria-hidden="true"></i> Delete'
+                    . '<span class="ir-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>'
+                    . '<span class="ir-act__label">Delete</span>'
                     . '</button>';
 
                 $html .= '</div>';
@@ -141,9 +144,9 @@ class IssueReportDataTable extends DataTable
             ->setTableId('issue-reports-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            ->responsive(true)
+            ->responsive(false)
             ->parameters([
-                'responsive'   => true,
+                'responsive'   => false,
                 'scrollX'      => false,
                 'autoWidth'    => false,
                 'ordering'     => true,
@@ -152,8 +155,6 @@ class IssueReportDataTable extends DataTable
                 'pageLength'   => 10,
                 'lengthMenu'   => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
                 'order'        => [],
-                'sargamDtUi'   => false,
-                'dom'          => "<'d-none sargam-dt-hidden-controls'lfip>rt",
                 'language'     => [
                     'search'            => '',
                     'searchPlaceholder' => 'Search…',
@@ -174,7 +175,7 @@ class IssueReportDataTable extends DataTable
             Column::make('dept_name')->title('Department Name')->orderable(true)->searchable(true),
             Column::make('sub_module_name')->title('Sub-Module Name')->orderable(true)->searchable(true),
             Column::make('reporter')->title('Issue Raised By')->orderable(true)->searchable(true),
-            Column::make('description')->title('Issue Description')->orderable(false)->searchable(true),
+            Column::make('description')->title('Issue Description')->orderable(false)->searchable(true)->addClass('ir-col-wrap'),
             Column::computed('attachment')->title('Attachment')->orderable(false)->searchable(false)->width(100)->addClass('text-center'),
             Column::computed('status')->title('Status')->orderable(true)->searchable(false)->width(120)->addClass('text-center'),
             Column::computed('action')->title('Action')->orderable(false)->searchable(false)->width(160)->addClass('text-center'),
@@ -184,9 +185,9 @@ class IssueReportDataTable extends DataTable
     private function statusBadge(int $status): string
     {
         if (in_array($status, [IssueReport::STATUS_OPEN, IssueReport::STATUS_IN_PROGRESS])) {
-            return '<span class="badge rounded-1 issue-status-badge issue-status-badge--active">Active</span>';
+            return '<span class="ir-status ir-status--active">Active</span>';
         }
-        return '<span class="badge rounded-1 issue-status-badge issue-status-badge--fixed">Fixed Issue</span>';
+        return '<span class="ir-status ir-status--fixed">Fixed Issue</span>';
     }
 
     protected function filename(): string

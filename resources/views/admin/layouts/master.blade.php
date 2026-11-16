@@ -35,9 +35,17 @@
 
     $routeMatcher = app(\App\Services\SidebarMenu\MenuRouteMatcher::class);
     $categoryLandingUrls = ['#home' => route('admin.dashboard')];
+    // A module with a dashboard card this user can see (same gate as dashboard())
+    // opens on that module's dashboard; any other module opens on its first menu.
+    $userRoleIds = auth()->check() ? auth()->user()->roles->pluck('id')->all() : [];
+    $modulesWithDashboard = \App\Models\DashboardCard::moduleIdsVisibleTo($userRoleIds);
     foreach ($sidebarMenus as $cat) {
         $tabHash = $cat->slug === 'home' ? '#home' : '#tab-' . $cat->slug;
         if ($tabHash === '#home') {
+            continue;
+        }
+        if (in_array($cat->id, $modulesWithDashboard)) {
+            $categoryLandingUrls[$tabHash] = route('admin.dashboard', ['category' => $cat->id]);
             continue;
         }
         $firstMenu = \App\Models\SidebarMenu\Menu::query()
@@ -829,7 +837,7 @@
     <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
     <script src="{{ asset('admin_assets/js/sidebar-panel-accordion.js') }}?v=2"></script>
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
-    <script src="{{ asset('admin_assets/js/nav-state.js') }}"></script>
+    <script src="{{ asset('admin_assets/js/nav-state.js') }}?v={{ @filemtime(public_path('admin_assets/js/nav-state.js')) ?: time() }}"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Global success toast (styles every icon:'success' Swal alike; see public/js/sargam-success-toast.js) -->
