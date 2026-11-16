@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin\COE;
 
 use App\DataTables\ServicePassingMarksDataTable;
-use App\DataTables\SubjectMaxMarksDataTable;
 use App\Http\Controllers\Admin\COE\Concerns\ExportsCoeMaster;
 use App\Http\Controllers\Controller;
 use App\Models\ServiceMaster;
@@ -49,7 +48,7 @@ class ServicePassingMarksController extends Controller
                     'options' => $this->serviceOptions(),
                 ],
                 [
-                    'key' => 'marks', 'name' => 'passing_marks', 'label' => 'Passing Marks', 'column' => 'Passing Marks',
+                    'key' => 'marks', 'name' => 'passing_marks', 'label' => 'Passing Percentage', 'column' => 'Passing Percentage',
                     'type' => 'number', 'placeholder' => '100', 'required' => true, 'maxValue' => 9999.99,
                 ],
             ],
@@ -86,7 +85,7 @@ class ServicePassingMarksController extends Controller
             'passing_marks.decimal' => 'Enter a number with at most 2 decimals.',
         ], [
             'service_master_pk' => 'service',
-            'passing_marks' => 'passing marks',
+            'passing_marks' => 'passing percentage',
         ]);
 
         $model = $id ? ServicePassingMarksMaster::findOrFail($id) : new ServicePassingMarksMaster();
@@ -157,8 +156,8 @@ class ServicePassingMarksController extends Controller
                     'value' => fn ($row) => $row->service->service_short_name ?? ''],
                 'service_name' => ['heading' => 'Service Name', 'width' => '40%', 'align' => 'left',
                     'value' => fn ($row) => $row->service->service_name ?? ''],
-                'marks' => ['heading' => 'Passing Marks', 'width' => '16%', 'align' => 'center',
-                    'value' => fn ($row) => SubjectMaxMarksDataTable::marks($row->passing_marks)],
+                'marks' => ['heading' => 'Passing Percentage', 'width' => '16%', 'align' => 'center',
+                    'value' => fn ($row) => ServicePassingMarksDataTable::percent($row->passing_marks)],
                 'status' => $this->coeStatusColumn(),
             ],
             // Same match as the grid's search: full or short service name.

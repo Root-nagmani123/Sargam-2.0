@@ -25,7 +25,7 @@ class ServicePassingMarksDataTable extends DataTable
                 ? '<span title="' . e($row->service->service_name) . '">' . e($row->service->service_short_name) . '</span>'
                 : '-')
             ->addColumn('service_name', fn ($row) => $row->service->service_name ?? '-')
-            ->editColumn('passing_marks', fn ($row) => SubjectMaxMarksDataTable::marks($row->passing_marks))
+            ->editColumn('passing_marks', fn ($row) => self::percent($row->passing_marks))
             ->addColumn('status', fn ($row) => $this->statusCell((bool) $row->active_inactive))
             ->addColumn('actions', fn ($row) => $this->actionsCell((bool) $row->active_inactive))
             ->setRowAttr([
@@ -49,6 +49,12 @@ class ServicePassingMarksDataTable extends DataTable
             ->rawColumns(['service_master_pk', 'status', 'actions']);
     }
 
+    /** Passing marks shown as a percentage, e.g. "40%" (blank when unset). */
+    public static function percent($value): string
+    {
+        return $value === null || $value === '' ? '' : SubjectMaxMarksDataTable::marks($value) . '%';
+    }
+
     public function query(ServicePassingMarksMaster $model): Builder
     {
         $query = $model->newQuery()->with('service');
@@ -67,7 +73,7 @@ class ServicePassingMarksDataTable extends DataTable
             Column::computed('DT_RowIndex')->title('S. No.')->addClass('coe-col-sno'),
             Column::make('service_master_pk')->title('Service'),
             Column::make('service_name')->title('Service Name'),
-            Column::make('passing_marks')->title('Passing Marks'),
+            Column::make('passing_marks')->title('Passing Percentage'),
             Column::computed('status')->title('Status')->addClass('coe-col-center coe-cell-status'),
             Column::computed('actions')->title('Action')->addClass('coe-cell-actions'),
         ];

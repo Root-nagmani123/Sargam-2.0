@@ -1200,7 +1200,10 @@
                 } else if (f.fixed !== undefined) {
                     input(f).val(f.fixed);   // frozen field: always its fixed value
                 } else {
-                    input(f).val(isEdit ? cellText($row, f) : '');
+                    var text = isEdit ? cellText($row, f) : '';
+                    // A number cell may carry a unit (e.g. "40%"); the input takes the number only.
+                    if (f.type === 'number') { text = text.replace(/[^\d.\-]/g, ''); }
+                    input(f).val(text);
                 }
             });
             $status.val(isEdit ? $row.attr('data-coe-active') : '1').trigger('change.select2');
