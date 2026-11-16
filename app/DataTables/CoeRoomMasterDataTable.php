@@ -33,7 +33,8 @@ class CoeRoomMasterDataTable extends DataTable
 
         return $table
             ->addIndexColumn()
-            ->editColumn('room_name', fn ($row) => e(trim((string) $row->room_name)))
+            // The cell shows the Venue Master full name; the stored short name if none matches.
+            ->editColumn('room_name', fn ($row) => e(self::roomFullName($row)))
             // Selects: the cell shows the name, the pk rides on data-coe-val-*.
             ->editColumn('building_master_pk', fn ($row) => e(trim((string) $row->building_name)))
             ->editColumn('floor_master_pk', fn ($row) => e(trim((string) $row->floor_name)))
@@ -52,7 +53,10 @@ class CoeRoomMasterDataTable extends DataTable
                 'data-coe-val-floor' => fn ($row) => (string) $row->floor_master_pk,
                 'data-coe-val-type' => fn ($row) => (string) $row->room_type,
             ])
-            ->filterColumn('room_name', fn ($q, $kw) => $q->where('building_floor_room_mapping.room_name', 'like', '%'.$kw.'%'))
+            ->filterColumn('room_name', fn ($q, $kw) => $q->where(fn ($w) => $w
+                ->where('building_floor_room_mapping.room_name', 'like', '%'.$kw.'%')
+                ->orWhereRaw('('.self::venueNameSql().') like ?', ['%'.$kw.'%'])))
+            ->orderColumn('room_name', 'room_full_name $1')
             ->filterColumn('building_master_pk', fn ($q, $kw) => $q->where('b.building_name', 'like', '%'.$kw.'%'))
             ->filterColumn('floor_master_pk', fn ($q, $kw) => $q->where('f.floor_name', 'like', '%'.$kw.'%'))
             ->filterColumn('room_type', fn ($q, $kw) => $q->where('building_floor_room_mapping.room_type', 'like', '%'.$kw.'%'))
@@ -67,21 +71,42 @@ class CoeRoomMasterDataTable extends DataTable
             ->orderBy('b.building_name')->orderBy('building_floor_room_mapping.floor_master_pk')->orderBy('building_floor_room_mapping.room_name');
     }
 
-    /** Rooms of Classroom buildings, with building_name / floor_name. */
+    /** Rooms of Classroom buildings, with building_name / floor_name / room_full_name. */
     public static function classroomRooms(Builder $query): Builder
     {
         return $query
             ->join('building_master as b', 'b.pk', '=', 'building_floor_room_mapping.building_master_pk')
             ->leftJoin('floor_master as f', 'f.pk', '=', 'building_floor_room_mapping.floor_master_pk')
             ->where('b.building_type', BuildingMaster::TYPE_CLASSROOM)
-            ->select('building_floor_room_mapping.*', 'b.building_name', 'f.floor_name');
+            ->select('building_floor_room_mapping.*', 'b.building_name', 'f.floor_name')
+            ->selectRaw('('.self::venueNameSql().') as room_full_name');
+    }
+
+    /**
+     * venue_name of the Venue Master row whose short name is the room's room_name
+     * (an active one first). Explicit collation: the two columns' collations differ.
+     */
+    public static function venueNameSql(): string
+    {
+        return 'SELECT vm.venue_name FROM venue_master vm'
+            . ' WHERE TRIM(vm.venue_short_name) COLLATE utf8mb4_general_ci'
+            . ' = TRIM(building_floor_room_mapping.room_name) COLLATE utf8mb4_general_ci'
+            . ' ORDER BY vm.active_inactive = 1 DESC, vm.venue_id LIMIT 1';
+    }
+
+    /** The room's full name for display: Venue Master venue_name, else the stored short name. */
+    public static function roomFullName(object $row): string
+    {
+        $full = trim((string) ($row->room_full_name ?? ''));
+
+        return $full !== '' ? $full : trim((string) $row->room_name);
     }
 
     public function getColumns(): array
     {
         return [
             Column::computed('DT_RowIndex')->title('S. No.')->addClass('coe-col-sno'),
-            Column::make('room_name')->title('Room Name'),
+            Column::make('room_name')->title('Room Full Name'),
             Column::make('building_master_pk')->title('Building'),
             Column::make('floor_master_pk')->title('Floor'),
             Column::make('room_type')->title('Room Type'),
