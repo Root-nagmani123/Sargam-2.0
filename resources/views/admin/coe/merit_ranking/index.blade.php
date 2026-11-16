@@ -84,8 +84,8 @@
 
             @if ($pending > 0)
                 <p class="coe-muted small mb-3">
-                    {{ $pending }} OT(s) on this course are not ranked yet: some of their marks are still to be approved.
-                    They show here once every subject held so far is evaluated.
+                    {{ $pending }} OT(s) on this course are not ranked yet: some of their marks are still to be approved or moderated.
+                    They show here once every subject held so far is evaluated and moderated.
                 </p>
             @endif
             @if ($noPassMarks)
@@ -176,7 +176,7 @@ $(function () {
         searchSlot: '#mrDtSearch',
         colvisGrid: '#mrColumnToggleGrid',
         colvisKey: 'coeMeritRanking:hiddenColumns:v4',
-        empty: { title: 'No Ranked Officers', zeroTitle: 'No Officers Found', text: 'Nobody on this course has all their marks approved yet. Courses show here once an exam on an Active drive is over.' }
+        empty: { title: 'No Ranked Officers', zeroTitle: 'No Officers Found', text: 'Nobody on this course has all their marks approved and moderated yet. Courses show here once an exam on an Active drive is over.' }
     });
 
     $('#mrFilterCourse').on('change', function () { $('#mrFilterForm').submit(); });

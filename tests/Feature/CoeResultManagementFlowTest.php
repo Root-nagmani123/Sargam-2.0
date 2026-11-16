@@ -158,6 +158,14 @@ class CoeResultManagementFlowTest extends TestCase
         ]);
     }
 
+    /** Marks Moderation done on the drive, with each moderated mark equal to the approved one. */
+    private function moderateAll(): void
+    {
+        DB::table('coe_evaluation_marks')->where('examination_drive_id', $this->drive->id)
+            ->where('status', EvaluationMark::STATUS_APPROVED)->where('is_absent', 0)
+            ->update(['moderated_marks' => DB::raw('marks'), 'moderated_by' => $this->admin->user_id, 'moderated_at' => now()]);
+    }
+
     private function compilationRow(int $subject): ?array
     {
         $rows = $this->actingAs($this->admin)->get(route('admin.coe.result-compilation.index'))
@@ -443,6 +451,11 @@ class CoeResultManagementFlowTest extends TestCase
         $this->assertSame(count($this->ots), $merit()->viewData('pending'));
 
         $this->save(3, [$z => [$o2 => 'AB'] + $this->fill($z, '10')[$z]], true)->assertOk();
+        // Every mark approved but none moderated yet: still nobody is ranked.
+        $this->assertSame([], $merit()->viewData('rows'));
+        $this->assertSame(count($this->ots), $merit()->viewData('pending'));
+
+        $this->moderateAll();
         $page = $merit();
         $rows = collect($page->viewData('rows'))->keyBy('student');
         $this->assertSame(0, $page->viewData('pending'));
@@ -480,6 +493,7 @@ class CoeResultManagementFlowTest extends TestCase
 
         $this->save(1, [$x => [$o0 => '40'] + $this->fill($x, '10')[$x]] + $this->fill($y, '5'), true)->assertOk();
         $this->save(3, $this->fill($z, '12'), true)->assertOk();
+        $this->moderateAll();
 
         $merit = fn () => $this->actingAs($this->admin)
             ->get(route('admin.coe.merit-ranking.index', ['course' => $this->drive->course_master_pk]))->assertOk();
@@ -503,6 +517,7 @@ class CoeResultManagementFlowTest extends TestCase
         $z = $this->key($this->subjectB, 'Z');
         $this->save(1, $this->fill($x, '10') + $this->fill($y, '5'), true)->assertOk();
         $this->save(3, $this->fill($z, '10'), true)->assertOk();
+        $this->moderateAll();
 
         $page = $this->actingAs($this->admin)->get(route('admin.coe.merit-ranking.index'))->assertOk()->assertSee('>All</option>', false);
         $this->assertNull($page->viewData('coursePk'));
