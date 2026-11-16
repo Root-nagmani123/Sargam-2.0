@@ -600,41 +600,62 @@ class RoleController extends Controller
             ->all();
     }
 
-    /** Card id => "Home, Setup": the tabs whose dashboard shows each card for the role. */
-    private function cardTabNames(int $roleId, ?int $cardId = null): array
+    /** Card id => ids of the live tabs whose dashboard shows it for the role, in header order. */
+    private function cardTabIds(int $roleId, ?int $cardId = null): array
     {
-        $names = DashboardCard::modules()->pluck('name', 'id');
+        $live = DashboardCard::modules()->pluck('id')->map(fn ($id) => (int) $id);
 
         return DB::table('role_dashboard_cards')->where('role_id', $roleId)
             ->when($cardId !== null, fn ($q) => $q->where('dashboard_card_id', $cardId))
             ->get(['dashboard_card_id', 'sidebar_category_id'])
             ->groupBy('dashboard_card_id')
-            ->map(fn ($rows) => $names->only($rows->pluck('sidebar_category_id')->all())->implode(', '))
+            ->map(fn ($rows) => $live->intersect($rows->pluck('sidebar_category_id')->map(fn ($v) => (int) $v))->values()->all())
             ->all();
     }
 
-    /**
-     * One tab's card list: the cards the role has on this tab, plus the ones it has
-     * on no tab yet, so they can be switched on. A card on another tab is listed
-     * only there, rather than as Disabled on every tab.
-     */
-    private function tabCardList(array $assignedCardIds, array $cardTabs)
+    /** cardTabIds() as names: card id => "Home, Setup". */
+    private function cardTabNames(array $tabIds): array
     {
-        return DashboardCard::orderBy('id', 'desc')->get()
-            ->filter(fn ($card) => in_array($card->id, $assignedCardIds) || ! isset($cardTabs[$card->id]))
-            ->values();
+        $names = DashboardCard::modules()->pluck('name', 'id');
+
+        return array_map(fn (array $ids) => $names->only($ids)->implode(', '), $tabIds);
+    }
+
+    /** The tab the grid is filtered to: null for All tabs (the default), an unknown one is Home. */
+    private function gridTab(mixed $requested)
+    {
+        if (in_array($requested, [null, '', 'all'], true)) {
+            return null;
+        }
+        $module = DashboardCard::resolveModule($requested);
+        abort_if($module === null, 404, 'No header module is configured.');
+
+        return $module;
+    }
+
+    /**
+     * The grid's cards, the ids of those Active and each card's tab ids. On one tab:
+     * the cards the role has there, plus the ones it has on no tab yet so they can be
+     * switched on; a card on another tab is listed only there. On All tabs: every
+     * card, Active when the role has it on any tab.
+     */
+    private function gridCards(Role $role, $module): array
+    {
+        $tabIds = $this->cardTabIds($role->id);
+        $active = $module ? $this->assignedCardIds($role, $module->id) : array_keys(array_filter($tabIds));
+        $cards = DashboardCard::orderBy('id', 'desc')->get();
+        if ($module) {
+            $cards = $cards->filter(fn ($card) => in_array($card->id, $active) || empty($tabIds[$card->id]))->values();
+        }
+
+        return [$cards, $active, $tabIds];
     }
 
     public function showDashboard(Request $request, $id)
     {
         $role = Role::findOrFail($id);
-        $module = DashboardCard::resolveModule($request->query('module'));
-        abort_if($module === null, 404, 'No header module is configured.');
-
-        $assignedCardIds = $this->assignedCardIds($role, $module->id);
-        $cardTabs = $this->cardTabNames($role->id);
-        $allCards = $this->tabCardList($assignedCardIds, $cardTabs);
-        $materialIcons = $this->materialIconNames();
+        $module = $this->gridTab($request->query('module'));
+        [$allCards, $assignedCardIds, $cardTabIds] = $this->gridCards($role, $module);
 
         return view('roles-permissions.assign-dashboard', [
             'role' => $role,
@@ -642,8 +663,9 @@ class RoleController extends Controller
             'module' => $module,
             'allCards' => $allCards,
             'assignedCardIds' => $assignedCardIds,
-            'cardTabs' => $cardTabs,
-            'materialIcons' => $materialIcons,
+            'cardTabIds' => $cardTabIds,
+            'cardTabs' => $this->cardTabNames($cardTabIds),
+            'materialIcons' => $this->materialIconNames(),
             'enabledCount' => $allCards->whereIn('id', $assignedCardIds)->count(),
         ]);
     }
@@ -660,13 +682,12 @@ class RoleController extends Controller
         abort_unless(in_array($format, ['csv', 'excel', 'pdf', 'print'], true), 404);
 
         $role = Role::findOrFail($id);
-        $module = DashboardCard::resolveModule($request->input('module'));
-        abort_if($module === null, 404);
-        $assignedCardIds = $this->assignedCardIds($role, $module->id);
-        $cardTabs = $this->cardTabNames($role->id);
+        $module = $this->gridTab($request->input('module'));
+        [$cards, $assignedCardIds, $cardTabIds] = $this->gridCards($role, $module);
+        $tabName = $module->name ?? 'All tabs';
 
         $rows = $this->service->filterDashboardCardRows(
-            $this->service->dashboardCardRows($this->tabCardList($assignedCardIds, $cardTabs), $assignedCardIds, $cardTabs),
+            $this->service->dashboardCardRows($cards, $assignedCardIds, $this->cardTabNames($cardTabIds)),
             $request->input('q'),
             $request->input('status')
         );
@@ -674,8 +695,8 @@ class RoleController extends Controller
 
         // Two renderings of the same filters: the print sheet gets the bold HTML
         // one, the CSV / .xlsx / PDF band gets plain text.
-        $bits = ['<strong>Module:</strong> '.e($module->name)];
-        $plain = ['Module: '.$module->name];
+        $bits = ['<strong>Module:</strong> '.e($tabName)];
+        $plain = ['Module: '.$tabName];
         if (in_array($request->input('status'), ['enabled', 'disabled'], true)) {
             $label = $request->input('status') === 'enabled' ? 'Active' : 'Inactive';
             $bits[] = '<strong>Status:</strong> '.$label;
@@ -703,8 +724,8 @@ class RoleController extends Controller
             $format,
             $rows,
             $columns,
-            'Dashboard Cards — '.$role->name.' — '.$module->name,
-            'DashboardCards_'.$slug.'_'.(\Illuminate\Support\Str::slug($module->name) ?: $module->id),
+            'Dashboard Cards — '.$role->name.' — '.$tabName,
+            'DashboardCards_'.$slug.'_'.(\Illuminate\Support\Str::slug($tabName) ?: $module->id),
             empty($plain) ? null : implode('  |  ', $plain),
             // Mirrors assign_dashboard_print.blade.php's column widths.
             [
@@ -745,6 +766,13 @@ class RoleController extends Controller
 
         $card = DashboardCard::findOrFail($cardId);
 
+        // From the All tabs view, Deactivate takes the card off every tab for the role.
+        if ($request->input('module') === 'all' && $status != 1) {
+            DB::table('role_dashboard_cards')->where(['role_id' => $role->id, 'dashboard_card_id' => $card->id])->delete();
+
+            return response()->json(['success' => true, 'message' => 'Dashboard card updated successfully.', 'tabs' => '-']);
+        }
+
         // A module that is not a live header module must be refused, not
         // silently turned into Home: the admin would be editing the wrong dashboard.
         $module = DashboardCard::liveModule($request->input('module'));
@@ -763,7 +791,7 @@ class RoleController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Dashboard card updated successfully.',
-            'tabs' => $this->cardTabNames($role->id, $card->id)[$card->id] ?? '-',
+            'tabs' => ($this->cardTabNames($this->cardTabIds($role->id, $card->id))[$card->id] ?? '') ?: '-',
         ]);
     }
 

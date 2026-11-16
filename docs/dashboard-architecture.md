@@ -321,6 +321,9 @@ This is where the actual dashboard is **built** for the logged-in user.
 - `GET /roles/{id}/dashboard?module=<id>` → Show "Assign Dashboard" page for one module; it lists the cards the role has
   on that module plus those it has on no module yet, never a card that lives only on another module.
   A Dashboard Tab column names every module the role has each card on
+  With no `module` (or `module=all`, the default) it is the All dashboards view: every card, Active when
+  the role has it on any module. There, Deactivate posts `module=all` (removes it from every module) and
+  Activate opens the card dialog to pick the module. The export takes the same `module=all`
 - `POST /roles/{id}/dashboard` → Update card assignment on a module (AJAX; `card_id`, `module`, `status`)
 - `GET /roles/{id}/dashboard/export?module=<id>` → Export that module's card assignments
 - `POST /dashboard-cards` → Create new dashboard card; with `role_id` + `module` (the "Dashboard tab"

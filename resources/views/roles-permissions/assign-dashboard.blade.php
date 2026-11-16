@@ -31,6 +31,9 @@
 @php
     $cardRows = app(\App\Services\RoleService::class)->dashboardCardRows($allCards, $assignedCardIds, $cardTabs);
     $disabledCount = count($cardRows) - $enabledCount;
+    // null $module = the All tabs view; dialogs then start on Home.
+    $exportModule = $module->id ?? 'all';
+    $defaultTabId = $module->id ?? ($modules->firstWhere('slug', 'home')->id ?? $modules->first()?->id);
 @endphp
 <div class="container-fluid rp-page rp-dashboard-page">
     {{-- No :items — see the note on assign-permission.blade.php; the trail comes
@@ -79,19 +82,19 @@
                     aria-labelledby="rpDownloadMenuBtn">
                     <li>
                         <a class="dropdown-item" id="rpCsvLink"
-                           href="{{ route('roles.dashboard.export', ['id' => $role->id, 'module' => $module->id, 'format' => 'csv']) }}">
+                           href="{{ route('roles.dashboard.export', ['id' => $role->id, 'module' => $exportModule, 'format' => 'csv']) }}">
                             <i class="bi bi-filetype-csv" aria-hidden="true"></i><span>CSV</span>
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item" id="rpExcelLink"
-                           href="{{ route('roles.dashboard.export', ['id' => $role->id, 'module' => $module->id, 'format' => 'excel']) }}">
+                           href="{{ route('roles.dashboard.export', ['id' => $role->id, 'module' => $exportModule, 'format' => 'excel']) }}">
                             <i class="bi bi-file-earmark-excel" aria-hidden="true"></i><span>Excel</span>
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item" id="rpPdfLink"
-                           href="{{ route('roles.dashboard.export', ['id' => $role->id, 'module' => $module->id, 'format' => 'pdf']) }}">
+                           href="{{ route('roles.dashboard.export', ['id' => $role->id, 'module' => $exportModule, 'format' => 'pdf']) }}">
                             <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i><span>PDF</span>
                         </a>
                     </li>
@@ -100,7 +103,7 @@
 
             {{-- Print stays OUTSIDE the dropdown: it opens a sheet rather than
                  saving a file, so it is not one of the download formats. --}}
-            <a href="{{ route('roles.dashboard.export', ['id' => $role->id, 'module' => $module->id, 'format' => 'print']) }}"
+            <a href="{{ route('roles.dashboard.export', ['id' => $role->id, 'module' => $exportModule, 'format' => 'print']) }}"
                id="rpPrintLink" target="_blank" rel="noopener"
                class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
                 <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
@@ -122,10 +125,12 @@
 
                     <div class="programme-dt-filter-select">
                         <select id="rpModuleFilter" class="form-select select2" aria-label="Module dashboard">
+                            <option value="all" data-url="{{ route('roles.dashboard', ['id' => $role->id]) }}"
+                                    @selected($module === null)>All dashboards</option>
                             @foreach ($modules as $m)
                                 <option value="{{ $m->id }}"
                                         data-url="{{ route('roles.dashboard', ['id' => $role->id, 'module' => $m->id]) }}"
-                                        @selected($m->id === $module->id)>{{ $m->name }} dashboard</option>
+                                        @selected($m->id === ($module->id ?? null))>{{ $m->name }} dashboard</option>
                             @endforeach
                         </select>
                     </div>
@@ -209,6 +214,7 @@
                                                 data-icon="{{ $row['icon'] }}"
                                                 data-color="{{ $row['color_class'] }}"
                                                 data-sort="{{ $row['sort_order'] }}"
+                                                data-tabs="{{ implode(',', $cardTabIds[$row['id']] ?? []) }}"
                                                 title="Edit {{ $row['label'] }}"
                                                 aria-label="Edit card {{ $row['label'] }}">
                                             <span class="rp-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
@@ -302,7 +308,7 @@
                             <select class="form-select rp-control rp-card-tab select2" name="module"
                                     id="rp{{ ucfirst($mode) }}CardTab" data-placeholder="Dashboard tab">
                                 @foreach ($modules as $m)
-                                    <option value="{{ $m->id }}" @selected($m->id === $module->id)>{{ $m->name }}</option>
+                                    <option value="{{ $m->id }}" @selected($m->id === $defaultTabId)>{{ $m->name }}</option>
                                 @endforeach
                             </select>
                             <p class="rp-form-help">
@@ -416,10 +422,11 @@ $(function () {
     var CARD_BASE = "{{ url('dashboard-cards') }}";
     var ASSIGN_URL = "{{ route('assign.roles.dashboard', $role->id) }}";
     var TOKEN = "{{ csrf_token() }}";
-    var MODULE_ID = {{ (int) $module->id }};
+    /* null on the All dashboards view. */
+    var MODULE_ID = @json($module ? (int) $module->id : null);
+    var DEFAULT_TAB_ID = {{ (int) $defaultTabId }};
     var ROLE_ID = {{ (int) $role->id }};
-    var HOME_MODULE_ID = {{ (int) ($modules->firstWhere('slug', 'home')->id ?? $module->id) }};
-    var HOME_MODULE_URL = @json(route('roles.dashboard', ['id' => $role->id]));
+    var ALL_TABS_URL = @json(route('roles.dashboard', ['id' => $role->id]));
 
     var ICON_NAMES = (function () {
         try { return JSON.parse(document.getElementById('rpIconNames').textContent) || []; }
@@ -488,13 +495,14 @@ $(function () {
     /* Module: Select2 fires a jQuery change, so bind with jQuery (§3c). */
     $('#rpModuleFilter').on('change', function () {
         var url = $(this).find('option:selected').attr('data-url');
-        if (url && Number(this.value) !== MODULE_ID) { window.location.assign(url); }
+        var picked = this.value === 'all' ? null : Number(this.value);
+        if (url && picked !== MODULE_ID) { window.location.assign(url); }
     });
 
-    /* Reset: status back to All, search cleared, and the Home module. */
+    /* Reset: status back to Active, search cleared, and All dashboards. */
     $('#rpResetFilters').on('click', function () {
-        if (MODULE_ID !== HOME_MODULE_ID) {
-            window.location.assign(HOME_MODULE_URL);
+        if (MODULE_ID !== null) {
+            window.location.assign(ALL_TABS_URL);
             return;
         }
         $('.rp-status-pill[data-rp-status="enabled"]').trigger('click');
@@ -658,16 +666,26 @@ $(function () {
         var $checkbox = $(this);
         var enabled = $checkbox.is(':checked');
 
+        // All dashboards: there is no one tab to switch it on for, so Activate
+        // opens the card's dialog with Status Active to pick the tab.
+        if (MODULE_ID === null && enabled) {
+            $checkbox.prop('checked', false);
+            $checkbox.closest('tr').find('.rp-edit-card-btn').trigger('click');
+            $('#rpEditCardStatus').val('1').trigger('change.select2');
+            return;
+        }
+
         $.ajax({
             url: ASSIGN_URL,
             type: 'POST',
-            data: { _token: TOKEN, card_id: $checkbox.data('id'), module: MODULE_ID, status: enabled ? 1 : 0 },
+            data: { _token: TOKEN, card_id: $checkbox.data('id'), module: MODULE_ID === null ? 'all' : MODULE_ID, status: enabled ? 1 : 0 },
             success: function (response) {
                 if (response && response.success) {
                     paintCardRow($checkbox, enabled);
                     if (response.tabs) {
                         var $tr = $checkbox.closest('tr');
                         $tr.find('.rp-card-tabs').text(response.tabs);
+                        if (MODULE_ID === null) { $tr.find('.rp-edit-card-btn').attr('data-tabs', ''); }
                         dt.row($tr).invalidate();
                     }
                     if (typeof toastr !== 'undefined') { toastr.success(response.message); }
@@ -843,13 +861,14 @@ $(function () {
     var $editModal = $('#rpEditCardModal');
     var pendingEditIcon = '';
     var editOpenedStatus = '';
+    var editFromTab = DEFAULT_TAB_ID;
 
     $('#rpAddCardBtn').on('click', function () {
         var $form = $('#rpAddCardForm');
         $form[0].reset();
         $form.find('.is-invalid').removeClass('is-invalid');
         // reset() puts the <select> back on the tab being viewed; repaint Select2.
-        $('#rpAddCardTab').val(String(MODULE_ID)).trigger('change.select2');
+        $('#rpAddCardTab').val(String(DEFAULT_TAB_ID)).trigger('change.select2');
         $('#rpAddCardStatus').val('1').trigger('change.select2');
         bootstrap.Modal.getOrCreateInstance($addModal[0]).show();
     });
@@ -877,8 +896,11 @@ $(function () {
         $('#rpEditCardColor').val($btn.attr('data-color') || 'stat-icon-blue')
             .trigger('change.select2');
         $('#rpEditCardSort').val($btn.attr('data-sort'));
-        // Opened from this tab's grid, so this is the tab a switch moves it from.
-        $('#rpEditCardTab').val(String(MODULE_ID)).trigger('change.select2');
+        // The tab a switch moves it from: the one being viewed, or on All
+        // dashboards the card's first tab (Home when it is on none).
+        editFromTab = MODULE_ID !== null ? MODULE_ID
+            : (Number(($btn.attr('data-tabs') || '').split(',')[0]) || DEFAULT_TAB_ID);
+        $('#rpEditCardTab').val(String(editFromTab)).trigger('change.select2');
         // The row's live switch, so a save that changes nothing changes nothing.
         editOpenedStatus = $btn.closest('tr').find('.card-toggle').is(':checked') ? '1' : '0';
         $('#rpEditCardStatus').val(editOpenedStatus).trigger('change.select2');
@@ -895,7 +917,7 @@ $(function () {
     /* Moving a card to another tab switches it on there by default (PR #353
        Option B); the Status field can still override it. Select2 fires a jQuery change. */
     $('#rpEditCardTab').on('change', function () {
-        $('#rpEditCardStatus').val(String(this.value) !== String(MODULE_ID) ? '1' : editOpenedStatus)
+        $('#rpEditCardStatus').val(String(this.value) !== String(editFromTab) ? '1' : editOpenedStatus)
             .trigger('change.select2');
     });
 
@@ -977,7 +999,7 @@ $(function () {
         $.ajax({
             url: CARD_BASE + '/' + id,
             type: 'POST',
-            data: $.extend({ _token: TOKEN, _method: 'PUT', from_module: MODULE_ID }, data),
+            data: $.extend({ _token: TOKEN, _method: 'PUT', from_module: editFromTab }, data),
             success: function (response) {
                 if (!response || !response.success) {
                     if (typeof toastr !== 'undefined') { toastr.error((response && response.message) || 'Something went wrong'); }
@@ -989,7 +1011,7 @@ $(function () {
                 // Tab or status changed: this tab's Status, toggle, Delete guard and
                 // Dashboard Tab cell all changed with it, so reload rather than
                 // repaint them by hand.
-                if (response.moved || String(data.module) !== String(MODULE_ID) || data.status !== editOpenedStatus) {
+                if (response.moved || String(data.module) !== String(editFromTab) || data.status !== editOpenedStatus) {
                     window.location.reload();
                     return;
                 }

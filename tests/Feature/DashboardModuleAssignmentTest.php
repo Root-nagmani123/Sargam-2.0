@@ -153,10 +153,34 @@ class DashboardModuleAssignmentTest extends TestCase
         $setup->assertOk();
         $this->assertSame([$this->cardId], array_map('intval', $setup->viewData('assignedCardIds')));
 
-        $home = $this->as($admin, ['Super Admin'])->get(route('roles.dashboard', ['id' => $this->roleId]));
+        $home = $this->as($admin, ['Super Admin'])->get(route('roles.dashboard', ['id' => $this->roleId, 'module' => $this->homeId]));
         $home->assertOk();
         $this->assertSame([], $home->viewData('assignedCardIds'));
         $this->assertSame($this->homeId, (int) $home->viewData('module')->id);
+
+        // No module (or ?module=all) is All dashboards: Active means on any tab.
+        foreach ([[], ['module' => 'all']] as $q) {
+            $all = $this->as($admin, ['Super Admin'])->get(route('roles.dashboard', ['id' => $this->roleId] + $q));
+            $all->assertOk()->assertSee('All dashboards');
+            $this->assertNull($all->viewData('module'));
+            $this->assertSame([$this->cardId], array_map('intval', $all->viewData('assignedCardIds')));
+        }
+    }
+
+    public function test_deactivating_from_all_dashboards_takes_the_card_off_every_tab(): void
+    {
+        $admin = $this->staffWithRole('Super Admin');
+        $this->assign($this->homeId);
+        $this->assign($this->setupId);
+        $url = route('assign.roles.dashboard', $this->roleId);
+
+        // Activate needs a tab: 'all' only ever deactivates.
+        $this->as($admin, ['Super Admin'])->post($url, ['card_id' => $this->cardId, 'module' => 'all', 'status' => 1])->assertStatus(422);
+        $this->assertSame([$this->homeId, $this->setupId], $this->tabsOf($this->roleId, $this->cardId));
+
+        $this->as($admin, ['Super Admin'])->post($url, ['card_id' => $this->cardId, 'module' => 'all', 'status' => 0])
+            ->assertOk()->assertJson(['success' => true, 'tabs' => '-']);
+        $this->assertSame([], $this->tabsOf($this->roleId, $this->cardId));
     }
 
     public function test_exports_are_for_the_selected_module(): void
@@ -174,9 +198,14 @@ class DashboardModuleAssignmentTest extends TestCase
         ));
 
         $homePrint = $this->as($admin, ['Super Admin'])
-            ->get(route('roles.dashboard.export', ['id' => $this->roleId, 'format' => 'print', 'status' => 'enabled']));
+            ->get(route('roles.dashboard.export', ['id' => $this->roleId, 'module' => $this->homeId, 'format' => 'print', 'status' => 'enabled']));
         $homePrint->assertOk();
         $this->assertSame([], $homePrint->viewData('rows'), 'Home has nothing enabled for this role');
+
+        $allPrint = $this->as($admin, ['Super Admin'])
+            ->get(route('roles.dashboard.export', ['id' => $this->roleId, 'format' => 'print', 'status' => 'enabled']));
+        $allPrint->assertOk()->assertSee('Module:</strong> All tabs', false);
+        $this->assertSame([[$this->cardId, $setupName]], array_map(fn ($r) => [(int) $r['id'], $r['tabs']], $allPrint->viewData('rows')));
 
         $this->as($admin, ['Super Admin'])
             ->get(route('roles.dashboard.export', ['id' => $this->roleId, 'module' => $this->setupId, 'format' => 'csv']))
