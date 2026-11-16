@@ -42,6 +42,22 @@ class CoeMarksheetFlowTest extends TestCase
         $this->markTestSkipped('Needs an OT ranked in Merit & Ranking with a Pass / Fail'.($unsigned ? ', not signed yet.' : '.'));
     }
 
+    /** Puts the UDC and AAO signatures on $row's marksheet, as if both had verified it, so the COE (Super Admin) can publish. */
+    private function verifiedByUdcAndAao(array $row): void
+    {
+        $pks = app(MarksheetService::class)->activeSignatures()->pluck('pk', 'designation_name');
+        if (! isset($pks['UDC'], $pks['AAO'])) {
+            $this->markTestSkipped('Needs an Active UDC and AAO signature.');
+        }
+        $at = now()->format('Y-m-d H:i:s');
+        $record = Marksheet::where('course_master_pk', (int) $row['course_key'])->where('student_master_pk', (int) $row['code'])->first();
+        $record->signed = [
+            'UDC' => ['signature' => (int) $pks['UDC'], 'by' => null, 'at' => $at],
+            'AAO' => ['signature' => (int) $pks['AAO'], 'by' => null, 'at' => $at],
+        ];
+        $record->save();
+    }
+
     public function test_the_screens_open(): void
     {
         $admin = $this->actingAs($this->admin());
@@ -71,10 +87,13 @@ class CoeMarksheetFlowTest extends TestCase
         }
     }
 
-    public function test_view_and_verify_lists_every_pending_marksheet_of_the_course_clicked_one_first(): void
+    public function test_view_and_verify_lists_every_marksheet_awaiting_the_coe_clicked_one_first(): void
     {
-        $row = $this->generated();
-        $pending = collect(app(MarksheetService::class)->courseRows($row['course_key']))->where('published', false);
+        $row = $this->generated(true);
+        $this->verifiedByUdcAndAao($row);
+        // The Super Admin signs as the COE, so sees only the marksheets the AAO has verified.
+        $pending = collect(app(MarksheetService::class)->courseRows($row['course_key']))
+            ->filter(fn ($m) => ! $m['published'] && isset($m['signatures']['AAO']) && ! isset($m['signatures']['COE']));
 
         $rows = $this->actingAs($this->admin())
             ->get(route('admin.coe.marksheet-generation.verify', ['course' => $row['course_key'], 'first' => $row['code']]))
@@ -93,6 +112,7 @@ class CoeMarksheetFlowTest extends TestCase
     public function test_publish_is_refused_until_all_three_signatures_are_active(): void
     {
         $row = $this->generated(true);
+        $this->verifiedByUdcAndAao($row);
         SignatureMaster::where('designation_name', 'AAO')->update(['active_inactive' => 0]);
 
         $this->actingAs($this->admin())->postJson(route('admin.coe.marksheet-generation.publish'), ['course' => $row['course_key'], 'ots' => [$row['code']]])
@@ -108,6 +128,7 @@ class CoeMarksheetFlowTest extends TestCase
         if (app(MarksheetService::class)->signatureProblem() !== null) {
             $this->markTestSkipped('Needs one Active UDC, AAO and COE signature with its image.');
         }
+        $this->verifiedByUdcAndAao($row);
 
         $this->actingAs($this->admin())->postJson(route('admin.coe.marksheet-generation.publish'), ['course' => $row['course_key'], 'ots' => [$row['code']]])
             ->assertOk()->assertJsonPath('published', 1);

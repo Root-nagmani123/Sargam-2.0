@@ -21,11 +21,11 @@ use Illuminate\Support\Facades\Storage;
  *      marks is not decided yet, so gets no marksheet.
  *   2. Their marksheet is Generated: a coe_marksheets row with its number,
  *      MS/<course short name>/<year>/<serial>, the first time it is listed.
- *   3. It is signed one by one with Verify (verify()): the UDC puts the UDC
- *      signature; the AAO the AAO one, and the UDC one if still blank; the COE
- *      the COE one and any still blank, which publishes it. Each signature is
- *      the designation's Active image in Signature Master. Publishing freezes the
- *      marksheet in `snapshot`; a published marksheet is never recomputed.
+ *   3. It is signed one by one with Verify (verify()), in order: the UDC first,
+ *      then the AAO once the UDC has, then the COE once the AAO has, which
+ *      publishes it. Each puts only their own signature, the designation's Active
+ *      image in Signature Master. Publishing freezes the marksheet in `snapshot`;
+ *      a published marksheet is never recomputed.
  *   4. Verified Marksheet lists the published ones.
  *
  * A course is Active while it has an Active drive, else Archived, so each
@@ -437,13 +437,22 @@ class MarksheetService
         return null;
     }
 
+    /** The designation that signs before $designation (the AAO after the UDC, the COE after the AAO), or null for the UDC. */
+    public static function signsBefore(string $designation): ?string
+    {
+        $order = array_keys(self::SIGNATORIES);
+
+        return $order[array_search($designation, $order, true) - 1] ?? null;
+    }
+
     /* ───────────── Verify & Publish ───────────── */
 
     /**
      * Verify the course's marksheets of these OTs (student pks) as $user: put their
-     * designation's signature on each, and every lower one still blank (the AAO the
-     * UDC's, the COE the UDC's and AAO's). The COE's signature publishes the
-     * marksheet. All or nothing; a published marksheet is skipped.
+     * designation's signature on each. The order is fixed: the AAO only after the
+     * UDC, the COE only after the AAO; the COE's signature publishes the marksheet
+     * and needs all three Active in Signature Master. All or nothing; a published
+     * marksheet, or one already signed by this designation, is skipped.
      *
      * @param  string[]  $codes
      * @return array{as:?string, signed:int, published:int, error:?string}
@@ -467,26 +476,33 @@ class MarksheetService
             }
         }
 
-        // UDC → [UDC]; AAO → [UDC, AAO]; COE → [UDC, AAO, COE]: each put only where still blank.
-        $order = array_keys(self::SIGNATORIES);
-        $mine = array_slice($order, 0, array_search($as, $order, true) + 1);
+        // UDC → AAO → COE: the one before must have signed first.
+        $before = self::signsBefore($as);
         $records = Marksheet::where('course_master_pk', (int) $courseKey)->whereIn('student_master_pk', array_map('intval', $codes))
             ->get()->keyBy(fn (Marksheet $m) => (string) $m->student_master_pk);
 
-        $needed = [];
+        $toSign = 0;
+        $waiting = 0;
         foreach ($codes as $code) {
-            if (! $rows[$code]['published'] && isset($records[$code])) {
-                $needed = array_merge($needed, array_diff($mine, array_keys($records[$code]->signed ?? [])));
+            if ($rows[$code]['published'] || ! isset($records[$code]) || isset($records[$code]->signed[$as])) {
+                continue;
+            }
+            if ($before !== null && ! isset($records[$code]->signed[$before])) {
+                $waiting++;
+            } else {
+                $toSign++;
             }
         }
-        $needed = array_values(array_unique($needed));
-        if ($needed && ($problem = $this->signatureProblem($needed))) {
+        if ($waiting) {
+            return $fail(($waiting === 1 ? '1 marksheet is' : "{$waiting} marksheets are")." not verified by the {$before} yet. The {$before} verifies first, then the {$as}.", $as);
+        }
+        if ($toSign && ($problem = $this->signatureProblem($as === 'COE' ? null : [$as]))) {
             return $fail($problem, $as);
         }
         $signatureOf = $this->activeSignatures()->mapWithKeys(fn (SignatureMaster $s) => [$s->designation_name => (int) $s->pk])->all();
         $now = now();
 
-        [$signed, $published] = DB::transaction(function () use ($rows, $codes, $courseKey, $mine, $as, $signatureOf, $user, $now) {
+        [$signed, $published] = DB::transaction(function () use ($rows, $codes, $courseKey, $before, $as, $signatureOf, $user, $now) {
             $signed = 0;
             $published = 0;
             foreach ($codes as $code) {
@@ -497,16 +513,10 @@ class MarksheetService
                 }
 
                 $put = $record->signed ?? [];
-                $added = false;
-                foreach ($mine as $designation) {
-                    if (! isset($put[$designation])) {
-                        $put[$designation] = ['signature' => $signatureOf[$designation], 'by' => $user->user_id, 'at' => $now->format('Y-m-d H:i:s')];
-                        $added = true;
-                    }
-                }
-                if (! $added) {
+                if (isset($put[$as]) || ($before !== null && ! isset($put[$before]))) {
                     continue;
                 }
+                $put[$as] = ['signature' => $signatureOf[$as], 'by' => $user->user_id, 'at' => $now->format('Y-m-d H:i:s')];
 
                 $record->signed = $put;
                 $record->modified_by = $user->user_id;

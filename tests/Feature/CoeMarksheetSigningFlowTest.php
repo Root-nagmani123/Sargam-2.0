@@ -11,9 +11,9 @@ use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /**
- * COE marksheets are signed one by one with Verify: the UDC puts the UDC signature,
- * the AAO the AAO one (and a blank UDC one), the COE the COE one (and any blank),
- * which publishes the marksheet. Development database, in a transaction.
+ * COE marksheets are signed one by one with Verify, in order: the UDC, then the
+ * AAO, then the COE, which publishes the marksheet. Each puts only their own
+ * signature. Development database, in a transaction.
  */
 class CoeMarksheetSigningFlowTest extends TestCase
 {
@@ -112,20 +112,26 @@ class CoeMarksheetSigningFlowTest extends TestCase
         $this->assertEqualsCanonicalizing(['UDC', 'AAO', 'COE'], array_keys($record->snapshot['signatures']));
     }
 
-    public function test_aao_also_signs_a_blank_udc_place(): void
+    public function test_aao_cannot_verify_before_the_udc(): void
     {
         $row = $this->unsigned();
 
-        $this->verify($this->signer('AAO'), $row)->assertOk()->assertJsonPath('signed', 1)->assertJsonPath('published', 0);
-        $this->assertEqualsCanonicalizing(['UDC', 'AAO'], array_keys($this->record($row)->signed));
+        $this->verify($this->signer('AAO'), $row)->assertUnprocessable()->assertJsonPath('message', fn ($m) => str_contains($m, 'not verified by the UDC'));
+        $this->assertNull($this->record($row)->signed);
     }
 
-    public function test_coe_signs_every_blank_place_and_publishes(): void
+    public function test_coe_cannot_verify_before_the_aao(): void
     {
         $row = $this->unsigned();
 
-        $this->verify($this->signer('COE'), $row)->assertOk()->assertJsonPath('published', 1);
-        $this->assertEqualsCanonicalizing(['UDC', 'AAO', 'COE'], array_keys($this->record($row)->signed));
+        $coe = $this->signer('COE');
+        $this->verify($coe, $row)->assertUnprocessable()->assertJsonPath('message', fn ($m) => str_contains($m, 'not verified by the AAO'));
+
+        // Only the UDC has signed: still not the COE's turn.
+        $this->verify($this->signer('UDC'), $row)->assertOk()->assertJsonPath('signed', 1);
+        $this->verify($coe, $row)->assertUnprocessable()->assertJsonPath('message', fn ($m) => str_contains($m, 'not verified by the AAO'));
+        $this->assertSame(['UDC'], array_keys($this->record($row)->signed));
+        $this->assertFalse($this->record($row)->isPublished());
     }
 
     public function test_a_signer_needs_their_signature_in_signature_master(): void

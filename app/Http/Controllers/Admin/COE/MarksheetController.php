@@ -106,15 +106,19 @@ class MarksheetController extends Controller
     }
 
     /**
-     * `can_verify` on each row: not published, and not signed yet by the logged-in
-     * user's designation (a UDC who verified it does not see Verify again).
+     * `can_verify` on each row: not published, not signed yet by the logged-in
+     * user's designation (a UDC who verified it does not see Verify again), and
+     * signed by the one before it (the AAO sees Verify only after the UDC, the COE
+     * only after the AAO).
      */
     private function withCanVerify(Request $request, array $rows): array
     {
         $as = MarksheetService::signerRole($request->user());
+        $before = $as === null ? null : MarksheetService::signsBefore($as);
 
         return array_map(fn ($m) => $m + [
-            'can_verify' => ! $m['published'] && ($as === null || ! isset($m['signatures'][$as])),
+            'can_verify' => ! $m['published'] && ($as === null || (! isset($m['signatures'][$as])
+                && ($before === null || isset($m['signatures'][$before])))),
         ], $rows);
     }
 }
