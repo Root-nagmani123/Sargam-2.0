@@ -37,4 +37,5 @@ tools/phpstan/vendor/
 /blob-report/
 /playwright/.cache/
 bootstrap/
+Modules/Protocol_old/
 tools/phpstan/
