@@ -1926,13 +1926,24 @@ if (!function_exists('notice_feed_base_query')) {
                 'notice_author_dept.department_name as author_department'
             )
             ->where('notices_notification.active_inactive', 1)
+            // Not before its display date, in any scope: a notice scheduled ahead
+            // reaches its audience on that date, along with its bell notification
+            // (notices:send-due-bells). Authors still see it on the notice list.
+            ->where(function ($q) use ($today) {
+                $q->whereNull('notices_notification.display_date')
+                    ->orWhere('notices_notification.display_date', '<=', $today);
+            })
             ->when($scope === 'live', function ($q) use ($today) {
                 $q->where('notices_notification.expiry_date', '>=', $today);
             })
             ->when($scope === 'archive', function ($q) use ($today) {
                 $q->where('notices_notification.expiry_date', '<', $today);
             })
-            ->orderBy('notices_notification.display_date', 'desc');
+            ->orderBy('notices_notification.display_date', 'desc')
+            // Tie-break: notices sharing a display date must keep one order, or a
+            // page boundary can show one twice and skip another, and a bell link
+            // cannot work out which page holds its notice.
+            ->orderBy('notices_notification.pk', 'desc');
     }
 }
 if (!function_exists('notice_audience_has_any')) {
@@ -1985,6 +1996,24 @@ if (!function_exists('notice_audience_unpinned_or_any')) {
         });
     }
 }
+if (!function_exists('notice_staff_faculty_role_names')) {
+    /**
+     * Role names that put a login with no user_category on the Staff/Faculty side
+     * of the notice feed. Shared with NoticeBellNotifier, which has to pick the
+     * same people when it rings their bell.
+     */
+    function notice_staff_faculty_role_names(): array
+    {
+        return [
+            'Internal Faculty', 'Guest Faculty', 'Staff', 'Faculty', 'Employee',
+            'Doctor', 'Admin', 'Super Admin', 'Personal Assistant', 'Estate',
+            'Estate Admin', 'Estate HAC', 'Mess-Staff', 'Mess-Admin',
+            'Training-Induction', 'Training-MCTP', 'Training MCTP Admin',
+            'Training IST', 'IST', 'Discipline Admin', 'Admin Security',
+            'Security Card', 'Centcom Admin', 'CR-Admin', 'TA and RF',
+        ];
+    }
+}
 if (!function_exists('notice_feed_query_by_role')) {
     /**
      * Role-scoped notice feed as an UNEXECUTED query builder.
@@ -2023,14 +2052,7 @@ if (!function_exists('notice_feed_query_by_role')) {
         // is why Staff/Faculty notices reached nobody.
         $category = (string) ($user->user_category ?? '');
 
-        $roleStaffFaculty = [
-            'Internal Faculty', 'Guest Faculty', 'Staff', 'Faculty', 'Employee',
-            'Doctor', 'Admin', 'Super Admin', 'Personal Assistant', 'Estate',
-            'Estate Admin', 'Estate HAC', 'Mess-Staff', 'Mess-Admin',
-            'Training-Induction', 'Training-MCTP', 'Training MCTP Admin',
-            'Training IST', 'IST', 'Discipline Admin', 'Admin Security',
-            'Security Card', 'Centcom Admin', 'CR-Admin', 'TA and RF',
-        ];
+        $roleStaffFaculty = notice_staff_faculty_role_names();
         $roleStudent = ['Student-OT', 'Officer Trainee'];
 
         // 'F' is a faculty login (is_faculty_portal_user()), so it gets the
@@ -2427,6 +2449,47 @@ if (! function_exists('fc_ini_size_to_bytes')) {
             'k' => $number * 1024,
             default => (float) $value,
         };
+    }
+}
+
+if (! function_exists('fc_word_count')) {
+    /**
+     * Words in a free-text answer: runs of non-whitespace, Unicode-aware (Hindi counts).
+     * The min_words / max_words rules and the live counter on the form (same regex in JS)
+     * both use this definition, so the number a trainee sees is the number that is checked.
+     */
+    function fc_word_count(?string $text): int
+    {
+        $text = trim((string) $text);
+
+        return $text === '' ? 0 : count(preg_split('/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY));
+    }
+}
+
+if (! function_exists('fc_text_length_limits')) {
+    /**
+     * Word and character limits read from a field's validation rules, for the live counter.
+     * `min:` / `max:` are characters (Laravel's meaning for strings); `min_words:` /
+     * `max_words:` are words. Missing limits are null.
+     *
+     * @return array{min_words: ?int, max_words: ?int, min_chars: ?int, max_chars: ?int}
+     */
+    function fc_text_length_limits(?string $rules): array
+    {
+        $out = ['min_words' => null, 'max_words' => null, 'min_chars' => null, 'max_chars' => null];
+
+        foreach (explode('|', (string) $rules) as $rule) {
+            if (preg_match('/^\s*(min_words|max_words|min|max):(\d+)\s*$/', $rule, $m)) {
+                $key = match ($m[1]) {
+                    'min' => 'min_chars',
+                    'max' => 'max_chars',
+                    default => $m[1],
+                };
+                $out[$key] = (int) $m[2];
+            }
+        }
+
+        return $out;
     }
 }
 

@@ -17,6 +17,7 @@
 
 /* --- Closed control: match the 40px grid chrome --------------------- */
 .programme-dt-filter-select .select2-container--default .select2-selection--single,
+.ir-modal .select2-container--default .select2-selection--single,
 .rp-modal .select2-container--default .select2-selection--single,
 .sbm-modal .select2-container--default .select2-selection--single,
 .users-page .select2-container--default .select2-selection--single {
@@ -24,6 +25,7 @@
 }
 
 .programme-dt-filter-select .select2-container--default .select2-selection--single .select2-selection__rendered,
+.ir-modal .select2-container--default .select2-selection--single .select2-selection__rendered,
 .rp-modal .select2-container--default .select2-selection--single .select2-selection__rendered,
 .sbm-modal .select2-container--default .select2-selection--single .select2-selection__rendered,
 .users-page .select2-container--default .select2-selection--single .select2-selection__rendered {
@@ -32,6 +34,7 @@
 }
 
 .programme-dt-filter-select .select2-container--default .select2-selection--single .select2-selection__arrow,
+.ir-modal .select2-container--default .select2-selection--single .select2-selection__arrow,
 .rp-modal .select2-container--default .select2-selection--single .select2-selection__arrow,
 .sbm-modal .select2-container--default .select2-selection--single .select2-selection__arrow,
 .users-page .select2-container--default .select2-selection--single .select2-selection__arrow {

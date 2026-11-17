@@ -222,6 +222,27 @@ class SidebarNavResolver
             if ($legacy) return $legacy;
         }
 
+        // Sub-pages that live under a DIFFERENT URL prefix from the menu that opens them, so
+        // no menu row matches them and the page fell back to the Home tab. Resolve them as
+        // their parent list page. Matched by path (not menu id) so it holds in every
+        // environment, whatever id the menu row has there.
+        //
+        // FC Form Management (menu: fc-reg/admin/forms) opens its step editor — the "Fields"
+        // and "Step" buttons, plus the step preview — at fc-reg/admin/form-builder/...
+        $parentPathPrefixMap = [
+            'fc-reg/admin/form-builder' => ['path' => 'fc-reg/admin/forms', 'route' => 'fc-reg.admin.forms.index'],
+        ];
+        $normalizedPath = $this->normalizePath($path);
+        foreach ($parentPathPrefixMap as $prefix => $p) {
+            if ($normalizedPath === $prefix || str_starts_with($normalizedPath, $prefix.'/')) {
+                $menu = $this->findMenuForRequest($p['path'], $p['route'])
+                     ?? $this->findMenuForRouteName($p['route']);
+                if ($menu) {
+                    return $this->resultFromMenu($menu);
+                }
+            }
+        }
+
         $menu = $this->findMenuForRequest($path, $routeName);
         if ($menu) {
             return $this->resultFromMenu($menu);

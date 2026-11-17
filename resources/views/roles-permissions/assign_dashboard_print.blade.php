@@ -8,7 +8,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Dashboard Cards — {{ $role->name }} — LBSNAA</title>
+    <title>Dashboard Cards — {{ $role->name }}@isset($module) — {{ $module->name }}@endisset — LBSNAA</title>
     <style>
         @page { size: A4 portrait; margin: 12mm 10mm; }
 
@@ -105,12 +105,13 @@
         .rp-print-foot { margin-top: 10px; text-align: center; font-size: 8px; color: #6b7280; }
 
         /* Column widths are the only per-report part of the table. */
-        .rp-print-sno     { width: 7%;  text-align: center; }
-        .rp-print-name    { width: 30%; }
-        .rp-print-icon    { width: 20%; }
-        .rp-print-colour  { width: 12%; }
-        .rp-print-order   { width: 8%;  text-align: center; }
-        .rp-print-created { width: 12%; text-align: center; }
+        .rp-print-sno     { width: 6%;  text-align: center; }
+        .rp-print-name    { width: 24%; }
+        .rp-print-tabs    { width: 14%; }
+        .rp-print-icon    { width: 16%; }
+        .rp-print-colour  { width: 11%; }
+        .rp-print-order   { width: 7%;  text-align: center; }
+        .rp-print-created { width: 11%; text-align: center; }
         .rp-print-status  { width: 11%; text-align: center; }
     </style>
 </head>
@@ -133,7 +134,7 @@
 
     <div class="rp-print-rule"></div>
 
-    <div class="rp-print-title">Dashboard Cards — {{ $role->name }}</div>
+    <div class="rp-print-title">Dashboard Cards — {{ $role->name }}@isset($module) — {{ $module->name }}@endisset</div>
     <div class="rp-print-meta">Generated: {{ $exportDate }}</div>
 
     @if (filled($filterLine))

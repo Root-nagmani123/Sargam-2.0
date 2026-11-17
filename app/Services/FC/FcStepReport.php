@@ -81,6 +81,16 @@ abstract class FcStepReport
      */
     abstract public function statusColumns(): array;
 
+    /**
+     * PDF layout: 'blocks' (one card per trainee — right for long free text) or 'table'
+     * (one landscape grid row per trainee, the same columns as the screen — right for reports
+     * made of short fields).
+     */
+    public function pdfLayout(): string
+    {
+        return 'blocks';
+    }
+
     /** Labels for the status filter, e.g. ['submitted' => 'Submitted only', ...]. */
     public function statusLabels(): array
     {

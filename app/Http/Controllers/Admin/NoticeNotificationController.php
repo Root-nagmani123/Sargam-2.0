@@ -10,6 +10,7 @@ use App\Models\NoticeNotification as Notice;
 use App\Models\NoticeAudienceMap;
 use App\Models\CourseMaster;
 use App\Models\DepartmentMaster;
+use App\Services\NoticeBellNotifier;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -187,11 +188,18 @@ class NoticeNotificationController extends Controller
             abort(404);
         }
 
-        if (! $notice->document || ! Storage::disk('private')->exists($notice->document)) {
+        // New uploads go to the public disk; files uploaded while notices were kept
+        // on the private disk are still served from there. This route is the only
+        // supported way in: the web server must deny direct /storage/notice_docs/
+        // requests (see deploy notes), or the audience check above is bypassed.
+        $disk = collect(['public', 'private'])
+            ->first(fn ($name) => $notice->document && Storage::disk($name)->exists($notice->document));
+
+        if (! $disk) {
             abort(404);
         }
 
-        return Storage::disk('private')->response($notice->document);
+        return Storage::disk($disk)->response($notice->document);
     }
 
     /**
@@ -269,16 +277,20 @@ class NoticeNotificationController extends Controller
 
         if ($request->hasFile('document')) {
             $data['document'] = $request->file('document')
-                ->store('notice_docs', 'private');
+                ->store('notice_docs', 'public');
         }
 
         // One transaction: a notice committed without its audience rows reads as
         // "every course / every department" in the feed, so a failed audience
         // insert must take the notice down with it.
-        DB::transaction(function () use ($data, $request) {
+        $notice = DB::transaction(function () use ($data, $request) {
             $notice = Notice::create($data);
             $this->syncAudience($notice, $request);
+
+            return $notice;
         });
+
+        $this->ringBell($notice->pk, false);
 
         return redirect()
             ->route('admin.notice.index')
@@ -410,13 +422,17 @@ class NoticeNotificationController extends Controller
         ]);
         $data['description'] = notice_safe_html($data['description'] ?? '');
 
+        $previousDocument = $notice->document;
+
         if ($request->hasFile('document')) {
-            $data['document'] = $request->file('document')->store('notice_docs', 'private');
+            $data['document'] = $request->file('document')->store('notice_docs', 'public');
         }
 
         if ($this->keepsLegacyCourselessAudience($notice, $request)) {
             // Audience untouched: no audience columns written, no rows re-synced.
             $notice->update($data);
+            $this->deleteReplacedAttachment($notice, $previousDocument);
+            $this->ringBell($notice->pk, true);
 
             return redirect()->route('admin.notice.index')->with('success', 'Notice updated!');
         }
@@ -429,8 +445,51 @@ class NoticeNotificationController extends Controller
             $notice->update($data);
             $this->syncAudience($notice, $request);
         });
+        $this->deleteReplacedAttachment($notice, $previousDocument);
+        $this->ringBell($notice->pk, true);
 
         return redirect()->route('admin.notice.index')->with('success', 'Notice updated!');
+    }
+
+    /**
+     * Ring the audience's bell once the response has gone out: an "All" notice
+     * reaches every login, and those inserts must not hold up the author's save.
+     * A failure is reported, never surfaced, since the notice itself is saved.
+     */
+    private function ringBell(int $noticePk, bool $updated): void
+    {
+        $sender = Auth::id();
+
+        app()->terminating(function () use ($noticePk, $updated, $sender) {
+            try {
+                app(NoticeBellNotifier::class)->publish($noticePk, $updated, $sender);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        });
+    }
+
+    private function deleteReplacedAttachment(Notice $notice, ?string $previousDocument): void
+    {
+        if ($previousDocument && $previousDocument !== $notice->document) {
+            $this->deleteAttachmentFile($previousDocument);
+        }
+    }
+
+    /**
+     * Remove a notice attachment from whichever disk holds it, once no notice row
+     * still points at it. Runs after the row change has committed, so a failed
+     * update never leaves a notice pointing at a deleted file.
+     */
+    private function deleteAttachmentFile(?string $path): void
+    {
+        if (! $path || Notice::where('document', $path)->exists()) {
+            return;
+        }
+
+        foreach (['public', 'private'] as $disk) {
+            Storage::disk($disk)->delete($path);
+        }
     }
 
 
@@ -446,6 +505,10 @@ class NoticeNotificationController extends Controller
                 $data->audienceMaps()->delete();
                 $data->delete();
             });
+            app(NoticeBellNotifier::class)->withdraw($data->pk);
+            // Public-disk files stay on disk until removed; don't leave a deleted
+            // notice's attachment behind.
+            $this->deleteAttachmentFile($data->document);
             return back()->with('success', 'Notice deleted!');
         } else {
             return back()->with('error', 'Active Notice cannot be deleted!');

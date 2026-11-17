@@ -1,63 +1,77 @@
 {{-- Floating "Report Issue" launcher + "Report a problem" modal (dashboard only) --}}
+@push('styles')
+@include('admin.layouts.partials.select2-assets')
+<link rel="stylesheet" href="{{ asset('css/issue-reports-admin.css') }}?v={{ @filemtime(public_path('css/issue-reports-admin.css')) ?: time() }}">
+@endpush
+
+{{-- Labelled launcher: visible text (never icon-only), large type, 56px+ target — readable at any age. --}}
 <button type="button" class="dash-report-fab" data-bs-toggle="modal" data-bs-target="#reportIssueModal"
-    aria-label="Report an issue">
-    <i class="bi bi-exclamation-lg dash-report-fab-icon" aria-hidden="true"></i>
-    <span class="dash-report-fab-label">Report Issue</span>
+    title="Report a problem with this application">
+    <span class="dash-report-fab__icon" aria-hidden="true"><i class="bi bi-exclamation-triangle-fill"></i></span>
+    <span class="dash-report-fab__text">
+        <span class="dash-report-fab__label">Report a Problem</span>
+        <span class="dash-report-fab__hint">Tell us what isn't working</span>
+    </span>
 </button>
 
-<div class="modal fade" id="reportIssueModal" tabindex="-1" aria-labelledby="reportIssueModalLabel" aria-hidden="true"
-    data-bs-backdrop="static">
+{{-- Same modal language as the Reported Issues screens — docs/new-design-index-page.md §3c --}}
+<div class="modal fade ir-modal" id="reportIssueModal" tabindex="-1" aria-labelledby="reportIssueModalLabel"
+    aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content dash-report-modal">
+        <div class="modal-content">
             <form id="reportIssueForm" novalidate>
                 @csrf
                 <input type="hidden" name="page_url" value="{{ url()->current() }}">
 
-                <div class="modal-header">
-                    <h5 class="modal-title" id="reportIssueModalLabel">Report a problem</h5>
+                <div class="ir-modal-header">
+                    <h5 class="ir-modal-title" id="reportIssueModalLabel">Report a problem</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="reportIssueModule" class="form-label">Department that you are facing issues
-                            with<span class="text-danger">*</span></label>
-                        <select class="form-select" id="reportIssueModule" name="menu_group_id" required>
-                            <option value="">Select Department</option>
-                            @foreach ($issueReportModules ?? [] as $module)
-                                <option value="{{ $module['id'] }}">{{ $module['name'] }}</option>
-                            @endforeach
-                        </select>
-                        <div class="invalid-feedback" data-error-for="menu_group_id"></div>
-                    </div>
+                <div class="modal-body ir-modal-body">
+                    <div class="ir-field-card">
+                        <div class="ir-field">
+                            <label for="reportIssueModule" class="ir-form-label">Department that you are facing
+                                issues with<span class="ir-req">*</span></label>
+                            <select class="form-select ir-control" id="reportIssueModule" name="menu_group_id" required
+                                data-searchable="true" data-placeholder="Select Department">
+                                <option value="">Select Department</option>
+                                @foreach ($issueReportModules ?? [] as $module)
+                                    <option value="{{ $module['id'] }}">{{ $module['name'] }}</option>
+                                @endforeach
+                            </select>
+                            <div class="invalid-feedback" data-error-for="menu_group_id"></div>
+                        </div>
 
-                    <div class="mb-3">
-                        <label for="reportIssueSubModule" class="form-label">Sub-Module</label>
-                        <input type="text" class="form-control" id="reportIssueSubModule" name="sub_module"
-                            placeholder="eg. OT Attendance" maxlength="255">
-                        <div class="invalid-feedback" data-error-for="sub_module"></div>
-                    </div>
+                        <div class="ir-field">
+                            <label for="reportIssueSubModule" class="ir-form-label">Sub-Module</label>
+                            <input type="text" class="form-control ir-control" id="reportIssueSubModule"
+                                name="sub_module" placeholder="eg. OT Attendance" maxlength="255">
+                            <div class="invalid-feedback" data-error-for="sub_module"></div>
+                        </div>
 
-                    <div class="mb-3">
-                        <label for="reportIssueDescription" class="form-label">Issue Description<span
-                                class="text-danger">*</span></label>
-                        <textarea class="form-control" id="reportIssueDescription" name="description" rows="4"
-                            placeholder="eg. Unable to submit OT attendance for July" maxlength="5000" required></textarea>
-                        <div class="invalid-feedback" data-error-for="description"></div>
-                    </div>
+                        <div class="ir-field">
+                            <label for="reportIssueDescription" class="ir-form-label">Issue Description<span
+                                    class="ir-req">*</span></label>
+                            <textarea class="form-control ir-control" id="reportIssueDescription" name="description"
+                                rows="4" placeholder="eg. Unable to submit OT attendance for July" maxlength="5000"
+                                required></textarea>
+                            <div class="invalid-feedback" data-error-for="description"></div>
+                        </div>
 
-                    <div class="mb-1">
-                        <label for="reportIssueAttachment" class="form-label">Attachment</label>
-                        <input type="file" class="form-control" id="reportIssueAttachment" name="attachment"
-                            accept=".jpg,.jpeg,.png,.pdf,.csv,.xlsx">
-                        <div class="invalid-feedback" data-error-for="attachment"></div>
-                        <div class="dash-report-hint">Supported Documents: .jpg .png .pdf .csv .xlsx</div>
+                        <div class="ir-field">
+                            <label for="reportIssueAttachment" class="ir-form-label">Attachment</label>
+                            <input type="file" class="form-control ir-control" id="reportIssueAttachment"
+                                name="attachment" accept=".jpg,.jpeg,.png,.pdf,.csv,.xlsx">
+                            <div class="invalid-feedback" data-error-for="attachment"></div>
+                            <div class="ir-hint">Supported Documents: .jpg .png .pdf .csv .xlsx</div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary" id="reportIssueSubmit">Report</button>
+                <div class="ir-modal-footer text-end d-flex justify-content-end">
+                    <button type="button" class="btn ir-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn ir-btn-submit" id="reportIssueSubmit">Report</button>
                 </div>
             </form>
         </div>
@@ -90,6 +104,7 @@
 
             modalEl.addEventListener('hidden.bs.modal', function() {
                 form.reset();
+                $('#reportIssueModule').trigger('change.select2');
                 clearErrors();
             });
 

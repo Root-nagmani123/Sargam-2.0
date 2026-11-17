@@ -30,6 +30,7 @@ use App\Models\EmployeeMaster;
 use App\Models\EmployeeRoleMapping;
 use App\Models\FacultyMaster;
 use App\Models\Holiday;
+use App\Services\NoticeBellNotifier;
 use App\Services\NotificationService;
 use App\Exports\LbsnaaTableExport;
 use Maatwebsite\Excel\Facades\Excel;
@@ -468,10 +469,7 @@ class UserController extends Controller
         // the same trap the discipline card documents.
         $isOtUser       = $isStudentOT || isOfficerTraineeUser();
         $isFacultyRole  = hasRole('Internal Faculty') || hasRole('Guest Faculty');
-        // The two faculty cards below key off portal membership, not those two role
-        // names — the only faculty role actually present is "Faculty", which
-        // $isFacultyRole does not match.
-        $isFacultyPortalUser = is_faculty_portal_user();
+        // The OT and faculty cards' visibility is DashboardCard::gatedCardVisibility().
 
         // Role-scoped course IDs for "My Course Participant" ([] = all, [-1] = none, [pks] = restricted)
         $myCourseIds = get_Role_by_course();
@@ -509,35 +507,35 @@ class UserController extends Controller
             'pending_id_approval1'    => ['count' => $todayApproval1IdCardRequests ?? 0,           'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1IdCardRequests ?? 0) > 0],
             'pending_dup_id_approval1'=> ['count' => $todayApproval1DuplicateIdCardRequests ?? 0,  'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1DuplicateIdCardRequests ?? 0) > 0],
             'ot_mdo_escort'           => ['count' => $MDO_count ?? 0,                              'link' => route('ot.mdo.escrot.exemption.view'),                         'visible' => !$isSecurityRole && $isStudentOT],
-            'my_groups'               => ['count' => $myGroupsCount ?? 0,                          'link' => route('admin.dashboard.my-groups'),                            'visible' => !$isSecurityRole && $isStudentOT],
+            'my_groups'               => ['count' => $myGroupsCount ?? 0,                          'link' => route('admin.dashboard.my-groups')],
             'total_inhouse_faculty'   => ['count' => $total_internal_faculty,                      'link' => route('admin.dashboard.inhouse_faculty'),                      'visible' => !$isSecurityRole && !$isStudentOT],
             'session_details'         => ['count' => $totalSessions,                               'link' => route('admin.dashboard.sessions'),                             'visible' => !$isSecurityRole && ($isFacultyRole || $isSuperAdmin)],
             // Faculty-only cards. Both open a report that scopes itself to the
             // logged-in faculty server-side, so the count and the page agree.
-            'total_sessions'          => ['count' => $facultyTotalSessions,                        'link' => route('timetable-report.index', ['course_mode' => 'all', 'faculty_role' => FacultySessionScope::ROLE_TEACHING]), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
-            'total_feedback'          => ['count' => $facultyTotalFeedback,                        'link' => route('faculty.session_feedback.comments', ['course_type' => 'current', 'program_id' => 'all']), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            'total_sessions'          => ['count' => $facultyTotalSessions,                        'link' => route('timetable-report.index', ['course_mode' => 'all', 'faculty_role' => FacultySessionScope::ROLE_TEACHING])],
+            'total_feedback'          => ['count' => $facultyTotalFeedback,                        'link' => route('faculty.session_feedback.comments', ['course_type' => 'current', 'program_id' => 'all'])],
             // No count on the two timetable cards: they open a calendar, not a list
             // whose rows could be counted. Academic = the whole Academy's timetable
             // (?scope=academy), My Timetable = the same page scoped to the viewer,
             // which is what it already does for a faculty login. Faculty only: the
             // academy scope refuses trainees (PR #334 F-047).
-            'academic_timetable'      => [                                                         'link' => route('calendar.index', ['scope' => 'academy']),               'visible' => !$isSecurityRole && $isFacultyPortalUser && !$isOtUser],
+            'academic_timetable'      => [                                                         'link' => route('calendar.index', ['scope' => 'academy'])],
             // An OT's own timetable is their dedicated calendar — the sessions of
             // the groups they are enrolled in. A faculty's is the same page scoped
             // to their classes, which is what it already does for them.
-            'my_timetable'            => ['link' => $isOtUser ? route('calendar.ot.index') : route('calendar.index'),                            'visible' => !$isSecurityRole && ($isFacultyPortalUser || $isOtUser)],
+            'my_timetable'            => ['link' => $isOtUser ? route('calendar.ot.index') : route('calendar.index')],
             // Both open the OT / Participants list — the second ordered by House so it
             // opens house-wise, with the page's House filter to narrow to one.
-            'my_counsellees'          => ['count' => $facultyCounsellees,                          'link' => route('admin.dashboard.ot-participants', ['view' => 'counsellees']), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
-            'house_wise_details'      => ['count' => $facultyHouses,                               'link' => route('admin.dashboard.ot-participants', ['view' => 'house']), 'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            'my_counsellees'          => ['count' => $facultyCounsellees,                          'link' => route('admin.dashboard.ot-participants', ['view' => 'counsellees'])],
+            'house_wise_details'      => ['count' => $facultyHouses,                               'link' => route('admin.dashboard.ot-participants', ['view' => 'house'])],
             // No count: Who's Who opens on a course picker, so there is no single
             // number the tile could honestly show — same as the timetable cards.
-            'whos_who'                => [                                                         'link' => route('admin.faculty.whos-who'),                               'visible' => !$isSecurityRole && $isFacultyPortalUser],
+            'whos_who'                => [                                                         'link' => route('admin.faculty.whos-who')],
             'total_students'          => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'student_details'         => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
             'my_course_participant'   => ['count' => StudentMasterCourseMap::query()->when(!empty($myCourseIds), fn($q) => $q->whereIn('course_master_pk', $myCourseIds))->count(), 'link' => route('my.course.participant'),                                'visible' => true],
-            'discipline_marks_deducted' => ['count' => $disciplineMarksDeducted,                   'link' => route('memo.discipline.ot_marks'),                              'visible' => !$isSecurityRole && $isOtUser],
-            'pending_feedback'        => ['count' => $pendingFeedbackCount,                        'link' => route('feedback.get.studentFeedbackUrl'),                      'visible' => !$isSecurityRole && $isOtUser],
+            'discipline_marks_deducted' => ['count' => $disciplineMarksDeducted,                   'link' => route('memo.discipline.ot_marks')],
+            'pending_feedback'        => ['count' => $pendingFeedbackCount,                        'link' => route('feedback.get.studentFeedbackUrl')],
             'protocol_guest_house_requests' => ['count' => $protocolCounts['guesthouse'],       'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'guesthouse']) : null, 'visible' => $isProtocolStaff],
             'protocol_vehicle_pass_requests'=> ['count' => $protocolCounts['vehicle'],          'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'vehicle']) : null,    'visible' => $isProtocolStaff],
             'protocol_ticket_requests'      => ['count' => $protocolCounts['ticket'],           'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'ticket']) : null,     'visible' => $isProtocolStaff],
@@ -552,18 +550,14 @@ class UserController extends Controller
             // 'my_card_key' => SomeModel::where('status', 'pending')->count(),
         ];
 
-        // Fetch which cards are enabled for this user's role
-        $userRoles = Auth::user()->roles ?? collect();
-        if ($userRoles->isNotEmpty()) {
-            $roleIds = $userRoles->pluck('id')->toArray();
-            $enabledCards = DashboardCard::whereHas('roles', function ($q) use ($roleIds) {
-                $q->whereIn('roles.id', $roleIds);
-            })
-                ->orderBy('sort_order')
-                ->get();
-        } else {
-            $enabledCards = collect();
-        }
+        // The cards this user's roles have on the requested header module's
+        // dashboard (?category=, the same parameter that selects the header tab);
+        // no or an unknown module is Home.
+        $dashboardModule = DashboardCard::resolveModule($request->query('category'));
+        $roleIds = (Auth::user()->roles ?? collect())->pluck('id')->all();
+        $enabledCards = ($roleIds !== [] && $dashboardModule)
+            ? DashboardCard::assignedTo($roleIds, $dashboardModule->id)->orderBy('sort_order')->get()
+            : collect();
 
         $baseCards = $enabledCards;
 
@@ -583,20 +577,14 @@ class UserController extends Controller
 
         $issueReportModules = \App\Http\Controllers\Admin\IssueReportController::moduleOptions();
 
-        // Cards whose 'visible' flag is enforced: the OT and faculty-portal cards,
-        // whose role mapping alone would show them to a login the page behind them
-        // refuses (an OT card to a non-OT, opening a 403). The older cards' flags
-        // were never applied and their role mappings are what admins have tuned
-        // against, so they are left as they are.
-        $gatedCardKeys = [
-            'my_groups', 'discipline_marks_deducted', 'pending_feedback',
-            'total_sessions', 'total_feedback', 'my_counsellees', 'house_wise_details', 'whos_who',
-            'academic_timetable', 'my_timetable',
-        ];
+        // Only the OT and faculty-portal cards are gated (DashboardCard::gatedCardVisibility(),
+        // shared with the header's module landing). The older cards' 'visible' flags
+        // above were never applied and their role mappings are what admins have
+        // tuned against, so they are left as they are.
+        $gatedCardVisibility = DashboardCard::gatedCardVisibility();
 
-        $cardsToRender = $baseCards->filter(fn ($c) => ! str_starts_with($c->key, 'widget_'))->filter(function ($card) use ($cardDefinitions, $gatedCardKeys) {
-            return ! in_array($card->key, $gatedCardKeys, true)
-                || ($cardDefinitions[$card->key]['visible'] ?? true);
+        $cardsToRender = $baseCards->filter(fn ($c) => ! str_starts_with($c->key, 'widget_'))->filter(function ($card) use ($gatedCardVisibility) {
+            return $gatedCardVisibility[$card->key] ?? true;
         })->map(function ($card) use ($cardDefinitions, $cardCounts) {
             $def = $cardDefinitions[$card->key] ?? null;
 
@@ -658,7 +646,8 @@ class UserController extends Controller
             'housePerformance',
             'houseCourses',
             'houseCourseFilter',
-            'issueReportModules'
+            'issueReportModules',
+            'dashboardModule'
         ));
     }
 
@@ -1277,7 +1266,39 @@ class UserController extends Controller
             'dept'     => is_scalar($v = $request?->query('notice_dept')) ? trim((string) $v) : '',
             'audience' => is_scalar($v = $request?->query('notice_audience')) ? trim((string) $v) : '',
             'q'        => is_scalar($v = $request?->query('q')) ? trim((string) $v) : '',
+            'focus'    => null,
+            'focusMissing' => false,
         ];
+
+        // A bell link (?notice=<pk>) opens the page holding that notice, on
+        // whichever side of expiry it now sits, and the view expands its card.
+        // Only on a bare link: a filter or page the user picked wins over it. The
+        // role-scoped query decides visibility, so the link reveals nothing the
+        // feed would not.
+        $rawFocus = $request?->query('notice');
+        $focusPk = is_scalar($rawFocus) && ctype_digit((string) $rawFocus) ? (int) $rawFocus : null;
+        $locateFocus = $focusPk !== null
+            && $request->query('page') === null
+            && $filters['year'] === '' && $filters['type'] === '' && $filters['dept'] === ''
+            && $filters['audience'] === '' && $filters['q'] === '';
+
+        if ($locateFocus) {
+            $visibleIn = fn (string $s) => ($q = notice_feed_query_by_role($s))
+                && $q->where('notices_notification.pk', $focusPk)->exists();
+
+            if ($visibleIn('live')) {
+                $scope = $filters['scope'] = 'live';
+            } elseif ($visibleIn('archive')) {
+                $scope = $filters['scope'] = 'archive';
+            } else {
+                $locateFocus = false;
+                $filters['focusMissing'] = true;
+            }
+        }
+
+        if ($focusPk !== null && ! $filters['focusMissing']) {
+            $filters['focus'] = $focusPk;
+        }
 
         $base = notice_feed_query_by_role($scope);
 
@@ -1368,7 +1389,40 @@ class UserController extends Controller
             });
         }
 
-        $notices = $base->paginate(self::NOTICE_FEED_PER_PAGE)->withQueryString();
+        // Which page holds the focused notice: count the notices the feed orders
+        // ahead of it (display_date desc, then pk desc; NULL dates sort last).
+        $page = null;
+        if ($locateFocus) {
+            $displayDate = DB::table('notices_notification')->where('pk', $focusPk)->value('display_date');
+
+            $ahead = (clone $base)->reorder()->where(function ($w) use ($displayDate, $focusPk) {
+                $samePlace = fn ($q) => $displayDate === null
+                    ? $q->whereNull('notices_notification.display_date')
+                    : $q->where('notices_notification.display_date', $displayDate);
+
+                $w->where(fn ($t) => $samePlace($t)->where('notices_notification.pk', '>', $focusPk));
+
+                if ($displayDate === null) {
+                    $w->orWhereNotNull('notices_notification.display_date');
+                } else {
+                    $w->orWhere('notices_notification.display_date', '>', $displayDate);
+                }
+            })->count();
+
+            $page = intdiv($ahead, self::NOTICE_FEED_PER_PAGE) + 1;
+        }
+
+        // `notice` stays out of the page links: paging on from the focused notice
+        // is ordinary browsing, not a second jump back to it. The scope the link
+        // landed on goes in instead, or page 2 of an archived notice's list would
+        // open the live feed.
+        $linkQuery = $request ? $request->except(['notice', 'page', 'notice_scope']) : [];
+        if ($scope === 'archive') {
+            $linkQuery['notice_scope'] = 'archive';
+        }
+
+        $notices = $base->paginate(self::NOTICE_FEED_PER_PAGE, ['*'], 'page', $page)
+            ->appends($linkQuery);
 
         return [$notices, $filterOptions, $filters];
     }
@@ -9060,6 +9114,23 @@ class UserController extends Controller
             }
             if ($table === 'issue_priority_master') {
                 IssuePriorityController::bumpIndexListCacheEpoch();
+            }
+            // An inactive notice leaves the feed, so its bell entries go with it;
+            // re-activating it announces it again (after the response, as on save).
+            if ($table === 'notices_notification' && (int) $previous !== $status) {
+                if ($status === 1) {
+                    $noticePk = (int) $id;
+                    $sender = Auth::id();
+                    app()->terminating(function () use ($noticePk, $sender) {
+                        try {
+                            app(NoticeBellNotifier::class)->publish($noticePk, false, $sender);
+                        } catch (\Throwable $e) {
+                            report($e);
+                        }
+                    });
+                } else {
+                    app(NoticeBellNotifier::class)->withdraw((int) $id);
+                }
             }
 
             $newState = ((int) $status === 1) ? 'Active' : 'Inactive';

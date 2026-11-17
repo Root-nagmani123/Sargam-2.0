@@ -166,14 +166,18 @@ class ProcessMessBillsEmployeeController extends Controller
                 ]
             );
 
-            $this->warmModalBillSummaryCacheFromCombinedBills(
-                $combinedBills,
-                $dateFrom,
-                $dateTo,
-                $clientTypes,
-                $clientTypePks,
-                $buyerNames
-            );
+            // The "Invoice Sent" view holds only already-invoiced buyers; warming the modal from it
+            // would hide every buyer still to be invoiced.
+            if ($invoiceSentFilter !== 'sent') {
+                $this->warmModalBillSummaryCacheFromCombinedBills(
+                    $combinedBills,
+                    $dateFrom,
+                    $dateTo,
+                    $clientTypes,
+                    $clientTypePks,
+                    $buyerNames
+                );
+            }
 
             if ($statusFilter !== null && $statusFilter !== '') {
                 $statusMap = [
@@ -816,7 +820,7 @@ class ProcessMessBillsEmployeeController extends Controller
         array $clientTypePks,
         array $buyerNames
     ): string {
-        return 'process_mess_bills_modal_summary_v4:'
+        return 'process_mess_bills_modal_summary_v5:'
             . $this->processMessBillsCombinedCacheVersion()
             . ':'
             . md5(json_encode([
@@ -898,7 +902,7 @@ class ProcessMessBillsEmployeeController extends Controller
             true
         );
 
-        return $groupedRows
+        return $this->withBuyerPooledPeriodPaid($groupedRows, $dateFrom, $dateTo)
             ->filter(function ($row) {
                 return trim((string) ($row->buyer_name ?? '')) !== ''
                     && (float) ($row->due ?? 0) > 0;
@@ -906,6 +910,157 @@ class ProcessMessBillsEmployeeController extends Controller
             ->map(fn ($cb) => $this->buildModalBillSummaryFromGroup($cb, $dateFrom, $dateTo))
             ->values()
             ->all();
+    }
+
+    /**
+     * Modal only: period paid / due / status per buyer, settling the buyer's payments (bills up to
+     * date_to, matched as in fetchBuyerPaidPoolByGroupKey) against line items oldest first, as
+     * computeCombinedBillFinancials does, but against the grid row's period total. That total
+     * leaves out rejected kitchen issues, which the statement counts, so the two differ when one
+     * falls in the period. FIFO by date reduces to three aggregates, so no per-buyer loads:
+     * period paid = min(period total, max(0, paid pool - net of lines dated before date_from)).
+     *
+     * The grid's light rows set a date-range voucher's whole paid_amount against only its
+     * in-range items, so a multi-month voucher whose part payment covered at least its in-range
+     * amount showed due 0 and the buyer was dropped from the modal (a smaller part payment
+     * understated the due). Rows are cloned so the cached grid rows stay as they are.
+     */
+    private function withBuyerPooledPeriodPaid(Collection $groups, string $dateFrom, string $dateTo): Collection
+    {
+        if ($groups->isEmpty()) {
+            return $groups;
+        }
+
+        $clientIds = [];
+        $names = [];
+        foreach ($groups as $group) {
+            foreach ($group->bills ?? [] as $bill) {
+                $clientId = (int) ($bill->client_id ?? 0);
+                if ($clientId > 0) {
+                    $clientIds[$clientId] = true;
+                } else {
+                    $name = trim((string) ($bill->client_name ?? ''));
+                    if ($name !== '') {
+                        $names[$name] = true;
+                    }
+                }
+            }
+        }
+        $pool = $this->fetchBuyerPaidPoolByGroupKey(array_keys($clientIds), array_keys($names), $dateFrom, $dateTo);
+
+        return $groups->map(function ($group) use ($pool) {
+            $group = clone $group;
+            $groupKeys = collect($group->bills ?? [])
+                ->map(fn ($bill) => $this->messBillBuyerGroupKeyFast($bill))
+                ->unique();
+            $paidPool = 0.0;
+            $netBefore = 0.0;
+            foreach ($groupKeys as $key) {
+                $paidPool += $pool[$key]['paid'] ?? 0.0;
+                $netBefore += $pool[$key]['net_before'] ?? 0.0;
+            }
+
+            $total = (float) ($group->total ?? 0);
+            $paid = $this->roundMoney(min($total, max(0.0, $paidPool - $netBefore)));
+            $group->paid = $paid;
+            $group->due = $this->billDueAmount($total, $paid);
+            $group->status = $this->isBillFullyPaid($paid, $total) ? 2 : ($paid > 0 ? 1 : 0);
+
+            return $group;
+        });
+    }
+
+    /**
+     * Paid pool and pre-range net per buyer group key: sale-status SV vouchers with items up to
+     * date_to and mess-selling kitchen issues issued up to date_to, fetched where client_id is one
+     * of the period's client ids or TRIM(client_name) equals one of the names on the period's bills
+     * without a client id. Each row is pooled under its own group key (messBillBuyerGroupKeyFast():
+     * cid:<client_id>|<slug> when it has a client id and an allowed slug, otherwise
+     * name:<trimmed name>|<slug>), and a buyer group sums only the keys of its own period bills.
+     *
+     * The statement (resolveBuyerBillsForPaymentAllocation via MessBuyerClientFilter::apply) instead
+     * resolves a client id from the buyer's name (SV vouchers, then kitchen issues, then, for
+     * employee buyers, employee_master and faculty_master). When it finds one it takes rows with that
+     * client id plus rows without a client id named with any of that client's nameVariants(), exactly
+     * or as "<variant> (...)"; when it finds none, rows named exactly the buyer's name or
+     * "<name> (...)". OT/course buyers skip the resolution and match by name only. The two row sets
+     * differ wherever these rules disagree: rows outside the group's own keys (e.g. a
+     * "<name> (Dept)" row without a client id) reach the statement's allocation but not this pool,
+     * and for an OT buyer with a client id, a row with that id under another name reaches this
+     * pool but not the statement.
+     * MessGenerateInvoiceModalPaidTest covers name-only buyers and client-id and no-client-id
+     * employee buyers on the uncached modal path, a name-only buyer on the path warmed by the grid's
+     * "All" view, and that the grid's default "Invoice Sent" view does not warm it.
+     *
+     * @param  array<int, int>  $clientIds
+     * @param  array<int, string>  $names
+     * @return array<string, array{paid: float, net_before: float}>
+     */
+    private function fetchBuyerPaidPoolByGroupKey(array $clientIds, array $names, string $dateFrom, string $dateTo): array
+    {
+        $pool = [];
+        if ($clientIds === [] && $names === []) {
+            return $pool;
+        }
+
+        $add = function (object $bill, float $paid, float $netBefore) use (&$pool) {
+            $key = $this->messBillBuyerGroupKeyFast($bill);
+            $pool[$key]['paid'] = ($pool[$key]['paid'] ?? 0.0) + $paid;
+            $pool[$key]['net_before'] = ($pool[$key]['net_before'] ?? 0.0) + $netBefore;
+        };
+        $buyerScope = function ($query, string $table) use ($clientIds, $names) {
+            $query->where(function ($q) use ($table, $clientIds, $names) {
+                if ($clientIds !== []) {
+                    $q->orWhereIn("{$table}.client_id", $clientIds);
+                }
+                if ($names !== []) {
+                    $q->orWhereIn(DB::raw("TRIM({$table}.client_name)"), $names);
+                }
+            });
+        };
+        $lineExpr = 'ROUND(GREATEST(0, COALESCE(i.quantity, 0) - COALESCE(i.return_quantity, 0)) * COALESCE(i.rate, 0), 2)';
+
+        $svQuery = DB::table('sv_date_range_reports as r')
+            ->join('sv_date_range_report_items as i', 'i.sv_date_range_report_id', '=', 'r.id')
+            ->select(
+                'r.id',
+                'r.client_id',
+                'r.client_name',
+                'r.client_type_slug',
+                'r.paid_amount',
+                DB::raw("SUM(CASE WHEN COALESCE(i.issue_date, r.issue_date) < ? THEN {$lineExpr} ELSE 0 END) as net_before")
+            )
+            ->addBinding($dateFrom, 'select')
+            ->whereIn('r.status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses())
+            ->where('i.issue_date', '<=', $dateTo)
+            ->groupBy('r.id', 'r.client_id', 'r.client_name', 'r.client_type_slug', 'r.paid_amount');
+        $buyerScope($svQuery, 'r');
+        foreach ($svQuery->get() as $row) {
+            $add($row, (float) ($row->paid_amount ?? 0), (float) $row->net_before);
+        }
+
+        $kiQuery = DB::table('kitchen_issue_master as k')
+            ->leftJoin('kitchen_issue_items as i', 'i.kitchen_issue_master_pk', '=', 'k.pk')
+            ->select(
+                'k.pk',
+                'k.client_id',
+                'k.client_name',
+                'k.client_type',
+                DB::raw("SUM(CASE WHEN k.issue_date < ? THEN {$lineExpr} ELSE 0 END) as net_before")
+            )
+            ->addBinding($dateFrom, 'select')
+            ->whereIn('k.kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
+            ->where('k.issue_date', '<=', $dateTo)
+            ->groupBy('k.pk', 'k.client_id', 'k.client_name', 'k.client_type');
+        $buyerScope($kiQuery, 'k');
+        $kiRows = $kiQuery->get();
+        $kiPaid = $this->fetchProcessIndexKitchenPaidTotalsByPk($kiRows->pluck('pk')->map(fn ($pk) => (int) $pk)->all());
+        foreach ($kiRows as $row) {
+            $row->client_type_slug = $this->kitchenClientTypeIdToSlug((int) $row->client_type);
+            $add($row, (float) ($kiPaid[(int) $row->pk] ?? 0), (float) $row->net_before);
+        }
+
+        return $pool;
     }
 
     /**
@@ -957,7 +1112,7 @@ class ProcessMessBillsEmployeeController extends Controller
         string $dateFrom,
         string $dateTo
     ): array {
-        return $combinedBills
+        return $this->withBuyerPooledPeriodPaid($combinedBills, $dateFrom, $dateTo)
             ->filter(function ($row) {
                 return trim((string) ($row->buyer_name ?? '')) !== ''
                     && (float) ($row->due ?? 0) > 0;
@@ -968,7 +1123,10 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * After the main grid loads, seed the modal summary cache without a second union query.
+     * Seed the modal summary cache from the grid's rows without a second union query. index()
+     * calls this for every view except "Invoice Sent" (whose rows are only already-invoiced
+     * buyers). It does nothing when a client type, client type pk or buyer filter is set, or when
+     * the summaries are already cached.
      *
      * @param  array<int, string>  $clientTypes
      * @param  array<int, string|int>  $clientTypePks

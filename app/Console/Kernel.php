@@ -21,6 +21,9 @@ class Kernel extends ConsoleKernel
         // File-cache entries retired by a FeedbackReportCache generation bump are never read
         // again, so FileStore never deletes them. Removes only already-expired files.
         $schedule->command('cache:prune-expired-files')->hourly()->withoutOverlapping();
+
+        // Notices with a future display date are announced on that date.
+        $schedule->command('notices:send-due-bells')->everyFifteenMinutes()->withoutOverlapping();
     }
 
     /**

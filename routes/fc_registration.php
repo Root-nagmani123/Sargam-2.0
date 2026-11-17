@@ -373,6 +373,10 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
         // form-overview.blade.php both link to. Registering the same URI here would shadow it.
         'bank-report' => ['Bank Details', 'bank_detail_report'],
         'pre-medical-history' => ['Pre-Medical History', 'pre_medical_history'],
+        // Filled / not filled across the whole course — /admin/travel lists only saved plans.
+        // The permission and its menu row are created by hand in each environment; until
+        // they exist this report returns 403 to everyone (see the note above).
+        'travel-plan' => ['Travel Plan', 'travel_plan_report'],
     ] as $stepReportKey => [$stepReportLabel, $stepReportPermission]) {
         // The group's `auth` is NOT an admin gate in this application: Authenticate.php STEP 2
         // hydrates an FC trainee's roster session into Auth, so Auth::check() passes for a

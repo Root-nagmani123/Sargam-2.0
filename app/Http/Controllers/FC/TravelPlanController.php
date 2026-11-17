@@ -109,8 +109,7 @@ class TravelPlanController extends Controller
         $request->validate([
             'joining_date'              => 'required|date',
             'joining_time'              => 'nullable|date_format:H:i',
-            // Activity slot is hidden on the form for now, so it is optional.
-            'fc_travel_arrival_slot_id' => 'nullable|exists:fc_travel_arrival_slots,id',
+            'fc_travel_arrival_slot_id' => 'required|exists:fc_travel_arrival_slots,id',
             // Accepts whatever the travel-mode master currently offers, plus the value this
             // plan already holds — so a plan saved under an older list can be resubmitted.
             'mode_of_journey'           => ['required', 'string', Rule::in(
@@ -119,32 +118,28 @@ class TravelPlanController extends Controller
             'journey_vehicle_no'        => 'required|string|max:200|no_html',
             'academy_arrival_date'      => 'nullable|date',
             'arrival_time_dehradun'     => 'required|string|max:120|no_html',
-            // Hidden on the form for now, so optional; a missing answer is stored as 0 (column default).
-            'require_academy_vehicle'   => 'nullable|boolean',
+            'require_academy_vehicle'   => 'required|boolean',
             'special_requirements'      => 'nullable|string|max:1000|no_html',
         ], [], [
             'journey_vehicle_no'    => 'Flight No / Train No / Vehicle No',
-            'arrival_time_dehradun' => 'Arrival time at Dehradun',
+            'arrival_time_dehradun' => 'Arrival time at Airport/Railway Station',
             'special_requirements'  => 'Remarks',
         ]);
 
-        // Slot checks run only when a slot is sent (field hidden on the form for now).
-        if ($request->filled('fc_travel_arrival_slot_id')) {
-            $slot = FcTravelArrivalSlot::where('id', $request->fc_travel_arrival_slot_id)
-                ->where('is_active', true)
-                ->first();
-            if (! $slot) {
-                return back()->withInput()->with('error', 'The selected time slot is not available.');
-            }
-            if (! $slot->slot_date || $slot->slot_date->format('Y-m-d') !== $request->joining_date) {
-                return back()->withInput()->with('error', 'Please select a slot for the chosen arrival date.');
-            }
-            if (! $slot->hasRoomForUser($userId)) {
-                return back()->withInput()->with('error', 'This time slot is full. Please pick another slot.');
-            }
-            if ($gapError = $this->arrivalSlotGapError($request->arrival_time_dehradun, $slot)) {
-                return back()->withInput()->with('error', $gapError);
-            }
+        $slot = FcTravelArrivalSlot::where('id', $request->fc_travel_arrival_slot_id)
+            ->where('is_active', true)
+            ->first();
+        if (! $slot) {
+            return back()->withInput()->with('error', 'The selected time slot is not available.');
+        }
+        if (! $slot->slot_date || $slot->slot_date->format('Y-m-d') !== $request->joining_date) {
+            return back()->withInput()->with('error', 'Please select a slot for the chosen arrival date.');
+        }
+        if (! $slot->hasRoomForUser($userId)) {
+            return back()->withInput()->with('error', 'This time slot is full. Please pick another slot.');
+        }
+        if ($gapError = $this->arrivalSlotGapError($request->arrival_time_dehradun, $slot)) {
+            return back()->withInput()->with('error', $gapError);
         }
 
         $plan = StudentTravelPlanMaster::updateOrCreate(
@@ -191,8 +186,7 @@ class TravelPlanController extends Controller
         $request->validate([
             'joining_date'              => 'required|date',
             'joining_time'              => 'nullable|date_format:H:i',
-            // Activity slot is hidden on the form for now, so it is optional.
-            'fc_travel_arrival_slot_id' => 'nullable|exists:fc_travel_arrival_slots,id',
+            'fc_travel_arrival_slot_id' => 'required|exists:fc_travel_arrival_slots,id',
             // Master-driven, plus this plan's own saved value (see save() above).
             'mode_of_journey'           => ['required', 'string', Rule::in(
                 MctpTravelModeMaster::choicesIncluding($existing?->mode_of_journey)
@@ -204,7 +198,7 @@ class TravelPlanController extends Controller
             'special_requirements'      => 'nullable|string|max:1000|no_html',
         ], [], [
             'journey_vehicle_no'    => 'Flight No / Train No / Vehicle No',
-            'arrival_time_dehradun' => 'Arrival time at Dehradun',
+            'arrival_time_dehradun' => 'Arrival time at Airport/Railway Station',
             'special_requirements'  => 'Remarks',
         ]);
 
@@ -212,23 +206,20 @@ class TravelPlanController extends Controller
             return $this->registrationFlow->redirectAfterTravelSubmit($userId);
         }
 
-        // Slot checks run only when a slot is sent (field hidden on the form for now).
-        if ($request->filled('fc_travel_arrival_slot_id')) {
-            $slot = FcTravelArrivalSlot::where('id', $request->fc_travel_arrival_slot_id)
-                ->where('is_active', true)
-                ->first();
-            if (! $slot) {
-                return back()->withInput()->with('error', 'The selected time slot is not available.');
-            }
-            if (! $slot->slot_date || $slot->slot_date->format('Y-m-d') !== $request->joining_date) {
-                return back()->withInput()->with('error', 'Please select a slot for the chosen arrival date.');
-            }
-            if (! $slot->hasRoomForUser($userId)) {
-                return back()->withInput()->with('error', 'The selected time slot is full. Please choose another slot.');
-            }
-            if ($gapError = $this->arrivalSlotGapError($request->arrival_time_dehradun, $slot)) {
-                return back()->withInput()->with('error', $gapError);
-            }
+        $slot = FcTravelArrivalSlot::where('id', $request->fc_travel_arrival_slot_id)
+            ->where('is_active', true)
+            ->first();
+        if (! $slot) {
+            return back()->withInput()->with('error', 'The selected time slot is not available.');
+        }
+        if (! $slot->slot_date || $slot->slot_date->format('Y-m-d') !== $request->joining_date) {
+            return back()->withInput()->with('error', 'Please select a slot for the chosen arrival date.');
+        }
+        if (! $slot->hasRoomForUser($userId)) {
+            return back()->withInput()->with('error', 'The selected time slot is full. Please choose another slot.');
+        }
+        if ($gapError = $this->arrivalSlotGapError($request->arrival_time_dehradun, $slot)) {
+            return back()->withInput()->with('error', $gapError);
         }
 
         $plan = StudentTravelPlanMaster::updateOrCreate(
@@ -273,7 +264,7 @@ class TravelPlanController extends Controller
         }
 
         if ($slotMinutes - $arrivalMinutes < 120) {
-            return 'The activity slot must be at least 2 hours after your arrival time at Dehradun. Please choose a later slot or adjust your Dehradun arrival time.';
+            return 'The activity slot must be at least 2 hours after your arrival time at the Airport/Railway Station. Please choose a later slot or adjust your arrival time.';
         }
 
         return null;
