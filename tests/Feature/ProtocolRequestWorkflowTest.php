@@ -85,9 +85,30 @@ class ProtocolRequestWorkflowTest extends TestCase
         $this->assertSame($managerEmployeePk, (int) $this->lastLog($request)->action_by_id);
 
         $this->actingAs($manager)
-            ->post(route('protocol.manager.decide', $request), ['decision' => 'reject'])
+            ->post(route('protocol.manager.decide', $request), ['decision' => 'reject', 'remarks' => 'too late'])
             ->assertForbidden();
         $this->assertSame(1, $request->logs()->where('action', '!=', 'raised')->count());
+    }
+
+    public function test_a_manager_cannot_reject_without_remarks(): void
+    {
+        $owner = $this->employeeLogin();
+        $manager = $this->employeeLogin([$owner->pk]);
+        $request = $this->seedRequest($owner, ProtocolRequest::STATUS_RECOMMENDED, null, ['recommended_to_id' => $manager->pk]);
+
+        foreach ([[], ['remarks' => ''], ['remarks' => '   ']] as $remarks) {
+            $this->actingAs($manager)
+                ->post(route('protocol.manager.decide', $request), ['decision' => 'reject'] + $remarks)
+                ->assertSessionHasErrors('remarks');
+        }
+        $this->assertSame(ProtocolRequest::STATUS_RECOMMENDED, $request->refresh()->status);
+
+        $this->actingAs($manager)
+            ->post(route('protocol.manager.decide', $request), ['decision' => 'reject', 'remarks' => 'Dates clash with the convocation'])
+            ->assertRedirect(route('protocol.manager.queue'));
+        $request->refresh();
+        $this->assertSame(ProtocolRequest::STATUS_REJECTED, $request->status);
+        $this->assertSame('Dates clash with the convocation', $this->lastLog($request)->remarks);
     }
 
     /** F-021: a login keyed on an employee's pk_old is listed, recommended to, and recorded as that employee */
