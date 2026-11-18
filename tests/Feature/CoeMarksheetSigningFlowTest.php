@@ -19,15 +19,19 @@ class CoeMarksheetSigningFlowTest extends TestCase
 {
     use DatabaseTransactions;
 
-    /** The $nth user outside Super Admin and the three signatory roles, given $role and the screen's permission. */
-    private function signer(?string $role, int $nth = 0): User
+    /**
+     * The $nth user outside Super Admin and the signatory roles, given the role that
+     * signs as $designation (UDC / AAO / COE → COE-Incharge) and the screen's permission.
+     */
+    private function signer(?string $designation, int $nth = 0): User
     {
-        foreach (['UDC', 'AAO', 'COE'] as $name) {
+        $role = $designation ? MarksheetService::SIGNER_ROLES[$designation] : null;
+        foreach (MarksheetService::SIGNER_ROLES as $name) {
             Role::firstOrCreate(['name' => $name, 'guard_name' => 'web']);
         }
-        $user = User::whereDoesntHave('roles', fn ($q) => $q->whereIn('name', ['Super Admin', 'UDC', 'AAO', 'COE']))
+        $user = User::whereDoesntHave('roles', fn ($q) => $q->whereIn('name', ['Super Admin', 'COE', ...array_values(MarksheetService::SIGNER_ROLES)]))
             ->orderBy('pk')->skip($nth)->first()
-            ?? $this->markTestSkipped('Needs users outside Super Admin, UDC, AAO and COE.');
+            ?? $this->markTestSkipped('Needs users outside Super Admin, UDC, AAO, COE-Incharge and COE.');
 
         // Through the role: the dev database keys model_has_permissions on permission_id
         // alone, so a permission can be given directly to one user only.
@@ -132,6 +136,20 @@ class CoeMarksheetSigningFlowTest extends TestCase
         $this->verify($coe, $row)->assertUnprocessable()->assertJsonPath('message', fn ($m) => str_contains($m, 'not verified by the AAO'));
         $this->assertSame(['UDC'], array_keys($this->record($row)->signed));
         $this->assertFalse($this->record($row)->isPublished());
+    }
+
+    public function test_only_coe_incharge_signs_as_the_coe_not_the_coe_section(): void
+    {
+        Role::firstOrCreate(['name' => 'COE', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'COE-Incharge', 'guard_name' => 'web']);
+        $user = User::whereDoesntHave('roles')->orderBy('pk')->first()
+            ?? $this->markTestSkipped('Needs a user with no role.');
+
+        $user->assignRole('COE');
+        $this->assertNull(MarksheetService::signerRole($user->fresh()));
+
+        $user->assignRole('COE-Incharge');
+        $this->assertSame('COE', MarksheetService::signerRole($user->fresh()));
     }
 
     public function test_a_signer_needs_their_signature_in_signature_master(): void

@@ -41,6 +41,16 @@ class MarksheetService
         'COE' => 'Controller of Examination',
     ];
 
+    /**
+     * Signature Master designation => the Spatie role that signs as it. The COE's
+     * signature is the COE-Incharge's (the main COE); the COE role is the COE section.
+     */
+    public const SIGNER_ROLES = [
+        'UDC' => 'UDC',
+        'AAO' => 'AAO',
+        'COE' => 'COE-Incharge',
+    ];
+
     /** Marksheet group of the Director Assessment drives (merit's B). */
     private const DIRECTOR_GROUP = 'Director Assessment';
 
@@ -420,8 +430,8 @@ class MarksheetService
     }
 
     /**
-     * The designation $user signs as: their highest of COE > AAO > UDC; Super Admin
-     * signs as the COE. Null when they are none of these.
+     * The designation $user signs as: their highest of COE > AAO > UDC (by the
+     * role in SIGNER_ROLES); Super Admin signs as the COE. Null when they are none of these.
      */
     public static function signerRole(User $user): ?string
     {
@@ -429,7 +439,7 @@ class MarksheetService
             return 'COE';
         }
         foreach (array_reverse(array_keys(self::SIGNATORIES)) as $designation) {
-            if ($user->hasRole($designation)) {
+            if ($user->hasRole(self::SIGNER_ROLES[$designation])) {
                 return $designation;
             }
         }
