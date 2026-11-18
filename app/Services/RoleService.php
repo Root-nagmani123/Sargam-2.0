@@ -327,7 +327,8 @@ class RoleService
      * @param  array     $assignedCardIds
      * @return array<int, array<string, mixed>>
      */
-    public function dashboardCardRows($cards, array $assignedCardIds): array
+    /** $tabs: card id => the role's tab names for it (RoleController::cardTabNames()). */
+    public function dashboardCardRows($cards, array $assignedCardIds, array $tabs = []): array
     {
         $assigned = array_flip($assignedCardIds);
         $rows = [];
@@ -336,6 +337,7 @@ class RoleService
             $rows[] = [
                 'id' => $card->id,
                 'label' => (string) $card->label,
+                'tabs' => $tabs[$card->id] ?? '-',
                 'icon' => (string) $card->icon,
                 'color_class' => (string) $card->color_class,
                 'color_label' => self::CARD_COLOURS[$card->color_class] ?? (string) $card->color_class,
@@ -363,7 +365,7 @@ class RoleService
             }
 
             if ($search !== '') {
-                $haystack = mb_strtolower($row['label'].' '.$row['icon'].' '.$row['color_label']);
+                $haystack = mb_strtolower($row['label'].' '.($row['tabs'] ?? '').' '.$row['icon'].' '.$row['color_label']);
                 if (! str_contains($haystack, mb_strtolower($search))) {
                     return false;
                 }
@@ -380,6 +382,8 @@ class RoleService
                 'value' => fn (array $row, $index) => $index + 1],
             ['key' => 'label', 'heading' => 'Name', 'class' => 'rp-print-name',
                 'value' => fn (array $row) => $row['label']],
+            ['key' => 'tabs', 'heading' => 'Dashboard Tab', 'class' => 'rp-print-tabs',
+                'value' => fn (array $row) => $row['tabs']],
             ['key' => 'icon', 'heading' => 'Icon', 'class' => 'rp-print-icon',
                 'value' => fn (array $row) => $row['icon'] !== '' ? $row['icon'] : '-'],
             ['key' => 'color', 'heading' => 'Colour', 'class' => 'rp-print-colour',
@@ -389,7 +393,7 @@ class RoleService
             ['key' => 'created_at', 'heading' => 'Created', 'class' => 'rp-print-created',
                 'value' => fn (array $row) => $row['created_at']],
             ['key' => 'status', 'heading' => 'Status', 'class' => 'rp-print-status',
-                'value' => fn (array $row) => $row['enabled'] ? 'Enabled' : 'Disabled'],
+                'value' => fn (array $row) => $row['enabled'] ? 'Active' : 'Inactive'],
         ];
     }
 

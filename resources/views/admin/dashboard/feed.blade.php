@@ -3,50 +3,154 @@
 @section('title', 'Dashboard Feed')
 
 @section('content')
-<div class="container-fluid dashboard-feed-page py-3 py-md-4">
+@php
+    // One list for the tab buttons, the breadcrumb and the script's labels.
+    $feedTabs = ['notifications' => 'Notifications', 'notices' => 'Notices', 'birthdays' => 'Birthdays', 'wishes' => 'Wishes'];
+    $activeTabLabel = $feedTabs[$activeTab] ?? $feedTabs['notifications'];
+    $feedTabCounts = [
+        'notifications' => count($feedExpandedNotifications),
+        'notices' => $notices->total(),
+        'birthdays' => count($emp_dob_data) + count($upcomingBirthdays),
+        'wishes' => count($feedExpandedWishes),
+    ];
+    // Controls that belong to some tabs only carry data-feed-only; the script
+    // toggles them on a tab switch, this sets the first paint.
+    $feedOnly = fn (string $tabs) => in_array($activeTab, explode(' ', $tabs), true) ? '' : 'd-none';
+    $noticeIsArchive = ($noticeFilters['scope'] ?? 'live') === 'archive';
+@endphp
+<div class="container-fluid dashboard-feed-page">
+    {{-- Named after the open tab; the script below renames it on a tab switch. --}}
     <x-breadcrum
-        title="Notifications"
+        :title="$activeTabLabel"
         :show-back="true"
         :items="[
             ['label' => 'Home', 'url' => route('admin.dashboard')],
             ['label' => 'Dashboard', 'url' => route('admin.dashboard')],
-            ['label' => 'Notifications'],
+            ['label' => $activeTabLabel],
         ]" />
+    {{-- Tabs and their actions sit ABOVE the card (new design §1). --}}
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0"
+            id="dashboard-feed-page-tabs" role="tablist" aria-label="Feed">
+            @foreach($feedTabs as $tabKey => $tabLabel)
+            <li class="nav-item" role="presentation">
+                <button type="button"
+                    class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ $activeTab === $tabKey ? 'active' : '' }}"
+                    data-dashboard-feed-tab="{{ $tabKey }}"
+                    role="tab"
+                    aria-selected="{{ $activeTab === $tabKey ? 'true' : 'false' }}"
+                    id="dashboard-feed-tab-{{ $tabKey }}">
+                    {{ $tabLabel }}
+                    <span class="dashboard-feed-pill-count">{{ number_format($feedTabCounts[$tabKey]) }}</span>
+                </button>
+            </li>
+            @endforeach
+        </ul>
+
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <button type="button" class="btn programme-dt-btn-columns border-0 text-primary {{ $feedOnly('notifications wishes') }}"
+                id="dashboard-feed-page-mark-all" data-feed-only="notifications wishes">
+                <i class="bi bi-check2-all" aria-hidden="true"></i><span>Mark all as read</span>
+            </button>
+            {{-- The notice screens' own gate (PR #334 F-003), so the button shows
+                 for exactly the accounts those routes admit. --}}
+            @if(canAuthorNotices())
+            <a href="{{ route('admin.notice.create') }}" id="dashboard-feed-add-notice"
+                class="btn btn-primary d-inline-flex align-items-center gap-2 rounded-1 {{ $feedOnly('notices') }}"
+                data-feed-only="notices">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Add New Notice</span>
+            </a>
+            @endif
+        </div>
+    </div>
+
     <div class="card dashboard-feed-panel">
         <div class="card-body p-3 p-md-4">
-            <div
-                class="dashboard-feed-expanded__toolbar d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center mb-3">
-                <ul class="nav dashboard-feed-expanded-tabs" id="dashboard-feed-page-tabs" role="tablist">
-                    @foreach(['notifications' => 'Notifications', 'notices' => 'Notices', 'birthdays' => 'Birthdays', 'wishes' => 'Wishes'] as $tabKey => $tabLabel)
-                    <li class="nav-item" role="presentation">
-                        <button type="button"
-                            class="nav-link rounded-1 {{ $activeTab === $tabKey ? 'active' : '' }}"
-                            data-dashboard-feed-tab="{{ $tabKey }}"
-                            role="tab"
-                            aria-selected="{{ $activeTab === $tabKey ? 'true' : 'false' }}"
-                            id="dashboard-feed-tab-{{ $tabKey }}">
-                            {{ $tabLabel }}
-                        </button>
-                    </li>
-                    @endforeach
-                </ul>
-                <div class="input-group dashboard-feed-expanded-search">
-                    <span class="input-group-text border-end-0 rounded-start-1 ps-3">
-                        <i class="material-icons material-symbols-rounded" aria-hidden="true">search</i>
-                    </span>
-                    <input type="search" class="form-control border-start-0 rounded-end-1"
-                        id="dashboard-feed-page-search" placeholder="Search" autocomplete="off"
-                        aria-label="Search feed items">
-                </div>
-            </div>
+            {{-- Toolbar (§2): count or the notice filters on the left, search on the right. --}}
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-3 min-w-0">
+                    <span class="programme-dt-filters-label dashboard-feed-count {{ $feedOnly('notifications birthdays wishes') }}"
+                        id="dashboard-feed-page-count" data-feed-only="notifications birthdays wishes" aria-live="polite">00 Items</span>
 
-            <div class="dashboard-feed-expanded-meta d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <h1 class="dashboard-feed-expanded-count h5 mb-0" id="dashboard-feed-page-count">00 Items</h1>
-                <button type="button"
-                    class="dashboard-feed-mark-all-read {{ in_array($activeTab, ['notifications', 'wishes'], true) ? '' : 'd-none' }}"
-                    id="dashboard-feed-page-mark-all">
-                    Mark all as read
-                </button>
+                    {{-- Notice filters run in SQL, so this is a plain GET form: changing a
+                         select reloads with the filter in the URL, which keeps deep links,
+                         back/forward and pagination consistent and never renders more
+                         than one page of notices. --}}
+                    <form method="GET" action="{{ route('admin.dashboard.feed') }}"
+                        class="d-flex flex-wrap align-items-center gap-3 {{ $feedOnly('notices') }}"
+                        id="notice-filter-form" data-feed-only="notices">
+                        <input type="hidden" name="tab" value="notices">
+                        <input type="hidden" name="q" id="notice-filter-q" value="{{ $noticeFilters['q'] }}">
+
+                        <span class="programme-dt-filters-label">Filters</span>
+
+                        {{-- Current / Archive decide which years exist, so changing it
+                             clears Year (script below). --}}
+                        <div class="programme-dt-filter-select dashboard-feed-filter">
+                            <select class="form-select notices-feed-filter select2" name="notice_scope"
+                                id="notice-filter-scope" aria-label="Notice scope">
+                                <option value="" @selected(!$noticeIsArchive)>Current notices</option>
+                                <option value="archive" @selected($noticeIsArchive)>Archive ({{ number_format($noticeFilterOptions['archiveCount'] ?? 0) }})</option>
+                            </select>
+                        </div>
+
+                        <div class="programme-dt-filter-select dashboard-feed-filter">
+                            <select class="form-select notices-feed-filter select2" name="notice_year"
+                                id="notice-filter-year" aria-label="Filter by year">
+                                <option value="">Year</option>
+                                @foreach($noticeFilterOptions['years'] as $ny)
+                                <option value="{{ $ny }}" {{ (string) $noticeFilters['year'] === (string) $ny ? 'selected' : '' }}>{{ $ny }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="programme-dt-filter-select dashboard-feed-filter">
+                            <select class="form-select notices-feed-filter select2" name="notice_type"
+                                id="notice-filter-type" aria-label="Filter by type">
+                                <option value="">Type</option>
+                                @foreach($noticeFilterOptions['types'] as $nt)
+                                <option value="{{ $nt }}" {{ $noticeFilters['type'] === $nt ? 'selected' : '' }}>{{ $nt }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="programme-dt-filter-select dashboard-feed-filter">
+                            <select class="form-select notices-feed-filter select2" name="notice_dept"
+                                id="notice-filter-dept" aria-label="Filter by department">
+                                <option value="">Department</option>
+                                @foreach($noticeFilterOptions['depts'] as $nd)
+                                <option value="{{ $nd }}" {{ $noticeFilters['dept'] === $nd ? 'selected' : '' }}>{{ $nd }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="programme-dt-filter-select dashboard-feed-filter">
+                            <select class="form-select notices-feed-filter select2" name="notice_audience"
+                                id="notice-filter-audience" aria-label="Filter by target audience">
+                                <option value="">Target Audience</option>
+                                @foreach($noticeFilterOptions['audiences'] as $na)
+                                <option value="{{ $na }}" {{ $noticeFilters['audience'] === $na ? 'selected' : '' }}>{{ $na }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        {{-- Clears the filters but keeps the scope. --}}
+                        <button type="button" class="btn programme-dt-btn-reset" id="notice-filter-reset"
+                            data-href="{{ route('admin.dashboard.feed', $noticeIsArchive ? ['tab' => 'notices', 'notice_scope' => 'archive'] : ['tab' => 'notices']) }}">
+                            Reset Filters
+                        </button>
+                    </form>
+                </div>
+
+                {{-- Same box as the grids' search (.dataTables_filter markup, no DataTable). --}}
+                <div class="programme-dt-search ms-lg-auto">
+                    <div class="dataTables_filter">
+                        <label class="mb-0">
+                            <input type="search" id="dashboard-feed-page-search" placeholder="Search"
+                                autocomplete="off" aria-label="Search feed items">
+                        </label>
+                    </div>
+                </div>
             </div>
 
             {{-- Notifications --}}
@@ -84,110 +188,17 @@
             {{-- Notices (with filter bar) --}}
             <div data-feed-panel="notices" class="{{ $activeTab !== 'notices' ? 'd-none' : '' }}"
                 data-notice-total="{{ $notices->total() }}">
-
-                @php $noticeIsArchive = ($noticeFilters['scope'] ?? 'live') === 'archive'; @endphp
-
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                    <h2 class="notices-feed-section-title mb-0">
-                        {{ $noticeIsArchive ? 'Notice Archive' : 'Notices' }}
-                    </h2>
-
-                    {{-- Live / Archive are two views of the same role-scoped set, so they
-                         are links rather than another filter select: the scope decides
-                         which years the Year dropdown can even offer. Current filters ride
-                         along, minus the page number — page 4 of the live feed is rarely
-                         page 4 of the archive. --}}
-                    <div class="btn-group btn-group-sm notices-feed-scope" role="group" aria-label="Notice scope">
-                        <a href="{{ route('admin.dashboard.feed', array_merge(request()->except(['notice_scope', 'notice_year', 'page', 'notice']), ['tab' => 'notices'])) }}"
-                            class="btn {{ $noticeIsArchive ? 'btn-outline-secondary' : 'btn-primary' }}"
-                            @if(!$noticeIsArchive) aria-current="page" @endif>
-                            <i class="bi bi-megaphone me-1" aria-hidden="true"></i>Current
-                        </a>
-                        <a href="{{ route('admin.dashboard.feed', array_merge(request()->except(['notice_year', 'page', 'notice']), ['tab' => 'notices', 'notice_scope' => 'archive'])) }}"
-                            class="btn {{ $noticeIsArchive ? 'btn-primary' : 'btn-outline-secondary' }}"
-                            @if($noticeIsArchive) aria-current="page" @endif>
-                            <i class="bi bi-archive me-1" aria-hidden="true"></i>Archive
-                            @if(($noticeFilterOptions['archiveCount'] ?? 0) > 0)
-                            <span class="badge rounded-pill bg-light text-dark ms-1">{{ number_format($noticeFilterOptions['archiveCount']) }}</span>
-                            @endif
-                        </a>
-                    </div>
-                </div>
-
                 @if($noticeFilters['focusMissing'] ?? false)
-                <div class="alert alert-warning small py-2 mb-3 mt-2" role="status">
+                <div class="alert alert-warning small py-2 mb-3" role="status">
                     <i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>The notice you opened is no longer available. It may have been withdrawn or deleted.
                 </div>
                 @endif
 
                 @if($noticeIsArchive)
-                <p class="text-body-secondary small mb-3 mt-2">
+                <p class="text-body-secondary small mb-3">
                     <i class="bi bi-info-circle me-1" aria-hidden="true"></i>Notices that have passed their expiry date. Only the ones addressed to you are listed.
                 </p>
                 @endif
-
-                {{-- Filters are applied in SQL, so the toolbar is a plain GET form:
-                     changing a select reloads the page with the filter in the URL.
-                     That keeps deep links, browser back/forward and pagination
-                     consistent, and means the page never renders more than one
-                     page of notices. --}}
-                <form method="GET" action="{{ route('admin.dashboard.feed') }}"
-                    class="notices-feed-toolbar d-flex flex-wrap align-items-center gap-2 mb-3"
-                    id="notice-filter-form">
-                    <input type="hidden" name="tab" value="notices">
-                    <input type="hidden" name="q" id="notice-filter-q" value="{{ $noticeFilters['q'] }}">
-                    {{-- Keeps Current/Archive selected when a filter select reloads the page. --}}
-                    @if($noticeIsArchive)
-                    <input type="hidden" name="notice_scope" value="archive">
-                    @endif
-
-                    <span class="notices-feed-toolbar__label">Filters</span>
-
-                    <select class="form-select form-select-sm notices-feed-filter" name="notice_year"
-                        id="notice-filter-year" aria-label="Filter by year">
-                        <option value="">Year</option>
-                        @foreach($noticeFilterOptions['years'] as $ny)
-                        <option value="{{ $ny }}" {{ (string) $noticeFilters['year'] === (string) $ny ? 'selected' : '' }}>{{ $ny }}</option>
-                        @endforeach
-                    </select>
-
-                    <select class="form-select form-select-sm notices-feed-filter" name="notice_type"
-                        id="notice-filter-type" aria-label="Filter by type">
-                        <option value="">Type</option>
-                        @foreach($noticeFilterOptions['types'] as $nt)
-                        <option value="{{ $nt }}" {{ $noticeFilters['type'] === $nt ? 'selected' : '' }}>{{ $nt }}</option>
-                        @endforeach
-                    </select>
-
-                    <select class="form-select form-select-sm notices-feed-filter" name="notice_dept"
-                        id="notice-filter-dept" aria-label="Filter by department">
-                        <option value="">Department</option>
-                        @foreach($noticeFilterOptions['depts'] as $nd)
-                        <option value="{{ $nd }}" {{ $noticeFilters['dept'] === $nd ? 'selected' : '' }}>{{ $nd }}</option>
-                        @endforeach
-                    </select>
-
-                    <select class="form-select form-select-sm notices-feed-filter" name="notice_audience"
-                        id="notice-filter-audience" aria-label="Filter by target audience">
-                        <option value="">Target Audience</option>
-                        @foreach($noticeFilterOptions['audiences'] as $na)
-                        <option value="{{ $na }}" {{ $noticeFilters['audience'] === $na ? 'selected' : '' }}>{{ $na }}</option>
-                        @endforeach
-                    </select>
-
-                    {{-- Reset clears the filters but stays on the current scope: switching
-                         back to the live feed is what the Current button is for. --}}
-                    <a href="{{ route('admin.dashboard.feed', $noticeIsArchive ? ['tab' => 'notices', 'notice_scope' => 'archive'] : ['tab' => 'notices']) }}"
-                        class="btn btn-sm notices-feed-reset-btn" id="notice-filter-reset">Reset Filters</a>
-
-                    {{-- The notice screens' own gate (PR #334 F-003), so the button shows
-                         for exactly the accounts those routes admit. --}}
-                    @if(canAuthorNotices())
-                    <a href="{{ route('admin.notice.create') }}" class="btn btn-sm notices-feed-add-btn ms-auto">
-                        <i class="bi bi-plus-square me-1" aria-hidden="true"></i>Add New Notice
-                    </a>
-                    @endif
-                </form>
 
                 <div id="dashboard-feed-page-list-notices"
                     @if(!empty($noticeFilters['focus'])) data-focus-notice="{{ (int) $noticeFilters['focus'] }}" @endif>
@@ -275,12 +286,15 @@
                     @endforelse
                 </div>
 
-                @if($notices->hasPages())
-                <div class="notices-feed-pagination d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3">
-                    <small class="text-body-secondary">
-                        Showing {{ $notices->firstItem() }}–{{ $notices->lastItem() }} of {{ number_format($notices->total()) }}
-                    </small>
-                    {{ $notices->onEachSide(1)->links('vendor.pagination.custom') }}
+                @if($notices->total() > 0)
+                {{-- Footer variant B (Laravel paginator): pager left, count right. --}}
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3">
+                    <div class="programme-dt-pagination">
+                        {{ $notices->onEachSide(1)->links('vendor.pagination.custom') }}
+                    </div>
+                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                        <div class="dataTables_info">Showing {{ $notices->firstItem() }}–{{ $notices->lastItem() }} of {{ number_format($notices->total()) }} items</div>
+                    </div>
                 </div>
                 @endif
             </div>
@@ -344,18 +358,17 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-feed.css') }}?v=15">
+{{-- The notice filters are Select2 (every dropdown is searchable, new design §2). --}}
+@include('admin.layouts.partials.select2-assets')
+<link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-feed.css') }}?v={{ @filemtime(public_path('admin_assets/css/dashboard-feed.css')) ?: time() }}">
 @endpush
 
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const tabLabels = {
-        notifications: 'Notifications',
-        notices: 'Notices',
-        birthdays: 'Birthdays',
-        wishes: 'Wishes'
-    };
+    const tabLabels = @json($feedTabs);
+    const crumbTitle = document.querySelector('.dashboard-feed-page .modern-breadcrumb-title');
+    const crumbLast = document.querySelector('.dashboard-feed-page .modern-breadcrumb-trail .breadcrumb-item.active span');
     const feedBaseUrl = @json(route('admin.dashboard.feed'));
     const allowedTabs = Object.keys(tabLabels);
 
@@ -371,6 +384,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('dashboard-feed-page-search');
     const countEl = document.getElementById('dashboard-feed-page-count');
     const markAllBtn = document.getElementById('dashboard-feed-page-mark-all');
+    const tabOnlyEls = document.querySelectorAll('[data-feed-only]');
     const tabButtons = document.querySelectorAll('[data-dashboard-feed-tab]');
     const tabPanels = document.querySelectorAll('[data-feed-panel]');
 
@@ -468,9 +482,13 @@ document.addEventListener('DOMContentLoaded', function() {
             panel.classList.toggle('d-none', !isActive);
         });
 
-        if (markAllBtn) {
-            markAllBtn.classList.toggle('d-none', activeTab !== 'notifications' && activeTab !== 'wishes');
-        }
+        // Tabs switch without a reload, so the breadcrumb follows here.
+        if (crumbTitle) crumbTitle.textContent = tabLabels[activeTab];
+        if (crumbLast) crumbLast.textContent = tabLabels[activeTab];
+
+        tabOnlyEls.forEach(function(el) {
+            el.classList.toggle('d-none', el.dataset.feedOnly.split(' ').indexOf(activeTab) === -1);
+        });
 
         if (searchInput) {
             // On the notices tab the box mirrors the query the server actually
@@ -505,12 +523,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         searchInput.addEventListener('blur', function(e) {
             if (activeTab !== 'notices') return;
-            // Reset Filters, Add New Notice and the four selects all live INSIDE
-            // the filter form. Submitting here when focus moves to one of them
-            // would navigate first and swallow that click — the select would not
-            // even open. Their own action already carries the synced `q`.
+            // Reset Filters and the selects live INSIDE the filter form, and Add
+            // New Notice sits above the card. Submitting here when focus moves to
+            // one of them would navigate first and swallow that click — a select
+            // would not even open. Their own action already carries the synced `q`.
             const form = document.getElementById('notice-filter-form');
-            if (form && e.relatedTarget && form.contains(e.relatedTarget)) return;
+            const to = e.relatedTarget;
+            if (to && ((form && form.contains(to)) || to.id === 'dashboard-feed-add-notice')) return;
             submitNoticeSearch();
         });
     }
@@ -521,14 +540,28 @@ document.addEventListener('DOMContentLoaded', function() {
         setActiveTab(tabFromUrl(), false);
     });
 
-    // Each select is a form field now — changing one reloads with the filter applied.
-    // "Reset Filters" is a plain link back to the unfiltered tab, so it needs no JS.
-    document.querySelectorAll('.notices-feed-filter').forEach(function(sel) {
-        sel.addEventListener('change', function() {
+    // Each select is a form field — changing one reloads with the filter applied.
+    // They are Select2, which fires a jQuery change that addEventListener never hears.
+    if (window.jQuery) {
+        window.jQuery(document).on('change', '.notices-feed-filter', function() {
             const form = document.getElementById('notice-filter-form');
-            if (form) form.submit();
+            if (!form) return;
+            // Current and Archive offer different years.
+            if (this.id === 'notice-filter-scope') {
+                const year = document.getElementById('notice-filter-year');
+                if (year) year.value = '';
+            }
+            syncNoticeSearchField();
+            form.submit();
         });
-    });
+    }
+
+    const noticeReset = document.getElementById('notice-filter-reset');
+    if (noticeReset) {
+        noticeReset.addEventListener('click', function() {
+            window.location.assign(noticeReset.dataset.href);
+        });
+    }
 
     if (markAllBtn) {
         markAllBtn.addEventListener('click', function() {

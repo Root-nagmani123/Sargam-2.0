@@ -1,0 +1,18 @@
+{
+    "name": "Protocol",
+    "alias": "protocol",
+    "description": "Protocol Module — Guest House, Vehicle Pass and Ticket request workflows with Protocol Staff approval/recommendation routing and full audit logging.",
+    "keywords": [
+        "protocol",
+        "guest-house",
+        "vehicle-pass",
+        "ticket",
+        "approval-workflow"
+    ],
+    "version": "1.0.0",
+    "priority": 0,
+    "providers": [
+        "Modules\\Protocol\\Providers\\ProtocolServiceProvider"
+    ],
+    "files": []
+}
