@@ -309,11 +309,11 @@ class ProtocolRequest extends Model
     /** Called inside the store transaction; the lock holds concurrent submissions until it commits */
     public static function generateRequestNumber(): string
     {
-        $last = static::withTrashed()->orderByDesc('id')->lockForUpdate()->first();
-        $next = $last ? $last->id + 1 : 1001;
+        // One sequence: numbering starts at PR-1001 and continues after the highest number issued.
+        // (Deriving it from id + 1 after an empty-table seed of 1001 gave PR-1001, PR-2, PR-3, ...)
+        $highest = (int) static::withTrashed()->max(DB::raw('CAST(SUBSTRING(request_number, 4) AS UNSIGNED)'));
+        $next = max($highest + 1, 1001);
 
-        // The empty-table seed and id + 1 are two sequences that meet (PR-1001 again at id 1000), and
-        // request_number is unique; when the number is taken, continue after the highest one issued (PR #348 F-028).
         // Only the candidate is read with a lock (one unique-index entry); the highest is a plain read, so the
         // table is not locked (F-029), and a number committed meanwhile is caught by the next locked check
         while (static::withTrashed()->where('request_number', 'PR-' . $next)->lockForUpdate()->value('id') !== null) {
