@@ -3,13 +3,17 @@
 @php
   $batch = $protocolRequest->batch;
   $d = $protocolRequest->requestable;
+  $course = $batch?->course;
+  $courseLabel = $course
+      ? collect([$course->course_name, $course->couse_short_name])->filter()->implode(' / ')
+      : ($batch?->course_team_to_notify ?: '—');
 @endphp
 
 <div class="pr-card mb-3">
   <div class="pr-card__body">
     <h3 class="pr-card__title">Request Summary</h3>
     <div class="pr-facts">
-      <div><span class="pr-fact__label">Course Team To Notify</span><div class="pr-fact__value">{{ $batch->course_team_to_notify ?? '—' }}</div></div>
+      <div><span class="pr-fact__label">Course Team To Notify</span><div class="pr-fact__value">{{ $courseLabel }}</div></div>
       <div><span class="pr-fact__label">Purpose</span><div class="pr-fact__value">{{ $batch->purpose ?? '—' }}</div></div>
       <div><span class="pr-fact__label">Escort Required</span><div class="pr-fact__value">{{ $batch->escort_required ? 'Yes' : 'No' }}</div></div>
       <div><span class="pr-fact__label">Faculty</span><div class="pr-fact__value">{{ $batch->is_faculty ? 'Yes' : 'No' }}</div></div>

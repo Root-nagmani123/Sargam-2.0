@@ -33,7 +33,8 @@ class StoreCombinedRequest extends FormRequest
             'types' => ['required', 'array', 'min:1'],
             'types.*' => ['in:guesthouse,vehicle,ticket'],
 
-            'course_team_to_notify' => ['nullable', 'string', 'max:150'],
+            // The select posts course_master.pk; the batch's course() relation joins on it (PR #355 F-004)
+            'course_team_to_notify' => ['nullable', 'integer', 'exists:course_master,pk'],
             'purpose' => ['required', 'string', 'max:150'],
             'other_purpose' => ['nullable','required_if:purpose,Other', 'string', 'max:150'],
             'escort_required' => ['required', 'in:yes,no'],
@@ -102,8 +103,8 @@ class StoreCombinedRequest extends FormRequest
             'types.*.in' => 'Selected request type is invalid.',
 
             // ---------------- Shared Fields ----------------
-            'course_team_to_notify.string' => 'Course Team to Notify must be a valid text value.',
-            'course_team_to_notify.max' => 'Course Team to Notify cannot exceed 150 characters.',
+            'course_team_to_notify.integer' => 'Please select a valid course for Course Team to Notify.',
+            'course_team_to_notify.exists' => 'The selected course for Course Team to Notify does not exist.',
 
             'purpose.required' => 'Please select a purpose.',
             'purpose.string' => 'Purpose must be a valid text value.',

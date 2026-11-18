@@ -31,6 +31,12 @@ class ProtocolRequestBatch extends Model
         return $this->belongsTo(config('auth.providers.users.model'), 'employee_id');
     }
 
+    /** The course (course_master.pk) stored in course_team_to_notify. */
+    public function course(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\CourseMaster::class, 'course_team_to_notify', 'pk');
+    }
+
     /** All guest rows entered once on this batch, shared by every request type checked. */
     public function guests(): HasMany
     {

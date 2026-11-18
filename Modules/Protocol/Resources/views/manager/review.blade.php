@@ -36,11 +36,14 @@
         <h3 class="pr-card__title">Final Decision</h3>
         <form method="POST" action="{{ route('protocol.manager.decide', $protocolRequest) }}" id="managerDecisionForm">
           @csrf
-          <input type="hidden" name="decision" id="managerDecisionField" value="approve">
+          <input type="hidden" name="decision" id="managerDecisionField" value="{{ old('decision', 'approve') }}">
 
           <div class="mb-3">
-            <label class="form-label" for="managerRemarks">Remarks</label>
-            <textarea name="remarks" id="managerRemarks" class="form-control" rows="2" placeholder="Optional note for the record"></textarea>
+            <label class="form-label" for="managerRemarks">Remarks <span class="text-muted small">(required when rejecting)</span></label>
+            <textarea name="remarks" id="managerRemarks" maxlength="1000"
+              class="form-control @error('remarks') is-invalid @enderror" rows="2"
+              placeholder="Required for Reject, optional for Approve">{{ old('remarks') }}</textarea>
+            <div class="invalid-feedback" id="managerRemarksError">{{ $errors->first('remarks') ?: 'Remarks are required when rejecting a request.' }}</div>
           </div>
 
           <div class="pr-form-footer">
@@ -53,6 +56,26 @@
             </button>
           </div>
         </form>
+        <script>
+          (function () {
+            var form = document.getElementById('managerDecisionForm');
+            var remarks = document.getElementById('managerRemarks');
+            var error = document.getElementById('managerRemarksError');
+
+            // Reject without remarks is stopped here; the server enforces the same rule
+            form.addEventListener('submit', function (e) {
+              if (document.getElementById('managerDecisionField').value === 'reject' && remarks.value.trim() === '') {
+                e.preventDefault();
+                error.textContent = 'Remarks are required when rejecting a request.';
+                remarks.classList.add('is-invalid');
+                remarks.focus();
+              }
+            });
+            remarks.addEventListener('input', function () {
+              if (remarks.value.trim() !== '') remarks.classList.remove('is-invalid');
+            });
+          })();
+        </script>
       </div>
     </div>
   </div>
