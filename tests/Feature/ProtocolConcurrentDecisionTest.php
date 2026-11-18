@@ -136,4 +136,35 @@ class ProtocolConcurrentDecisionTest extends TestCase
         $this->assertNotSame($taken, $number);
         $this->assertSame(0, ProtocolRequest::withTrashed()->where('request_number', $number)->count());
     }
+
+    /**
+     * PR #355 F-001: a second submission drawn while the first is still open must wait for it,
+     * not draw the same number and deadlock on the insert. Session B runs the real
+     * generateRequestNumber() by making the second connection the default for that call.
+     */
+    public function test_a_second_submission_waits_for_the_first_to_draw_its_number(): void
+    {
+        $owner = $this->employeeLogin();
+        $this->request = $this->seedRequest($owner);
+
+        // Session A is mid-submission: its number is drawn and the transaction is still open
+        DB::beginTransaction();
+        $numberA = ProtocolRequest::generateRequestNumber();
+
+        $default = config('database.default');
+        $sessionB = DB::connection('protocol_second_session');
+        $sessionB->statement('SET SESSION innodb_lock_wait_timeout = 1');
+        $sessionB->beginTransaction();
+        DB::setDefaultConnection('protocol_second_session');
+        try {
+            ProtocolRequest::generateRequestNumber();
+            $this->fail("session B drew a number while session A ({$numberA}) was still open");
+        } catch (QueryException $e) {
+            $this->assertSame(1205, (int) ($e->errorInfo[1] ?? 0), $e->getMessage());
+        } finally {
+            DB::setDefaultConnection($default);
+            $sessionB->rollBack();
+            DB::rollBack();
+        }
+    }
 }

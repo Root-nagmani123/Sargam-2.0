@@ -87,6 +87,10 @@ class ProtocolRequestWorkflowTest extends TestCase
         $this->actingAs($manager)
             ->post(route('protocol.manager.decide', $request), ['decision' => 'reject', 'remarks' => 'too late'])
             ->assertForbidden();
+        // PR #355 F-002: the 403 answers before the remarks rule, so a remarks-less repeat is refused, not validated
+        $this->actingAs($manager)
+            ->post(route('protocol.manager.decide', $request), ['decision' => 'reject'])
+            ->assertForbidden();
         $this->assertSame(1, $request->logs()->where('action', '!=', 'raised')->count());
     }
 
@@ -109,6 +113,22 @@ class ProtocolRequestWorkflowTest extends TestCase
         $request->refresh();
         $this->assertSame(ProtocolRequest::STATUS_REJECTED, $request->status);
         $this->assertSame('Dates clash with the convocation', $this->lastLog($request)->remarks);
+    }
+
+    /** PR #355 F-002: a manager the request was not recommended to gets 403, with or without remarks */
+    public function test_a_manager_it_was_not_recommended_to_cannot_decide_it(): void
+    {
+        $owner = $this->employeeLogin();
+        $manager = $this->employeeLogin([$owner->pk]);
+        $otherManager = $this->employeeLogin([$owner->pk, $manager->pk]);
+        $request = $this->seedRequest($owner, ProtocolRequest::STATUS_RECOMMENDED, null, ['recommended_to_id' => $manager->pk]);
+
+        foreach ([['decision' => 'reject'], ['decision' => 'reject', 'remarks' => 'Not mine'], ['decision' => 'approve']] as $payload) {
+            $this->actingAs($otherManager)
+                ->post(route('protocol.manager.decide', $request), $payload)
+                ->assertForbidden();
+        }
+        $this->assertSame(ProtocolRequest::STATUS_RECOMMENDED, $request->refresh()->status);
     }
 
     /** F-021: a login keyed on an employee's pk_old is listed, recommended to, and recorded as that employee */
@@ -257,7 +277,65 @@ class ProtocolRequestWorkflowTest extends TestCase
         $taken = 'PR-' . ($last->id + 1);
         $last->update(['request_number' => $taken]);
 
-        $this->actingAs($owner)->post(route('protocol.requests.store'), [
+        $this->submitTicket($owner)->assertSessionHasNoErrors()->assertSessionMissing('error');
+
+        $created = ProtocolRequest::where('id', '>', $last->id)->sole();
+        $this->assertNotSame($taken, $created->request_number);
+        $this->assertSame(1, ProtocolRequest::withTrashed()->where('request_number', $created->request_number)->count());
+    }
+
+    /** PR #355 F-003: a new request is numbered one after the highest number issued, not from its id */
+    public function test_a_submission_is_numbered_after_the_highest_number_issued(): void
+    {
+        $owner = $this->plainEmployee();
+        $last = $this->seedRequest($owner);
+        $highest = $this->highestIssuedNumber() + 50;
+        $last->update(['request_number' => 'PR-' . $highest]);
+
+        $this->submitTicket($owner)->assertSessionHasNoErrors()->assertSessionMissing('error');
+
+        $this->assertSame('PR-' . ($highest + 1), ProtocolRequest::where('id', '>', $last->id)->sole()->request_number);
+    }
+
+    /** PR #355 F-003: a soft-deleted request still holds its number, so the next one continues after it */
+    public function test_a_soft_deleted_highest_number_is_not_reissued(): void
+    {
+        $owner = $this->plainEmployee();
+        $last = $this->seedRequest($owner);
+        $highest = $this->highestIssuedNumber() + 50;
+        $last->update(['request_number' => 'PR-' . $highest]);
+        $last->delete();
+
+        $this->submitTicket($owner)->assertSessionHasNoErrors()->assertSessionMissing('error');
+
+        $this->assertSame('PR-' . ($highest + 1), ProtocolRequest::where('id', '>', $last->id)->sole()->request_number);
+    }
+
+    /** PR #355 F-004: Course Team To Notify must be a course_master pk, which is what course() joins on */
+    public function test_course_team_to_notify_must_be_an_existing_course(): void
+    {
+        $owner = $this->plainEmployee();
+        $missingPk = (int) DB::table('course_master')->max('pk') + 1000;
+
+        foreach (['12abc', 'Foundation', $missingPk] as $value) {
+            $this->submitTicket($owner, ['course_team_to_notify' => $value])->assertSessionHasErrors('course_team_to_notify');
+        }
+
+        $course = DB::table('course_master')->value('pk');
+        if ($course !== null) {
+            $this->submitTicket($owner, ['course_team_to_notify' => $course])->assertSessionHasNoErrors();
+        }
+    }
+
+    private function highestIssuedNumber(): int
+    {
+        return (int) ProtocolRequest::withTrashed()->max(DB::raw('CAST(SUBSTRING(request_number, 4) AS UNSIGNED)'));
+    }
+
+    /** A one-journey ticket submission through the store route, as the create form posts it */
+    private function submitTicket(User $owner, array $overrides = [])
+    {
+        return $this->actingAs($owner)->post(route('protocol.requests.store'), $overrides + [
             'types' => ['ticket'],
             'purpose' => 'Official',
             'escort_required' => 'no',
@@ -267,11 +345,7 @@ class ProtocolRequestWorkflowTest extends TestCase
                 'date_of_journey' => now()->addDay()->toDateString(),
                 'train_flight_bus_name' => 'Shatabdi', 'train_flight_bus_no' => '12017',
             ]]],
-        ])->assertSessionHasNoErrors()->assertSessionMissing('error');
-
-        $created = ProtocolRequest::where('id', '>', $last->id)->sole();
-        $this->assertNotSame($taken, $created->request_number);
-        $this->assertSame(1, ProtocolRequest::withTrashed()->where('request_number', $created->request_number)->count());
+        ]);
     }
 
     private function seedVehicle(string $name, int $status, $deletedAt = null): int

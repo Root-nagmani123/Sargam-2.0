@@ -306,9 +306,17 @@ class ProtocolRequest extends Model
         return config("protocol.request_types.{$this->request_type}.label", $this->request_type);
     }
 
-    /** Called inside the store transaction; the lock holds concurrent submissions until it commits */
+    /**
+     * Called inside the store transaction. The locking read of the last row is the serialisation
+     * point: a concurrent submission waits on it until this transaction commits, so two submissions
+     * never draw the same number and then block each other's insert (PR #355 F-001). Do not remove it
+     * without replacing that guarantee.
+     */
     public static function generateRequestNumber(): string
     {
+        // Serialise concurrent submissions (one row, by primary key; other requests stay unlocked, F-029)
+        static::withTrashed()->orderByDesc('id')->lockForUpdate()->value('id');
+
         // One sequence: numbering starts at PR-1001 and continues after the highest number issued.
         // (Deriving it from id + 1 after an empty-table seed of 1001 gave PR-1001, PR-2, PR-3, ...)
         $highest = (int) static::withTrashed()->max(DB::raw('CAST(SUBSTRING(request_number, 4) AS UNSIGNED)'));
