@@ -8,6 +8,12 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-18: Faculty edits the translated paper, then freezes.** As soon as Rajbhasha
+  sends the translation back (Pending Verification), the faculty sees **Edit Translated
+  Paper**, not only after a COE unfreeze. The edited translation stays with the faculty
+  (no trip back to Rajbhasha) and they freeze it with the OTP. Edit Original Paper still
+  sends it back to Rajbhasha. Details: Question papers → "Flow". Tests:
+  `FacultyQuestionPaperUploadTest::test_faculty_edits_the_sent_back_translation_then_freezes_it`.
 - **2026-11-18: Rajbhasha View Original Paper: OTP verification first.** Before the
   original question paper opens, Rajbhasha must verify a 5-digit OTP sent to their
   mobile; a verified OTP opens that paper once (10 min), so every view needs a new OTP.
@@ -163,10 +169,15 @@ Table `question_papers` (one per drive + subject, soft deletes), `question_paper
   Each screen maps these to its own badge labels.
 - Flow: faculty writes in Summernote (no file upload any more) → `pending-rajbhasha`;
   edit allowed in `pending-rajbhasha` / `sent-for-approval` (bumps version, sends back to
-  Rajbhasha). Rajbhasha translates in place (templates are bilingual) → `translated` →
-  Send for Approval → `sent-for-approval`. Faculty **freezes with a 5-digit SMS OTP** →
-  `published`. COE can **unfreeze** (back to `sent-for-approval`, faculty may then edit the
-  translation) or **delete** (route only, no button, any status).
+  Rajbhasha). Faculty can't edit while it is `translated` (Rajbhasha's unsent draft).
+  Rajbhasha translates in place (templates are bilingual) → `translated` →
+  Send for Approval → `sent-for-approval` (faculty: "Pending Verification"). There the
+  faculty either **edits the original** (next version → back to Rajbhasha, translation kept
+  for Rajbhasha to correct), or **edits the translation itself** (Edit Translated Paper,
+  `QuestionPaperService::translationEditable()`: stays `sent-for-approval`, no trip back
+  to Rajbhasha, `translated_by` unchanged, logged as Faculty / Translation / Updated), then
+  **freezes with a 5-digit SMS OTP** → `published`. COE can **unfreeze** (back to
+  `sent-for-approval`, same choices again) or **delete** (route only, no button, any status).
 - Faculty routes use the **`examination_drive_faculty_maps.id`** as `{paper}`; Rajbhasha
   and admin routes use `question_papers.id`.
 - **OTP** (`FreezeOtpService`): hashed in cache 10 min, 5 sends / 5 wrong tries per 10 min,

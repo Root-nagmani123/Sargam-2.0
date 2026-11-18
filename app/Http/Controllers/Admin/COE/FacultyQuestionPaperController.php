@@ -21,10 +21,10 @@ use Illuminate\Validation\ValidationException;
  * can edit it while it waits there).
  *
  * Once Rajbhasha sends the translation back, the faculty verifies it and
- * freezes it with an OTP to publish - or edits the original again, which sends
- * it back to Rajbhasha. After COE unfreezes a published paper, the faculty may
- * also edit the translation itself. The rows and their shape come from
- * QuestionPaperService::papersForFaculty().
+ * freezes it with an OTP to publish - or edits the translation itself (it stays
+ * with them, to freeze), or edits the original again, which sends it back to
+ * Rajbhasha. The same holds once COE unfreezes a published paper. The rows and
+ * their shape come from QuestionPaperService::papersForFaculty().
  */
 class FacultyQuestionPaperController extends Controller
 {
@@ -217,8 +217,9 @@ class FacultyQuestionPaperController extends Controller
     }
 
     /**
-     * Edit Translated Paper — once COE has unfrozen the published paper, the
-     * faculty corrects the translation in the editor themselves.
+     * Edit Translated Paper — while it is Pending Verification (sent back by
+     * Rajbhasha, or unfrozen by COE), the faculty corrects the translation in the
+     * editor themselves; no need to send it back to Rajbhasha.
      */
     public function editTranslation(Request $request, int $paper)
     {

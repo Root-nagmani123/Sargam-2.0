@@ -380,6 +380,50 @@ class FacultyQuestionPaperUploadTest extends TestCase
         $this->assertSame(QuestionPaper::STATUS_PUBLISHED, $this->paper()->status);
     }
 
+    public function test_faculty_edits_the_sent_back_translation_then_freezes_it(): void
+    {
+        $this->write()->assertOk();
+        $editUrl = route('admin.coe.faculty-question-paper.translation.edit', $this->map->id);
+        $saveUrl = route('admin.coe.faculty-question-paper.translation.store', $this->map->id);
+
+        // Still with Rajbhasha: no Edit Translated Paper.
+        $this->actingAs($this->faculty)->get(route('admin.coe.faculty-question-paper.index'))
+            ->assertOk()->assertDontSee($editUrl, false);
+        $this->actingAs($this->faculty)->get($editUrl)
+            ->assertRedirect(route('admin.coe.faculty-question-paper.index'))
+            ->assertSessionHas('error', fn ($m) => str_contains($m, 'only while it is Pending Verification'));
+        $this->actingAs($this->faculty)->postJson($saveUrl, ['paper_html' => '<p>बदला</p>'])
+            ->assertStatus(422)->assertJsonValidationErrors('paper');
+
+        // Rajbhasha sent it back (no COE unfreeze): the faculty edits it, it stays with them, and they freeze it.
+        $oldPath = $this->sentBackTranslated();
+        $translator = $this->paper()->translated_by;
+        $this->actingAs($this->faculty)->get(route('admin.coe.faculty-question-paper.index'))
+            ->assertOk()->assertSee($editUrl, false);
+        $this->actingAs($this->faculty)->get($editUrl)
+            ->assertOk()
+            ->assertSee('Edit Translated Paper')
+            ->assertSee('प्रश्न 1');
+        $this->actingAs($this->faculty)->postJson($saveUrl, ['paper_html' => '<p>प्रश्न 1 बदला</p>'])
+            ->assertOk()
+            ->assertJson(['message' => 'Translated question paper updated. Freeze it to publish.']);
+
+        $paper = $this->paper();
+        $this->assertSame(QuestionPaper::STATUS_SENT_FOR_APPROVAL, $paper->status);
+        $this->assertSame($translator, $paper->translated_by);
+        $this->assertNotNull($paper->sent_for_approval_at);
+        $this->assertStringContainsString('प्रश्न 1 बदला', Storage::disk(QuestionPaper::DISK)->get($paper->translated_file_path));
+        Storage::disk(QuestionPaper::DISK)->assertMissing($oldPath);
+
+        $this->action('freeze', ['otp' => $this->sendOtp()])->assertOk();
+        $this->assertSame(QuestionPaper::STATUS_PUBLISHED, $this->paper()->status);
+
+        // Published: the translation is final again.
+        $this->actingAs($this->faculty)->get($editUrl)->assertRedirect(route('admin.coe.faculty-question-paper.index'));
+        $this->actingAs($this->faculty)->postJson($saveUrl, ['paper_html' => '<p>फिर बदला</p>'])
+            ->assertStatus(422)->assertJsonValidationErrors('paper');
+    }
+
     public function test_after_coe_unfreezes_it_the_faculty_edits_the_translation(): void
     {
         $this->write()->assertOk();
@@ -387,15 +431,6 @@ class FacultyQuestionPaperUploadTest extends TestCase
         $translator = $this->paper()->translated_by;
         $editUrl = route('admin.coe.faculty-question-paper.translation.edit', $this->map->id);
         $saveUrl = route('admin.coe.faculty-question-paper.translation.store', $this->map->id);
-
-        // Sent back by Rajbhasha but never unfrozen: no Edit Translated Paper.
-        $this->actingAs($this->faculty)->get(route('admin.coe.faculty-question-paper.index'))
-            ->assertOk()->assertDontSee($editUrl, false);
-        $this->actingAs($this->faculty)->get($editUrl)
-            ->assertRedirect(route('admin.coe.faculty-question-paper.index'))
-            ->assertSessionHas('error', fn ($m) => str_contains($m, 'after COE unfreezes'));
-        $this->actingAs($this->faculty)->postJson($saveUrl, ['paper_html' => '<p>बदला</p>'])
-            ->assertStatus(422)->assertJsonValidationErrors('paper');
 
         $this->paper()->update(['status' => QuestionPaper::STATUS_PUBLISHED, 'frozen_at' => now()]);
         app(AdminPaperService::class)->unfreeze($this->paper()->id);

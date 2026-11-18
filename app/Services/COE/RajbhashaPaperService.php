@@ -214,8 +214,8 @@ class RajbhashaPaperService
 
     /**
      * Stores the translation written in the editor as .html in place of the
-     * paper's current one - for Rajbhasha, and for the faculty after COE unfreezes
-     * it. $allowed is checked again on the locked row; $changes go on the row too.
+     * paper's current one - for Rajbhasha, and for the faculty while it is Pending
+     * Verification. $allowed is checked again on the locked row; $changes go on the row too.
      *
      * @param  callable(QuestionPaper): bool  $allowed
      *

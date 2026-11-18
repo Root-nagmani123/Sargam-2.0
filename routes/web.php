@@ -2071,7 +2071,7 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
             ->whereNumber('paper')->name('faculty-question-paper.original');
         Route::get('faculty-question-paper/{paper}/translated', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'translated'])
             ->whereNumber('paper')->name('faculty-question-paper.translated');
-        // Edit Translated Paper: only once COE has unfrozen the published paper.
+        // Edit Translated Paper: while it is Pending Verification (then Freeze; no trip back to Rajbhasha).
         Route::get('faculty-question-paper/{paper}/translation/edit', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'editTranslation'])
             ->whereNumber('paper')->name('faculty-question-paper.translation.edit');
         Route::post('faculty-question-paper/{paper}/translation', [\App\Http\Controllers\Admin\COE\FacultyQuestionPaperController::class, 'storeTranslation'])

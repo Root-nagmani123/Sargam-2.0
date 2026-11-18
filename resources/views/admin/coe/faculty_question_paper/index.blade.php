@@ -216,7 +216,7 @@ $(function () {
 
     /* ── Row actions per state — the ONE place they are defined ─────────── */
     // href: null → a button; 'create' → the row's own URL (data-coe-create-url);
-    // 'translate' → its Edit Translated Paper URL (data-coe-translate-url), only after COE unfroze it.
+    // 'translate' → its Edit Translated Paper URL (data-coe-translate-url), while Pending Verification.
     // view: 'original' / 'translated' → opens that paper in the read-only viewer,
     // shown only when the row has it (data-coe-original / data-coe-translated).
     function act(cls, icon, label, href, view) {
@@ -245,7 +245,7 @@ $(function () {
         // Pending Verification: Rajbhasha sent the translation back; Freeze (OTP) publishes it.
         // Papers are only ever viewed here, never downloaded. Pending Verification:
         // Freeze publishes it; Edit Original Paper sends it back to Rajbhasha.
-        // Edit Translated Paper only once COE has unfrozen it (the row's translate URL).
+        // Edit Translated Paper (the row's translate URL): stays Pending Verification, to freeze.
         'translated': [
             ['coe-act--download', 'bi-eye', 'View Original Paper', null, 'original'],
             ['coe-act--download', 'bi-translate', 'View Translated Paper', null, 'translated'],

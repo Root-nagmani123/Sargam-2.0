@@ -17,9 +17,10 @@ use Illuminate\Validation\ValidationException;
  * COE question papers from the faculty's side: which papers they owe, writing
  * the original paper in the editor (V1, straight to Rajbhasha - no freeze),
  * editing it (V2, V3...) while it waits on Rajbhasha, and - once the translation
- * is sent back - verifying it and freezing it with an OTP to publish, or editing
- * it again, which sends it back to Rajbhasha to translate the change. Once COE
- * unfreezes a published paper, the faculty may also edit the translation itself.
+ * is sent back - verifying it and freezing it with an OTP to publish, editing
+ * the translation itself (it stays with them, to freeze), or editing the original
+ * again, which sends it back to Rajbhasha to translate the change. The same holds
+ * once COE unfreezes a published paper.
  *
  * A faculty owes one paper per subject mapped to them on an examination drive
  * (examination_drive_faculty_maps). The question_papers row only exists once
@@ -74,7 +75,7 @@ class QuestionPaperService
 
     private const PUBLISHED_MESSAGE = 'This question paper is published, so it can no longer be changed.';
 
-    private const TRANSLATION_LOCKED_MESSAGE = 'The translated paper can be edited only after COE unfreezes the published paper.';
+    private const TRANSLATION_LOCKED_MESSAGE = 'The translated paper can be edited only while it is Pending Verification with you.';
 
     private const DRIVE_NOT_APPROVED_MESSAGE = 'The Course Coordinator has not approved this examination drive yet. You can upload the question paper once it is approved.';
 
@@ -233,7 +234,7 @@ class QuestionPaperService
     }
 
     /**
-     * "Edit Translated Paper" on a paper COE unfroze: the translation, cleaned
+     * "Edit Translated Paper" on a paper Pending Verification: the translation, cleaned
      * again, to start the editor from.
      *
      * @throws ModelNotFoundException when the paper is not this faculty's
@@ -468,14 +469,15 @@ class QuestionPaperService
     }
 
     /**
-     * COE unfroze it and it waits on the faculty's verification: they may edit the
-     * translation too - one written in the editor (an older .docx cannot be).
+     * Rajbhasha sent it back (or COE unfroze it) and it waits on the faculty's
+     * verification: they may edit the translation themselves and then freeze it,
+     * without sending it back to Rajbhasha - one written in the editor (an older
+     * .docx cannot be).
      */
     private function translationEditable(?QuestionPaper $paper): bool
     {
         return $paper !== null
             && $paper->status === QuestionPaper::STATUS_SENT_FOR_APPROVAL
-            && $paper->unfrozen_at !== null
             && $paper->translated_file_path
             && str_ends_with(strtolower((string) $paper->translated_file_name), '.html');
     }
@@ -516,7 +518,7 @@ class QuestionPaperService
             'drive_approved' => $driveApproved,
             // Add; Edit while it waits on Rajbhasha or on the faculty's verification.
             'editable' => $driveApproved && ($paper === null || in_array($paper->status, self::EDITABLE, true)),
-            // Edit Translated Paper: only after COE unfroze it.
+            // Edit Translated Paper: while it is Pending Verification.
             'translation_editable' => $this->translationEditable($paper),
         ];
     }
