@@ -18,7 +18,7 @@
 
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
-            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
                 <form method="GET" class="d-flex flex-wrap align-items-center gap-3" id="amChampFilters">
                     <span class="programme-dt-filters-label">Filter</span>
                     <div class="programme-dt-filter-select">
@@ -37,7 +37,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <a href="{{ route('admin.athletics.reports.champion.index') }}" class="btn programme-dt-btn-reset">Remove Filter</a>
+                    <a href="{{ route('admin.athletics.reports.champion.index') }}" class="btn programme-dt-btn-reset d-inline-flex align-items-center">Remove Filter</a>
                 </form>
                 @include('admin.athletics.partials.grid_tools', ['table' => 'amChampTable'])
             </div>

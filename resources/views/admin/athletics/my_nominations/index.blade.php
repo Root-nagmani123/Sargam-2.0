@@ -35,11 +35,9 @@
             </div>
         </div>
     @empty
-        <div class="am-panel">
-            <div class="am-panel__section text-center py-5">
-                <span class="material-icons material-symbols-rounded d-block mb-2 text-secondary" aria-hidden="true">sports_score</span>
-                <p class="mb-0">There is no athletics meet open for nominations right now.</p>
-            </div>
+        <div class="ds-empty-state">
+            <span class="material-icons material-symbols-rounded d-block mb-2" aria-hidden="true">sports_score</span>
+            <p class="mb-0">There is no athletics meet open for nominations right now.</p>
         </div>
     @endforelse
 </div>
