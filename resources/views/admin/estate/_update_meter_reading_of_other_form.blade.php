@@ -326,7 +326,7 @@ function init() {
                     window.otherMeterRowData[row.pk + '_1'] = { curr_month_elec_red: '', new_meter_no: nm1 };
                     window.otherMeterRowData[row.pk + '_2'] = { curr_month_elec_red: '', new_meter_no: nm2 };
 
-                    tbody.append('<tr class="other-reading-row other-dual-stacked" data-dual="1" data-pk="' + row.pk + '" data-later-month="' + escAttr(row.later_month_ym || '') + '">' +
+                    tbody.append('<tr class="other-reading-row other-dual-stacked" data-dual="1" data-pk="' + row.pk + '" data-later-month="' + escAttr(row.later_month_ym || '') + '" data-bill-ym="' + escAttr(row.bill_ym || '') + '">' +
                         '<td class="text-center align-middle position-relative">' +
                             '<input type="checkbox" class="form-check-input row-check row-check-master" name="readings[' + i0 + '][selected]" value="1" data-pair-sel-id="otherPairSel_' + i1 + '">' +
                             '<input type="checkbox" class="form-check-input other-pair-cb" name="readings[' + i1 + '][selected]" value="1" id="otherPairSel_' + i1 + '" tabindex="-1" aria-hidden="true">' +
@@ -386,7 +386,7 @@ function init() {
                 var oldDisp = (row.old_meter_no != null && String(row.old_meter_no).trim() !== '') ? row.old_meter_no : (row.meter_no || 'N/A');
                 var lastElecDisp = (row.last_month_reading != null && row.last_month_reading !== '') ? row.last_month_reading : 'N/A';
 
-                tbody.append('<tr class="other-reading-row other-reading-row-single" data-dual="0" data-pk="' + row.pk + '" data-meter-slot="' + slot + '" data-later-month="' + escAttr(row.later_month_ym || '') + '">' +
+                tbody.append('<tr class="other-reading-row other-reading-row-single" data-dual="0" data-pk="' + row.pk + '" data-meter-slot="' + slot + '" data-later-month="' + escAttr(row.later_month_ym || '') + '" data-bill-ym="' + escAttr(row.bill_ym || '') + '">' +
                     '<td><input type="checkbox" class="form-check-input row-check row-check-master" name="readings[' + idx + '][selected]" value="1"></td>' +
                     '<td>' + escAttr(row.house_no || 'N/A') + '</td>' +
                     '<td>' + escAttr(row.name || 'N/A') + '</td>' +
@@ -593,8 +593,20 @@ function init() {
         });
         if (laterMonth !== '') {
             var later = new Date(laterMonth + '-01T00:00:00').toLocaleString('en-GB', { month: 'long', year: 'numeric' });
-            showError('A reading for ' + later + ' is already saved for this house, so an earlier month cannot be corrected. Correct or remove ' + later + ' first.');
+            showError('A reading for ' + later + ' is already saved for this house, so an earlier month cannot be corrected. Please contact the Estate module administrator for correction.');
             return false;
+        }
+
+        // F-057: Edit corrects the opened row's own month only, as on Update Meter Reading (F-053). The store also
+        // refuses a month earlier than the house's latest saved month, or one taken from an older row.
+        if (isListEditMode) {
+            var editYm = String($checked.first().closest('tr').attr('data-bill-ym') || '');
+            if (editYm !== '' && val('bill_month') !== editYm) {
+                var editMonth = new Date(editYm + '-01T00:00:00').toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+                showError('This Edit corrects the ' + editMonth + ' reading only. Set Meter Change Month back to ' + editMonth + '; to record another month, use Update Meter Reading of Other without Edit.');
+                $f('bill_month').trigger('focus');
+                return false;
+            }
         }
 
         var hasEmptyReading = false;

@@ -582,7 +582,7 @@ $(document).ready(function() {
         if (laterMonth !== '') {
             e.preventDefault();
             const later = monthLabel(laterMonth);
-            alert('A reading for ' + later + ' is already saved for this house, so an earlier month cannot be corrected. Correct or remove ' + later + ' first.');
+            alert('A reading for ' + later + ' is already saved for this house, so an earlier month cannot be corrected. Please contact the Estate module administrator for correction.');
             return;
         }
 

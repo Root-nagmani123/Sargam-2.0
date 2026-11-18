@@ -8196,17 +8196,16 @@ class EstateController extends Controller
 
         // F-051: the meter numbers each form row's month opened with. Read before the transaction: this save never
         // writes the earlier rows, and a read inside it would take share locks on the whole table under SERIALIZABLE.
-        $neighboursByFormPk = $byPk === [] ? [] : $this->meterReadingNeighbours(
-            'estate_month_reading_details',
-            'estate_possession_details_pk',
-            DB::table('estate_month_reading_details')->whereIn('pk', array_keys($byPk))
-                ->get(['pk', 'bill_month', 'bill_year', 'estate_possession_details_pk'])
-        );
+        $formRows = $byPk === [] ? collect() : DB::table('estate_month_reading_details')->whereIn('pk', array_keys($byPk))
+            ->get(['pk', 'bill_month', 'bill_year', 'estate_possession_details_pk']);
+        $neighboursByFormPk = $formRows->isEmpty() ? [] : $this->meterReadingNeighbours('estate_month_reading_details', 'estate_possession_details_pk', $formRows);
+        // F-056: a reading row never changes possession, so its possession pk may be read before the lock it selects.
+        $possessionByFormPk = $formRows->pluck('estate_possession_details_pk', 'pk')->all();
 
         // Step 2: One fetch + update (or insert when saving a new bill period so prior month rows are not overwritten).
         // One transaction for the whole save: a refusal is thrown as HttpResponseException, which rolls back the
         // houses already written, so a failure response never leaves part of the save behind (PR #349 F-048).
-        $this->runAllotmentTransaction(function () use ($byPk, $neighboursByFormPk, $editReadingPk, $hasSecondaryPossessionReadingCol, $hasUnitTypeOnSubType, $emrdHasWaterCharges, $emrdHasLicenceFees, $request, $storeBillMonthName, $storeBillYearStr, $currentMeterReadingDate, $readingBillMonth, $lastMeterReadingDate, $hasLastMeterDateCol, $hasCurrentMeterDateCol) {
+        $this->runAllotmentTransaction(function () use ($byPk, $neighboursByFormPk, $possessionByFormPk, $editReadingPk, $hasSecondaryPossessionReadingCol, $hasUnitTypeOnSubType, $emrdHasWaterCharges, $emrdHasLicenceFees, $request, $storeBillMonthName, $storeBillYearStr, $currentMeterReadingDate, $readingBillMonth, $lastMeterReadingDate, $hasLastMeterDateCol, $hasCurrentMeterDateCol) {
         foreach ($byPk as $formRowPk => $data) {
             $resolvePk = $formRowPk;
             while (true) {
@@ -8264,6 +8263,12 @@ class EstateController extends Controller
             // Issued (verify ho chuke) bill ka amount freeze rehta hai — us decision ke liye chahiye.
             if (\Illuminate\Support\Facades\Schema::hasColumn('estate_month_reading_details', 'notify_employee_status')) {
                 $rowSelect[] = 'emrd.notify_employee_status';
+            }
+            // F-056: possession lock BEFORE the row is read. Every save of this house (correction or new month) takes
+            // it first, so the reading, opening and units below come from a read made after any competing save
+            // committed — never from a reading a concurrent correction is about to replace.
+            if (! empty($possessionByFormPk[$formRowPk])) {
+                DB::table('estate_possession_details')->where('pk', (int) $possessionByFormPk[$formRowPk])->lockForUpdate()->value('pk');
             }
             $row = DB::table('estate_month_reading_details as emrd')
                 ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
@@ -8331,16 +8336,16 @@ class EstateController extends Controller
                 // month's opening reading; only a new month takes the form row's saved reading as its opening.
                 $correctsOwnMonth = $readingBillMonth !== null
                     && $this->meterReadingYmFromRowColumns($row->bill_month, $row->bill_year) === (string) $readingBillMonth;
-                // F-052 race guard: a later month saved after validation is seen here. A new-month save takes the same
-                // possession lock before it inserts, so the two cannot both get through.
+                $rowRef = (object) [
+                    'pk' => $resolvePk,
+                    'bill_month' => $row->bill_month,
+                    'bill_year' => $row->bill_year,
+                    'estate_possession_details_pk' => $row->estate_possession_details_pk,
+                ];
+                // F-052 race guard: a later month saved after validation is seen here, read under the possession lock
+                // taken above, which a new-month save also takes before reading its source row (F-056).
                 if ($correctsOwnMonth) {
-                    DB::table('estate_possession_details')->where('pk', (int) $row->estate_possession_details_pk)->lockForUpdate()->value('pk');
-                    $laterYm = $this->meterReadingNeighbours('estate_month_reading_details', 'estate_possession_details_pk', [(object) [
-                        'pk' => $resolvePk,
-                        'bill_month' => $row->bill_month,
-                        'bill_year' => $row->bill_year,
-                        'estate_possession_details_pk' => $row->estate_possession_details_pk,
-                    ]])[$resolvePk]['later_ym'] ?? null;
+                    $laterYm = $this->meterReadingNeighbours('estate_month_reading_details', 'estate_possession_details_pk', [$rowRef])[$resolvePk]['later_ym'] ?? null;
                     if ($laterYm !== null) {
                         throw new \Illuminate\Http\Exceptions\HttpResponseException($this->meterReadingRefusedResponse($request, $this->laterMonthSavedMessage($laterYm)));
                     }
@@ -8493,9 +8498,9 @@ class EstateController extends Controller
                 );
 
             if ($periodMismatch && ! empty($update)) {
-                // Possession row lock: a second operator's save of this house waits here, and under READ COMMITTED
-                // the check below then sees that save's committed row (the table has no possession index to lock on).
-                DB::table('estate_possession_details')->where('pk', (int) $row->estate_possession_details_pk)->lockForUpdate()->value('pk');
+                // Under the possession lock taken before the row was read: a second operator's save of this house has
+                // committed or waits, so under READ COMMITTED the checks below see its rows (the table has no
+                // possession index to lock on).
                 $existingTarget = DB::table('estate_month_reading_details')
                     ->where('estate_possession_details_pk', (int) $row->estate_possession_details_pk)
                     ->where('bill_month', $storeBillMonthName)
@@ -8503,6 +8508,14 @@ class EstateController extends Controller
                     ->first();
                 if ($existingTarget && (int) $existingTarget->pk !== $resolvePk) {
                     throw new \Illuminate\Http\Exceptions\HttpResponseException($this->staleMeterReadingResponse($request, (string) $storeBillMonthName, (string) $storeBillYearStr));
+                }
+                // F-057: a new month only follows the house's latest saved month, from that month's own row. A month
+                // earlier than the history, or one taken from an older row (replayed POST, stale list), is refused.
+                $history = $rowYm !== null
+                    ? ($this->meterReadingNeighbours('estate_month_reading_details', 'estate_possession_details_pk', [$rowRef])[$resolvePk] ?? null)
+                    : null;
+                if ($history !== null && ($history['later_ym'] !== null || $targetYm < $rowYm)) {
+                    throw new \Illuminate\Http\Exceptions\HttpResponseException($this->meterReadingRefusedResponse($request, $this->outOfOrderMonthMessage($targetYm, $history['latest_ym'])));
                 }
                 if (! $existingTarget) {
                     $insertData = array_merge(
@@ -9413,6 +9426,8 @@ class EstateController extends Controller
             $openingMeterNo2 = $ownMonthRow ? ($neighboursByPkOther[(int) $row->pk]['opening'][2] ?? null) : null;
             // F-052 (Option A): a later month is saved, so the store refuses a save of this month's own row.
             $laterMonthYm = $ownMonthRow ? ($neighboursByPkOther[(int) $row->pk]['later_ym'] ?? null) : null;
+            // F-057: the row's own month; the Edit screen refuses a save under any other month, as Update Meter Reading does (F-053).
+            $rowBillYmOther = $this->meterReadingYmFromRowColumns($row->bill_month, $row->bill_year);
             $poss = $row->estatePossessionOther;
             $req = $poss ? $poss->estateOtherRequest : null;
             $name = $req ? ($req->emp_name ?? 'N/A') : 'N/A';
@@ -9449,6 +9464,7 @@ class EstateController extends Controller
                 $rows->push([
                     'pk' => $row->pk,
                     'later_month_ym' => $laterMonthYm,
+                    'bill_ym' => $rowBillYmOther,
                     'dual_meter' => true,
                     'house_no' => $row->house_no ?? 'N/A',
                     'name' => $name,
@@ -9474,6 +9490,7 @@ class EstateController extends Controller
                 $rows->push([
                     'pk' => $row->pk,
                     'later_month_ym' => $laterMonthYm,
+                    'bill_ym' => $rowBillYmOther,
                     'dual_meter' => false,
                     'meter_slot' => 1,
                     'house_no' => $row->house_no ?? 'N/A',
@@ -9492,6 +9509,7 @@ class EstateController extends Controller
                 $rows->push([
                     'pk' => $row->pk,
                     'later_month_ym' => $laterMonthYm,
+                    'bill_ym' => $rowBillYmOther,
                     'dual_meter' => false,
                     'meter_slot' => 2,
                     'house_no' => $row->house_no ?? 'N/A',
@@ -9521,6 +9539,7 @@ class EstateController extends Controller
                 $rows->push([
                     'pk' => $row->pk,
                     'later_month_ym' => $laterMonthYm,
+                    'bill_ym' => $rowBillYmOther,
                     'dual_meter' => false,
                     'meter_slot' => 1,
                     'house_no' => $row->house_no ?? 'N/A',
@@ -9989,11 +10008,12 @@ class EstateController extends Controller
      *  - opening: meter numbers on the latest earlier row, i.e. the numbers the month opened with (F-051).
      *    {@see \App\Support\EstateMeterReadingUnits::meterReplaced()} compares the month's own number with them, so
      *    a replacement recorded on one save is still seen by every later save of that month. Null without an earlier row.
-     *  - later_ym: the first later month already saved (Y-m), or null. F-052 decision 6845841302 (Option A): a month
-     *    cannot be corrected while a later month exists.
+     *  - later_ym: the first later month already saved (Y-m), or null. F-052 (Option A): a month cannot be corrected
+     *    while a later month exists.
+     *  - latest_ym: the possession's latest saved month (Y-m), the row's own when nothing later is saved (F-057).
      *
      * @param  iterable<object>  $rows  each with pk, bill_month, bill_year and $possessionCol
-     * @return array<int, array{opening: array{1: string, 2: string}|null, later_ym: string|null}>  by row pk
+     * @return array<int, array{opening: array{1: string, 2: string}|null, later_ym: string|null, latest_ym: string}>  by row pk
      */
     private function meterReadingNeighbours(string $table, string $possessionCol, iterable $rows): array
     {
@@ -10017,6 +10037,7 @@ class EstateController extends Controller
             $previous = null;
             $previousYm = null;
             $laterYm = null;
+            $latestYm = $ym;
             foreach ($history->get($possessionPk, collect()) as $h) {
                 $hYm = (int) $h->pk === $pk ? null : $this->meterReadingYmFromRowColumns($h->bill_month, $h->bill_year);
                 if ($hYm !== null && $hYm < $ym && ($previousYm === null || $hYm > $previousYm)) {
@@ -10025,22 +10046,38 @@ class EstateController extends Controller
                 if ($hYm !== null && $hYm > $ym && ($laterYm === null || $hYm < $laterYm)) {
                     $laterYm = $hYm;
                 }
+                if ($hYm !== null && $hYm > $latestYm) {
+                    $latestYm = $hYm;
+                }
             }
             $out[$pk] = [
                 'opening' => $previous !== null ? [1 => (string) ($previous->meter_one ?? ''), 2 => (string) ($previous->meter_two ?? '')] : null,
                 'later_ym' => $laterYm,
+                'latest_ym' => $latestYm,
             ];
         }
 
         return $out;
     }
 
-    /** F-052 decision 6845841302 (Option A). The screens show the same text before posting. */
+    /**
+     * F-052 (Option A). The screens show the same text before posting. F-058: no screen removes a saved month, so
+     * the text names no in-app remedy (the remedy is the Estate module owner's decision, not yet recorded).
+     */
     private function laterMonthSavedMessage(string $laterYm): string
     {
-        $later = \Carbon\Carbon::createFromFormat('Y-m', $laterYm)->format('F Y');
+        $later = \Carbon\Carbon::createFromFormat('Y-m-d', $laterYm.'-01')->format('F Y');
 
-        return "A reading for {$later} is already saved for this house, so an earlier month cannot be corrected. Correct or remove {$later} first.";
+        return "A reading for {$later} is already saved for this house, so an earlier month cannot be corrected. Please contact the Estate module administrator for correction.";
+    }
+
+    /** F-057: a new month only follows the house's latest saved month, and only from that month's row. */
+    private function outOfOrderMonthMessage(string $targetYm, string $latestYm): string
+    {
+        $target = \Carbon\Carbon::createFromFormat('Y-m-d', $targetYm.'-01')->format('F Y');
+        $latest = \Carbon\Carbon::createFromFormat('Y-m-d', $latestYm.'-01')->format('F Y');
+
+        return "{$target} cannot be saved from this reading: the latest month saved for this house is {$latest}, and a new month can only follow it. Reload the list and choose a month after {$latest}.";
     }
 
     private function staleMeterReadingMessage(string $monthName, string $year): string
@@ -10322,15 +10359,14 @@ class EstateController extends Controller
 
         // F-051: read before the transaction, as in storeMeterReadings().
         $selectedFormPks = $selected->pluck('pk')->map(fn ($x) => (int) $x)->filter()->unique()->values()->all();
-        $neighboursByFormPkOther = $selectedFormPks === [] ? [] : $this->meterReadingNeighbours(
-            'estate_month_reading_details_other',
-            'estate_possession_other_pk',
-            DB::table('estate_month_reading_details_other')->whereIn('pk', $selectedFormPks)
-                ->get(['pk', 'bill_month', 'bill_year', 'estate_possession_other_pk'])
-        );
+        $formRowsOther = $selectedFormPks === [] ? collect() : DB::table('estate_month_reading_details_other')->whereIn('pk', $selectedFormPks)
+            ->get(['pk', 'bill_month', 'bill_year', 'estate_possession_other_pk']);
+        $neighboursByFormPkOther = $formRowsOther->isEmpty() ? [] : $this->meterReadingNeighbours('estate_month_reading_details_other', 'estate_possession_other_pk', $formRowsOther);
+        // F-056, as in storeMeterReadings(): a reading row never changes possession.
+        $possessionByFormPkOther = $formRowsOther->pluck('estate_possession_other_pk', 'pk')->all();
 
         // One transaction for the whole save, as in storeMeterReadings() (PR #349 F-048).
-        $this->runAllotmentTransaction(function () use ($selected, $neighboursByFormPkOther, $resolvedOtherReadingPkByFormPk, $hasUnitTypeOnSubTypeForOtherElectric, $emroHasWaterCharges, $emroHasLicenceFees, $emroHasBillNo, $emroHasPayrollRecovery, $request, $storeBillMonthNameOther, $storeBillYearStrOther, $readingBillMonthOther, $readingMeterDateForStore) {
+        $this->runAllotmentTransaction(function () use ($selected, $neighboursByFormPkOther, $possessionByFormPkOther, $resolvedOtherReadingPkByFormPk, $hasUnitTypeOnSubTypeForOtherElectric, $emroHasWaterCharges, $emroHasLicenceFees, $emroHasBillNo, $emroHasPayrollRecovery, $request, $storeBillMonthNameOther, $storeBillYearStrOther, $readingBillMonthOther, $readingMeterDateForStore) {
         foreach ($selected as $item) {
             $formPk = (int) ($item['pk'] ?? 0);
             $currVal = $item['curr_month_elec_red'] ?? null;
@@ -10342,6 +10378,10 @@ class EstateController extends Controller
             $resolvePk = $resolvedOtherReadingPkByFormPk[$formPk] ?? $formPk;
 
             while (true) {
+                // F-056, as in storeMeterReadings(): possession lock before the row is read.
+                if (! empty($possessionByFormPkOther[$formPk])) {
+                    DB::table('estate_possession_other')->where('pk', (int) $possessionByFormPkOther[$formPk])->lockForUpdate()->value('pk');
+                }
                 $row = EstateMonthReadingDetailsOther::where('pk', $resolvePk)->first();
                 if (! $row) {
                     break;
@@ -10422,9 +10462,8 @@ class EstateController extends Controller
                     && $this->meterReadingYmFromRowColumns($row->bill_month, $row->bill_year) === $readingBillMonthOther;
                 // F-051: an own-month save compares with the meter number the month opened with, as storeMeterReadings() does.
                 $openingMeterNosOther = $ownMonthOther ? ($neighboursByFormPkOther[$formPk]['opening'] ?? null) : null;
-                // F-052 race guard, as in storeMeterReadings(): the new-month insert below takes the same possession lock.
+                // F-052 race guard, as in storeMeterReadings(): read under the possession lock taken above.
                 if ($ownMonthOther) {
-                    DB::table('estate_possession_other')->where('pk', (int) $row->estate_possession_other_pk)->lockForUpdate()->value('pk');
                     $laterYm = $this->meterReadingNeighbours('estate_month_reading_details_other', 'estate_possession_other_pk', [$row])[(int) $row->pk]['later_ym'] ?? null;
                     if ($laterYm !== null) {
                         throw new \Illuminate\Http\Exceptions\HttpResponseException($this->meterReadingRefusedResponse($request, $this->laterMonthSavedMessage($laterYm)));
@@ -10575,8 +10614,7 @@ class EstateController extends Controller
                     );
 
                 if ($periodMismatch && ! empty($update)) {
-                    // Possession row lock, as in storeMeterReadings(): a concurrent save of this house is seen below.
-                    DB::table('estate_possession_other')->where('pk', (int) $row->estate_possession_other_pk)->lockForUpdate()->value('pk');
+                    // Under the possession lock taken before the row was read, as in storeMeterReadings().
                     $existingTarget = DB::table('estate_month_reading_details_other')
                         ->where('estate_possession_other_pk', (int) $row->estate_possession_other_pk)
                         ->where('bill_month', $storeBillMonthNameOther)
@@ -10584,6 +10622,13 @@ class EstateController extends Controller
                         ->first();
                     if ($existingTarget && (int) $existingTarget->pk !== $resolvePk) {
                         throw new \Illuminate\Http\Exceptions\HttpResponseException($this->staleMeterReadingResponse($request, (string) $storeBillMonthNameOther, (string) $storeBillYearStrOther));
+                    }
+                    // F-057, as in storeMeterReadings(): only after the latest saved month, only from its row.
+                    $historyOther = $rowYmOther !== null
+                        ? ($this->meterReadingNeighbours('estate_month_reading_details_other', 'estate_possession_other_pk', [$row])[(int) $row->pk] ?? null)
+                        : null;
+                    if ($historyOther !== null && ($historyOther['later_ym'] !== null || $targetYmOther < $rowYmOther)) {
+                        throw new \Illuminate\Http\Exceptions\HttpResponseException($this->meterReadingRefusedResponse($request, $this->outOfOrderMonthMessage($targetYmOther, $historyOther['latest_ym'])));
                     }
                     if (! $existingTarget) {
                         $dateOrNull = static function ($d) {
@@ -12604,13 +12649,6 @@ class EstateController extends Controller
     {
         $this->authorizeEstateMasterMeterAndReports();
 
-        $billMonths = EstateMonthReadingDetails::select('bill_year', 'bill_month')
-            ->whereNotNull('bill_year')
-            ->whereNotNull('bill_month')
-            ->groupBy('bill_year', 'bill_month')
-            ->orderByRaw('CAST(bill_year AS UNSIGNED) DESC, CAST(bill_month AS UNSIGNED) DESC')
-            ->limit(24)
-            ->get();
         $blocks = DB::table('estate_month_reading_details as emrd')
             ->join('estate_possession_details as epd', 'emrd.estate_possession_details_pk', '=', 'epd.pk')
             ->join('estate_house_master as h', 'epd.estate_house_master_pk', '=', 'h.pk')
@@ -12630,18 +12668,24 @@ class EstateController extends Controller
         }
         // The grid's Bill Month filter is rendered server-side from the periods
         // that actually have readings, newest first — value is the `Y-m` the
-        // data endpoint parses, label is what the user reads.
+        // data endpoint parses, label is what the user reads. Both reading tables: the page lists Other readings too.
+        // bill_month is a month name, so SQL cannot order it; keep the newest 24 after parsing (F-059, as F-033).
         $billMonthOptions = [];
-        foreach ($billMonths as $row) {
-            [$m, $y] = $this->meterReadingParseUiMonthYear($row->bill_month ?? null, $row->bill_year ?? null);
-            if ($m === null || $y === null) {
-                continue;
+        foreach (['estate_month_reading_details', 'estate_month_reading_details_other'] as $readingTable) {
+            $periods = DB::table($readingTable)->select('bill_year', 'bill_month')
+                ->whereNotNull('bill_year')->whereNotNull('bill_month')->distinct()->get();
+            foreach ($periods as $row) {
+                [$m, $y] = $this->meterReadingParseUiMonthYear($row->bill_month ?? null, $row->bill_year ?? null);
+                if ($m === null || $y === null) {
+                    continue;
+                }
+                $billMonthOptions[sprintf('%04d-%02d', $y, $m)] = date('F Y', mktime(0, 0, 0, $m, 1, $y));
             }
-            $billMonthOptions[sprintf('%04d-%02d', $y, $m)] = date('F Y', mktime(0, 0, 0, $m, 1, $y));
         }
         krsort($billMonthOptions);
+        $billMonthOptions = array_slice($billMonthOptions, 0, 24, true);
 
-        return view('admin.estate.list_meter_reading', compact('billMonths', 'billMonthOptions', 'blocks'));
+        return view('admin.estate.list_meter_reading', compact('billMonthOptions', 'blocks'));
     }
 
     /**
