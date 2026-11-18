@@ -2013,6 +2013,11 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
     Route::middleware('menu.permission:coe_my_question_paper_rajbhasha')->group(function () {
         Route::get('my-question-paper', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'index'])
             ->name('my-question-paper.index');
+        // View Original Paper: OTP first; throttled per user on top of FreezeOtpService's own per-paper limits.
+        Route::post('my-question-paper/{paper}/original-otp', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'originalOtp'])
+            ->whereNumber('paper')->middleware('throttle:10,1')->name('my-question-paper.original-otp');
+        Route::post('my-question-paper/{paper}/original-otp/verify', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'verifyOriginalOtp'])
+            ->whereNumber('paper')->middleware('throttle:10,1')->name('my-question-paper.original-otp.verify');
         Route::get('my-question-paper/{paper}/original', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'original'])
             ->whereNumber('paper')->name('my-question-paper.original');
         Route::get('my-question-paper/{paper}/translated', [\App\Http\Controllers\Admin\COE\MyQuestionPaperController::class, 'translated'])

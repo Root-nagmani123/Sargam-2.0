@@ -6,8 +6,8 @@ use App\Services\COE\FreezeOtpService;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Freeze (faculty): the OTP sent to their mobile. Whether it is right, and
- * which paper they may freeze, is checked by the service.
+ * Freeze (faculty), and View Original Paper (Rajbhasha): the OTP sent to their
+ * mobile. Whether it is right, and which paper it is for, is checked by the service.
  */
 class FreezeQuestionPaperRequest extends FormRequest
 {

@@ -40,10 +40,69 @@ class RajbhashaPaperService
 
     private const SENT_MESSAGE = 'This translation has already been sent for approval, so it can no longer be changed.';
 
+    /** How long a verified View Original Paper OTP stays good for the one view it opens. */
+    private const VIEW_PASS_MINUTES = 10;
+
     public function __construct(
         private QuestionPaperStorage $files,
         private PaperHtmlSanitizer $sanitizer,
+        private FreezeOtpService $otp,
     ) {
+    }
+
+    /** "+91 ******3274" — the number the View Original Paper OTP goes to. */
+    public function viewOtpPhoneMasked(): string
+    {
+        return FreezeOtpService::mask($this->userMobile());
+    }
+
+    /**
+     * View Original Paper, step 1: sends the OTP to the Rajbhasha user's mobile.
+     *
+     * @throws ValidationException when throttled, there is no number, or the SMS cannot go out
+     */
+    public function sendViewOtp(int $paperId): void
+    {
+        $paper = $this->find($paperId);
+        $this->otp->send((int) auth()->id(), $paper->id, $this->userMobile(), FreezeOtpService::PURPOSE_VIEW);
+    }
+
+    /**
+     * View Original Paper, step 2: the right OTP lets the viewer open this paper
+     * once (takeViewPass()), within VIEW_PASS_MINUTES.
+     *
+     * @throws ValidationException when the OTP is wrong / expired
+     */
+    public function verifyViewOtp(int $paperId, string $otp): void
+    {
+        $paper = $this->find($paperId);
+        $this->otp->verify((int) auth()->id(), $paper->id, $otp, FreezeOtpService::PURPOSE_VIEW);
+        session()->put($this->viewPassKey($paper->id), now()->addMinutes(self::VIEW_PASS_MINUTES)->timestamp);
+    }
+
+    /** Uses up the pass verifyViewOtp() gave: true at most once per verified OTP. */
+    public function takeViewPass(int $paperId): bool
+    {
+        $until = session()->pull($this->viewPassKey($paperId));
+
+        return $until !== null && (int) $until >= now()->timestamp;
+    }
+
+    private function viewPassKey(int $paperId): string
+    {
+        return 'coe_qp_view_pass.'.$paperId;
+    }
+
+    /** The login's own number, else its employee record's. */
+    private function userMobile(): ?string
+    {
+        $user = auth()->user();
+        $mobile = trim((string) ($user->mobile_no ?? ''));
+        if ($mobile === '' && $user?->user_id) {
+            $mobile = trim((string) DB::table('employee_master')->where('pk', $user->user_id)->value('mobile'));
+        }
+
+        return $mobile !== '' ? $mobile : null;
     }
 
     /**

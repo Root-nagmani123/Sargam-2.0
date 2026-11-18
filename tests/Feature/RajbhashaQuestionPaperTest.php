@@ -18,6 +18,7 @@ use App\Services\COE\RajbhashaPaperService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Log\Events\MessageLogged;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -63,6 +64,9 @@ class RajbhashaQuestionPaperTest extends TestCase
         // Rajbhasha is whoever holds the permission; given directly here, rolled back with the test.
         [$this->rajbhasha, $this->outsider] = [$nonFaculty[0], $nonFaculty[1]];
         $this->rajbhasha->givePermissionTo(RajbhashaPaperService::PERMISSION);
+        // The View Original Paper OTP goes to this number (rolled back with the test).
+        DB::table('user_credentials')->where('pk', $this->rajbhasha->pk)->update(['mobile_no' => '9876501234']);
+        $this->rajbhasha->refresh();
         if ($this->outsider->can(RajbhashaPaperService::PERMISSION)) {
             $this->markTestSkipped('The second non-faculty user already has the Rajbhasha permission.');
         }
@@ -137,6 +141,10 @@ class RajbhashaQuestionPaperTest extends TestCase
     public function test_rajbhasha_views_the_original_but_never_downloads_it(): void
     {
         $url = route('admin.coe.my-question-paper.original', $this->paper->id);
+        $this->verifyViewOtp($this->sendViewOtp())->assertOk();
+
+        // Opening the address in the browser gets no file (and does not use up the OTP).
+        $this->actingAs($this->rajbhasha)->get($url)->assertNotFound();
 
         // An older .docx upload: the browser lays it out from base64.
         $response = $this->actingAs($this->rajbhasha)->getJson($url)
@@ -144,9 +152,52 @@ class RajbhashaQuestionPaperTest extends TestCase
             ->assertJson(['format' => 'docx', 'content' => base64_encode('original paper')]);
         $this->assertNull($response->headers->get('Content-Disposition'));
         $this->assertStringContainsString('ID '.$this->rajbhasha->getAuthIdentifier(), $response->json('watermark'));
+    }
 
-        // Opening the address in the browser gets no file.
-        $this->actingAs($this->rajbhasha)->get($url)->assertNotFound();
+    public function test_the_original_needs_a_fresh_otp_for_every_view(): void
+    {
+        $url = route('admin.coe.my-question-paper.original', $this->paper->id);
+
+        $this->actingAs($this->rajbhasha)->get(route('admin.coe.my-question-paper.index'))
+            ->assertOk()->assertSee('Verify OTP')->assertSee('+91 ******1234');
+
+        // No OTP, no paper.
+        $this->actingAs($this->rajbhasha)->getJson($url)->assertForbidden();
+
+        // A wrong OTP opens nothing.
+        $otp = $this->sendViewOtp();
+        $this->verifyViewOtp($otp === '00000' ? '11111' : '00000')
+            ->assertUnprocessable()->assertJsonPath('errors.otp.0', 'The OTP is incorrect.');
+        $this->actingAs($this->rajbhasha)->getJson($url)->assertForbidden();
+
+        // The right one opens it once; the code itself is used up too.
+        $this->verifyViewOtp($otp)->assertOk();
+        $this->actingAs($this->rajbhasha)->getJson($url)->assertOk();
+        $this->actingAs($this->rajbhasha)->getJson($url)->assertForbidden();
+        $this->verifyViewOtp($otp)->assertUnprocessable();
+
+        // An OTP is for its own paper only.
+        $other = $this->paper->replicate();
+        $other->paper_code .= '-B';
+        $other->save();
+        $this->verifyViewOtp($this->sendViewOtp())->assertOk();
+        $this->actingAs($this->rajbhasha)->getJson(route('admin.coe.my-question-paper.original', $other->id))->assertForbidden();
+
+        // Only Rajbhasha can ask for one.
+        $this->actingAs($this->outsider)->postJson(route('admin.coe.my-question-paper.original-otp', $this->paper->id))->assertForbidden();
+    }
+
+    public function test_view_otp_needs_a_mobile_number(): void
+    {
+        DB::table('user_credentials')->where('pk', $this->rajbhasha->pk)->update(['mobile_no' => null]);
+        if ($this->rajbhasha->user_id) {
+            DB::table('employee_master')->where('pk', $this->rajbhasha->user_id)->update(['mobile' => null]);
+        }
+
+        $this->actingAs($this->rajbhasha->fresh())
+            ->postJson(route('admin.coe.my-question-paper.original-otp', $this->paper->id))
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.otp.0', 'There is no mobile number on your user record to send the OTP to. Contact the COE office.');
     }
 
     public function test_translate_page_starts_from_the_faculty_paper(): void
@@ -408,6 +459,29 @@ class RajbhashaQuestionPaperTest extends TestCase
         return $name === 'translation.destroy'
             ? $this->actingAs($this->rajbhasha)->deleteJson($url)
             : $this->actingAs($this->rajbhasha)->postJson($url, $data);
+    }
+
+    /** Sends Rajbhasha's View Original Paper OTP and reads it back from the log (no SMS template in testing). */
+    private function sendViewOtp(): string
+    {
+        $otp = null;
+        Log::listen(function (MessageLogged $e) use (&$otp) {
+            if (str_starts_with($e->message, 'COE view OTP')) {
+                $otp = $e->context['otp'];
+            }
+        });
+
+        $this->actingAs($this->rajbhasha)
+            ->postJson(route('admin.coe.my-question-paper.original-otp', $this->paper->id))
+            ->assertOk();
+
+        return (string) $otp;
+    }
+
+    private function verifyViewOtp(string $otp)
+    {
+        return $this->actingAs($this->rajbhasha)
+            ->postJson(route('admin.coe.my-question-paper.original-otp.verify', $this->paper->id), ['otp' => $otp]);
     }
 
     /** Sends the faculty's freeze OTP and reads it back from the log (no SMS template in testing). */

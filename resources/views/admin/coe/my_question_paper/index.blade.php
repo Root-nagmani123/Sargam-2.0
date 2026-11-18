@@ -169,6 +169,15 @@
 {{-- Send for Approval (shared) --}}
 @include('admin.coe.partials.confirm_approval_modal')
 
+{{-- View Original Paper — OTP first (shared OTP modal) --}}
+@include('admin.coe.partials.freeze_modal', [
+    'phoneMasked' => $otpPhoneMasked,
+    'icon' => 'bi-shield-lock',
+    'title' => 'Verify OTP',
+    'text' => 'Enter the OTP to view the original question paper.',
+    'hint' => 'The OTP is sent to your Phone number',
+])
+
 {{-- View Original / Translated Paper — read-only, no download (shared) --}}
 @include('admin.coe.partials.paper_viewer_modal')
 
@@ -273,22 +282,29 @@ $(function () {
        always repainted from the database, never from the client alone. */
     var URLS = {
         original: @json(route('admin.coe.my-question-paper.original', ['paper' => '__PAPER__'])),
+        originalOtp: @json(route('admin.coe.my-question-paper.original-otp', ['paper' => '__PAPER__'])),
+        originalOtpVerify: @json(route('admin.coe.my-question-paper.original-otp.verify', ['paper' => '__PAPER__'])),
         translated: @json(route('admin.coe.my-question-paper.translated', ['paper' => '__PAPER__'])),
         send: @json(route('admin.coe.my-question-paper.send-for-approval', ['paper' => '__PAPER__']))
     };
 
     function url(name, $row) { return URLS[name].replace('__PAPER__', $row.attr('data-coe-id')); }
 
-    // See Attachment / View … Paper: read-only viewer, no download.
-    $table.on('click', '[data-coe-view]', function (e) {
-        e.preventDefault();
-        var $row = $(this).closest('tr');
-        var which = $(this).attr('data-coe-view');
+    function openViewer(which, $row) {
         CoePaperViewer.open({
             url: url(which, $row),
             title: rowLabel($row),
             subtitle: which === 'original' ? 'Original Paper' : 'Translated Paper (Rajbhasha)'
         });
+    }
+
+    // See Attachment / View … Paper: read-only viewer, no download. The original
+    // opens only after its OTP (below).
+    $table.on('click', '[data-coe-view]', function (e) {
+        e.preventDefault();
+        if ($(this).attr('data-coe-view') !== 'original') {
+            openViewer($(this).attr('data-coe-view'), $(this).closest('tr'));
+        }
     });
 
     function errorText(xhr) {
@@ -332,6 +348,23 @@ $(function () {
         modal: '#qpApprovalModal',
         confirm: '#qpApprovalConfirm',
         onConfirm: function ($row) { return run(send('POST', url('send', $row))); }
+    });
+
+    // View Original Paper / See Attachment (original): the OTP is sent when the
+    // modal opens and on Resend; the right one opens the viewer once the modal
+    // has closed. Errors show under the boxes.
+    CoeGrid.freeze({
+        table: '#qpTable',
+        trigger: '[data-coe-view="original"]',
+        onOpen: function ($row) { return send('POST', url('originalOtp', $row)); },
+        onResend: function ($row) { return send('POST', url('originalOtp', $row)); },
+        onConfirm: function ($row, otp) {
+            var request = send('POST', url('originalOtpVerify', $row), { otp: otp });
+            request.then(function () {
+                $('#qpFreezeModal').one('hidden.bs.modal', function () { openViewer('original', $row); });
+            });
+            return request;
+        }
     });
 });
 </script>

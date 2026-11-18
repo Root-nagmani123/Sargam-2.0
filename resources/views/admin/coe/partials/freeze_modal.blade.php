@@ -1,17 +1,19 @@
 {{-- COE question papers — Confirm Freeze with OTP. Shared by every coe-* grid;
      behaviour is CoeGrid.freeze() in public/js/coe-grid.js.
-     Params: $phoneMasked (required), $digits (OTP length, default 5). --}}
+     Params: $phoneMasked (required), $digits (OTP length, default 5); optional
+     $title, $text, $hint (before the number), $icon for another OTP step
+     (e.g. Rajbhasha's View Original Paper). --}}
 <div class="modal fade" id="qpFreezeModal" tabindex="-1" aria-labelledby="qpFreezeModalLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
         <div class="modal-content coe-modal border-0 shadow">
             <form class="coe-confirm" id="qpFreezeForm" novalidate>
                 <div class="coe-confirm__icon coe-confirm__icon--freeze" aria-hidden="true">
-                    <i class="bi bi-snow"></i>
+                    <i class="bi {{ $icon ?? 'bi-snow' }}"></i>
                 </div>
-                <h5 class="coe-confirm__title" id="qpFreezeModalLabel">Confirm Freeze?</h5>
-                <p class="coe-confirm__text">Are you sure you want to freeze this record?</p>
+                <h5 class="coe-confirm__title" id="qpFreezeModalLabel">{{ $title ?? 'Confirm Freeze?' }}</h5>
+                <p class="coe-confirm__text">{{ $text ?? 'Are you sure you want to freeze this record?' }}</p>
                 <p class="coe-confirm__hint">
-                    For freezing the OTP is sent to your Phone number {{ $phoneMasked }}.
+                    {{ $hint ?? 'For freezing the OTP is sent to your Phone number' }} {{ $phoneMasked }}.
                 </p>
 
                 <div class="coe-otp" role="group" aria-label="One-time password">

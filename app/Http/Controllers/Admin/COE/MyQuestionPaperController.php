@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\COE;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\COE\FreezeQuestionPaperRequest;
 use App\Http\Requests\Admin\COE\UploadTranslationRequest;
 use App\Services\COE\QuestionPaperLogger;
 use App\Services\COE\QuestionPaperNotifier;
@@ -56,13 +57,35 @@ class MyQuestionPaperController extends Controller
             'drives' => $papers->pluck('drive')->unique()->sort()->values(),
             'batches' => $papers->pluck('batch')->unique()->sort()->values(),
             'statusLabels' => self::STATUS_LABELS,
+            'otpPhoneMasked' => $this->papers->viewOtpPhoneMasked(),
         ]);
     }
 
-    /** View Original Paper / See Attachment (original) — read-only viewer. */
+    /** View Original Paper, step 1 (modal opened / Resend OTP): sends the OTP. */
+    public function originalOtp(int $paper): JsonResponse
+    {
+        $this->papers->sendViewOtp($paper);
+
+        return response()->json(['message' => 'OTP sent.']);
+    }
+
+    /** View Original Paper, step 2: the right OTP lets the viewer open it once. */
+    public function verifyOriginalOtp(FreezeQuestionPaperRequest $request, int $paper): JsonResponse
+    {
+        $this->papers->verifyViewOtp($paper, $request->input('otp'));
+
+        return response()->json(['message' => 'OTP verified.']);
+    }
+
+    /**
+     * View Original Paper / See Attachment (original) — read-only viewer, only
+     * straight after the OTP is verified (verifyOriginalOtp()).
+     */
     public function original(Request $request, int $paper): JsonResponse
     {
         $qp = $this->papers->find($paper);
+        abort_unless($request->expectsJson(), 404);
+        abort_unless($this->papers->takeViewPass($qp->id), 403, 'Verify the OTP to view the original paper.');
         $response = $this->paperViewer($request, $qp->original_file_path, $qp->original_file_name);
         $this->log->record(QuestionPaperLogger::ROLE_RAJBHASHA, QuestionPaperLogger::MODULE_PAPER, QuestionPaperLogger::VIEWED, $qp, 'V'.$qp->version);
 
