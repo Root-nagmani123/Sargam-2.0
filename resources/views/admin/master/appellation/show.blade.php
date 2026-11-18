@@ -127,11 +127,11 @@
 
     <!-- Action Buttons -->
     <div class="no-print text-end mt-4">
-        <a href="{{ route('master.appellation.master.index') }}" class="btn btn-secondary">
+        <a href="{{ route('master.appellation.master.index') }}" class="ux4g-btn-outline-neutral ux4g-btn-m">
             <i class="material-icons" style="vertical-align: middle; margin-right: 5px;">arrow_back</i>
             Back
         </a>
-        <a href="{{ route('master.appellation.master.edit', ['id' => encrypt($appellationMaster->pk)]) }}" class="btn btn-primary">
+        <a href="{{ route('master.appellation.master.edit', ['id' => encrypt($appellationMaster->pk)]) }}" class="ux4g-btn-primary ux4g-btn-m">
             <i class="material-icons" style="vertical-align: middle; margin-right: 5px;">edit</i>
             Edit
         </a>

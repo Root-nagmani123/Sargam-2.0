@@ -28,10 +28,10 @@
                     <!-- Leave Type -->
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">
-                                Leave Type <span class="text-danger">*</span>
+                            <label class="form-label" for="leave_type">
+                                Leave Type <span class="text-danger" aria-hidden="true">*</span>
                             </label>
-                            <select name="leave_type" class="form-select" required>
+                            <select name="leave_type" id="leave_type" class="form-select" required>
                                 <option value="">Select Leave Type</option>
                                 @foreach($leaveTypes as $value => $label)
                                     <option value="{{ $value }}"
@@ -68,10 +68,10 @@
                     <!-- Status -->
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">
-                                Status <span class="text-danger">*</span>
+                            <label class="form-label" for="active_inactive">
+                                Status <span class="text-danger" aria-hidden="true">*</span>
                             </label>
-                            <select name="active_inactive" class="form-select" required>
+                            <select name="active_inactive" id="active_inactive" class="form-select" required>
                                 <option value="1"
                                     {{ old('active_inactive', $leaveNature->active_inactive ?? 1) == 1 ? 'selected' : '' }}>
                                     Active
@@ -92,10 +92,10 @@
                 <hr>
 
                 <div class="text-end">
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="ux4g-btn-primary ux4g-btn-m">
                         {{ isset($leaveNature) ? 'Update' : 'Submit' }}
                     </button>
-                    <a href="{{ route('master.leave-nature.index') }}" class="btn btn-secondary">
+                    <a href="{{ route('master.leave-nature.index') }}" class="ux4g-btn-outline-neutral ux4g-btn-m">
                         Back
                     </a>
                 </div>

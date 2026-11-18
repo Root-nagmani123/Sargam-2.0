@@ -16,7 +16,7 @@
                 <div class="col-6">
                     <div class="d-flex justify-content-end align-items-center gap-2">
                         <a href="{{ route('master.leave-nature.create') }}"
-                            class="btn btn-primary d-flex align-items-center">
+                            class="ux4g-btn-primary ux4g-btn-m d-flex align-items-center">
                             <i class="material-icons menu-icon material-symbols-rounded"
                                 style="font-size: 24px;">add</i>
                             Add Leave Nature

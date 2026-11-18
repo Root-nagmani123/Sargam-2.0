@@ -10,7 +10,7 @@
 <div class="container-fluid cs-master-page">
     <x-breadcrum title="Define Club/ Society">
         <button type="button"
-                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
+                class="ux4g-btn-primary ux4g-btn-m d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
                 id="csAddBtn" data-bs-toggle="modal" data-bs-target="#csFormModal">
             <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
             <span>Add Club Society</span>
@@ -22,12 +22,12 @@
     {{-- Secondary actions (Download / Print) --}}
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
         <a href="{{ route('master.club.society.export') }}" class="btn programme-dt-btn-columns border-0 text-primary" title="Download as Excel">
-            <i class="bi bi-download" aria-hidden="true"></i>
+            <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">download</i>
             <span>Download</span>
         </a>
         <a href="{{ route('master.club.society.print') }}" target="_blank" rel="noopener"
            class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
-            <i class="bi bi-printer" aria-hidden="true"></i>
+            <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">print</i>
             <span>Print</span>
         </a>
     </div>
@@ -40,7 +40,7 @@
                     <button type="button" class="btn programme-dt-btn-columns" id="csBtnColumns"
                             data-bs-toggle="modal" data-bs-target="#csColumnVisibilityModal"
                             title="Show / hide columns">
-                        <span>Columns</span> <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                        <span>Columns</span> <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">view_column</i>
                     </button>
                     <div id="csDtSearch" class="programme-dt-search" data-dt-search-for="clubsocietymaster-table"></div>
                 </div>
@@ -71,7 +71,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div id="csFormAlert" class="alert d-none mb-3" role="alert"></div>
+                    <div id="csFormAlert" class="ux4g-alert d-none mb-3" role="alert"></div>
 
                     <div class="mb-0">
                         <label for="csName" class="form-label fw-semibold">Club/ Society Name <span class="text-danger">*</span></label>
@@ -81,8 +81,8 @@
                     </div>
                 </div>
                 <div class="modal-footer border-0 gap-2 justify-content-end">
-                    <button type="button" class="btn btn-outline-danger rounded-1 px-4" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary rounded-1 px-4" id="csSubmitBtn">Add Club/ Society</button>
+                    <button type="button" class="ux4g-btn-outline-danger ux4g-btn-m rounded-1 px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="ux4g-btn-primary ux4g-btn-m rounded-1 px-4" id="csSubmitBtn">Add Club/ Society</button>
                 </div>
             </form>
         </div>
@@ -102,7 +102,7 @@
                 <div class="row g-3" id="csColumnToggleGrid"></div>
             </div>
             <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="ux4g-btn-outline-primary ux4g-btn-m rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -206,7 +206,7 @@
         function csClearErrors() {
             $form.find('.is-invalid').removeClass('is-invalid');
             $form.find('.invalid-feedback').text('');
-            $alert.addClass('d-none').removeClass('alert-danger alert-success').empty();
+            $alert.addClass('d-none').removeClass('ux4g-alert-error ux4g-alert-success').empty();
         }
 
         function csResetForm() {
@@ -258,8 +258,8 @@
                     'Accept': 'application/json'
                 },
                 success: function (response) {
-                    $alert.removeClass('d-none alert-danger').addClass('alert-success')
-                          .html('<i class="bi bi-check-circle me-1"></i>' + (response.message || 'Saved successfully.'));
+                    $alert.removeClass('d-none ux4g-alert-error').addClass('ux4g-alert-success')
+                          .html('<i class="material-icons material-symbols-rounded sargam-icon-text me-1" aria-hidden="true">check_circle</i>' + (response.message || 'Saved successfully.'));
 
                     if ($.fn.DataTable.isDataTable(TABLE_ID)) {
                         $(TABLE_ID).DataTable().ajax.reload(null, false);
@@ -282,8 +282,8 @@
                         var msg = (xhr.responseJSON && xhr.responseJSON.message)
                             ? xhr.responseJSON.message
                             : 'An error occurred while saving. Please try again.';
-                        $alert.removeClass('d-none alert-success').addClass('alert-danger')
-                              .html('<i class="bi bi-exclamation-circle me-1"></i>' + msg);
+                        $alert.removeClass('d-none ux4g-alert-success').addClass('ux4g-alert-error')
+                              .html('<i class="material-icons material-symbols-rounded sargam-icon-text me-1" aria-hidden="true">error</i>' + msg);
                     }
                 },
                 complete: function () {

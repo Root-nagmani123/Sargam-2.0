@@ -61,10 +61,10 @@
                 <hr>
 
                 <div class="text-end">
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="ux4g-btn-primary ux4g-btn-m">
                         {{ isset($appellation) ? 'Update' : 'Add' }}
                     </button>
-                    <a href="{{ route('master.appellation.index') }}" class="btn btn-secondary">
+                    <a href="{{ route('master.appellation.index') }}" class="ux4g-btn-outline-neutral ux4g-btn-m">
                         Back
                     </a>
                 </div>

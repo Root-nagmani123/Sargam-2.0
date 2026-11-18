@@ -24,7 +24,7 @@
          reading: per society and post, accepted nominees ranked by how many
          people nominated them, with the top N (N = posts available) elected. --}}
     <div class="alert alert-info d-flex align-items-start gap-2" role="alert">
-        <i class="bi bi-info-circle mt-1" aria-hidden="true"></i>
+        <i class="material-icons material-symbols-rounded sargam-icon-text mt-1" aria-hidden="true">info</i>
         <div>
             Nominees are ranked by the number of distinct people who nominated them.
             The top entries, up to the number of posts available for that role, are marked
@@ -68,7 +68,7 @@
                                         data-society="{{ (int) $rows->first()->club_society_master_pk }}"
                                         data-role="{{ (int) $rows->first()->club_society_role_master_pk }}"
                                         data-label="{{ $societyName }} — {{ $postName }}">
-                                    <i class="bi bi-shuffle" aria-hidden="true"></i> Pick at random
+                                    <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">shuffle</i> Pick at random
                                 </button>
                             @endif
                         </div>

@@ -11,7 +11,7 @@
     <x-breadcrum title="MDO Duty Type" :showBack="false">
         {{-- .add-btn opens the SweetAlert Add form (second script below). --}}
         <button type="button"
-                class="btn btn-primary add-btn d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
+                class="ux4g-btn-primary ux4g-btn-m add-btn d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
             <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
             <span>Add MDO Duty Type</span>
         </button>
@@ -28,7 +28,7 @@
                             data-bs-toggle="modal" data-bs-target="#mdoDutyTypeColumnVisibilityModal"
                             title="Show / hide columns">
                         <span>Columns</span>
-                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                        <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">view_column</i>
                     </button>
                     <div class="programme-dt-search" data-dt-search-for="mdodutytypemaster-table"></div>
                 </div>
@@ -62,7 +62,7 @@
                 <div class="row g-3 mst-colvis-grid" id="mdoDutyTypeColumnToggleGrid"></div>
             </div>
             <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="ux4g-btn-outline-primary ux4g-btn-m rounded-1 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>

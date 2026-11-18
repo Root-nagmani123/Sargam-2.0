@@ -11,7 +11,7 @@
 <div class="container-fluid mst-page">
     <x-breadcrum title="Discipline Master" :showBack="false">
         <a href="{{ route('master.discipline.create') }}" data-mst-modal-form
-           class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
+           class="ux4g-btn-primary ux4g-btn-m d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm">
             <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
             <span>Add Discipline</span>
         </a>
@@ -28,7 +28,7 @@
                             data-bs-toggle="modal" data-bs-target="#discMstColumnVisibilityModal"
                             title="Show / hide columns">
                         <span>Columns</span>
-                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                        <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">view_column</i>
                     </button>
                     <div class="programme-dt-search" data-dt-search-for="discipline-table"></div>
                 </div>
@@ -62,7 +62,7 @@
                 <div class="row g-3 mst-colvis-grid" id="discMstColumnToggleGrid"></div>
             </div>
             <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="ux4g-btn-outline-primary ux4g-btn-m rounded-1 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>

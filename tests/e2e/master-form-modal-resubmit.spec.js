@@ -234,7 +234,9 @@ test("a rejected Save whose form page has only an error flash re-enables Save an
   await expect(save).toBeVisible();
 
   await save.click();
-  await expect(modal.locator(".mst-form-modal-alert")).toHaveText("Record could not be saved.");
+  // UX4G alert: the message sits beside an aria-hidden icon ligature, so assert the message element.
+  await expect(modal.locator(".mst-form-modal-alert .ux4g-alert-message")).toHaveText("Record could not be saved.");
+  await expect(modal.locator(".mst-form-modal-alert")).toHaveAttribute("role", "alert");
   await expect(save).toBeEnabled();
   await expect(save).toHaveText("Save");
   expect(posts).toHaveLength(1);

@@ -12,7 +12,7 @@
 <div class="container-fluid cs-master-page ed-page">
     <x-breadcrum title="Create Election Drive">
         <button type="button"
-                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
+                class="ux4g-btn-primary ux4g-btn-m d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
                 id="edAddBtn" data-bs-toggle="modal" data-bs-target="#edFormModal">
             <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
             <span>Create Election Drive</span>
@@ -39,12 +39,12 @@
         <div class="d-flex flex-wrap align-items-center gap-2">
             <a href="{{ route('master.election.drive.export') }}" id="edDownloadBtn"
                class="btn programme-dt-btn-columns border-0 text-primary" title="Download as Excel">
-                <i class="bi bi-download" aria-hidden="true"></i>
+                <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">download</i>
                 <span>Download</span>
             </a>
             <a href="{{ route('master.election.drive.print') }}" id="edPrintBtn"
                target="_blank" rel="noopener" class="btn programme-dt-btn-columns" title="Print">
-                <i class="bi bi-printer" aria-hidden="true"></i>
+                <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">print</i>
                 <span>Print</span>
             </a>
         </div>
@@ -73,7 +73,7 @@
                     <button type="button" class="btn programme-dt-btn-columns" id="edBtnColumns"
                             data-bs-toggle="modal" data-bs-target="#edColumnVisibilityModal"
                             title="Show / hide columns">
-                        <span>Columns</span> <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                        <span>Columns</span> <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">view_column</i>
                     </button>
                     <div id="edDtSearch" class="programme-dt-search" data-dt-search-for="electiondrive-table"></div>
                 </div>
@@ -104,7 +104,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div id="edFormAlert" class="alert d-none mb-3" role="alert"></div>
+                    <div id="edFormAlert" class="ux4g-alert d-none mb-3" role="alert"></div>
 
                     <div class="row g-3 mb-3">
                         <div class="col-12 col-md-6">
@@ -196,8 +196,8 @@
                     </div>
                 </div>
                 <div class="modal-footer border-0 gap-2 justify-content-end">
-                    <button type="button" class="btn btn-outline-danger rounded-1 px-4" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary rounded-1 px-4" id="edSubmitBtn">Create Election Drive</button>
+                    <button type="button" class="ux4g-btn-outline-danger ux4g-btn-m rounded-1 px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="ux4g-btn-primary ux4g-btn-m rounded-1 px-4" id="edSubmitBtn">Create Election Drive</button>
                 </div>
             </form>
         </div>
@@ -217,7 +217,7 @@
                 <div class="row g-3" id="edColumnToggleGrid"></div>
             </div>
             <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="ux4g-btn-outline-primary ux4g-btn-m rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -491,7 +491,7 @@
         function edClearErrors() {
             $form.find('.is-invalid').removeClass('is-invalid');
             $form.find('.invalid-feedback').text('');
-            $alert.addClass('d-none').removeClass('alert-danger alert-success').empty();
+            $alert.addClass('d-none').removeClass('ux4g-alert-error ux4g-alert-success').empty();
         }
 
         function edResetForm() {
@@ -563,7 +563,7 @@
                     });
                 },
                 error: function () {
-                    $alert.removeClass('d-none alert-success').addClass('alert-danger')
+                    $alert.removeClass('d-none ux4g-alert-success').addClass('ux4g-alert-error')
                           .text('Could not load this drive. Please close and try again.');
                 }
             });
@@ -589,8 +589,8 @@
                 data: $form.serialize(),
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
                 success: function (response) {
-                    $alert.removeClass('d-none alert-danger').addClass('alert-success')
-                          .html('<i class="bi bi-check-circle me-1"></i>' + (response.message || 'Saved successfully.'));
+                    $alert.removeClass('d-none ux4g-alert-error').addClass('ux4g-alert-success')
+                          .html('<i class="material-icons material-symbols-rounded sargam-icon-text me-1" aria-hidden="true">check_circle</i>' + (response.message || 'Saved successfully.'));
                     reload();
                     setTimeout(function () {
                         var instance = bootstrap.Modal.getInstance(document.getElementById('edFormModal'));
@@ -612,14 +612,14 @@
                                 $form.find('.invalid-feedback[data-field="' + key + '"]').text(errors[field][0]);
                             }
                         });
-                        $alert.removeClass('d-none alert-success').addClass('alert-danger')
+                        $alert.removeClass('d-none ux4g-alert-success').addClass('ux4g-alert-error')
                               .text(xhr.responseJSON.message || 'Please correct the highlighted fields.');
                     } else {
                         var msg = (xhr.responseJSON && xhr.responseJSON.message)
                             ? xhr.responseJSON.message
                             : 'An error occurred while saving. Please try again.';
-                        $alert.removeClass('d-none alert-success').addClass('alert-danger')
-                              .html('<i class="bi bi-exclamation-circle me-1"></i>' + msg);
+                        $alert.removeClass('d-none ux4g-alert-success').addClass('ux4g-alert-error')
+                              .html('<i class="material-icons material-symbols-rounded sargam-icon-text me-1" aria-hidden="true">error</i>' + msg);
                     }
                 },
                 complete: function () {

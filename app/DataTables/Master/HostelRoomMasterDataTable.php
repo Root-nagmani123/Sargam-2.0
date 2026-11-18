@@ -34,6 +34,7 @@ class HostelRoomMasterDataTable extends DataTable
                 $checked = $row->active_inactive == 1 ? 'checked' : '';
                 return '<div class="form-check form-switch d-inline-block ms-2">
                 <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                    aria-label="' . e(($row->active_inactive == 1 ? 'Deactivate ' : 'Activate ') . ($row->hostel_room_name ?? 'room')) . '"
                     data-table="hostel_room_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
             </div>';
             })

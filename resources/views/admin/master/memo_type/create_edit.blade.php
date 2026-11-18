@@ -51,7 +51,7 @@
                         @if(isset($memoType) && $memoType->memo_doc_upload)
                             <a href="{{ asset('storage/' . $memoType->memo_doc_upload) }}" target="_blank" rel="noopener"
                                class="d-inline-flex align-items-center gap-1 mt-2 text-primary fw-medium">
-                                <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                                <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">description</i>
                                 <span>Existing file: {{ basename($memoType->memo_doc_upload) }}</span>
                             </a>
                         @endif
@@ -78,8 +78,8 @@
                 </div>
 
                 <div class="mst-form-footer">
-                    <a href="{{ route('master.memo.type.master.index') }}" class="btn mst-btn-cancel px-4">Cancel</a>
-                    <button type="submit" class="btn mst-btn-submit px-4">
+                    <a href="{{ route('master.memo.type.master.index') }}" class="ux4g-btn-outline-neutral ux4g-btn-m mst-btn-cancel px-4">Cancel</a>
+                    <button type="submit" class="ux4g-btn-primary ux4g-btn-m mst-btn-submit px-4">
                         {{ isset($memoType) ? 'Update' : 'Save' }}
                     </button>
                 </div>

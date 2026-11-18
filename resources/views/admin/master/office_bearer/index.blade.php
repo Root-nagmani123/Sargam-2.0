@@ -33,12 +33,12 @@
         <div class="d-flex flex-wrap align-items-center gap-2">
             <a href="{{ route('master.office.bearer.export') }}" id="obDownloadBtn"
                class="btn programme-dt-btn-columns border-0 text-primary" title="Download as Excel">
-                <i class="bi bi-download" aria-hidden="true"></i>
+                <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">download</i>
                 <span>Download</span>
             </a>
             <a href="{{ route('master.office.bearer.print') }}" id="obPrintBtn"
                target="_blank" rel="noopener" class="btn programme-dt-btn-columns" title="Print">
-                <i class="bi bi-printer" aria-hidden="true"></i>
+                <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">print</i>
                 <span>Print</span>
             </a>
         </div>
@@ -76,7 +76,7 @@
                     <button type="button" class="btn programme-dt-btn-columns" id="obBtnColumns"
                             data-bs-toggle="modal" data-bs-target="#obColumnVisibilityModal"
                             title="Show / hide columns">
-                        <span>Columns</span> <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                        <span>Columns</span> <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">view_column</i>
                     </button>
                     <div id="obDtSearch" class="programme-dt-search" data-dt-search-for="officebearer-table"></div>
                 </div>
@@ -107,7 +107,7 @@
                 <div class="row g-3" id="obColumnToggleGrid"></div>
             </div>
             <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="ux4g-btn-outline-primary ux4g-btn-m rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>

@@ -3,7 +3,7 @@
     icon-over-label stacks (docs/new-design-index-page.md §3b). One source for
     every master / mapping grid — Yajra closures render it with
     view('admin.master.partials.grid-actions', [...])->render(), Blade tables
-    @include it. Styled by public/css/master-admin.css (.mst-page .mst-act*).
+    @include it. Styled by public/css/master-admin.css (.mst-page .mst-act*). Icons: Material Symbols (UX4G iconography).
 
     Every key is optional; an action is rendered only when its key is given.
 
@@ -28,7 +28,7 @@
                 + 'disabled' => bool, 'reason' => tooltip when disabled
                 + 'confirm' => custom confirmation text (form variant)
 
-    'extra'  => [['icon' => 'bi-people', 'label' => 'Assign', 'href' => url
+    'extra'  => [['icon' => 'group' (Material Symbols name), 'label' => 'Assign', 'href' => url
                   | 'class' => 'js-hook', 'attrs' => [..], 'tone' => 'view'], ...]
                 appended before Delete, same stack shape.
 --}}
@@ -51,13 +51,13 @@
         @if (!empty($view['href']))
             <a href="{{ $view['href'] }}" class="mst-act mst-act--view {{ $view['class'] ?? '' }}"
                title="{{ $mstLabelFor('View') }}"{!! $mstAttrs($view['attrs'] ?? []) !!}>
-                <span class="mst-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span>
+                <span class="mst-act__icon"><i class="material-icons material-symbols-rounded" aria-hidden="true">visibility</i></span>
                 <span class="mst-act__label">View</span>
             </a>
         @else
             <button type="button" class="mst-act mst-act--view {{ $view['class'] ?? '' }}"
                     title="{{ $mstLabelFor('View') }}"{!! $mstAttrs($view['attrs'] ?? []) !!}>
-                <span class="mst-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span>
+                <span class="mst-act__icon"><i class="material-icons material-symbols-rounded" aria-hidden="true">visibility</i></span>
                 <span class="mst-act__label">View</span>
             </button>
         @endif
@@ -67,13 +67,13 @@
         @if (!empty($edit['href']))
             <a href="{{ $edit['href'] }}" class="mst-act mst-act--edit {{ $edit['class'] ?? '' }}"
                title="{{ $mstLabelFor('Edit') }}"{!! $mstAttrs($edit['attrs'] ?? []) !!}>
-                <span class="mst-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
+                <span class="mst-act__icon"><i class="material-icons material-symbols-rounded" aria-hidden="true">edit</i></span>
                 <span class="mst-act__label">Edit</span>
             </a>
         @else
             <button type="button" class="mst-act mst-act--edit {{ $edit['class'] ?? '' }}"
                     title="{{ $mstLabelFor('Edit') }}"{!! $mstAttrs($edit['attrs'] ?? []) !!}>
-                <span class="mst-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
+                <span class="mst-act__icon"><i class="material-icons material-symbols-rounded" aria-hidden="true">edit</i></span>
                 <span class="mst-act__label">Edit</span>
             </button>
         @endif
@@ -103,13 +103,13 @@
         @if (!empty($mstExtra['href']))
             <a href="{{ $mstExtra['href'] }}" class="mst-act mst-act--{{ $mstTone }} {{ $mstExtra['class'] ?? '' }}"
                title="{{ $mstExtra['title'] ?? $mstLabelFor($mstExtra['label']) }}"{!! $mstAttrs($mstExtra['attrs'] ?? []) !!}>
-                <span class="mst-act__icon"><i class="bi {{ $mstExtra['icon'] ?? 'bi-three-dots' }}" aria-hidden="true"></i></span>
+                <span class="mst-act__icon"><i class="material-icons material-symbols-rounded" aria-hidden="true">{{ $mstExtra['icon'] ?? 'more_horiz' }}</i></span>
                 <span class="mst-act__label">{{ $mstExtra['label'] }}</span>
             </a>
         @else
             <button type="button" class="mst-act mst-act--{{ $mstTone }} {{ $mstExtra['class'] ?? '' }}"
                     title="{{ $mstExtra['title'] ?? $mstLabelFor($mstExtra['label']) }}"{!! $mstAttrs($mstExtra['attrs'] ?? []) !!}>
-                <span class="mst-act__icon"><i class="bi {{ $mstExtra['icon'] ?? 'bi-three-dots' }}" aria-hidden="true"></i></span>
+                <span class="mst-act__icon"><i class="material-icons material-symbols-rounded" aria-hidden="true">{{ $mstExtra['icon'] ?? 'more_horiz' }}</i></span>
                 <span class="mst-act__label">{{ $mstExtra['label'] }}</span>
             </button>
         @endif
@@ -121,7 +121,7 @@
                  icon that always fails (§3b). --}}
             <span class="mst-act mst-act--del is-disabled" aria-disabled="true" tabindex="0"
                   title="{{ $delete['reason'] ?? 'This record cannot be deleted.' }}">
-                <span class="mst-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
+                <span class="mst-act__icon"><i class="material-icons material-symbols-rounded" aria-hidden="true">delete</i></span>
                 <span class="mst-act__label">Delete</span>
                 <span class="visually-hidden">{{ $delete['reason'] ?? 'This record cannot be deleted.' }}</span>
             </span>
@@ -138,14 +138,14 @@
                 @endforeach
                 <button type="submit" class="mst-act mst-act--del {{ $delete['class'] ?? '' }}"
                         title="{{ $mstLabelFor('Delete') }}"{!! $mstAttrs($delete['attrs'] ?? []) !!}>
-                    <span class="mst-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
+                    <span class="mst-act__icon"><i class="material-icons material-symbols-rounded" aria-hidden="true">delete</i></span>
                     <span class="mst-act__label">Delete</span>
                 </button>
             </form>
         @else
             <button type="button" class="mst-act mst-act--del {{ $delete['class'] ?? '' }}"
                     title="{{ $mstLabelFor('Delete') }}"{!! $mstAttrs($delete['attrs'] ?? []) !!}>
-                <span class="mst-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
+                <span class="mst-act__icon"><i class="material-icons material-symbols-rounded" aria-hidden="true">delete</i></span>
                 <span class="mst-act__label">Delete</span>
             </button>
         @endif

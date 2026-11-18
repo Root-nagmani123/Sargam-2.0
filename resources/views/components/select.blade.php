@@ -1,6 +1,11 @@
 
+@php
+    // Same accessibility contract as x-input: visible required marker, error tied to the control.
+    $selectId = $id ?? $name;
+    $hasError = $errors->has($name);
+@endphp
 @if($label)
-    <label class="form-label" for="{{ $id ?? $name }}">{{ $label }} <span class="text-danger">{{ $labelRequired ? '*' : '' }}</span></label>
+    <label class="form-label" for="{{ $selectId }}">{{ $label }}@if($labelRequired || $required) <span class="text-danger" aria-hidden="true">*</span>@endif</label>
 @endif
 
 @php
@@ -9,9 +14,10 @@
 
 <select 
     class="{{ $formSelectClass }}"
-    id="{{ $id ?? $name }}"
+    id="{{ $selectId }}"
     name="{{ $name }}"
     @if($required) required @endif
+    @if($hasError) aria-invalid="true" aria-describedby="{{ $selectId }}-error" @endif
     @if($multiple) multiple @endif
 >
     {{-- Callers that pass a placeholder get it here; everyone else keeps "Select". --}}
@@ -30,6 +36,6 @@
 </select>
 
 @error($name)
-    <span class="text-danger">{{ $message }}</span>
+    <span class="text-danger" id="{{ $selectId }}-error">{{ $message }}</span>
 @enderror
 

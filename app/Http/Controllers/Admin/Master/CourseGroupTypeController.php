@@ -74,10 +74,7 @@ class CourseGroupTypeController extends Controller
             ->addColumn('status', function ($row) {
                 $isActive = (int) $row->active_inactive === 1;
 
-                return '<span class="status-pill badge rounded-1 ' . ($isActive ? 'bg-success-subtle' : 'bg-danger-subtle') . '"'
-                    . ' data-order="' . (int) $isActive . '">'
-                    . ($isActive ? 'Active' : 'Inactive')
-                    . '</span>';
+                return view('admin.master.partials.grid-status', ['active' => $isActive, 'order' => (int) $isActive])->render();
             })
 
             // Action: Edit - switch - Delete as equal-width icon-over-label stacks.

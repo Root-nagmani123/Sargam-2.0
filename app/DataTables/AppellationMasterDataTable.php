@@ -21,9 +21,7 @@ class AppellationMasterDataTable extends DataTable
             ->addColumn('status', function ($row) {
                 $isActive = (int) $row->active_inactive === 1;
 
-                return '<span class="status-pill badge rounded-1 ' . ($isActive ? 'bg-success-subtle' : 'bg-danger-subtle') . '">'
-                    . ($isActive ? 'Active' : 'Inactive')
-                    . '</span>';
+                return view('admin.master.partials.grid-status', ['active' => $isActive])->render();
             })
 
             // Action: Edit · status switch · Delete, as equal-width icon-over-label stacks.

@@ -12,37 +12,14 @@
  * docs/new-design-index-page.md.
  * ========================================================================= */
 
-/* ── Brand tint ──────────────────────────────────────────────────────────────
- * The theme recoloured --bs-primary to the canonical brand navy (#004384) but
- * left --bs-primary-rgb at the legacy 0,74,147. Everything that tints from the
- * TRIPLET rather than the hex — .text-primary on the Download / Print buttons,
- * Bootstrap's focus rings — therefore renders a slightly different blue from
- * the buttons next to it. Restate it for this subtree only; the app-wide
- * triplet is a separate change. */
-.mst-page {
-    --bs-primary-rgb: 0, 67, 132;
-}
+/* Brand tint: --bs-primary now aliases --ux4g-color-primary-600 (#004a93) app-wide,
+ * matching --bs-primary-rgb, so the old #004384 subtree patch is gone. */
 
 /* ── Export row (Download / Print), above the card ───────────────────────────
  * Chrome comes from .programme-dt-btn-columns so these match the toolbar below.
  * Nothing here but the print rule — see the @media print block at the end. */
 
-/* ── Status badge ────────────────────────────────────────────────────────────
- * The theme ships the *-subtle backgrounds but not the matching
- * text-*-emphasis colours, so the label would render black. Tint it here. */
-.mst-page .status-pill {
-    padding: 0.4em 0.85em;
-    font-size: 0.75rem;
-    font-weight: 600;
-}
-
-.mst-page .status-pill.bg-success-subtle {
-    color: #146c43;
-}
-
-.mst-page .status-pill.bg-danger-subtle {
-    color: #b02a37;
-}
+/* Status badge: UX4G Tag from admin.master.partials.grid-status (no module CSS). */
 
 /* ── Row actions: Edit · status switch · Delete ──────────────────────────────
  * One fixed-height icon strip so the glyphs and the switch share a baseline,
@@ -101,23 +78,23 @@
 }
 
 .mst-page .mst-act--edit {
-    color: #2563eb;
+    color: var(--ux4g-color-primary-600);
 }
 
 .mst-page .mst-act--view {
-    color: #0e7490;
+    color: var(--ux4g-text-info-default);
 }
 
 .mst-page .mst-act--toggle {
-    color: #475467;
+    color: var(--ux4g-text-neutral-secondary);
 }
 
 .mst-page .mst-act--del {
-    color: var(--bs-danger, #dc3545);
+    color: var(--ux4g-text-error-default);
 }
 
 .mst-page .mst-act--del.is-disabled {
-    color: #98a2b3;
+    color: var(--ux4g-text-neutral-tertiary);
     opacity: 0.65;
     cursor: not-allowed;
 }
@@ -310,38 +287,15 @@
     border-color: #dc2626;
 }
 
+/* Look comes from UX4G (ux4g-btn-primary / ux4g-btn-outline-neutral); mst-btn-* stay as JS hooks + widths. */
 .mst-modal .mst-btn-cancel,
 .mst-page  .mst-btn-cancel {
     min-width: 108px;
-    color: #dc2626;
-    border: 1px solid #fca5a5;
-    background: #fff;
-    border-radius: 8px;
-    font-weight: 500;
-}
-
-.mst-modal .mst-btn-cancel:hover,
-.mst-page  .mst-btn-cancel:hover {
-    background: #fef2f2;
-    border-color: #f87171;
-    color: #dc2626;
 }
 
 .mst-modal .mst-btn-submit,
 .mst-page  .mst-btn-submit {
     min-width: 140px;
-    color: #fff;
-    background: #004384;
-    border: 1px solid #004384;
-    border-radius: 8px;
-    font-weight: 600;
-}
-
-.mst-modal .mst-btn-submit:hover,
-.mst-page  .mst-btn-submit:hover {
-    color: #fff;
-    background: #00356a;
-    border-color: #00356a;
 }
 
 /* ── Full-page form: cards, section titles, footer ──────────────────────────
@@ -1103,22 +1057,6 @@
     word-break: break-word;
 }
 
-/* Soft workflow / category badges beyond Active-Inactive. */
-.mst-page .status-pill.bg-warning-subtle {
-    color: #93370d;
-}
-
-.mst-page .status-pill.bg-info-subtle {
-    color: #055160;
-}
-
-.mst-page .status-pill.bg-primary-subtle {
-    color: #004384;
-}
-
-.mst-page .status-pill.bg-secondary-subtle {
-    color: #344054;
-}
 
 /* Column-visibility modal tiles. Styled by class so a new grid does not have
  * to be appended to the hard-coded ID lists in custom.css (§9). */
@@ -1154,7 +1092,9 @@
 
 @media (max-width: 575.98px) {
     .mst-page .mst-form-footer > .btn,
-    .mst-modal .modal-footer > .btn {
+    .mst-modal .modal-footer > .btn,
+    .mst-page .mst-form-footer > [class*="ux4g-btn-"],
+    .mst-modal .modal-footer > [class*="ux4g-btn-"] {
         flex: 1 1 auto;
     }
 }
@@ -1214,7 +1154,8 @@
 }
 
 @media (max-width: 575.98px) {
-    .mst-form-modal .mst-form-footer > .btn {
+    .mst-form-modal .mst-form-footer > .btn,
+    .mst-form-modal .mst-form-footer > [class*="ux4g-btn-"] {
         flex: 1 1 auto;
     }
 }

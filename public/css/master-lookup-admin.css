@@ -19,22 +19,7 @@
 
 /* ── Status column: soft badge, display only (§3b) ─────────────────────────── */
 
-/* The theme ships the *-subtle backgrounds but not the matching
-   text-*-emphasis colours, so the label would render black. */
-.mst-page .status-pill {
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 0.35rem 0.7rem;
-    letter-spacing: 0.01em;
-}
-
-.mst-page .status-pill.bg-success-subtle {
-    color: #146c43;
-}
-
-.mst-page .status-pill.bg-danger-subtle {
-    color: #b02a37;
-}
+/* UX4G Tag from admin.master.partials.grid-status — no module CSS. */
 
 /* ── Action column: equal-width icon-over-label stacks (§3b) ───────────────── */
 
@@ -192,56 +177,15 @@
     padding: 0.25rem 1.25rem 1.25rem;
 }
 
-.mst-modal .mst-btn-cancel,
-.mst-page .mst-btn-cancel,
-.mst-modal .mst-btn-submit,
-.mst-page .mst-btn-submit {
-    min-height: 2.625rem;
-    padding: 0.5rem 1.5rem;
-    border-radius: 8px;
-    font-size: 0.9375rem;
-    line-height: 1.4;
-}
-
+/* Look comes from UX4G (ux4g-btn-primary / ux4g-btn-outline-neutral); mst-btn-* stay as JS hooks + widths. */
 .mst-modal .mst-btn-cancel,
 .mst-page .mst-btn-cancel {
     min-width: 108px;
-    border: 1px solid #fca5a5;
-    background: #ffffff;
-    color: #dc2626;
-    font-weight: 500;
-}
-
-.mst-modal .mst-btn-cancel:hover,
-.mst-modal .mst-btn-cancel:focus,
-.mst-page .mst-btn-cancel:hover,
-.mst-page .mst-btn-cancel:focus {
-    background: #fef2f2;
-    border-color: #f87171;
-    color: #dc2626;
 }
 
 .mst-modal .mst-btn-submit,
 .mst-page .mst-btn-submit {
     min-width: 140px;
-    border: 1px solid #004384;
-    background: #004384;
-    color: #ffffff;
-    font-weight: 600;
-}
-
-.mst-modal .mst-btn-submit:hover,
-.mst-modal .mst-btn-submit:focus,
-.mst-page .mst-btn-submit:hover,
-.mst-page .mst-btn-submit:focus {
-    background: #00356a;
-    border-color: #00356a;
-    color: #ffffff;
-}
-
-.mst-modal .mst-btn-submit:disabled {
-    opacity: 0.65;
-    cursor: not-allowed;
 }
 
 .mst-modal .invalid-feedback {

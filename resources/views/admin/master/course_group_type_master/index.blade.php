@@ -51,7 +51,7 @@
                         data-bs-toggle="modal" data-bs-target="#cgtColumnVisibilityModal"
                         title="Show / hide columns">
                         <span>Columns</span>
-                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                        <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">view_column</i>
                     </button>
                     <div id="cgtDtSearch" class="programme-dt-search" data-dt-search-for="coursegrouptype"></div>
                 </div>
@@ -132,8 +132,8 @@
                 </form>
             </div>
             <div class="modal-footer border-0 gap-2">
-                <button type="button" class="btn btn-outline-primary rounded-1" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary rounded-1" id="cgtAddSubmit">Create Course Group</button>
+                <button type="button" class="ux4g-btn-outline-primary ux4g-btn-m rounded-1" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="ux4g-btn-primary ux4g-btn-m rounded-1" id="cgtAddSubmit">Create Course Group</button>
             </div>
         </div>
     </div>
@@ -167,8 +167,8 @@
                 </form>
             </div>
             <div class="modal-footer border-0 gap-2">
-                <button type="button" class="btn btn-outline-primary rounded-1" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary rounded-1" id="cgtEditSubmit">Update Course Group</button>
+                <button type="button" class="ux4g-btn-outline-primary ux4g-btn-m rounded-1" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="ux4g-btn-primary ux4g-btn-m rounded-1" id="cgtEditSubmit">Update Course Group</button>
             </div>
         </div>
     </div>
@@ -187,7 +187,7 @@
                 <div class="row g-3" id="cgtColumnToggleGrid"></div>
             </div>
             <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="ux4g-btn-outline-primary ux4g-btn-m rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>

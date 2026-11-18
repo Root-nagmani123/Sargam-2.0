@@ -19,7 +19,7 @@
                         </div>
                         <div class="col-6">
                             <div class="float-end gap-2">
-                                <a href="{{route('master.hostel.room.create')}}" class="btn btn-primary">+ Add Hostel Room</a>
+                                <a href="{{route('master.hostel.room.create')}}" class="ux4g-btn-primary ux4g-btn-m">+ Add Hostel Room</a>
                             </div>
                         </div>
                     </div>

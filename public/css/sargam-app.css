@@ -51,6 +51,9 @@
     --ux4g-text-success-default: var(--ux4g-color-green-700);   /* 6.57:1 */
     --ux4g-text-error-default: var(--ux4g-color-red-700);       /* 6.56:1 */
 
+    /* SARGAM control radius is 4px (docs/design.md "NO pills"); UX4G exposes it as a token (default 8px). */
+    --ux4g-btn-radius: var(--ux4g-radius-sm);
+
     /* Multilingual: keep Devanagari in the UX4G font stacks (Hindi content). */
     --ux4g-font-family-base: "Noto Sans", "Noto Sans Devanagari", system-ui, sans-serif;
     --ux4g-font-family-display: "Noto Sans Display", "Noto Sans", "Noto Sans Devanagari", sans-serif;
@@ -62,6 +65,29 @@
 :root:not([data-bs-theme="dark"]) {
     --bs-secondary-color: var(--ux4g-text-neutral-secondary);  /* 10.4:1 */
     --bs-tertiary-color: var(--ux4g-text-neutral-tertiary);    /* 4.74:1 */
+    /* One brand blue: the theme's #004384 vs #004a93 everywhere else (and in --bs-primary-rgb). */
+    --bs-primary: var(--ux4g-color-primary-600);
+}
+
+/* Material Symbols inside UX4G components (SARGAM's Material implementation,
+   see docs/UX4G-DESIGN-TOKENS.md §7). Tags sit inline in table cells. */
+.sargam-tag {
+    display: inline-flex;
+    align-items: center;
+}
+.sargam-tag > .material-symbols-rounded {
+    font-size: var(--ux4g-font-size-14);
+}
+.ux4g-alert-icon > .material-symbols-rounded,
+.ux4g-alert-close > .material-symbols-rounded {
+    font-size: var(--ux4g-font-size-20);
+}
+/* Material Symbol sized to the surrounding text — replaces Bootstrap Icons' 1em glyphs
+   (scripts/ux4g-codemod.mjs adds it). */
+.material-symbols-rounded.sargam-icon-text {
+    font-size: 1.25em;
+    line-height: 1;
+    vertical-align: -0.25em;
 }
 
 /* WCAG 2.4.7 focus ring — UX4G foundations/focus.css values, minus its
@@ -158,12 +184,15 @@ a.dropdown-item:focus-visible {
 
 /* Table headers: quieter, more scannable enterprise look.
    Intentionally gentle — only weight/colour/spacing, no size or
-   text-transform overrides, so existing table layouts are untouched. */
+   text-transform overrides, so existing table layouts are untouched.
+   !important only because the theme ships `.table th { color:#787878 !important }`
+   (3.96:1 on its #F3F3F3 header, WCAG 1.4.3) on every Bootstrap table. */
 .table > thead > tr > th,
-.table > thead th {
+.table > thead th,
+.table th {
     font-weight: 600;
     letter-spacing: 0.01em;
-    color: var(--ds-ink-muted);
+    color: var(--ds-ink-muted) !important;
 }
 
 /* Consistent control heights (kept gentle — min-height, not height) */

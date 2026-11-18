@@ -73,8 +73,8 @@
                     </div>
 
                     <div class="mst-form-footer">
-                        <a href="{{ route('master.class.session.index') }}" class="btn mst-btn-cancel px-4">Cancel</a>
-                        <button type="submit" class="btn mst-btn-submit px-4" id="saveClassSessionForm">
+                        <a href="{{ route('master.class.session.index') }}" class="ux4g-btn-outline-neutral ux4g-btn-m mst-btn-cancel px-4">Cancel</a>
+                        <button type="submit" class="ux4g-btn-primary ux4g-btn-m mst-btn-submit px-4" id="saveClassSessionForm">
                             {{ $isEdit ? 'Update' : 'Save' }}
                         </button>
                     </div>

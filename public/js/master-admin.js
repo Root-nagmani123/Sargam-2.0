@@ -431,8 +431,11 @@
     function modalAlert(message) {
         var body = formModal.el.querySelector('.modal-body');
         $(body).find('.mst-form-modal-alert').remove();
-        $('<div class="alert alert-danger rounded-1 mst-form-modal-alert" role="alert"></div>')
-            .text(message)
+        // UX4G Alert (same markup family as <x-session_message />).
+        $('<div class="ux4g-alert ux4g-alert-error mst-form-modal-alert mb-3" role="alert">'
+            + '<span class="ux4g-alert-icon"><i class="material-icons material-symbols-rounded" aria-hidden="true">error</i></span>'
+            + '<span class="ux4g-alert-message"></span></div>')
+            .find('.ux4g-alert-message').text(message).end()
             .prependTo(body);
     }
 
@@ -442,11 +445,15 @@
         dialog.classList.add(size === 'xl' ? 'modal-xl' : 'modal-lg');
     }
 
+    // Flash alerts <x-session_message /> renders (UX4G since the migration; legacy Bootstrap kept for pages that still emit it).
+    var FLASH_ERROR = '.alert-danger, .sargam-flash.ux4g-alert-error';
+    var FLASH_SUCCESS = '.alert-success, .sargam-flash.ux4g-alert-success';
+
     // Text of the flash alerts <x-session_message /> rendered on a page.
     function flashText(doc, selector) {
         return $(doc).find(selector).map(function () {
             var clone = this.cloneNode(true);
-            $(clone).find('button, strong').remove();
+            $(clone).find('button, strong, .ux4g-alert-icon').remove(); // icon ligature text is not message text
             return $.trim($(clone).text());
         }).get().filter(Boolean);
     }
@@ -479,7 +486,7 @@
         // An `error` flash or a business-rule message the page would have shown
         // above the form. Plain validation errors already sit under their fields.
         var hasFieldErrors = serverErrorCount(root) > 0;
-        var errors = flashText(doc, '.alert-danger');
+        var errors = flashText(doc, FLASH_ERROR);
         if (errors.length && !hasFieldErrors) {
             modalAlert(errors.join(' '));
         }
@@ -571,18 +578,18 @@
                 return fetchPage(url).then(function (doc) {
                     var root = doc.querySelector('[data-mst-form-root]');
                     var failed = (root && serverErrorCount(root) > 0)
-                        || flashText(doc, '.alert-danger').length > 0;
+                        || flashText(doc, FLASH_ERROR).length > 0;
                     if (failed) {
                         if (!renderForm(doc)) {
                             // Only an error flash, no form to re-render: keep this one, usable again.
                             setBusy(form, false);
-                            modalAlert(flashText(doc, '.alert-danger').join(' '));
+                            modalAlert(flashText(doc, FLASH_ERROR).join(' '));
                             return;
                         }
                         focusFirstError();
                         return;
                     }
-                    var done = flashText(doc, '.alert-success');
+                    var done = flashText(doc, FLASH_SUCCESS);
                     try {
                         window.sessionStorage.setItem('mstFlash', done[0] || 'Saved successfully.');
                     } catch (e) { /* storage unavailable */ }

@@ -24,12 +24,12 @@
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
         <a href="{{ route('master.nomination.drive.nominees.export', ['id' => $driveId]) }}"
            class="btn programme-dt-btn-columns border-0 text-primary" title="Download as Excel">
-            <i class="bi bi-download" aria-hidden="true"></i>
+            <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">download</i>
             <span>Download</span>
         </a>
         <a href="{{ route('master.nomination.drive.nominees.print', ['id' => $driveId]) }}"
            target="_blank" rel="noopener" class="btn programme-dt-btn-columns" title="Print">
-            <i class="bi bi-printer" aria-hidden="true"></i>
+            <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">print</i>
             <span>Print</span>
         </a>
     </div>
@@ -42,7 +42,7 @@
                     <button type="button" class="btn programme-dt-btn-columns" id="ndvBtnColumns"
                             data-bs-toggle="modal" data-bs-target="#ndvColumnVisibilityModal"
                             title="Show / hide columns">
-                        <span>Columns</span> <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                        <span>Columns</span> <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">view_column</i>
                     </button>
                     <div id="ndvDtSearch" class="programme-dt-search" data-dt-search-for="nominationdriveview-table"></div>
                 </div>
@@ -77,7 +77,7 @@
                                     <td>{{ $row->nominee_name ?: '-' }}</td>
                                     <td class="text-center">{{ $row->ot_code ?: '-' }}</td>
                                     <td class="text-center">
-                                        <button type="button" class="btn btn-link p-0 nd-nominators-link"
+                                        <button type="button" class="ux4g-btn-text-primary ux4g-btn-m p-0 nd-nominators-link"
                                                 data-society="{{ $row->club_society_master_pk }}"
                                                 data-role="{{ $row->club_society_role_master_pk }}"
                                                 data-nominee="{{ $row->nominee_student_pk }}"
@@ -101,7 +101,7 @@
                                                     data-id="{{ encrypt($row->nomination_pk) }}"
                                                     data-name="{{ $row->nominee_name }}"
                                                     aria-label="Withdraw nomination">
-                                                <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                                                <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">undo</i>
                                                 <span>Withdraw</span>
                                             </button>
                                         @else
@@ -147,7 +147,7 @@
                 </table>
             </div>
             <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-outline-danger rounded-1 px-4" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="ux4g-btn-outline-danger ux4g-btn-m rounded-1 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -166,7 +166,7 @@
                 <div class="row g-3" id="ndvColumnToggleGrid"></div>
             </div>
             <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="ux4g-btn-outline-primary ux4g-btn-m rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>

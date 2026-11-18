@@ -11,7 +11,7 @@
 <div class="container-fluid mst-page eccm-page">
     <x-breadcrum title="Exemption categories" :showBack="false">
         <button type="button" id="showAlert"
-                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
+                class="ux4g-btn-primary ux4g-btn-m d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
                 data-bs-toggle="modal" data-bs-target="#eccmAddModal" aria-controls="eccmAddModal">
             <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
             <span>Add Exemption Category</span>
@@ -29,7 +29,7 @@
                             data-bs-toggle="modal" data-bs-target="#eccmColumnVisibilityModal"
                             title="Show / hide columns">
                         <span>Columns</span>
-                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                        <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">view_column</i>
                     </button>
                     <div class="programme-dt-search" data-dt-search-for="exceptiongetcategory"></div>
                 </div>
@@ -110,8 +110,8 @@
                 </form>
             </div>
             <div class="modal-footer border-0 gap-2 justify-content-end">
-                <button type="button" class="btn mst-btn-cancel px-4" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn mst-btn-submit px-4" id="eccmAddSubmit">Save</button>
+                <button type="button" class="ux4g-btn-outline-neutral ux4g-btn-m mst-btn-cancel px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="ux4g-btn-primary ux4g-btn-m mst-btn-submit px-4" id="eccmAddSubmit">Save</button>
             </div>
         </div>
     </div>
@@ -172,8 +172,8 @@
                 </form>
             </div>
             <div class="modal-footer border-0 gap-2 justify-content-end">
-                <button type="button" class="btn mst-btn-cancel px-4" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn mst-btn-submit px-4" id="eccmEditSubmit">Update</button>
+                <button type="button" class="ux4g-btn-outline-neutral ux4g-btn-m mst-btn-cancel px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="ux4g-btn-primary ux4g-btn-m mst-btn-submit px-4" id="eccmEditSubmit">Update</button>
             </div>
         </div>
     </div>
@@ -193,7 +193,7 @@
                 <div class="row g-3 mst-colvis-grid" id="eccmColumnToggleGrid"></div>
             </div>
             <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="ux4g-btn-outline-primary ux4g-btn-m rounded-1 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -275,14 +275,15 @@
         function eccmStatusBadge(row) {
             const isActive = String(row.active_inactive) === '1';
             return $('<span></span>')
-                .attr('class', 'status-pill badge rounded-1 ' + (isActive ? 'bg-success-subtle' : 'bg-danger-subtle'))
-                .text(isActive ? 'Active' : 'Inactive')
+                .attr('class', 'sargam-tag ux4g-tag-tonal-' + (isActive ? 'success' : 'error'))
+                .append($('<i class="material-icons material-symbols-rounded" aria-hidden="true"></i>').text(isActive ? 'check_circle' : 'cancel'))
+                .append(document.createTextNode(isActive ? 'Active' : 'Inactive'))
                 .prop('outerHTML');
         }
 
         function eccmActStack(cls, icon, label, title) {
             return $('<button type="button"></button>').attr({ 'class': 'mst-act ' + cls, title: title })
-                .append($('<span class="mst-act__icon"></span>').append($('<i aria-hidden="true"></i>').addClass('bi ' + icon)))
+                .append($('<span class="mst-act__icon"></span>').append($('<i class="material-icons material-symbols-rounded" aria-hidden="true"></i>').text(icon)))
                 .append($('<span class="mst-act__label"></span>').text(label));
         }
 
@@ -292,7 +293,7 @@
             const $group = $('<div class="mst-act-group" role="group" aria-label="Row actions"></div>');
 
             $group.append(
-                eccmActStack('mst-act--edit edit-btn', 'bi-pencil', 'Edit', $.trim('Edit ' + name)).attr({
+                eccmActStack('mst-act--edit edit-btn', 'edit', 'Edit', $.trim('Edit ' + name)).attr({
                     'data-id': row.pk,
                     'data-exemp_category_name': name,
                     'data-exemp_cat_short_name': eccmDecode(row.exemp_cat_short_name),
@@ -317,13 +318,13 @@
                 $group.append(
                     $('<span class="mst-act mst-act--del is-disabled" aria-disabled="true" tabindex="0"></span>')
                         .attr('title', reason)
-                        .append('<span class="mst-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>')
+                        .append('<span class="mst-act__icon"><i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">delete</i></span>')
                         .append('<span class="mst-act__label">Delete</span>')
                         .append($('<span class="visually-hidden"></span>').text(reason))
                 );
             } else {
                 $group.append(
-                    eccmActStack('mst-act--del delete-btn', 'bi-trash', 'Delete', $.trim('Delete ' + name))
+                    eccmActStack('mst-act--del delete-btn', 'delete', 'Delete', $.trim('Delete ' + name))
                         .attr('data-id', row.pk)
                 );
             }

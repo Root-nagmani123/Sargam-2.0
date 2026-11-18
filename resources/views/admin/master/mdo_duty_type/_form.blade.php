@@ -33,8 +33,8 @@
         </div>
     </div>
     <div class="d-flex flex-wrap justify-content-end gap-2 mt-3">
-        <button type="button" class="btn mst-btn-cancel px-4" data-bs-dismiss="modal">Cancel</button>
-        <button type="submit" class="btn mst-btn-submit px-4">
+        <button type="button" class="ux4g-btn-outline-neutral ux4g-btn-m mst-btn-cancel px-4" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" class="ux4g-btn-primary ux4g-btn-m mst-btn-submit px-4">
             {{ !empty($mdoDutyType) ? 'Update' : 'Save' }}
         </button>
     </div>

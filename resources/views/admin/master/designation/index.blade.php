@@ -13,9 +13,9 @@
         {{-- Add and Edit both open #dsgFormModal — no page navigation
              (docs/new-design-index-page.md §3c). --}}
         <button type="button" id="dsgAddBtn"
-            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-semibold shadow-sm"
+            class="ux4g-btn-primary ux4g-btn-m d-inline-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-semibold shadow-sm"
             data-bs-toggle="modal" data-bs-target="#dsgFormModal">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">add</i>
             <span>Add Designation</span>
         </button>
     </x-breadcrum>
@@ -35,7 +35,7 @@
                 <button type="button"
                     class="btn programme-dt-btn-columns dropdown-toggle border-0 text-primary"
                     id="dsgDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-download" aria-hidden="true"></i>
+                    <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">download</i>
                     <span>Download</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-1 py-2"
@@ -43,21 +43,21 @@
                     <li>
                         <a class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2 dsg-export-link"
                             data-export-format="csv" href="{{ route('master.designation.export', 'csv') }}">
-                            <i class="bi bi-filetype-csv text-success" aria-hidden="true"></i>
+                            <i class="material-icons material-symbols-rounded sargam-icon-text text-success" aria-hidden="true">csv</i>
                             <span>Download CSV</span>
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2 dsg-export-link"
                             data-export-format="excel" href="{{ route('master.designation.export', 'excel') }}">
-                            <i class="bi bi-file-earmark-spreadsheet text-success" aria-hidden="true"></i>
+                            <i class="material-icons material-symbols-rounded sargam-icon-text text-success" aria-hidden="true">table_view</i>
                             <span>Download Excel</span>
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2 dsg-export-link"
                             data-export-format="pdf" href="{{ route('master.designation.export', 'pdf') }}">
-                            <i class="bi bi-filetype-pdf text-danger" aria-hidden="true"></i>
+                            <i class="material-icons material-symbols-rounded sargam-icon-text text-danger" aria-hidden="true">picture_as_pdf</i>
                             <span>Download PDF</span>
                         </a>
                     </li>
@@ -68,7 +68,7 @@
                 id="dsgPrintBtn" data-export-format="print"
                 href="{{ route('master.designation.export', 'print') }}"
                 target="_blank" rel="noopener" title="Print the filtered list">
-                <i class="bi bi-printer" aria-hidden="true"></i>
+                <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">print</i>
                 <span>Print</span>
             </a>
         </div>
@@ -82,7 +82,7 @@
                         data-bs-toggle="modal" data-bs-target="#dsgColumnVisibilityModal"
                         title="Show / hide columns">
                         <span>Columns</span>
-                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                        <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">view_column</i>
                     </button>
                     <div id="dsgDtSearch" class="programme-dt-search"
                         data-dt-search-for="designationmaster-table"></div>
@@ -117,7 +117,7 @@
                     </div>
 
                     <div class="mst-modal-body">
-                        <div id="dsgFormAlert" class="alert d-none mb-3" role="alert"></div>
+                        <div id="dsgFormAlert" class="ux4g-alert d-none mb-3" role="alert"></div>
 
                         <label for="dsgName" class="mst-form-label">
                             Designation Name <span class="mst-req">*</span>
@@ -128,8 +128,8 @@
                     </div>
 
                     <div class="mst-modal-footer">
-                        <button type="button" class="btn mst-btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn mst-btn-submit" id="dsgSubmitBtn">Add Designation</button>
+                        <button type="button" class="ux4g-btn-outline-neutral ux4g-btn-m mst-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="ux4g-btn-primary ux4g-btn-m mst-btn-submit" id="dsgSubmitBtn">Add Designation</button>
                     </div>
                 </form>
             </div>
@@ -149,7 +149,7 @@
                     <div class="row g-3" id="dsgColumnToggleGrid"></div>
                 </div>
                 <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="ux4g-btn-outline-primary ux4g-btn-m rounded-3 px-4" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -311,7 +311,7 @@ $(function () {
     function dsgClearErrors() {
         $form.find('.is-invalid').removeClass('is-invalid');
         $form.find('.invalid-feedback').text('');
-        $alert.addClass('d-none').removeClass('alert-danger alert-success').empty();
+        $alert.addClass('d-none').removeClass('ux4g-alert-error ux4g-alert-success').empty();
     }
 
     function dsgResetForm() {
@@ -359,8 +359,8 @@ $(function () {
                 'Accept': 'application/json'
             },
             success: function (response) {
-                $alert.removeClass('d-none alert-danger').addClass('alert-success')
-                    .html('<i class="bi bi-check-circle me-1"></i>' + (response.message || 'Saved successfully.'));
+                $alert.removeClass('d-none ux4g-alert-error').addClass('ux4g-alert-success')
+                    .html('<i class="material-icons material-symbols-rounded sargam-icon-text me-1" aria-hidden="true">check_circle</i>' + (response.message || 'Saved successfully.'));
 
                 if ($.fn.DataTable.isDataTable(DSG_TABLE)) {
                     $(DSG_TABLE).DataTable().ajax.reload(null, false);
@@ -382,8 +382,8 @@ $(function () {
                     var msg = (xhr.responseJSON && xhr.responseJSON.message)
                         ? xhr.responseJSON.message
                         : 'An error occurred while saving. Please try again.';
-                    $alert.removeClass('d-none alert-success').addClass('alert-danger')
-                        .html('<i class="bi bi-exclamation-circle me-1"></i>' + msg);
+                    $alert.removeClass('d-none ux4g-alert-success').addClass('ux4g-alert-error')
+                        .html('<i class="material-icons material-symbols-rounded sargam-icon-text me-1" aria-hidden="true">error</i>' + msg);
                 }
             },
             complete: function () {

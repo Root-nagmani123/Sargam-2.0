@@ -48,11 +48,11 @@
                     </div>
                 </div>
                 <div class="mb-3">
-                    <button class="btn btn-primary hstack gap-6 float-end" type="submit" id="saveFacultyForm">
+                    <button class="ux4g-btn-primary ux4g-btn-m hstack gap-6 float-end" type="submit" id="saveFacultyForm">
                         <i class="material-icons menu-icon">save</i>
                         {{ !empty($facultyType) ? 'Update' : 'Save' }}
                     </button>
-                    <a href="{{ route('master.faculty.type.master.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
+                    <a href="{{ route('master.faculty.type.master.index') }}" class="ux4g-btn-outline-neutral ux4g-btn-m hstack gap-6 float-end me-2">
                         <i class="material-icons menu-icon">arrow_back</i>
                         Back
                     </a>

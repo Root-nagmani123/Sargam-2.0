@@ -1,6 +1,6 @@
 # UX4G 3.0 Migration Report — SARGAM ERP
 
-Status: **Phases 1–4 done (foundation, shell, shared components, dashboard). Module pages (phase 5+) not started.**
+Status: **Phases 1–4 done (foundation, shell, shared components, dashboard). Phase 5 (modules): Master module done; app-wide shared components (flash alerts, form inputs/selects, status tag) migrated. Other modules pending.**
 Date: 2026-11-18. Branch: `ux4g_audit`.
 
 ## 1. Current architecture
@@ -43,9 +43,28 @@ Known class collision: UX4G `modal.css` has a bare `.is-open{display:block}`; 10
 
 See `UX4G-COMPONENT-MAPPING.md`. Summary: global tokens/typography/focus ring; breadcrumb (349 views via `<x-breadcrum>`) → UX4G Breadcrumb + page `<h1>`; DataTables pagination (two patterns) → UX4G tokens; header, sidebar, mobile bottom bar → accessibility fixes + Material icons; dashboard notices + calendar → accessibility + tokens.
 
+### Phase 5 — Master module (`resources/views/admin/master`, 71 views)
+
+| Change | Reach |
+|---|---|
+| `<x-session_message />` flash → **UX4G Alert** (icon, title, message, dismiss); 2-second auto-dismiss removed (WCAG 2.2.1); errors `role="alert"`, success `role="status"`; dismiss returns focus to `#main-content` | **217 views app-wide** |
+| `<x-input>` / `<x-select>`: visible required marker (same truthiness as the `required` attribute), `aria-invalid`, `aria-describedby` → help/error text | 28 views app-wide |
+| `admin.master.partials.grid-status` → **UX4G Tag** (`ux4g-tag-tonal-*`) with icon + text; optional `data-order` | every grid using it (Master, City/State/District/Country, Venue, Stream, Building, Hostel, MDO duty, Memo) |
+| 7 Master DataTable/controller classes that hand-built the old badge now render the shared partial | Appellation, Caste, Department, Designation, Employee Group/Type, Course Group Type |
+| `admin.master.partials.grid-actions` + 3 client-side copies: Bootstrap Icons → Material Symbols | all Master grids |
+| `scripts/ux4g-codemod.mjs`: Bootstrap buttons → UX4G buttons, Bootstrap Icons → Material Symbols | 54 Master views: 155 buttons, 141 icons |
+| `mst-btn-submit`/`mst-btn-cancel` → `ux4g-btn-primary` / `ux4g-btn-outline-neutral` (Cancel was red); hook classes kept, visual CSS removed | every Master form + modal |
+| Modal form errors (`master-admin.js` `modalAlert`) → UX4G Alert; flash detection reads both legacy and UX4G markup | Master modal forms |
+| `--bs-primary` → `--ux4g-color-primary-600` (one brand blue; theme had #004384); `--ux4g-btn-radius` → 4px | app-wide |
+
+Kept Bootstrap on purpose: modals (Bootstrap JS; UX4G modal JS conflicts — §3), `btn-close`, `programme-dt-*` toolbar buttons, `programme-confirm-btn` (shared confirm dialog), `btn-warning/info` (no UX4G equivalent), form controls inside `<x-input>` (`.form-control` restyled by tokens; the UX4G input container needs wrapper markup + `ux4g-custom.js`).
+
 ## 5. Components pending
 
-Buttons, form controls, cards, tables, modals, alerts, badges/status, tabs, dropdowns in **module views** (≈600 files). Strategy: one module per PR, starting with the Attendance/`programme-dt-*` pattern; replace Bootstrap JS widgets in that module before loading `ux4g-custom.js` there.
+- Other modules (≈550 views). Run `node scripts/ux4g-codemod.mjs <module dir>` (dry run), review skips, then `--write`; move the module's status markup to `grid-status`; delete the module's copies of `.status-pill` / button colour CSS; update any test asserting old markup. Suggested order: Estate (74 views, 28 on `programme-dt`), Issue Management, Roles & Permissions, Sidebar Menu, then the rest.
+- `programme-status-badge` (7 views, `custom.css`): workflow badges; text + passing contrast already; migrate to UX4G Tag.
+- Master modal form alert boxes (`#…FormAlert`, 13 pages) toggle Bootstrap `alert-success/danger`.
+- Bootstrap modals → UX4G modal only after the page drops Bootstrap JS widgets.
 
 ## 6. Deprecated styles removed
 
@@ -107,6 +126,20 @@ Not integrated. The official page (ux4g.gov.in/resources/accessibility-widget) p
 | Calendar day keyboard select | pass |
 | Phase-1 visual regression (dashboard, roles @1440/768/375) | only heading font change (Noto Sans Display, +4 px) |
 
+### Phase 5 (Master) verification
+
+| Test | Result |
+|---|---|
+| All 75 parameter-free Master-namespace routes @1440/375, pristine (`94d7593cd`) vs migrated | axe nodes **1,639 → 128**; 0 status changes; 0 horizontal overflow; 0 new console errors |
+| Remaining after fixes | Master module pages: 0. Left: Setup department/designation (unlabelled switches, Setup module), Memo discipline + Protocol vehicle pages (other modules), JSON/fragment endpoints without `<title>`/`lang` |
+| Caste form empty submit (server validation, no DB write) | required markers, `aria-invalid` + `aria-describedby`, UX4G error alerts `role="alert"`, no auto-dismiss, dismiss → focus `#main-content`, axe clean |
+| Master modal form alert with mocked 500 / 200 save | UX4G error (6:1) / success (5.8:1) alert; no request reached the server |
+| Playwright e2e (15 specs, `zz-epo-modals` excluded: it saves to the DB) | 77 pass; the 11 failures (calendar `withScope`, login-page broken images, estate Select2) fail identically on pristine `94d7593cd` |
+| PHPUnit, every file without RefreshDatabase/DatabaseMigrations (251; `FeedbackReportOptimizationTest` skipped: >15 min on local data) | 247 files pass; 4 fail identically on pristine (HostelBuilding enum drift, LeaveOnBehalf ×2 course dates, ProtocolRequestWorkflow) |
+| Tests updated for the new markup | 5 Master feature tests (status assertion now checks UX4G tag + icon + text), 1 e2e (`master-form-modal-resubmit`) |
+
+App-wide fix found here: the theme ships `.table th { color:#787878 !important }` (3.96:1) on every Bootstrap table header; `sargam-app.css` now overrides it with UX4G neutral secondary (9.4:1).
+
 Not tested: Firefox and Edge (only Chrome was driven), screen readers (NVDA/JAWS), Lighthouse, roles other than Super Admin, module pages beyond the four above, PHPUnit suite.
 
 ## 14. Known limitations
@@ -117,3 +150,5 @@ Not tested: Firefox and Edge (only Chrome was driven), screen readers (NVDA/JAWS
 ## Backend changes
 
 One file, presentation only: `app/Http/Controllers/SidebarController.php` — the HTML strings it returns now nest submenu `<ul>` inside its `<li>`, mark icons `aria-hidden`, add `aria-controls`, and use `aria-current` instead of `aria-selected` on group links. No query, permission, or route logic changed.
+
+Phase 5, presentation strings only (HTML returned for grid columns): `app/DataTables/AppellationMasterDataTable.php`, `app/DataTables/Master/{CasteCategory,Department,Designation,EmployeeGroup,EmployeeType}MasterDataTable.php`, `app/Http/Controllers/Admin/Master/CourseGroupTypeController.php` (status column now renders the shared `grid-status` partial); `app/DataTables/LeaveNatureMasterDataTable.php`, `app/DataTables/Master/HostelRoomMasterDataTable.php` (`aria-label` on the status switch). No query, filter, permission or route change.

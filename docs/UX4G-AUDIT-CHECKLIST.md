@@ -1,6 +1,6 @@
 # UX4G / WCAG / GIGW Audit Checklist — SARGAM
 
-Ticked = done **and verified** in the running app (Chrome, axe-core 4.10.3, keyboard walk) on: `/dashboard`, `/admin/roles`, `/admin/setup/member`, `/faculty/create`, plus the shared shell. Unticked = not done or not verified. Evidence: `UX4G-MIGRATION-REPORT.md` §7–13.
+Ticked = done **and verified** in the running app (Chrome, axe-core 4.10.3, keyboard walk) on: `/dashboard`, `/admin/roles`, `/admin/setup/member`, `/faculty/create`, the shared shell, and (phase 5) every parameter-free Master module route. Unticked = not done or not verified. Evidence: `UX4G-MIGRATION-REPORT.md` §7–13.
 
 ### Foundation
 - [x] UX4G tokens (3.3.2 self-hosted; SARGAM overrides only via official token names)
@@ -11,13 +11,13 @@ Ticked = done **and verified** in the running app (Chrome, axe-core 4.10.3, keyb
 - [ ] Icons — shell on Material; Bootstrap Icons/Iconify/Font Awesome remain in modules
 
 ### Components
-- [ ] Buttons — breadcrumb default only
+- [ ] Buttons — Master module done (UX4G buttons via codemod); other modules pending
 - [ ] Inputs — focus ring only
 - [ ] Selects
 - [ ] Checkbox
 - [ ] Radio
-- [ ] Alerts
-- [ ] Badges
+- [ ] Alerts — flash messages (`<x-session_message>`, 217 views) and Master modal alerts done; inline module alerts pending
+- [ ] Badges — grid status → UX4G Tag (Master + every grid on `grid-status`); `programme-status-badge` and other badges pending
 - [ ] Cards
 - [ ] Tables — pagination tokens only
 - [ ] Modal
@@ -35,8 +35,8 @@ Ticked = done **and verified** in the running app (Chrome, axe-core 4.10.3, keyb
 - [x] Focus — visible on every tested tab stop; focus returns from notice dialog
 - [ ] Screen reader — semantics fixed per axe; not tested with NVDA/JAWS
 - [x] Contrast — tested pages (secondary text token fixed app-wide)
-- [ ] Forms — labels present on `/faculty/create`; error summary / `aria-describedby` not audited
-- [ ] Error handling — not audited
+- [ ] Forms — `<x-input>`/`<x-select>`: visible required marker, `aria-invalid`, `aria-describedby` (verified on Caste form error round-trip); hand-written forms not audited
+- [ ] Error handling — flash errors announced (`role="alert"`), no auto-dismiss (WCAG 2.2.1), dismiss keeps focus in page; module-specific errors not audited
 - [ ] Reduced motion — not audited (breadcrumb hover motion removed)
 
 ### GIGW

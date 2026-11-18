@@ -33,12 +33,12 @@
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
         <a href="{{ route('master.election.drive.nominations.export', ['id' => $driveId] + $exportQuery) }}"
            class="btn programme-dt-btn-columns border-0 text-primary" title="Download as Excel">
-            <i class="bi bi-download" aria-hidden="true"></i>
+            <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">download</i>
             <span>Download</span>
         </a>
         <a href="{{ route('master.election.drive.nominations.print', ['id' => $driveId] + $exportQuery) }}"
            target="_blank" rel="noopener" class="btn programme-dt-btn-columns" title="Print">
-            <i class="bi bi-printer" aria-hidden="true"></i>
+            <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">print</i>
             <span>Print</span>
         </a>
     </div>
@@ -83,7 +83,7 @@
                                aria-label="Nominated to date">
                     </div>
 
-                    <button type="submit" class="btn btn-primary rounded-1 px-3">Apply</button>
+                    <button type="submit" class="ux4g-btn-primary ux4g-btn-m rounded-1 px-3">Apply</button>
                     <a href="{{ route('master.election.drive.nominations', ['id' => $driveId]) }}"
                        class="btn programme-dt-btn-reset">Remove Filter</a>
                 </div>
@@ -92,7 +92,7 @@
                     <button type="button" class="btn programme-dt-btn-columns" id="edNomBtnColumns"
                             data-bs-toggle="modal" data-bs-target="#edNomColumnVisibilityModal"
                             title="Show / hide columns">
-                        <span>Columns</span> <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                        <span>Columns</span> <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">view_column</i>
                     </button>
                     <div class="programme-dt-search ed-nom-search">
                         <input type="search" class="form-control" id="edNomSearch"
@@ -184,7 +184,7 @@
                 <div class="row g-3" id="edNomColumnToggleGrid"></div>
             </div>
             <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="ux4g-btn-outline-primary ux4g-btn-m rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>

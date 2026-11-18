@@ -6,7 +6,7 @@
     function run() {
         var field = document.querySelector('form .is-invalid');
         var alertBox = document.getElementById('fc-validation-alert')
-            || document.querySelector('.alert-danger');
+            || document.querySelector('.alert-danger, .ux4g-alert-error');
         if (!field && !alertBox) return;
 
         // If the invalid field is inside an inactive tab, activate that tab first.

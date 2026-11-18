@@ -7,7 +7,7 @@
 <div class="container-fluid mst-page">
     <x-breadcrum title="Faculty Type" :showBack="false">
         <button type="button"
-                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
+                class="ux4g-btn-primary ux4g-btn-m d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
                 id="ftmAddBtn" data-bs-toggle="modal" data-bs-target="#ftmFormModal">
             <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
             <span>Add Faculty Type</span>
@@ -26,25 +26,25 @@
             <button type="button" id="ftmDownloadToggle"
                     class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
                     data-bs-toggle="dropdown" aria-expanded="false" title="Download">
-                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+                <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">download</i><span>Download</span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="ftmDownloadToggle">
                 <li>
                     <a class="dropdown-item" id="ftmCsvLink"
                        href="{{ route('master.faculty.type.master.export', ['format' => 'csv']) }}">
-                        <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i> CSV
+                        <i class="material-icons material-symbols-rounded sargam-icon-text me-1" aria-hidden="true">csv</i> CSV
                     </a>
                 </li>
                 <li>
                     <a class="dropdown-item" id="ftmExcelLink"
                        href="{{ route('master.faculty.type.master.export', ['format' => 'excel']) }}">
-                        <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Excel (.xlsx)
+                        <i class="material-icons material-symbols-rounded sargam-icon-text me-1" aria-hidden="true">table_view</i> Excel (.xlsx)
                     </a>
                 </li>
                 <li>
                     <a class="dropdown-item" id="ftmPdfLink"
                        href="{{ route('master.faculty.type.master.export', ['format' => 'pdf']) }}">
-                        <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF
+                        <i class="material-icons material-symbols-rounded sargam-icon-text me-1" aria-hidden="true">picture_as_pdf</i> PDF
                     </a>
                 </li>
             </ul>
@@ -53,7 +53,7 @@
         <a href="{{ route('master.faculty.type.master.export', ['format' => 'print']) }}"
            id="ftmPrintLink" target="_blank" rel="noopener"
            class="btn programme-dt-btn-columns border-0 text-primary" title="Print">
-            <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
+            <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">print</i><span>Print</span>
         </a>
     </div>
 
@@ -66,7 +66,7 @@
                             data-bs-toggle="modal" data-bs-target="#ftmColumnVisibilityModal"
                             title="Show / hide columns">
                         <span>Columns</span>
-                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                        <i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">view_column</i>
                     </button>
                     <div id="ftmDtSearch" class="programme-dt-search" data-dt-search-for="facultyTypeTable"></div>
                 </div>
@@ -100,9 +100,7 @@
                                     <td>{{ $name }}</td>
                                     <td class="text-nowrap">{{ $shortName }}</td>
                                     <td class="text-nowrap" data-order="{{ $isActive ? 1 : 0 }}">
-                                        <span class="status-pill badge rounded-1 {{ $isActive ? 'bg-success-subtle' : 'bg-danger-subtle' }}">
-                                            {{ $isActive ? 'Active' : 'Inactive' }}
-                                        </span>
+                                        @include('admin.master.partials.grid-status', ['active' => $isActive])
                                     </td>
                                     <td class="text-nowrap">
                                         <div class="mst-act-group" role="group" aria-label="Row actions">
@@ -111,7 +109,7 @@
                                                     data-name="{{ $name }}"
                                                     data-short="{{ $shortName }}"
                                                     title="Edit {{ $name }}">
-                                                <span class="mst-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span>
+                                                <span class="mst-act__icon"><i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">edit</i></span>
                                                 <span class="mst-act__label">Edit</span>
                                             </button>
 
@@ -130,7 +128,7 @@
                                             @if($isActive)
                                                 <span class="mst-act mst-act--del is-disabled" aria-disabled="true"
                                                       title="Active records cannot be deleted. Deactivate it first.">
-                                                    <span class="mst-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
+                                                    <span class="mst-act__icon"><i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">delete</i></span>
                                                     <span class="mst-act__label">Delete</span>
                                                 </span>
                                             @else
@@ -139,7 +137,7 @@
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="mst-act mst-act--del" title="Delete {{ $name }}">
-                                                        <span class="mst-act__icon"><i class="bi bi-trash" aria-hidden="true"></i></span>
+                                                        <span class="mst-act__icon"><i class="material-icons material-symbols-rounded sargam-icon-text" aria-hidden="true">delete</i></span>
                                                         <span class="mst-act__label">Delete</span>
                                                     </button>
                                                 </form>
@@ -208,8 +206,8 @@
                 </div>
 
                 <div class="modal-footer border-0 gap-2 justify-content-end">
-                    <button type="button" class="btn mst-btn-cancel px-4" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn mst-btn-submit px-4" id="ftmSubmitBtn">Add Faculty Type</button>
+                    <button type="button" class="ux4g-btn-outline-neutral ux4g-btn-m mst-btn-cancel px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="ux4g-btn-primary ux4g-btn-m mst-btn-submit px-4" id="ftmSubmitBtn">Add Faculty Type</button>
                 </div>
             </form>
         </div>
@@ -230,7 +228,7 @@
                 <div class="row g-3" id="ftmColumnToggleGrid"></div>
             </div>
             <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="ux4g-btn-outline-primary ux4g-btn-m rounded-1 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>

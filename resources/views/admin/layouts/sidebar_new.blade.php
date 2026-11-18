@@ -94,7 +94,8 @@
                                                 aria-label="scrollable content"
                                                 style="height: 100%; overflow: hidden scroll;">
                                                 <div class="simplebar-content" style="padding: 16px 12px 24px 12px;">
-                                                    <h2 class="text-light fs-6 px-3 pb-2" id="sidebar-title"></h2>
+                                                    {{-- Screen-reader heading for the menu (was white-on-white text, WCAG 1.3.1 / 1.4.3); the rail shows the group visually. --}}
+                                                    <h2 class="visually-hidden" id="sidebar-title"></h2>
                                                     <ul class="sidebar-menu" id="sidebarnav"></ul>
                                                 </div>
                                             </div>

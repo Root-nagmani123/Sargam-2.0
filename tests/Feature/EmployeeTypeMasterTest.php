@@ -109,7 +109,8 @@ class EmployeeTypeMasterTest extends TestCase
         // Status is a display-only badge…
         // Soft badge with data-order, per docs/new-design-index-page.md §3b.
         $this->assertMatchesRegularExpression(
-            '/status-pill badge rounded-1 bg-(success|danger)-subtle/',
+            // UX4G Tag (admin.master.partials.grid-status): tone + icon + state text, never colour alone.
+            '#ux4g-tag-tonal-(success|error) sargam-tag"[^>]*><i [^>]*aria-hidden="true">(check_circle|cancel)</i>(Active|Inactive)<#',
             $row['status']
         );
         $this->assertMatchesRegularExpression('/data-order="[01]"/', $row['status']);
