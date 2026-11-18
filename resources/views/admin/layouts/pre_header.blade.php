@@ -8,12 +8,22 @@
 <meta name="faculty-index-path" content="{{ route('faculty.index', [], false) }}">
 <!-- Force light color scheme to prevent system dark mode -->
 <meta name="color-scheme" content="light">
+<script>
+    // Active state for module nav links (WCAG 4.1.2): aria-selected is valid only on role="tab";
+    // plain links (mobile bottom bar) use aria-current. Defined in <head> so header/master/nav-state can call it.
+    window.sargamSetNavActive = function (el, on) {
+        if (el.getAttribute('role') === 'tab') { el.setAttribute('aria-selected', on ? 'true' : 'false'); return; }
+        el.removeAttribute('aria-selected');
+        if (on) { el.setAttribute('aria-current', 'page'); } else { el.removeAttribute('aria-current'); }
+    };
+</script>
 
 <!-- Favicon icon-->
 <link rel="shortcut icon" type="image/ico" href="{{asset('admin_assets/images/logos/favicon.ico')}}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <x-fonts-sargam />
+<x-ux4g-styles />
 <!-- Core Css -->
 <link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
 <link rel="stylesheet" href="{{ asset('css/custom.css') }}?v={{ @filemtime(public_path('css/custom.css')) ?: time() }}">
@@ -56,7 +66,7 @@
 </style>
 
 <style>
-/* DataTables pagination: custom pill design (scoped only to DataTables) */
+/* DataTables pagination + length select — UX4G tokens (primary, radius, neutral); was Bootstrap #0d6efd pills */
 .dataTables_wrapper .dataTables_paginate {
   margin-top: 0.75rem;
 }
@@ -74,38 +84,37 @@
   min-width: 2.1rem;
   height: 2.1rem;
   padding: 0 0.65rem;
-  border-radius: 999px !important;
-  border: 0 !important;
-  background: #ffffff !important;
-  color: #1f3f66 !important;
+  border-radius: var(--ux4g-radius-sm) !important;
+  border: 1px solid var(--ux4g-border-color-neutral-subtle) !important;
+  background: var(--ux4g-bg-neutral-elevated) !important;
+  color: var(--ux4g-text-neutral-primary) !important;
   font-weight: 600;
   line-height: 2rem;
   text-align: center;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 2px rgba(13, 110, 253, 0.08);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .dataTables_wrapper .dataTables_paginate .page-link:hover {
-  background: #eef5ff !important;
-  color: #0d6efd !important;
-  transform: translateY(-1px);
+  background: var(--ux4g-bg-primary) !important;
+  color: var(--ux4g-color-primary-700) !important;
 }
 
 .dataTables_wrapper .dataTables_paginate .page-item.active .page-link {
-  background: linear-gradient(135deg, #0d6efd, #0a58ca) !important;
-  color: #ffffff !important;
-  box-shadow: 0 6px 16px rgba(13, 110, 253, 0.25);
+  background: var(--ux4g-bg-primary-strong) !important;
+  border-color: var(--ux4g-bg-primary-strong) !important;
+  color: var(--ux4g-color-neutral-0) !important;
 }
 
 .dataTables_wrapper .dataTables_paginate .page-item.disabled .page-link {
-  background: #f6f8fb !important;
-  color: #9aa9bd !important;
+  background: var(--ux4g-bg-neutral-soft) !important;
+  color: var(--ux4g-text-neutral-tertiary) !important;
   cursor: not-allowed;
   box-shadow: none;
 }
 
-.dataTables_wrapper .dataTables_paginate .page-link:focus {
-  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.2) !important;
+.dataTables_wrapper .dataTables_paginate .page-link:focus-visible {
+  outline: var(--ux4g-border-width-md) solid var(--ux4g-border-color-primary-strong);
+  outline-offset: 2px;
 }
 
 /* DataTables page-length selector variants */
@@ -119,7 +128,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  color: #1f3f66;
+  color: var(--ux4g-text-neutral-secondary);
   font-weight: 600;
   margin: 0;
 }
@@ -134,11 +143,10 @@
 
 /* 1) Pill style (default) */
 .dataTables_wrapper.dt-length-style-pill .dataTables_length select {
-  border-radius: 999px !important;
-  border: 1px solid #d8e3f2 !important;
-  background: #ffffff !important;
-  color: #1f3f66 !important;
-  box-shadow: 0 1px 2px rgba(13, 110, 253, 0.08);
+  border-radius: var(--ux4g-radius-sm) !important;
+  border: 1px solid var(--ux4g-border-color-neutral-default) !important;
+  background: var(--ux4g-bg-neutral-elevated) !important;
+  color: var(--ux4g-text-neutral-primary) !important;
 }
 
 /* 2) Underline style */
@@ -154,7 +162,7 @@
 }
 
 .dataTables_wrapper.dt-length-style-underline .dataTables_length select:focus {
-  border-bottom-color: #0d6efd !important;
+  border-bottom-color: var(--ux4g-border-color-primary-strong) !important;
   box-shadow: none !important;
 }
 
@@ -181,8 +189,12 @@
 }
 
 .dataTables_wrapper .dataTables_length select:focus {
-  border-color: #0d6efd !important;
-  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15) !important;
+  border-color: var(--ux4g-border-color-primary-strong) !important;
+  box-shadow: none !important;
+}
+.dataTables_wrapper .dataTables_length select:focus-visible {
+  outline: var(--ux4g-border-width-md) solid var(--ux4g-border-color-primary-strong);
+  outline-offset: 2px;
 }
 </style>
 

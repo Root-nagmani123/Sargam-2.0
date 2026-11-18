@@ -376,7 +376,8 @@ document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.sidebar-category-link').forEach(function (tab) {
                 var on = tab.getAttribute('href') === tabToHighlight;
                 tab.classList.toggle('active', on);
-                tab.setAttribute('aria-selected', on ? 'true' : 'false');
+                // Helper (admin pre_header) uses aria-current on non-tab links; other layouts keep the old attribute.
+                (window.sargamSetNavActive || function (el, v) { el.setAttribute('aria-selected', v ? 'true' : 'false'); })(tab, on);
             });
         }
 

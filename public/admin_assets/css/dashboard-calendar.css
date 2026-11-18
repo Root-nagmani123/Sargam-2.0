@@ -14,7 +14,7 @@
     --cal-optional-bg: #e6fffa;
     --cal-optional-text: #0d9488;
     --cal-text: #212529;
-    --cal-muted: #adb5bd;
+    --cal-muted: var(--ux4g-text-neutral-tertiary); /* was #adb5bd, 2.1:1 on weekday headers (WCAG 1.4.3) */
     --cal-border: #dee2e6;
     --cal-cell-border: #e9ecef;
     --cal-other-border: #f0f1f3;

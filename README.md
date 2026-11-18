@@ -318,7 +318,7 @@ For support and queries:
 
 ## 🎨 UI Design System
 
-Sargam 2.0 uses **UX4G** (a Bootstrap 5 fork) as its CSS framework. Modules follow the new-design standard established by the Attendance page:
+Sargam 2.0 is migrating to the **UX4G Design System 3.0** (self-hosted 3.3.2, `ux4g-*` classes and tokens) alongside the existing Bootstrap 5 markup. See `docs/UX4G-MIGRATION-REPORT.md`, `docs/UX4G-DESIGN-TOKENS.md` and `docs/UX4G-COMPONENT-MAPPING.md`. Modules follow the new-design standard established by the Attendance page:
 
 | Pattern | Description |
 |---|---|

@@ -24,7 +24,8 @@
                                     <span class="sidebar-google-label">Close</span>
                                 </button>
                             </div>
-                            <ul class="mini-nav-ul simplebar-scrollable-y flex-fill" data-simplebar="init"
+                            {{-- role="none": layout wrapper for simplebar; the real list is .sidebar-groups-list --}}
+                            <ul class="mini-nav-ul simplebar-scrollable-y flex-fill" data-simplebar="init" role="none"
                                 style="min-height: 0;">
                                 <div class="simplebar-wrapper" style="margin: 0px;">
                                     <div class="simplebar-height-auto-observer-wrapper">
@@ -51,11 +52,11 @@
                                                                 class="d-flex flex-column align-items-center justify-content-center rounded-3 sidebar-group-link sidebar-google-item {{ $groupSelected ? 'selected' : '' }}"
                                                                 data-id="{{ $group->id }}"
                                                                 data-name="{{ $group->name }}"
-                                                                aria-selected="{{ $groupSelected ? 'true' : 'false' }}">
+                                                                aria-current="{{ $groupSelected ? 'true' : 'false' }}">
                                                                 <span
                                                                     class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
                                                                     <i
-                                                                        class="material-icons menu-icon material-symbols-rounded">{{ $group->icon }}</i>
+                                                                        class="material-icons menu-icon material-symbols-rounded" aria-hidden="true">{{ $group->icon }}</i>
                                                                 </span>
                                                                 <span
                                                                     class="sidebar-google-label">{{ $group->name }}</span>

@@ -38,6 +38,7 @@
     <!-- Plugins css Ends-->
     <!-- Bootstrap css (CDN latest stable) -->
     <!-- Previously: admin_assets/css/vendors/bootstrap.css -->
+    <x-ux4g-styles />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" integrity="" crossorigin="anonymous">
     <!-- App css-->
     <link rel="stylesheet" type="text/css" href="{{asset('admin_assets/css/styles.css')}}">

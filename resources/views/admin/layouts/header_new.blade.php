@@ -52,10 +52,10 @@
         <nav class="navbar navbar-expand-lg px-3">
             <ul class="navbar-nav">
                 <li class="nav-item d-flex d-xl-none">
-                    <a class="nav-link nav-icon-hover-bg rounded-circle sidebartoggler" id="headerCollapse"
-                        href="javascript:void(0)">
-                        <iconify-icon icon="solar:hamburger-menu-line-duotone" class="fs-6"></iconify-icon>
-                    </a>
+                    <button type="button" class="nav-link nav-icon-hover-bg rounded-circle sidebartoggler border-0 bg-transparent" id="headerCollapse"
+                        aria-label="Toggle sidebar menu">
+                        <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">menu</i>
+                    </button>
                 </li>
             </ul>
 
@@ -74,18 +74,18 @@
          class="header-logo">
 </a>
 
-            <a class="navbar-toggler p-0 border-0 nav-icon-hover-bg rounded-circle" data-bs-toggle="collapse"
+            <button type="button" class="navbar-toggler p-0 border-0 bg-transparent nav-icon-hover-bg rounded-circle" data-bs-toggle="collapse"
                 data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false"
                 aria-label="Toggle navigation">
-                <iconify-icon icon="solar:menu-dots-bold-duotone" class="fs-6"></iconify-icon>
-            </a>
+                <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">more_horiz</i>
+            </button>
 
             <div class="collapse navbar-collapse" id="navbarNav">
                 <div class="collapse navbar-collapse justify-content-center" id="mainNavbar">
                     <!-- Enhanced Navigation Container (Desktop) -->
                     <div class="nav-container position-relative d-none d-lg-block">
 
-                        <ul class="navbar-nav header-main-nav px-4 py-2 gap-1 align-items-center" role="menubar">
+                        <ul class="navbar-nav header-main-nav px-4 py-2 gap-1 align-items-center" role="tablist" aria-label="Modules">
                             @foreach($sidebarMenus as $category)
                                 @php
                                     $categoryTabHash = $category->slug === 'home'
@@ -105,7 +105,7 @@
                                         data-tab="{{ $categoryTabHash }}"
                                         aria-selected="{{ $isActive ? 'true' : 'false' }}">
                                         @if(!empty($category->icon))
-                                            <i class="{{ $category->icon }}"></i>
+                                            <i class="{{ $category->icon }}" aria-hidden="true"></i>
                                         @endif
                                         <span>{{ $category->name }}</span>
                                     </a>
@@ -334,12 +334,12 @@
             </div>
 
             <!-- Mobile Navigation Container (FB/Instagram-style) -->
-            <div class="nav-container d-lg-none">
-                <ul class="navbar-nav mobile-tabbar" role="menubar" aria-label="Main navigation mobile">
+            <div class="nav-container d-lg-none" role="navigation" aria-label="Modules (mobile)">
+                <ul class="navbar-nav mobile-tabbar">
                     <!-- Home -->
-                    <li class="nav-item" role="none">
+                    <li class="nav-item">
                         <a href="#home" class="nav-link mobile-tab-link sidebar-category-link {{ $activeNavTab === '#home' ? 'active' : '' }}"
-                            data-sargam-category-tab="1" role="tab" aria-selected="{{ $activeNavTab === '#home' ? 'true' : 'false' }}" aria-controls="home-panel"
+                            data-sargam-category-tab="1" @if($activeNavTab === '#home') aria-current="page" @endif
                             id="home-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">home</i>
                             <span>Home</span>
@@ -347,9 +347,9 @@
                     </li>
 
                     <!-- Setup -->
-                    <li class="nav-item" role="none">
+                    <li class="nav-item">
                         <a href="#tab-setup" class="nav-link mobile-tab-link sidebar-category-link {{ $activeNavTab === '#tab-setup' ? 'active' : '' }}"
-                            data-sargam-category-tab="1" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
+                            data-sargam-category-tab="1" @if($activeNavTab === '#tab-setup') aria-current="page" @endif
                             id="setup-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">settings</i>
                             @if(hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Staff'))
@@ -362,29 +362,27 @@
                     </li>
 
                     <!-- Communications -->
-                    <li class="nav-item" role="none">
+                    <li class="nav-item">
                         <a href="#tab-communications" class="nav-link mobile-tab-link sidebar-category-link {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
-                            data-sargam-category-tab="1" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}"
-                            aria-controls="communications-panel" id="communications-tab-mobile">
+                            data-sargam-category-tab="1" @if($activeNavTab === '#tab-communications') aria-current="page" @endif id="communications-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">forum</i>
                             <span>Comms</span>
                         </a>
                     </li>
 
                     <!-- Material Management -->
-                    <li class="nav-item" role="none">
+                    <li class="nav-item">
                         <a href="#tab-material-management" class="nav-link mobile-tab-link sidebar-category-link {{ $activeNavTab === '#tab-material-management' ? 'active' : '' }}"
-                            data-sargam-category-tab="1" role="tab" aria-selected="{{ $activeNavTab === '#tab-material-management' ? 'true' : 'false' }}"
-                            aria-controls="material-management-panel" id="material-management-tab-mobile">
+                            data-sargam-category-tab="1" @if($activeNavTab === '#tab-material-management') aria-current="page" @endif id="material-management-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">inventory_2</i>
                             <span>Material</span>
                         </a>
                     </li>
 
                     <!-- Financial Dropdown -->
-                    <li class="nav-item dropup" role="none">
+                    <li class="nav-item dropup">
                         <a class="nav-link mobile-tab-link dropdown-toggle-custom" href="#" id="financialDropdownMobile"
-                            role="menuitem" aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
+                            aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
                             <i class="material-icons material-symbols-rounded"
                                 aria-hidden="true">account_balance_wallet</i>
                             <span>Finance</span>
@@ -409,7 +407,7 @@
                     </li>
 
                     <!-- Notifications (Offcanvas on mobile for reliable display) -->
-                    <li class="nav-item" role="none">
+                    <li class="nav-item">
                         <button type="button"
                             class="nav-link mobile-tab-link border-0 bg-transparent p-0 position-relative"
                             id="notificationBtnMobile" data-bs-toggle="offcanvas" data-bs-target="#notificationOffcanvasMobile"
@@ -428,7 +426,7 @@
                     </li>
 
                     <!-- Search -->
-                    <li class="nav-item" role="none">
+                    <li class="nav-item">
                         <button type="button" class="nav-link mobile-tab-link search-trigger"
                             aria-label="Open search" aria-expanded="false" aria-controls="searchModal">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">search</i>
@@ -771,6 +769,7 @@
     cursor: pointer;
 }
 .header-lang-select:focus { outline: none; box-shadow: none; }
+.header-lang-select:focus-visible { outline: var(--ux4g-border-width-md) solid var(--ux4g-color-neutral-0); outline-offset: 2px; } /* WCAG 2.4.7; white ring on the dark top bar */
 .header-lang-select option { background: #0c1a2e; color: #fff; }
 
 /* =============================
@@ -1904,13 +1903,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         document.querySelectorAll('.sidebar-category-link').forEach(function (l) {
             const href = l.getAttribute('href');
-            if (href === targetId) {
-                l.classList.add('active');
-                l.setAttribute('aria-selected', 'true');
-            } else {
-                l.classList.remove('active');
-                l.setAttribute('aria-selected', 'false');
-            }
+            l.classList.toggle('active', href === targetId);
+            window.sargamSetNavActive(l, href === targetId);
         });
 
         try {

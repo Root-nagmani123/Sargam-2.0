@@ -90,11 +90,15 @@
 
     <div class="calendar-wrap">
         <div class="calendar-grid" role="grid" aria-label="Calendar {{ $firstOfMonth->format('F Y') }}">
+            {{-- role="row" wrappers make the ARIA grid valid (WCAG 1.3.1); display:contents keeps the 7-column CSS grid. --}}
+            <div class="calendar-grid__row" role="row" style="display: contents;">
             @foreach(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as $w)
             <div class="calendar-grid__weekday" role="columnheader">{{ $w }}</div>
             @endforeach
+            </div>
 
             @for($r = 0; $r < $calendarRows; $r++)
+                <div class="calendar-grid__row" role="row" style="display: contents;">
                 @for($c = 1; $c <= 7; $c++)
                 @php
                 $cellIndex = $r * 7 + $c;
@@ -168,6 +172,7 @@
                 </div>
                 @endif
                 @endfor
+                </div>
             @endfor
         </div>
     </div>

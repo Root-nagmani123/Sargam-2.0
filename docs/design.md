@@ -1,5 +1,9 @@
 # Design System — `sargam-app.css`
 
+> **UX4G 3.0 is now the primary design system.** `--ds-*` tokens below are aliases of
+> official `--ux4g-*` tokens (values in `docs/UX4G-DESIGN-TOKENS.md`). New code should
+> use `ux4g-*` classes and `--ux4g-*` tokens directly; `--ds-*` remains for existing pages.
+
 The single consolidated custom stylesheet for the ERP:
 `public/css/sargam-app.css`. It is loaded **last** in every layout (after
 Bootstrap and the admin theme `styles.css`), so its rules win on cascade order

@@ -16,54 +16,108 @@
      • NO rounded-pill. Controls/badges/buttons = rounded-1 (4px).
        Cards / modals cap at rounded-2 (8px).
      • One 4px-grid spacing scale. No random margins.
-     • Never redefine --bs-* (the theme + forced-light layer own those).
+     • --bs-* may only be re-pointed AT a UX4G token (Layer 0), never
+       given a new raw value (the theme + forced-light layer own those).
      • Never change form names / IDs / JS hooks / RBAC / Blade logic.
    ===================================================================== */
 
 /* =====================================================================
-   LAYER A — DESIGN TOKENS
+   LAYER 0 — UX4G 3.3.2 THEME (SARGAM brand on official UX4G tokens)
+   UX4G itself is loaded first by <x-ux4g-styles />. Only official
+   --ux4g-* token NAMES are set here, each for a documented reason
+   (docs/UX4G-DESIGN-TOKENS.md). Nothing here styles an element.
    ===================================================================== */
 :root {
-    /* --- Spacing: strict 4px grid --------------------------------- */
-    --ds-space-1: 0.25rem;   /*  4px */
-    --ds-space-2: 0.5rem;    /*  8px */
-    --ds-space-3: 1rem;      /* 16px  (DEFAULT) */
-    --ds-space-4: 1.5rem;    /* 24px */
-    --ds-space-5: 2rem;      /* 32px */
-    --ds-space-6: 3rem;      /* 48px */
+    /* Primary: LBSNAA blue #004a93 anchored at 600, the step UX4G uses for
+       filled buttons, links, strong borders and the focus ring. Same
+       mechanism as UX4G's own Neel theme. 600 on white = 8.75:1. */
+    --ux4g-color-primary-50: #f2f6fa;
+    --ux4g-color-primary-100: #e0e9f2;
+    --ux4g-color-primary-200: #bfd2e4;
+    --ux4g-color-primary-300: #94b3d2;
+    --ux4g-color-primary-400: #618fbc;
+    --ux4g-color-primary-500: #2e6ba6;
+    --ux4g-color-primary-600: #004a93;
+    --ux4g-color-primary-700: #003d79;
+    --ux4g-color-primary-800: #003161;
+    --ux4g-color-primary-900: #00254a;
+    --ux4g-color-primary-950: #001932;
 
-    /* --- Radius: enterprise scale (NO pills) ---------------------- */
-    --ds-radius-0: 0;
-    --ds-radius-1: 0.25rem;  /* 4px  — DEFAULT: buttons, inputs, badges, chips */
-    --ds-radius-2: 0.5rem;   /* 8px  — cards, modals, panels */
+    /* WCAG 1.4.3: upstream status text tokens fail 4.5:1 on white
+       (info cyan-600 2.21, warning orange-600 2.38, success green-600 4.51
+       drops below 4.5 on tinted fills). Moved to the darker official shades. */
+    --ux4g-text-info-default: var(--ux4g-color-cyan-800);       /* 6.10:1 */
+    --ux4g-text-warning-default: var(--ux4g-color-orange-800);  /* 5.43:1 */
+    --ux4g-text-success-default: var(--ux4g-color-green-700);   /* 6.57:1 */
+    --ux4g-text-error-default: var(--ux4g-color-red-700);       /* 6.56:1 */
+
+    /* Multilingual: keep Devanagari in the UX4G font stacks (Hindi content). */
+    --ux4g-font-family-base: "Noto Sans", "Noto Sans Devanagari", system-ui, sans-serif;
+    --ux4g-font-family-display: "Noto Sans Display", "Noto Sans", "Noto Sans Devanagari", sans-serif;
+}
+
+/* WCAG 1.4.3: the theme ships --bs-secondary-color rgba(152,164,174,.75)
+   (~1.9:1 on white) for .text-body-secondary, breadcrumbs and hints app-wide.
+   Light mode only; dark mode keeps the theme's own values. */
+:root:not([data-bs-theme="dark"]) {
+    --bs-secondary-color: var(--ux4g-text-neutral-secondary);  /* 10.4:1 */
+    --bs-tertiary-color: var(--ux4g-text-neutral-tertiary);    /* 4.74:1 */
+}
+
+/* WCAG 2.4.7 focus ring — UX4G foundations/focus.css values, minus its
+   `position: relative` (would move absolutely-positioned controls on focus).
+   Zero specificity so every component's own focus style still wins. */
+:where(:focus-visible) {
+    outline: var(--ux4g-border-width-md) solid var(--ux4g-border-color-primary-strong);
+    outline-offset: 2px;
+}
+
+/* =====================================================================
+   LAYER A — DESIGN TOKENS (--ds-*), now aliases of UX4G tokens.
+   Existing pages keep using --ds-*; values come from UX4G. A raw value
+   remains only where UX4G 3.3.2 has no equivalent step (marked SARGAM).
+   ===================================================================== */
+:root {
+    /* --- Spacing: 4px grid (UX4G space scale) --------------------- */
+    --ds-space-1: var(--ux4g-space-2);   /*  4px */
+    --ds-space-2: var(--ux4g-space-4);   /*  8px */
+    --ds-space-3: var(--ux4g-space-6);   /* 16px  (DEFAULT) */
+    --ds-space-4: var(--ux4g-space-8);   /* 24px */
+    --ds-space-5: 2rem;                  /* 32px  SARGAM: no UX4G step */
+    --ds-space-6: 3rem;                  /* 48px  SARGAM: no UX4G step */
+
+    /* --- Radius (UX4G semantic radius) ---------------------------- */
+    --ds-radius-0: var(--ux4g-radius-0);
+    --ds-radius-1: var(--ux4g-radius-sm);  /* 4px  — buttons, inputs, badges, chips */
+    --ds-radius-2: var(--ux4g-radius-md);  /* 8px  — cards, modals, panels */
     --ds-radius: var(--ds-radius-1);
     --ds-radius-card: var(--ds-radius-2);
 
-    /* --- Elevation: subtle, enterprise-grade ---------------------- */
-    --ds-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
-    --ds-shadow:    0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.04);
-    --ds-shadow-lg: 0 4px 12px rgba(16, 24, 40, 0.10), 0 2px 4px rgba(16, 24, 40, 0.06);
+    /* --- Elevation (UX4G shadow levels) --------------------------- */
+    --ds-shadow-sm: var(--ux4g-shadow-l1);
+    --ds-shadow:    var(--ux4g-shadow-l1);
+    --ds-shadow-lg: var(--ux4g-shadow-l3);
 
-    /* --- Brand (mirror theme; do NOT redefine --bs-*) ------------- */
-    --ds-primary: var(--bs-primary, #004a93);
-    --ds-secondary: #b12923;
-    --ds-warning: #b54708;      /* amber — tertiary/step-back actions */
-    --ds-danger: #ef4444;       /* destructive control (remove a row) */
-    --ds-accent: #2563eb;       /* additive control (add a row) */
+    /* --- Brand / semantic colour (do NOT redefine --bs-*) --------- */
+    --ds-primary: var(--ux4g-color-primary-600);
+    --ds-secondary: #b12923;                         /* SARGAM: LBSNAA red (UX4G secondary does not drive components) */
+    --ds-warning: var(--ux4g-text-warning-default);  /* tertiary/step-back actions */
+    --ds-danger: var(--ux4g-bg-error-strong);        /* destructive control; was #ef4444 (3.76:1, failed AA) */
+    --ds-accent: #2563eb;                            /* SARGAM: additive control — pending review */
     /* Comma-separated channels, for rgba() tints of the brand red.
        --bs-primary-rgb already ships the same thing for the blue. */
     --ds-secondary-rgb: 177, 41, 35;
-    --ds-ink: #1f2937;          /* primary text */
-    --ds-ink-muted: #667085;    /* secondary text */
-    --ds-line: #e5e7eb;         /* hairline borders */
-    --ds-surface: #ffffff;      /* card surface */
-    --ds-surface-2: #f8fafc;    /* subtle fill / headers */
-    --ds-canvas: #f1f4f9;       /* page background */
+    --ds-ink: var(--ux4g-text-neutral-primary);        /* primary text */
+    --ds-ink-muted: var(--ux4g-text-neutral-secondary); /* secondary text (10:1, AA on every canvas) */
+    --ds-line: var(--ux4g-border-color-neutral-subtle); /* hairline borders */
+    --ds-surface: var(--ux4g-bg-neutral-elevated);      /* card surface */
+    --ds-surface-2: var(--ux4g-bg-neutral-soft);        /* subtle fill / headers */
+    --ds-canvas: #f1f4f9;                               /* SARGAM: page background (matches theme shell) */
 
     /* --- Control sizing ------------------------------------------- */
-    --ds-control-h: 2.5rem;     /* 40px — consistent input/button height */
-    --ds-control-h-sm: 2rem;    /* 32px */
-    --ds-focus-ring: 0 0 0 0.2rem rgba(var(--bs-primary-rgb, 0 74 147), 0.20);
+    --ds-control-h: 2.5rem;     /* 40px — UX4G md control height */
+    --ds-control-h-sm: 2rem;    /* 32px — UX4G sm control height */
+    --ds-focus-ring: 0 0 0 var(--ux4g-border-width-md) var(--ux4g-border-color-primary-strong);
 }
 
 /* =====================================================================
@@ -79,14 +133,27 @@ body {
     text-rendering: optimizeLegibility;
 }
 
-/* Accessible, consistent keyboard focus ring (does not affect mouse use) */
+/* Accessible, consistent keyboard focus ring — the UX4G ring (2px primary
+   outline, 2px offset). Outline, not box-shadow: `.shadow-none` (!important)
+   on many inputs erased the old box-shadow ring entirely (WCAG 2.4.7). */
 .btn:focus-visible,
 .form-control:focus-visible,
 .form-select:focus-visible,
+.form-check-input:focus-visible,
+.nav-link:focus-visible,
 .page-link:focus-visible,
 a.dropdown-item:focus-visible {
-    outline: none;
-    box-shadow: var(--ds-focus-ring);
+    outline: var(--ux4g-border-width-md) solid var(--ux4g-border-color-primary-strong);
+    outline-offset: 2px;
+}
+
+/* Mobile bottom tab bar, active item: the theme's
+   `.navbar-nav .nav-link.active { color:#fff !important }` turned the label
+   white on a pale tint (~1.1:1, WCAG 1.4.3). Same specificity, loaded later;
+   !important only because the rule it corrects uses it. */
+.mobile-tabbar .mobile-tab-link.active,
+.mobile-tabbar .mobile-tab-link.active i {
+    color: var(--ux4g-color-primary-600) !important;
 }
 
 /* Table headers: quieter, more scannable enterprise look.

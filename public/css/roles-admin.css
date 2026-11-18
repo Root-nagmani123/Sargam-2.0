@@ -201,8 +201,8 @@
 .roles-page .programme-dt-footer .pagination .page-item.active .page-link,
 .roles-page .programme-dt-footer .pagination .page-link.current-page {
     background: #fff !important;
-    border-color: #7367f0 !important;
-    color: #344054 !important;
+    border-color: var(--ux4g-border-color-primary-strong) !important; /* UX4G primary; was template purple #7367f0 */
+    color: var(--ux4g-color-primary-600) !important;
     font-weight: 600;
 }
 

@@ -175,13 +175,8 @@
     function updateCategoryLinkActiveState(target) {
         document.querySelectorAll('.sidebar-category-link').forEach(function (l) {
             var href = l.getAttribute('href');
-            if (href === target) {
-                l.classList.add('active');
-                l.setAttribute('aria-selected', 'true');
-            } else {
-                l.classList.remove('active');
-                l.setAttribute('aria-selected', 'false');
-            }
+            l.classList.toggle('active', href === target);
+            global.sargamSetNavActive(l, href === target);
         });
     }
 

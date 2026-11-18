@@ -1097,7 +1097,7 @@
 
         function selectSidebarGroupVisual(groupId) {
             $('#sidebar-setup .mini-nav-item').removeClass('selected');
-            $('.sidebar-group-link').removeClass('selected').attr('aria-selected', 'false');
+            $('.sidebar-group-link').removeClass('selected').attr('aria-current', 'false');
             if (!groupId) {
                 return;
             }
@@ -1106,13 +1106,13 @@
                 return;
             }
             $link.closest('.mini-nav-item').addClass('selected');
-            $link.addClass('selected').attr('aria-selected', 'true');
+            $link.addClass('selected').attr('aria-current', 'true');
         }
         window.selectSidebarGroupVisual = selectSidebarGroupVisual;
 
         function clearSidebarGroupSelectedVisual() {
             $('#sidebar-setup .mini-nav-item').removeClass('selected');
-            $('.sidebar-group-link').removeClass('selected').attr('aria-selected', 'false');
+            $('.sidebar-group-link').removeClass('selected').attr('aria-current', 'false');
         }
         window.clearSidebarGroupSelectedVisual = clearSidebarGroupSelectedVisual;
 
@@ -1233,10 +1233,10 @@
 
             if (!categoryId) return;
 
-            $('.sidebar-category-link').removeClass('active').attr('aria-selected', 'false');
+            $('.sidebar-category-link').removeClass('active').each(function () { window.sargamSetNavActive(this, false); });
             $('.sidebar-category-link[data-id="' + categoryId + '"]')
                 .addClass('active')
-                .attr('aria-selected', 'true');
+                .each(function () { window.sargamSetNavActive(this, true); });
 
             loadSidebarGroupsForCategory(categoryId, function () {
                 if (groupId) {

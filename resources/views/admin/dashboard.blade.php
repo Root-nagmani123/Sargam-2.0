@@ -385,10 +385,10 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                     data-notice-desc='@json(notice_safe_html($notice->description ?? ""))'
                                     data-notice-badge="{{ $noticeCategory }}"
                                     data-notice-meta="{{ $noticeMeta }}"
-                                    data-notice-doc="{{ $notice->document ? route('admin.notice.attachment', $notice->pk) : '' }}"
-                                    role="button" tabindex="0"
-                                    aria-label="View notice: {{ $notice->notice_title ?? 'Notice' }}">
-                                    <span class="dashboard-notice-title">{{ $notice->notice_title }}</span>
+                                    data-notice-doc="{{ $notice->document ? route('admin.notice.attachment', $notice->pk) : '' }}">
+                                    {{-- Real button (not role="button" on the card): the card also holds the attachment link,
+                                         and interactive controls must not nest (WCAG 4.1.2). Clicks still bubble to the card handler. --}}
+                                    <button type="button" class="dashboard-notice-title">{{ $notice->notice_title }}</button>
                                     <div class="dashboard-notice-meta">
                                         <small class="dashboard-notice-byline">
                                             @if($noticeAuthor !== '')
@@ -1713,6 +1713,9 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 attachWrap.classList.add('d-none');
             }
 
+            // WCAG 2.4.3: return focus to the notice that opened the dialog (it is opened from script, not data-bs-toggle).
+            var trigger = card.querySelector('.dashboard-notice-title');
+            modalEl.addEventListener('hidden.bs.modal', function () { if (trigger) trigger.focus(); }, { once: true });
             bootstrap.Modal.getOrCreateInstance(modalEl).show();
         }
 
@@ -1722,14 +1725,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
             var card = e.target.closest('.dashboard-notice-item[data-notice-pk]');
             if (card) openNoticeModal(card);
         });
-
-        document.addEventListener('keydown', function (e) {
-            if (e.key !== 'Enter' && e.key !== ' ') return;
-            var card = e.target.closest ? e.target.closest('.dashboard-notice-item[data-notice-pk]') : null;
-            if (!card) return;
-            e.preventDefault();
-            openNoticeModal(card);
-        });
+        // Keyboard: the card's title is a native <button>, so Enter/Space already fire the click above.
     })();
     </script>
     @endpush

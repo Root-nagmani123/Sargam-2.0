@@ -58,12 +58,13 @@ class SidebarController extends Controller
         foreach ($groups as $group) {
             $groupSelected = $activeGroupId && (string) $activeGroupId === (string) $group->id;
             $selectedClass = $groupSelected ? ' selected' : '';
-            $ariaSelected = $groupSelected ? 'true' : 'false';
+            // aria-current, not aria-selected: aria-selected is invalid on a link (WCAG 4.1.2).
+            $ariaCurrent = $groupSelected ? 'true' : 'false';
 
             $html .= '<li class="sidebar-group-item mini-nav-item py-2'.$selectedClass.'" id="'.$group->id.'" data-id="'.$group->id.'">';
-            $html .= '<a href="javascript:void(0)" class="sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3 sidebar-group-link'.$selectedClass.'" data-id="'.$group->id.'" data-name="'.e($group->name).'" aria-selected="'.$ariaSelected.'">';
+            $html .= '<a href="javascript:void(0)" class="sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3 sidebar-group-link'.$selectedClass.'" data-id="'.$group->id.'" data-name="'.e($group->name).'" aria-current="'.$ariaCurrent.'">';
             $html .= '<span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">';
-            $html .= '<i class="material-icons menu-icon material-symbols-rounded">'.e($group->icon).'</i>';
+            $html .= '<i class="material-icons menu-icon material-symbols-rounded" aria-hidden="true">'.e($group->icon).'</i>';
             $html .= '</span>';
             $html .= '<span class="sidebar-google-label">'.e($group->name).'</span>';
             $html .= '</a>';
@@ -164,12 +165,11 @@ class SidebarController extends Controller
                     <a class="'.$parentLinkClass.' d-flex justify-content-between align-items-center"
                         data-bs-toggle="collapse"
                         href="#'.$collapseId.'"
-                        aria-expanded="'.$ariaExpanded.'">
-                        <i class="material-icons material-symbols-rounded">'.e($this->menuIcon($menu)).'</i>
+                        aria-expanded="'.$ariaExpanded.'" aria-controls="'.$collapseId.'">
+                        <i class="material-icons material-symbols-rounded" aria-hidden="true">'.e($this->menuIcon($menu)).'</i>
                         <span class="hide-menu fw-bold">'.e($menu->name).'</span>
-                        <i class="material-icons">chevron_right</i>
+                        <i class="material-icons" aria-hidden="true">chevron_right</i>
                     </a>
-                </li>
                 <ul class="'.$collapseClass.' list-unstyled ps-3" id="'.$collapseId.'">';
 
                 foreach ($children as $submenu) {
@@ -184,7 +184,8 @@ class SidebarController extends Controller
                 </li>';
                 }
 
-                $html .= '</ul>';
+                // Submenu list closes inside its parent <li> (valid nested list, WCAG 1.3.1).
+                $html .= '</ul></li>';
             } else {
                 if ($hasMenuPermission) {
                     $activeClass = $this->isWinningLink($menu->route, $currentPath, $currentRouteName, $bestScore) ? ' active' : '';
@@ -193,7 +194,7 @@ class SidebarController extends Controller
                     $html .= '
                 <li class="sidebar-item">
                     <a class="sidebar-link'.$activeClass.'" href="'.e($href).'" target="'.$target.'"'.($target === '_blank' ? ' rel="noopener"' : '').'>
-                        <i class="material-icons material-symbols-rounded">'.e($this->menuIcon($menu)).'</i>
+                        <i class="material-icons material-symbols-rounded" aria-hidden="true">'.e($this->menuIcon($menu)).'</i>
                         <span class="hide-menu">'.e($menu->name).'</span>
                     </a>
                 </li>';

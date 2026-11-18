@@ -9,7 +9,7 @@
     'buttonUrl' => null,
     'buttonId' => null,
     'buttonIcon' => 'add',
-    'buttonClass' => 'btn btn-primary btn-sm d-inline-flex align-items-center gap-2',
+    'buttonClass' => 'ux4g-btn-primary ux4g-btn-s d-inline-flex align-items-center gap-2',
 ])
 @php
     $variant = $variant ?? 'glass';
@@ -267,26 +267,23 @@
                     </button>
                 @endif
                 <div class="min-w-0 flex-grow-1">
-                    <nav aria-label="breadcrumb" class="mb-1">
-                        <ol class="breadcrumb mb-0 small text-body-secondary align-items-center flex-wrap modern-breadcrumb-trail"
-                            style="--bs-breadcrumb-divider: '/';">
+                    {{-- UX4G Breadcrumb (icon/"/" divider variant). Page title is the page's <h1> (WCAG 1.3.1 / GIGW). --}}
+                    <nav aria-label="Breadcrumb" class="ux4g-breadcrumb ux4g-breadcrumb-icon mb-1">
+                        <ol class="ux4g-breadcrumb-list d-flex align-items-center flex-wrap mb-0 ps-0 modern-breadcrumb-trail">
                             @foreach ($breadcrumbItems as $index => $item)
                                 @php $isLast = $index === count($breadcrumbItems) - 1; @endphp
-                                <li class="breadcrumb-item{{ $isLast ? ' active' : '' }}"
+                                <li class="ux4g-breadcrumb-item{{ $isLast ? ' active' : '' }}"
                                     @if ($isLast) aria-current="page" @endif>
                                     @if (!$isLast && filled($item['url']))
-                                        <a href="{{ $item['url'] }}"
-                                           class="link-secondary text-decoration-none">
-                                            {{ $item['label'] }}
-                                        </a>
+                                        <a href="{{ $item['url'] }}" class="ux4g-breadcrumb-link">{{ $item['label'] }}</a>
                                     @else
-                                        <span class="{{ $isLast ? 'text-dark fw-medium' : '' }}">{{ $item['label'] }}</span>
+                                        <span>{{ $item['label'] }}</span>
                                     @endif
                                 </li>
                             @endforeach
                         </ol>
                     </nav>
-                    <h4 class="modern-breadcrumb-title mb-0 text-dark">{{ $title }}</h4>
+                    <h1 class="modern-breadcrumb-title mb-0">{{ $title }}</h1>
                 </div>
             </div>
 
@@ -317,30 +314,22 @@
     }
 
     .modern-breadcrumb-shell {
-        background: #ffffff;
-        border: 1px solid #eef1f4;
-        transition: box-shadow 0.2s ease;
+        background: var(--ux4g-bg-neutral-elevated);
+        border: 1px solid var(--ux4g-border-color-neutral-subtle);
     }
 
-    .modern-breadcrumb-shell:hover {
-        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
-    }
-
-    .modern-breadcrumb-trail {
-        --bs-breadcrumb-item-padding-x: 0.35rem;
-        font-size: 0.925rem;
-    }
-
-    .modern-breadcrumb-trail .breadcrumb-item + .breadcrumb-item::before {
-        color: var(--bs-secondary-color);
-        font-weight: 600;
+    /* Trail typography comes from UX4G (14px medium); only the divider gap is tightened for the header card. */
+    .modern-breadcrumb-trail.ux4g-breadcrumb-list { gap: var(--ux4g-space-2) 0; }
+    .ux4g-breadcrumb-icon .modern-breadcrumb-trail .ux4g-breadcrumb-item + .ux4g-breadcrumb-item::before {
+        margin: 0 var(--ux4g-space-3);
+        font-size: var(--ux4g-font-size-14);
     }
 
     .modern-breadcrumb-title {
-        font-size: 1.25rem;
-        font-weight: 700;
+        font-size: var(--ux4g-font-size-20);
+        font-weight: var(--ux4g-font-weight-bold);
         line-height: 1.15;
-        letter-spacing: -0.01em;
+        color: var(--ux4g-text-neutral-primary);
     }
 
     .modern-breadcrumb-back {
@@ -365,30 +354,16 @@
         background: rgba(var(--bs-primary-rgb), 0.08) !important;
     }
 
-    .modern-breadcrumb-back:focus-visible {
-        box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.2);
-    }
-
     .modern-breadcrumb-action .btn {
         min-height: 2.5rem;
-        border-radius: 0.6rem;
+        border-radius: var(--ux4g-radius-sm);
         font-weight: 600;
         padding-inline: 1.15rem;
     }
 
-    @media (prefers-reduced-motion: reduce) {
-        .modern-breadcrumb-shell {
-            transition: none !important;
-        }
-    }
-
     @media (max-width: 767.98px) {
         .modern-breadcrumb-wrapper .modern-breadcrumb-shell.rounded-1 {
-            border-radius: var(--bs-border-radius-xl) !important;
-        }
-
-        .modern-breadcrumb-trail {
-            font-size: 0.8125rem;
+            border-radius: var(--ux4g-radius-md) !important;
         }
 
         .modern-breadcrumb-action {
