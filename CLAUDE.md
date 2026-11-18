@@ -187,6 +187,10 @@ Table `question_papers` (one per drive + subject, soft deletes), `question_paper
      and an OTP opens only its own paper. A browser (non-JSON) GET is 404 and doesn't
      use the pass. Both POSTs are `throttle:10,1`; the code is checked by
      `FreezeQuestionPaperRequest`.
+  The pass lives in the session only: logout (`session()->invalidate()`) or session
+  expiry drops it, so after a new login the OTP is asked for again (tested in
+  `test_a_new_login_needs_the_otp_again`). An OTP *code* sent before is in the cache by
+  user + paper and still works for its 10 min.
   View Translated Paper, and the faculty / admin original views, need no OTP.
 - **Templates are Blade files** in `faculty_question_paper/templates/` (`standard`,
   `multi_section`, `case_study`, `omr`, shared `_head`, `_section`), registered in

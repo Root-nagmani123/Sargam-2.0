@@ -187,6 +187,25 @@ class RajbhashaQuestionPaperTest extends TestCase
         $this->actingAs($this->outsider)->postJson(route('admin.coe.my-question-paper.original-otp', $this->paper->id))->assertForbidden();
     }
 
+    public function test_a_new_login_needs_the_otp_again(): void
+    {
+        $url = route('admin.coe.my-question-paper.original', $this->paper->id);
+
+        // Verified, then logged out before the viewer opened: the pass goes with the session.
+        $this->verifyViewOtp($this->sendViewOtp())->assertOk();
+        $this->actingAs($this->rajbhasha)->get(route('get.logout'))->assertRedirect('/');
+        $this->actingAs($this->rajbhasha)->getJson($url)->assertForbidden();
+
+        // Verified, then the session expired: logged in again, the OTP is asked for again.
+        $this->verifyViewOtp($this->sendViewOtp())->assertOk();
+        $this->app['session']->flush();
+        $this->actingAs($this->rajbhasha)->getJson($url)->assertForbidden();
+
+        // The same process as the first time: OTP, then the paper.
+        $this->verifyViewOtp($this->sendViewOtp())->assertOk();
+        $this->actingAs($this->rajbhasha)->getJson($url)->assertOk();
+    }
+
     public function test_view_otp_needs_a_mobile_number(): void
     {
         DB::table('user_credentials')->where('pk', $this->rajbhasha->pk)->update(['mobile_no' => null]);
