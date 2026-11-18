@@ -2314,6 +2314,21 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
     });
     Route::get('merit-ranking', [\App\Http\Controllers\Admin\COE\MeritRankingController::class, 'index'])
         ->middleware('menu.permission:coe_merit_ranking')->name('merit-ranking.index');
+    // OMR scanner CSV → coe_omr_uploads / coe_omr_responses.
+    Route::middleware('menu.permission:coe_omr_upload')->group(function () {
+        Route::get('omr-upload', [\App\Http\Controllers\Admin\COE\OmrUploadController::class, 'index'])
+            ->name('omr-upload.index');
+        Route::post('omr-upload', [\App\Http\Controllers\Admin\COE\OmrUploadController::class, 'store'])
+            ->middleware('throttle:10,1')->name('omr-upload.store');
+        Route::get('omr-upload/{upload}', [\App\Http\Controllers\Admin\COE\OmrUploadController::class, 'show'])
+            ->whereNumber('upload')->name('omr-upload.show');
+        Route::get('omr-upload/{upload}/export', [\App\Http\Controllers\Admin\COE\OmrUploadController::class, 'export'])
+            ->whereNumber('upload')->middleware('throttle:10,1')->name('omr-upload.export');
+        Route::post('omr-upload/{upload}/rematch', [\App\Http\Controllers\Admin\COE\OmrUploadController::class, 'rematch'])
+            ->whereNumber('upload')->middleware('throttle:10,1')->name('omr-upload.rematch');
+        Route::delete('omr-upload/{upload}', [\App\Http\Controllers\Admin\COE\OmrUploadController::class, 'destroy'])
+            ->whereNumber('upload')->name('omr-upload.destroy');
+    });
     // Training section's screen; Super Admin always passes menu.permission.
     Route::middleware('menu.permission:coe_marks_moderation')->group(function () {
         Route::get('marks-moderation', [\App\Http\Controllers\Admin\COE\MarksModerationController::class, 'index'])
