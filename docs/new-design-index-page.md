@@ -858,6 +858,7 @@ Page CSS is namespaced under a page-root class (`.disc-page .disc-tab`,
 | `sm-*` | Subject Master / Module |
 | `attendance-*` | Attendance |
 | `ic-*` | Centcom / Issue Management — **all** its index pages: categories, sub-categories, priorities (`public/css/issue-management-admin.css`) |
+| `am-*` | Athletics Meet — every screen (`public/css/athletics-admin.css`, UX4G tokens; shared grid/modal JS in `public/js/athletics-admin.js`) |
 
 Within a prefix, the row-action stack uses BEM-ish element names — `.ic-act` /
 `.ic-act__icon` / `.ic-act__label`, modifiers `--edit` / `--toggle` / `--del`

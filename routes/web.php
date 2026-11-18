@@ -102,6 +102,7 @@ use App\Http\Controllers\SidebarMenu\MenuGroupController;
 use App\Http\Controllers\SidebarMenu\SidebarCategoryController;
 use App\Http\Middleware\EnsureDirectoryExportAccess;
 use App\Http\Middleware\EnsureFacultyPortalUser;
+use App\Http\Controllers\Admin\Athletics;
 use App\Http\Middleware\EnsureMenuPermission;
 use App\Http\Middleware\EnsureRoleAdmin;
 use App\Models\CourseMaster;
@@ -2147,3 +2148,80 @@ Route::middleware(['auth'])->prefix('sidebar')->name('sidebar.')->group(function
     Route::get('getGroups/{category_id}', [SidebarController::class, 'getCategoryGroups'])->name('getGroups');
     Route::get('getMenus/{group_id}', [SidebarController::class, 'getGroupMenus'])->name('getMenus');
 });
+
+// Athletics Meet (Setup → Athletics Meet). Each screen is gated by its own sidebar
+// permission, created in 2026_11_18_100100_add_athletics_meet_sidebar_menu.
+Route::middleware(['auth'])->prefix('admin/athletics')->name('admin.athletics.')->group(function () {
+    Route::middleware([EnsureMenuPermission::class.':athletics_event_master'])
+        ->prefix('events')->name('events.')->controller(Athletics\EventController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/export/{format?}', 'export')->name('export');
+            Route::post('/', 'store')->name('store');
+            Route::put('/{event}', 'update')->name('update');
+            Route::delete('/{event}', 'destroy')->name('destroy');
+        });
+
+    Route::middleware([EnsureMenuPermission::class.':athletics_venue_master'])
+        ->prefix('venues')->name('venues.')->controller(Athletics\VenueController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/export/{format?}', 'export')->name('export');
+            Route::post('/', 'store')->name('store');
+            Route::put('/{venue}', 'update')->name('update');
+            Route::delete('/{venue}', 'destroy')->name('destroy');
+        });
+
+    Route::middleware([EnsureMenuPermission::class.':athletics_house_master'])
+        ->prefix('houses')->name('houses.')->controller(Athletics\HouseController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/export/{format?}', 'export')->name('export');
+            Route::get('/ots', 'ots')->name('ots');
+            Route::post('/', 'store')->name('store');
+            Route::put('/{house}', 'update')->name('update');
+            Route::delete('/{house}', 'destroy')->name('destroy');
+            Route::get('/{house}/ots', 'members')->name('members');
+            Route::get('/{house}/ots/export/{format?}', 'exportMembers')->name('members.export');
+            Route::delete('/{house}/ots/{member}', 'removeMember')->name('members.remove');
+        });
+
+    Route::middleware([EnsureMenuPermission::class.':athletics_drive'])
+        ->prefix('drives')->name('drives.')->controller(Athletics\DriveController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/export/{format?}', 'export')->name('export');
+            Route::post('/', 'store')->name('store');
+            Route::put('/{drive}', 'update')->name('update');
+            Route::delete('/{drive}', 'destroy')->name('destroy');
+            Route::get('/{drive}/preview', 'preview')->name('preview');
+        });
+
+    Route::middleware([EnsureMenuPermission::class.':athletics_nominations'])
+        ->prefix('nominations')->name('nominations.')->controller(Athletics\NominationController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/export/{format?}', 'export')->name('export');
+            Route::get('/drive-options/{drive}', 'driveOptions')->name('drive-options');
+            Route::post('/', 'store')->name('store');
+            Route::post('/bulk', 'bulk')->name('bulk');
+            Route::put('/{nomination}', 'update')->name('update');
+        });
+
+    Route::middleware([EnsureMenuPermission::class.':athletics_result_entry'])
+        ->prefix('results')->name('results.')->controller(Athletics\ResultController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/export/{format?}', 'export')->name('export');
+            Route::get('/course/{course}', 'course')->name('course');
+            Route::post('/drives/{drive}', 'save')->name('save');
+        });
+
+    Route::middleware([EnsureMenuPermission::class.':athletics_overall_champion'])
+        ->prefix('reports/overall-champion')->name('reports.champion.')->controller(Athletics\ReportController::class)->group(function () {
+            Route::get('/', 'champion')->name('index');
+            Route::get('/export/{format?}', 'championExport')->name('export');
+        });
+});
+
+// The OT's own nomination form (Figma "Athletics Meet Nomination — OT Participant").
+Route::middleware(['auth', EnsureMenuPermission::class.':athletics_my_nominations'])
+    ->prefix('athletics/my-nominations')->name('athletics.my-nominations.')->controller(Athletics\MyNominationController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/{drive}', 'show')->name('show');
+        Route::post('/{drive}', 'store')->name('store');
+    });

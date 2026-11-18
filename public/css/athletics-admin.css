@@ -1,0 +1,110 @@
+/* ==========================================================================
+   Athletics Meet — module stylesheet (am-*)
+   Every Athletics screen links this one file. Built on UX4G tokens per
+   docs/UX4G-DESIGN-TOKENS.md; page chrome is the shared programme-dt-* layer
+   (docs/new-design-index-page.md). Scoped to .am-page / .am-modal so it can't leak.
+   ========================================================================== */
+
+/* ── Row actions: icon over caption, equal widths (doc §3b) ─────────────── */
+.am-page .am-act-group { display: inline-flex; align-items: stretch; gap: var(--ux4g-space-2, 4px); }
+.am-page .am-act {
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    gap: 4px; min-width: 62px; padding: 0; margin: 0; border: 0; background: transparent;
+    font-size: 0.75rem; line-height: 1.15; text-align: center; text-decoration: none; cursor: pointer;
+    color: var(--ux4g-text-brand-primary-default);
+}
+.am-page .am-act__icon { display: flex; align-items: center; justify-content: center; height: 24px; }
+.am-page .am-act__icon .material-icons { font-size: 22px; line-height: 1; }
+.am-page .am-act__icon .form-check-input { margin: 0; float: none; }
+.am-page .am-act--toggle { color: var(--ux4g-text-warning-default); }
+.am-page .am-act--del,
+.am-page .am-act--decline { color: var(--ux4g-text-error-default); }
+.am-page .am-act--approve { color: var(--ux4g-text-success-default); }
+.am-page .am-act--remove { color: var(--ux4g-text-warning-default); max-width: 92px; }
+.am-page .am-act[disabled],
+.am-page .am-act.is-disabled { color: var(--ux4g-text-neutral-tertiary); opacity: .65; cursor: not-allowed; }
+.am-page .am-act-form { display: flex; margin: 0; padding: 0; }
+
+/* Count that opens a drill-down (House OTs, Drives, Events). */
+.am-page .am-count-link { color: var(--ux4g-text-brand-primary-default); text-decoration: underline; font-weight: 500; }
+
+.am-page .programme-dt-table td .ux4g-tag-tonal-success,
+.am-page .programme-dt-table td .ux4g-tag-tonal-warning,
+.am-page .programme-dt-table td .ux4g-tag-tonal-error,
+.am-page .programme-dt-table td .ux4g-tag-tonal-neutral { min-width: 72px; justify-content: center; }
+
+/* Wide free-text columns wrap (programme-dt-table only wraps column 2). */
+.am-page .am-col-wrap { white-space: normal; min-width: 220px; max-width: 360px; }
+
+/* Header button that goes green (Freeze All) — UX4G ships no success button. */
+.am-page .am-btn-success { background: var(--ux4g-bg-success-strong); color: #fff; border: 0; }
+.am-page .am-btn-success:hover { filter: brightness(.95); color: #fff; }
+
+/* Column chooser tiles. */
+.am-colvis .colvis-item { cursor: pointer; transition: border-color .15s ease, background-color .15s ease; }
+.am-colvis .colvis-item:hover { background: var(--ux4g-bg-neutral-soft); border-color: var(--ux4g-border-color-neutral-default); }
+
+/* ── Create / Edit modals (doc §3c) ─────────────────────────────────────── */
+.am-modal .modal-content { border-radius: var(--ux4g-radius-lg, 12px); border: 0; }
+.am-modal .modal-header { border-bottom: 1px solid var(--ux4g-border-color-neutral-subtle); padding: 1rem 1.25rem; }
+.am-modal .modal-title { font-size: 1.25rem; font-weight: 500; color: var(--ux4g-text-neutral-primary); }
+.am-modal .modal-body { padding: 1rem 1.25rem; }
+.am-modal .modal-footer { border-top: 0; padding: 0 1.25rem 1.25rem; gap: .75rem; }
+.am-modal .am-label,
+.am-page .am-label { display: block; margin-bottom: .375rem; font-size: .8125rem; font-weight: 500; color: var(--ux4g-text-neutral-primary); }
+.am-modal .am-req,
+.am-page .am-req { color: var(--ux4g-text-error-default); margin-left: 2px; }
+.am-modal .form-control,
+.am-modal .form-select { border-radius: var(--ux4g-radius-md); border-color: var(--ux4g-border-color-neutral-default); min-height: 2.5rem; }
+.am-modal .am-radio-row { display: flex; align-items: center; gap: 1.25rem; min-height: 2.5rem; }
+
+/* Repeatable rows (drive events, result sheet). */
+.am-rows { width: 100%; border-collapse: collapse; }
+.am-rows thead th {
+    background: var(--ux4g-bg-neutral-subtle); color: var(--ux4g-text-neutral-secondary);
+    font-size: .75rem; font-weight: 500; padding: .625rem .75rem; white-space: nowrap;
+}
+.am-rows tbody td { padding: .5rem .75rem; border-bottom: 1px solid var(--ux4g-border-color-neutral-subtle); vertical-align: middle; }
+.am-rows .form-control,
+.am-rows .form-select { min-height: 2.25rem; font-size: .875rem; }
+.am-row-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; padding: 0; border: 0; border-radius: var(--ux4g-radius-sm); color: #fff;
+}
+.am-row-btn .material-icons { font-size: 20px; }
+.am-row-btn--remove { background: var(--ux4g-bg-error-strong); }
+.am-row-btn--add { background: var(--ux4g-bg-primary-strong); }
+.am-row-actions { display: flex; justify-content: flex-end; gap: .375rem; min-width: 68px; }
+
+/* ── Result Entry: expanded drive row ───────────────────────────────────── */
+.am-page .am-expand-row > td { padding: 0 !important; background: var(--ux4g-bg-neutral-elevated); }
+.am-page .am-event-band { background: var(--ux4g-bg-primary); color: var(--ux4g-text-brand-primary-default); font-weight: 600; padding: .75rem 1rem; }
+.am-page .am-result-footer { display: flex; justify-content: flex-end; padding: 1rem; }
+
+/* ── OT nomination form (Figma "Athletics Meet Nomination — OT Participant") ─ */
+.am-page .am-panel {
+    background: var(--ux4g-bg-neutral-elevated); border: 1px solid var(--ux4g-border-color-neutral-subtle);
+    border-radius: var(--ux4g-radius-md);
+}
+.am-page .am-panel + .am-panel { margin-top: 1.5rem; }
+.am-page .am-panel__head { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--ux4g-border-color-neutral-subtle); }
+.am-page .am-panel__section { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--ux4g-border-color-neutral-subtle); }
+.am-page .am-panel__section:last-child { border-bottom: 0; }
+.am-page .am-fact__label { font-size: .8125rem; color: var(--ux4g-text-neutral-secondary); }
+.am-page .am-fact__value { color: var(--ux4g-text-neutral-primary); }
+.am-page .am-step {
+    display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 28px;
+    border-radius: var(--ux4g-radius-sm); background: var(--ux4g-bg-primary); color: var(--ux4g-text-brand-primary-default); font-size: .8125rem;
+}
+.am-page .am-pick {
+    display: flex; align-items: center; gap: .75rem; margin: 0; padding: .75rem 1rem; cursor: pointer;
+    border: 1px solid var(--ux4g-border-color-neutral-subtle); border-radius: var(--ux4g-radius-md);
+}
+.am-page .am-pick .form-check-input { margin: 0; flex-shrink: 0; }
+.am-page .am-pick:has(:checked) {
+    background: var(--ux4g-bg-primary); border-color: var(--ux4g-border-color-primary-strong);
+    color: var(--ux4g-text-brand-primary-default);
+}
+.am-page .am-pick:has(:disabled) { cursor: not-allowed; opacity: .6; }
+.am-page .am-note { background: var(--ux4g-bg-primary); color: var(--ux4g-text-brand-primary-default); border-radius: var(--ux4g-radius-md); padding: .75rem 1rem; font-size: .8125rem; }
+.am-page .am-summary li { display: flex; justify-content: space-between; gap: .75rem; padding: .625rem 0; border-bottom: 1px solid var(--ux4g-border-color-neutral-subtle); }

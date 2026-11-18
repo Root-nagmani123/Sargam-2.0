@@ -8877,6 +8877,9 @@ class UserController extends Controller
      */
     private const TOGGLE_STATUS_ALLOWED = [
         'appellation_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
+        'athletics_events' => ['id_column' => 'id', 'columns' => ['status'], 'permission' => 'athletics_event_master'],
+        'athletics_houses' => ['id_column' => 'id', 'columns' => ['status'], 'permission' => 'athletics_house_master'],
+        'athletics_venues' => ['id_column' => 'id', 'columns' => ['status'], 'permission' => 'athletics_venue_master'],
         'building_floor_room_mapping' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'building_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
         'caste_category_master' => ['id_column' => 'pk', 'columns' => ['active_inactive']],
