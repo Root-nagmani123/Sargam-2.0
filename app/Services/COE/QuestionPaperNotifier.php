@@ -17,8 +17,8 @@ use Illuminate\Support\Facades\Log;
  *
  * Who gets them: the paper's faculty through faculty_master.employee_master_pk
  * (= user_credentials.user_id - without a linked login they cannot be told),
- * Rajbhasha as whoever holds RajbhashaPaperService::PERMISSION, COE as the
- * COE-Incharge role (COE_ROLE). The one acting is never told of their own action.
+ * Rajbhasha as whoever holds RajbhashaPaperService::PERMISSION, COE as the COE
+ * role. The one acting is never told of their own action.
  *
  * The controllers call these after the action succeeds. A notification that
  * cannot be sent never undoes or blocks the action - it is reported to the app log.
@@ -34,8 +34,7 @@ class QuestionPaperNotifier
 
     public const MODULE_COE = 'CoeQuestionPaper';
 
-    // The main COE; the COE role is the COE section, which gets no question paper bells.
-    public const COE_ROLE = 'COE-Incharge';
+    public const COE_ROLE = 'COE';
 
     public function __construct(private NotificationService $notifications)
     {

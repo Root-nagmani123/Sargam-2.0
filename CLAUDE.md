@@ -8,13 +8,6 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
-- **2026-11-18: Two COE roles: `COE-Incharge` (main) and `COE` (section).** The old COE
-  role is renamed COE-Incharge and keeps its users and permissions; a new, empty COE role
-  is the COE section. Marksheet COE signature, Examination Drive (COE) and question paper
-  bells now go to COE-Incharge only. Needs `php artisan migrate` (the split migration)
-  on each server, and the section's users / screens set in Roles & Permissions.
-  Details: Access control → "Two COE roles". Tests: `CoeMarksheetSigningFlowTest`.
-
 - **2026-11-18: Faculty edits the translated paper, then freezes.** As soon as Rajbhasha
   sends the translation back (Pending Verification), the faculty sees **Edit Translated
   Paper**, not only after a COE unfreeze. The edited translation stays with the faculty
@@ -91,43 +84,22 @@ Masters (type, term, component, building/floor/room, subject max marks,
   faculty, CC, COE), Roll Numbers, UPC, Laptop & Scriber Seats, OT Laptop Status,
   Venue Allocation, Scriber Master, the Evaluation & Marks mock screens. The menu keys
   exist but no route checks them. Some controllers check access themselves (`coeIndex`
-  needs role COE-Incharge/Super Admin, CC approve/reject checks coordinator, Laptop
-  Declaration checks the user is an OT).
-- **Two COE roles** (migration `2026_11_18_000001_split_coe_role_into_incharge_and_section`):
-  - **`COE-Incharge`** = the main COE. It is the old `COE` role renamed (same id 187),
-    so it kept its users and permissions (`coe_question_paper`, `coe_question_paper_logs`,
-    `coe_marksheet_generation`, `coe_coe_examination_drive`). The code checks this name
-    for: marksheet COE signature (`MarksheetService::SIGNER_ROLES`), Examination Drive
-    (COE) (`coeIndex`), question paper bells (`QuestionPaperNotifier::COE_ROLE`).
-  - **`COE`** = the COE section. A new role, created with **no permissions**; screens are
-    given through Roles & Permissions. It does **not** sign marksheets, open Examination
-    Drive (COE) or get question paper bells. Only Venue Allocation's `filled_by` label
-    still names it (COE-Incharge, else COE, else Super Admin).
-  - Dev DB: COE-Incharge → MAHAVIR RAWAT (`singh.mahavir12`); COE → PREMKUMAR VR
-    (`premkumar.vr`, also Faculty). User assignments are per database (not in the
-    migration): set them on each server through Roles & Permissions.
-  - Older migrations (`2026_10_29_…coe_menu`, `2026_11_12_…roll_code_mapping`) still say
-    `COE`; on a fresh database they run first and the split migration then renames that
-    role, so their grants end up on COE-Incharge.
-  - "COE" as **text** is unchanged: the COE menu group and breadcrumbs, notification
-    sender label, `QuestionPaperLogger::ROLE_COE` log label, the Signature Master
-    designation `COE` and the marksheet `signed` / `snapshot` key `COE`.
+  needs role COE/Super Admin, CC approve/reject checks coordinator, Laptop Declaration
+  checks the user is an OT).
 - Roles granted by migrations: **Faculty** gets `coe_my_question_paper_faculty`,
   `coe_faculty_examination_drive`, `coe_cc_examination_drive`,
-  `coe_faculty_result_entry`. **COE-Incharge** (then named COE) gets
-  `coe_coe_examination_drive`, `coe_roll_code_mapping`. All other keys are assigned
-  through Roles & Permissions.
+  `coe_faculty_result_entry`. **COE** gets `coe_coe_examination_drive`,
+  `coe_roll_code_mapping`. All other keys are assigned through Roles & Permissions.
 - **Course Coordinator is not a Spatie role:** `course_coordinator_master.Coordinator_name`
   holds the CC's `faculty_master.pk` per course (`CourseCoordinatorService`; main CC only).
 - **Rajbhasha** = whoever holds `coe_my_question_paper_rajbhasha`.
 - **Login ↔ faculty:** `faculty_master.employee_master_pk = user_credentials.user_id`.
   Faculty without this link can't be notified or recognised as mapped.
-- Spatie roles used by name: `Faculty`, `COE-Incharge`, `UDC`, `AAO` (marksheet signing,
-  notifications), `Rajbhasha` (holds `coe_my_question_paper_rajbhasha`); `COE` (section)
-  is not checked by any rule. `COE-Incharge` and `COE` come from migrations; the others
-  were created through the Roles UI (they exist on the dev DB). Grants made through the
-  UI (e.g. COE-Incharge → `coe_question_paper`, `coe_marksheet_generation`; UDC/AAO →
-  `coe_marksheet_generation`) live only in the DB.
+- Spatie roles used by name: `Faculty`, `COE`, `UDC`, `AAO` (marksheet signing,
+  notifications), `Rajbhasha` (holds `coe_my_question_paper_rajbhasha`). Only `COE` is
+  created by a migration; the others were created through the Roles UI (they exist on
+  the dev DB). Grants made through the UI (e.g. COE → `coe_question_paper`,
+  `coe_marksheet_generation`; UDC/AAO → `coe_marksheet_generation`) live only in the DB.
 - `coe_marks_moderation` has **no migration and no menu**: until someone creates the
   permission, only Super Admin can open Marks Moderation.
 
@@ -326,10 +298,8 @@ All rules in `ResultMarksService` (RMS) and `MarksModeration`.
 - Generated **on GET** for every OT with a Pass/Fail result: `coe_marksheets`, number
   `MS/{COURSE}/{year}/{0001}`.
 - Signing in strict order **UDC (Prepared By) → AAO (Compared By) → COE (Controller of
-  Examination)**; signer = user's highest of COE > AAO > UDC, by the role in
-  `MarksheetService::SIGNER_ROLES` (the COE signature is the **COE-Incharge** role's; the
-  COE section role does not sign). Super Admin signs as COE. JSON `signed` column holds
-  each signature, keyed by designation (`UDC` / `AAO` / `COE`).
+  Examination)**; signer = user's highest of the Spatie roles COE > AAO > UDC (Super Admin
+  signs as COE). JSON `signed` column holds each signature.
 - Agreed rule: UDC, AAO and COE must each have **exactly one Active** Signature Master row
   (designation name literally `UDC` / `AAO` / `COE`, image file present) or the marksheet
   can't be verified and published. Today the server enforces it on verify

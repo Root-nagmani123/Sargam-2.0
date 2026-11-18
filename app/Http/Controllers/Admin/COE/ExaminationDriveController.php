@@ -1088,10 +1088,10 @@ class ExaminationDriveController extends Controller
         return 'Sent to the Course Coordinator for approval.';
     }
 
-    /** COE-end: list of drives for COE review (Approve / Reject). COE-Incharge (the main COE) and Super Admin only. */
+    /** COE-end: list of drives for COE review (Approve / Reject). COE role and Super Admin only. */
     public function coeIndex(Request $request, ExaminationDriveCoeDataTable $dataTable)
     {
-        abort_unless(auth()->user()?->hasAnyRole(['COE-Incharge', 'Super Admin']), 403);
+        abort_unless(auth()->user()?->hasAnyRole(['COE', 'Super Admin']), 403);
 
         $scope = in_array($request->query('scope'), self::SCOPES, true)
             ? $request->query('scope') : 'active';

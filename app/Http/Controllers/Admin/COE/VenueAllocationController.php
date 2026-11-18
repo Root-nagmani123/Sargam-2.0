@@ -462,12 +462,12 @@ class VenueAllocationController extends Controller
         return ['plan' => $plan, 'summary' => $this->reseat($plan, $allocator)];
     }
 
-    /** The role a room was mapped under: COE-Incharge, else COE (section), else Super Admin, else the user's first role. */
+    /** The role a room was mapped under: COE, else Super Admin, else the user's first role. */
     private function filledByRole(): ?string
     {
         $roles = Auth::user()?->getRoleNames() ?? collect();
 
-        foreach (['COE-Incharge', 'COE', 'Super Admin'] as $role) {
+        foreach (['COE', 'Super Admin'] as $role) {
             if ($roles->contains($role)) {
                 return $role;
             }
