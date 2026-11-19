@@ -7,6 +7,7 @@ use App\Models\COE\SeatAllocation;
 use App\Models\COE\SeatPlan;
 use App\Models\COE\SeatPlanVenue;
 use App\Models\COE\VenueSeatLayout;
+use App\Models\ExaminationDrive;
 use App\Services\COE\CourseParticipants;
 use App\Services\COE\ExamRooms;
 use App\Services\COE\LaptopDeclarationService;
@@ -50,6 +51,19 @@ class VenueAllocationController extends Controller
     /** Must match public/js/coe-seat-map.js — desks per row, per block. */
     private const SEAT_BLOCKS = ['A' => 4, 'B' => 13, 'C' => 6];
 
+    /** examination_drive_component_maps.exam_type that takes no invigilators. */
+    private const OFFLINE_OBJECTIVE = 'Offline Objective';
+
+    /** Add Invigilators: request field => coe_seat_plan_venue_invigilators column, and whether it holds a faculty. */
+    private const INVIGILATOR_ROLES = [
+        'chief' => ['column' => 'chief_faculty_pk', 'faculty' => true, 'label' => 'Chief Invigilator'],
+        'invigilator' => ['column' => 'invigilator_faculty_pk', 'faculty' => true, 'label' => 'Invigilator'],
+        'assistant' => ['column' => 'assistant_faculty_pk', 'faculty' => true, 'label' => 'Assistant Invigilator'],
+        'mts' => ['column' => 'mts_employee_pk', 'faculty' => false, 'label' => 'MTS'],
+    ];
+
+    private const MTS_DESIGNATION = 'MULTI TASKING STAFF';
+
     public function index(Request $request)
     {
         $scope = in_array($request->query('scope'), self::SCOPES, true)
@@ -68,9 +82,7 @@ class VenueAllocationController extends Controller
                 'subject' => $rows->pluck('subject')->unique()->sort()->values(),
                 'component' => $rows->pluck('component')->unique()->sort()->values(),
             ],
-            'courseBatches' => $this->courseBatches(),
-            'categories' => SeatPlan::categories(),
-            'laptopRequirements' => SeatPlan::laptopRequirements(),
+            'drives' => $this->mappableDrives()->map(fn ($d) => ['id' => $d['id'], 'label' => $d['label']])->values(),
             'buildings' => $rooms->unique('building_pk')->sortBy('building')
                 ->map(fn ($r) => ['id' => $r->building_pk, 'name' => $r->building])->values(),
             'roomsByBuildingFloor' => $this->roomTree($rooms),
@@ -172,6 +184,247 @@ class VenueAllocationController extends Controller
     }
 
     /**
+     * Map Seating Plan, drive first: everything the dialog needs once a drive is picked —
+     * the drive's subjects and their components (each one row of the dialog), the OT count
+     * and laptop count of the drive's cohort, and the OTs with a roll number for the
+     * OT Roll No. picker.
+     *
+     * Per component: `taken` is the OTs already listed in a room of that component's plan
+     * (they cannot be listed again), `frozen` whether that plan is published.
+     */
+    public function drive(int $id): JsonResponse
+    {
+        $drive = $this->mappableDrives()->firstWhere('id', $id);
+        if ($drive === null) {
+            return response()->json(['status' => 'error', 'message' => 'This examination drive is closed, or its course has no roll numbers yet.'], 422);
+        }
+        [$courseId, $batch] = [$drive['course_id'], $drive['batch']];
+
+        $plans = DB::table('coe_seat_plans')
+            ->where('course_master_pk', $courseId)
+            ->where('batch', $batch)
+            ->whereNotNull('examination_drive_component_map_id')
+            ->get(['pk', 'examination_drive_component_map_id as map_id', 'status']);
+        $taken = DB::table('coe_seat_plan_venue_ots')
+            ->whereIn('seat_plan_pk', $plans->pluck('pk')->all())
+            ->get(['seat_plan_pk', 'student_master_pk'])
+            ->groupBy('seat_plan_pk');
+
+        $subjects = DB::table('examination_drive_component_maps as dcm')
+            ->join('component_master as comp', 'comp.pk', '=', 'dcm.component_master_pk')
+            ->leftJoin('subject_master as sub', 'sub.pk', '=', 'dcm.subject_master_pk')
+            ->where('dcm.examination_drive_id', $id)
+            ->orderBy('sub.subject_name')
+            ->orderBy('dcm.exam_date')
+            ->orderBy('comp.component_name')
+            ->get(['dcm.id', 'dcm.exam_date', 'dcm.exam_end_date', 'sub.subject_name', 'comp.component_name'])
+            ->map(function ($c) use ($plans, $taken) {
+                $own = $plans->where('map_id', $c->id);
+
+                return [
+                    'id' => (int) $c->id,
+                    'subject' => trim((string) $c->subject_name) ?: 'General',
+                    'component' => $c->component_name,
+                    'exam_date' => $this->examDateLabel($c->exam_date, $c->exam_end_date),
+                    'frozen' => $own->contains(fn ($p) => (int) $p->status === SeatPlan::STATUS_PUBLISHED),
+                    'taken' => $own->flatMap(fn ($p) => ($taken[$p->pk] ?? collect())->pluck('student_master_pk'))
+                        ->map(fn ($pk) => (int) $pk)->values(),
+                ];
+            })
+            ->groupBy('subject')
+            ->map(fn ($components, $subject) => ['subject' => $subject, 'components' => $components->values()])
+            ->values();
+
+        $ots = $this->participantQuery($courseId, $batch, SeatPlan::CATEGORY_ALL)
+            ->orderBy('rn.serial_number')
+            ->orderBy('sm.pk')
+            ->get(['sm.pk', 'rn.roll_number', 'rn.serial_number', 'sm.display_name', 'sm.first_name', 'sm.middle_name', 'sm.last_name'])
+            ->map(fn ($o) => [
+                'pk' => (int) $o->pk,
+                'roll' => (string) $o->roll_number,
+                'serial' => (int) $o->serial_number,
+                'name' => $this->studentName($o),
+            ]);
+
+        $laptops = (int) $this->participantQuery($courseId, $batch, SeatPlan::CATEGORY_ALL)
+            ->where('lr.laptop_required', 1)
+            ->count();
+
+        return response()->json([
+            'status' => 'success',
+            'ot_count' => $ots->count(),
+            'laptop_required' => $laptops,
+            'subjects' => $subjects,
+            'ots' => $ots,
+        ]);
+    }
+
+    /**
+     * Map Seating Plan, drive first. One row per component of the drive: the room it sits
+     * in and the OTs that room seats (Manual seating, every candidate category). Rows the
+     * administrator left blank are skipped; the rest are saved together or not at all.
+     */
+    public function storeDrive(Request $request, SeatAllocator $allocator): JsonResponse
+    {
+        $validated = $request->validate([
+            'drive_id' => ['required', 'integer'],
+            'rows' => ['required', 'array', 'min:1'],
+            'rows.*.component_map_id' => ['required', 'integer'],
+            'rows.*.venue_id' => ['required', 'integer'],
+            'rows.*.ots' => ['required', 'array', 'min:1'],
+            'rows.*.ots.*' => ['integer'],
+            'rule_avoid_same_service' => ['nullable', 'boolean'],
+            'rule_avoid_same_cadre' => ['nullable', 'boolean'],
+            'rule_alternate_gender' => ['nullable', 'boolean'],
+            'rule_odd_even' => ['nullable', 'boolean'],
+            'seat_gap' => ['nullable', 'integer', 'min:0', 'max:10'],
+        ], [
+            'drive_id.required' => 'Select a drive.',
+            'rows.required' => 'Map at least one component to a room.',
+            'rows.*.venue_id.required' => 'Select a room.',
+            'rows.*.ots.required' => 'Select the OTs for this room.',
+            'rows.*.ots.min' => 'Select the OTs for this room.',
+        ]);
+
+        $drive = $this->mappableDrives()->firstWhere('id', (int) $validated['drive_id']);
+        if ($drive === null) {
+            throw ValidationException::withMessages(['drive_id' => 'This examination drive is closed, or its course has no roll numbers yet.']);
+        }
+        $components = DB::table('examination_drive_component_maps as dcm')
+            ->join('component_master as comp', 'comp.pk', '=', 'dcm.component_master_pk')
+            ->leftJoin('subject_master as sub', 'sub.pk', '=', 'dcm.subject_master_pk')
+            ->where('dcm.examination_drive_id', $drive['id'])
+            ->get(['dcm.id', 'sub.subject_name', 'comp.component_name'])
+            ->keyBy(fn ($c) => (int) $c->id);
+
+        // Rows of one component share its seating plan: grouped, in the dialog's order.
+        $groups = [];
+        foreach ($validated['rows'] as $i => $row) {
+            if (! $components->has((int) $row['component_map_id'])) {
+                throw ValidationException::withMessages(["rows.{$i}.component_map_id" => 'That component is not part of this drive.']);
+            }
+            $groups[(int) $row['component_map_id']][] = $i;
+        }
+
+        $common = array_intersect_key($validated, array_flip(['rule_avoid_same_service', 'rule_avoid_same_cadre',
+            'rule_alternate_gender', 'rule_odd_even', 'seat_gap'])) + [
+                'course_batch' => $drive['course_id'] . ':' . $drive['batch'],
+                'candidate_category' => SeatPlan::CATEGORY_ALL,
+                // The design has no laptop choice: a laptop desk goes to every OT who
+                // answered "Laptop Required = Yes" on OT Laptop Status.
+                'laptop_requirement' => SeatPlan::LAPTOP_REQ_DECLARED_YES,
+                'seating_mode' => 'manual',
+            ];
+
+        try {
+            $messages = DB::transaction(function () use ($groups, $validated, $common, $components, $allocator) {
+                $messages = [];
+                foreach ($groups as $mapId => $rowIndexes) {
+                    $rooms = array_map(fn (int $i) => [
+                        'venue_id' => (int) $validated['rows'][$i]['venue_id'],
+                        'ots' => $validated['rows'][$i]['ots'],
+                    ], $rowIndexes);
+
+                    try {
+                        $mapping = $this->resolveValidated(['component_map_id' => $mapId, 'rooms' => $rooms] + $common, true);
+                    } catch (ValidationException $e) {
+                        throw $this->driveRowErrors($e, $rowIndexes);
+                    }
+                    $summary = $this->applyMapping($mapping, $allocator)['summary'];
+
+                    $c = $components[$mapId];
+                    $messages[] = [
+                        'component' => (trim((string) $c->subject_name) ?: 'General') . ' – ' . $c->component_name,
+                        'status' => $summary['unallocated'] > 0 ? 'warning' : 'success',
+                        'text' => $this->allocationMessage($summary),
+                    ];
+                }
+
+                return $messages;
+            });
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            Log::error('COE venue allocation by drive failed', ['drive' => $drive['id'], 'exception' => $e->getMessage()]);
+
+            return response()->json(['status' => 'error', 'message' => 'The seating could not be saved. Nothing was changed.'], 500);
+        }
+
+        return response()->json([
+            'status' => collect($messages)->contains('status', 'warning') ? 'warning' : 'success',
+            'message' => collect($messages)->map(fn ($m) => $m['component'] . ': ' . $m['text'])->implode("\n"),
+            'results' => $messages,
+        ]);
+    }
+
+    /**
+     * A per-component validation error, re-keyed to the dialog row it is about:
+     * rooms.{n}.x → rows.{row}.x, and a component-level error to the component's first row.
+     *
+     * @param  array<int, int>  $rowIndexes  rooms.{n} came from rows.{$rowIndexes[n]}
+     */
+    private function driveRowErrors(ValidationException $e, array $rowIndexes): ValidationException
+    {
+        $errors = [];
+        foreach ($e->errors() as $key => $messages) {
+            if (preg_match('/^rooms\.(\d+)\.(\w+)/', $key, $m) && isset($rowIndexes[(int) $m[1]])) {
+                $field = $m[2] === 'ots' ? 'ots' : 'venue_id';
+                $errors["rows.{$rowIndexes[(int) $m[1]]}.{$field}"] = $messages;
+            } else {
+                $errors["rows.{$rowIndexes[0]}.component_map_id"] = $messages;
+            }
+        }
+
+        return ValidationException::withMessages($errors);
+    }
+
+    /**
+     * Examination drives a seating plan can be mapped for: not closed, and their course has
+     * roll numbers. The cohort is the roll-number batch matching the drive's academic
+     * session, else the course's latest — the rule Examination Drive uses for roll numbers.
+     *
+     * @return Collection<int, array{id: int, label: string, course_id: int, batch: int}>
+     */
+    private function mappableDrives(): Collection
+    {
+        $batches = DB::table('coe_roll_number_allocations')
+            ->get(['course_master_pk', 'batch'])
+            ->groupBy('course_master_pk');
+
+        return DB::table('examination_drives as ed')
+            ->join('course_master as cm', 'cm.pk', '=', 'ed.course_master_pk')
+            ->where('ed.status', '!=', ExaminationDrive::STATUS_CLOSED)
+            ->whereIn('ed.course_master_pk', $batches->keys()->all())
+            ->orderByDesc('ed.start_date')
+            ->orderByDesc('ed.id')
+            ->get(['ed.id', 'ed.drive_name', 'ed.phase', 'ed.academic_session', 'ed.course_master_pk', 'cm.course_name'])
+            ->map(function ($d) use ($batches) {
+                $courseBatches = $batches[$d->course_master_pk]->pluck('batch')->map(fn ($b) => (int) $b);
+                $batch = $courseBatches->contains((int) $d->academic_session) ? (int) $d->academic_session : $courseBatches->max();
+                $name = trim((string) $d->drive_name);
+
+                return [
+                    'id' => (int) $d->id,
+                    'label' => $name !== '' ? $name . ' — ' . $d->course_name : trim($d->course_name . ' ' . $d->phase),
+                    'course_id' => (int) $d->course_master_pk,
+                    'batch' => (int) $batch,
+                ];
+            });
+    }
+
+    /** "01/11/2026", or "01/11/2026 – 03/11/2026" for a component examined over a range. */
+    private function examDateLabel(?string $start, ?string $end): string
+    {
+        if (! $start) {
+            return '—';
+        }
+        $from = date('d/m/Y', strtotime($start));
+        $to = $end ? date('d/m/Y', strtotime($end)) : $from;
+
+        return $to === $from ? $from : $from . ' – ' . $to;
+    }
+
+    /**
      * Validate a Map Seating Plan request and look up everything it names, refusing it
      * before anything is written.
      *
@@ -212,6 +465,19 @@ class VenueAllocationController extends Controller
             'rooms.*.ots.required' => 'Select the OTs for this room.',
         ]);
 
+        return $this->resolveValidated($validated, $manual);
+    }
+
+    /**
+     * resolveMapping() after the request is validated: look up the course, component,
+     * rooms and plan, and refuse anything that clashes. Map Seating Plan by drive calls
+     * this once per component, inside its transaction, so a room taken by an earlier
+     * component of the same submission is already visible here.
+     *
+     * @throws ValidationException
+     */
+    private function resolveValidated(array $validated, bool $manual): array
+    {
         [$courseId, $batch] = $this->splitCourseBatch($validated['course_batch']);
         if (! $this->courseBatches()->contains('key', $courseId . ':' . $batch)) {
             throw ValidationException::withMessages(['course_batch' => 'This course has no roll numbers yet. Generate roll numbers first.']);
@@ -539,6 +805,280 @@ class VenueAllocationController extends Controller
         }
 
         return response()->json(['status' => 'success', 'message' => $message]);
+    }
+
+    // ── Add Invigilators ────────────────────────────────────────────────────
+
+    /**
+     * Add Invigilators, opened from one listing row: every room mapped for the same
+     * examination drive (same course + batch), grouped by subject then component, with who
+     * invigilates each. A plan made before drives existed shows its own rooms only.
+     * Offline Objective components are left out — they take no invigilators.
+     */
+    public function invigilators(int $id): JsonResponse
+    {
+        [, $plan] = $this->findPlanVenue($id);
+
+        $component = $plan->examination_drive_component_map_id === null ? null
+            : DB::table('examination_drive_component_maps')->where('id', $plan->examination_drive_component_map_id)
+                ->first(['examination_drive_id', 'exam_type']);
+        if ($component && $component->exam_type === self::OFFLINE_OBJECTIVE) {
+            return response()->json(['status' => 'error', 'message' => 'An Offline Objective paper takes no invigilators.'], 422);
+        }
+
+        $rooms = $this->invigilatorRooms()
+            ->when($component, fn ($q) => $q->where('dcm.examination_drive_id', $component->examination_drive_id)
+                ->where('sp.course_master_pk', $plan->course_master_pk)
+                ->where('sp.batch', $plan->batch),
+                fn ($q) => $q->where('sp.pk', $plan->pk))
+            ->where(fn ($w) => $w->whereNull('dcm.exam_type')->orWhere('dcm.exam_type', '!=', self::OFFLINE_OBJECTIVE))
+            ->orderBy('sp.subject_name')
+            ->orderBy('dcm.exam_date')
+            ->orderBy('sp.exam_name')
+            ->orderBy('sp.pk')
+            ->orderBy('spv.display_order')
+            ->get(['spv.pk', 'spv.seat_plan_pk', 'spv.venue_id', 'sp.examination_drive_component_map_id as map_id', 'sp.subject_name', 'sp.exam_name', 'sp.exam_date as plan_date',
+                'dcm.exam_date', 'dcm.exam_end_date', 'vm.venue_name',
+                DB::raw('COALESCE(rp.building_name, eb.building_name) as building_name'),
+                DB::raw('COALESCE(rp.floor_name, ef.floor_name) as floor_name'),
+                'inv.chief_faculty_pk', 'inv.invigilator_faculty_pk', 'inv.assistant_faculty_pk', 'inv.mts_employee_pk']);
+
+        // Roll-number serials seated in each room, for the OT column ("1-252").
+        $serials = DB::table('coe_seat_allocations as sa')
+            ->join('coe_roll_numbers as rn', 'rn.pk', '=', 'sa.roll_number_pk')
+            ->whereIn('sa.seat_plan_pk', $rooms->pluck('seat_plan_pk')->unique()->all())
+            ->get(['sa.seat_plan_pk', 'sa.venue_id', 'rn.serial_number'])
+            ->groupBy(fn ($s) => $s->seat_plan_pk . ':' . $s->venue_id);
+
+        $subjects = $rooms->map(fn ($r) => [
+            'id' => (int) $r->pk,
+            // Rooms of one paper sit at the same time: one person, one room among them.
+            'paper' => $r->map_id ? 'c' . $r->map_id : 'p' . $r->seat_plan_pk,
+            'subject' => trim((string) $r->subject_name) ?: 'General',
+            'component' => $r->exam_name ?: '—',
+            'exam_date' => $this->examDateLabel($r->exam_date ?? $r->plan_date, $r->exam_end_date),
+            'building' => $r->building_name ?: '—',
+            'floor' => $r->floor_name ?: '—',
+            'room' => $r->venue_name,
+            'ot' => $this->serialRuns(($serials[$r->seat_plan_pk . ':' . $r->venue_id] ?? collect())->pluck('serial_number')->all()),
+            'chief' => $r->chief_faculty_pk ? (int) $r->chief_faculty_pk : null,
+            'invigilator' => $r->invigilator_faculty_pk ? (int) $r->invigilator_faculty_pk : null,
+            'assistant' => $r->assistant_faculty_pk ? (int) $r->assistant_faculty_pk : null,
+            'mts' => $r->mts_employee_pk ? (int) $r->mts_employee_pk : null,
+        ])
+            ->groupBy('subject')
+            ->map(fn ($rows, $subject) => ['subject' => $subject, 'rooms' => $rows->values()])
+            ->values();
+
+        // Someone already assigned stays in the list even after leaving the master's active set.
+        $assignedFaculty = $rooms->flatMap(fn ($r) => [$r->chief_faculty_pk, $r->invigilator_faculty_pk, $r->assistant_faculty_pk])->filter()->unique()->values()->all();
+        $assignedMts = $rooms->pluck('mts_employee_pk')->filter()->unique()->values()->all();
+
+        return response()->json([
+            'status' => 'success',
+            'subjects' => $subjects,
+            'faculty' => $this->facultyOptions($assignedFaculty),
+            'mts' => $this->mtsOptions($assignedMts),
+        ]);
+    }
+
+    /**
+     * Map Invigilator: save who invigilates each room shown. A role left empty is cleared.
+     * One person cannot hold two roles in one room, nor invigilate two rooms of the same
+     * paper (component) — those rooms sit at the same time.
+     */
+    public function storeInvigilators(Request $request): JsonResponse
+    {
+        $rules = ['rows' => ['required', 'array', 'min:1'], 'rows.*.id' => ['required', 'integer', 'distinct']];
+        foreach (array_keys(self::INVIGILATOR_ROLES) as $role) {
+            $rules["rows.*.{$role}"] = ['nullable', 'integer'];
+        }
+        $validated = $request->validate($rules, ['rows.required' => 'There is no room to map.']);
+        $rows = $validated['rows'];
+
+        $rooms = $this->invigilatorRooms()
+            ->whereIn('spv.pk', array_map(fn ($r) => (int) $r['id'], $rows))
+            ->get(['spv.pk', 'sp.pk as plan_pk', 'sp.examination_drive_component_map_id as map_id', 'dcm.exam_type', 'vm.venue_name',
+                'inv.chief_faculty_pk', 'inv.invigilator_faculty_pk', 'inv.assistant_faculty_pk', 'inv.mts_employee_pk'])
+            ->keyBy(fn ($r) => (int) $r->pk);
+
+        // Who may be picked: the active masters, plus whoever a submitted room already holds.
+        $currentFaculty = $rooms->flatMap(fn ($r) => [$r->chief_faculty_pk, $r->invigilator_faculty_pk, $r->assistant_faculty_pk])->filter()->all();
+        $faculty = collect($this->facultyOptions($currentFaculty))->keyBy('id');
+        $mts = collect($this->mtsOptions($rooms->pluck('mts_employee_pk')->filter()->all()))->keyBy('id');
+
+        $errors = [];
+        $paper = [];   // "<component>|f|<person>" or "<component>|m|<person>" => [row index, field]
+        foreach ($rows as $i => $row) {
+            $room = $rooms[(int) $row['id']] ?? null;
+            if ($room === null) {
+                $errors["rows.{$i}.id"] = 'That room is no longer part of a seating plan.';
+                continue;
+            }
+            if ($room->exam_type === self::OFFLINE_OBJECTIVE) {
+                $errors["rows.{$i}.id"] = 'An Offline Objective paper takes no invigilators.';
+                continue;
+            }
+            $inRoom = [];
+            foreach (self::INVIGILATOR_ROLES as $role => $def) {
+                $pk = $row[$role] ?? null;
+                if ($pk === null) {
+                    continue;
+                }
+                $pk = (int) $pk;
+                $people = $def['faculty'] ? $faculty : $mts;
+                if (! $people->has($pk)) {
+                    $errors["rows.{$i}.{$role}"] = $def['faculty'] ? 'Select an active faculty member.' : 'Select an active Multi Tasking Staff member.';
+                    continue;
+                }
+                if ($def['faculty'] && isset($inRoom[$pk])) {
+                    $errors["rows.{$i}.{$role}"] = $people[$pk]['text'] . ' is already ' . self::INVIGILATOR_ROLES[$inRoom[$pk]]['label'] . ' in this room.';
+                    continue;
+                }
+                $inRoom[$pk] = $role;
+                // Same paper = same sitting: one person, one room.
+                $key = ($room->map_id ?? 'plan' . $room->plan_pk) . '|' . ($def['faculty'] ? 'f' : 'm') . '|' . $pk;
+                if (isset($paper[$key])) {
+                    $errors["rows.{$i}.{$role}"] = $people[$pk]['text'] . ' already invigilates another room of this paper.';
+                    continue;
+                }
+                $paper[$key] = $room->venue_name;
+            }
+        }
+
+        // Rooms of the same papers that this request does not include still hold their people.
+        $mapIds = $rooms->pluck('map_id')->filter()->unique()->all();
+        if ($mapIds !== [] && $errors === []) {
+            $others = $this->invigilatorRooms()
+                ->whereIn('sp.examination_drive_component_map_id', $mapIds)
+                ->whereNotIn('spv.pk', $rooms->keys()->all())
+                ->get(['sp.examination_drive_component_map_id as map_id', 'vm.venue_name',
+                    'inv.chief_faculty_pk', 'inv.invigilator_faculty_pk', 'inv.assistant_faculty_pk', 'inv.mts_employee_pk']);
+            foreach ($rows as $i => $row) {
+                $room = $rooms[(int) $row['id']];
+                foreach (self::INVIGILATOR_ROLES as $role => $def) {
+                    $pk = isset($row[$role]) ? (int) $row[$role] : null;
+                    $clash = $pk === null ? null : $others->first(fn ($o) => (int) $o->map_id === (int) $room->map_id && ($def['faculty']
+                        ? in_array($pk, [(int) $o->chief_faculty_pk, (int) $o->invigilator_faculty_pk, (int) $o->assistant_faculty_pk], true)
+                        : (int) $o->mts_employee_pk === $pk));
+                    if ($clash) {
+                        $name = ($def['faculty'] ? $faculty : $mts)[$pk]['text'];
+                        $errors["rows.{$i}.{$role}"] = "{$name} already invigilates {$clash->venue_name} for this paper.";
+                    }
+                }
+            }
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
+
+        $now = now();
+        DB::transaction(function () use ($rows, $now) {
+            foreach ($rows as $row) {
+                $values = [];
+                foreach (self::INVIGILATOR_ROLES as $role => $def) {
+                    $values[$def['column']] = isset($row[$role]) ? (int) $row[$role] : null;
+                }
+                $where = ['seat_plan_venue_pk' => (int) $row['id']];
+                $table = DB::table('coe_seat_plan_venue_invigilators');
+
+                if (array_filter($values) === []) {
+                    $table->where($where)->delete();
+                } elseif ((clone $table)->where($where)->exists()) {
+                    $table->where($where)->update($values + ['modified_by' => Auth::id(), 'modified_date' => $now]);
+                } else {
+                    $table->insert($where + $values + ['created_by' => Auth::id(), 'created_date' => $now]);
+                }
+            }
+        });
+
+        return response()->json(['status' => 'success', 'message' => 'Invigilators saved for ' . count($rows) . ' room(s).']);
+    }
+
+    /** Rooms of seating plans with their building, floor and invigilators — for Add Invigilators. */
+    private function invigilatorRooms()
+    {
+        return DB::table('coe_seat_plan_venues as spv')
+            ->join('coe_seat_plans as sp', 'sp.pk', '=', 'spv.seat_plan_pk')
+            ->join('venue_master as vm', 'vm.venue_id', '=', 'spv.venue_id')
+            ->leftJoin('examination_drive_component_maps as dcm', 'dcm.id', '=', 'sp.examination_drive_component_map_id')
+            ->leftJoinSub(ExamRooms::placements(), 'rp', 'rp.venue_id', '=', 'vm.venue_id')
+            ->leftJoin('exam_building_master as eb', 'eb.pk', '=', 'vm.building_master_pk')
+            ->leftJoin('exam_floor_master as ef', 'ef.pk', '=', 'vm.floor_master_pk')
+            ->leftJoin('coe_seat_plan_venue_invigilators as inv', 'inv.seat_plan_venue_pk', '=', 'spv.pk');
+    }
+
+    /**
+     * Active faculty for the three invigilator roles, plus $keep (already assigned).
+     *
+     * @param  array<int, int|string>  $keep
+     * @return array<int, array{id: int, text: string}>
+     */
+    private function facultyOptions(array $keep = []): array
+    {
+        return DB::table('faculty_master')
+            ->where(fn ($w) => $w->where('active_inactive', 1)->orWhereIn('pk', $keep))
+            ->get(['pk', 'full_name', 'first_name', 'middle_name', 'last_name', 'faculty_code'])
+            ->map(function ($f) {
+                $name = trim((string) $f->full_name) ?: trim(implode(' ', array_filter([$f->first_name, $f->middle_name, $f->last_name])));
+
+                return ['id' => (int) $f->pk, 'text' => ($name ?: 'Faculty #' . $f->pk) . ($f->faculty_code ? ' (' . trim($f->faculty_code) . ')' : '')];
+            })
+            ->sortBy('text', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Active Multi Tasking Staff for the MTS role, plus $keep (already assigned).
+     *
+     * @param  array<int, int|string>  $keep
+     * @return array<int, array{id: int, text: string}>
+     */
+    private function mtsOptions(array $keep = []): array
+    {
+        return DB::table('employee_master as em')
+            ->leftJoin('designation_master as dm', 'dm.pk', '=', 'em.designation_master_pk')
+            ->where(fn ($w) => $w->where(fn ($a) => $a->where('dm.designation_name', self::MTS_DESIGNATION)->where('em.status', 1))
+                ->orWhereIn('em.pk', $keep))
+            ->get(['em.pk', 'em.first_name', 'em.middle_name', 'em.last_name', 'em.emp_id'])
+            ->map(function ($e) {
+                $name = trim(implode(' ', array_filter([$e->first_name, $e->middle_name, $e->last_name])));
+
+                return ['id' => (int) $e->pk, 'text' => ($name ?: 'Employee #' . $e->pk) . ($e->emp_id ? ' (' . trim($e->emp_id) . ')' : '')];
+            })
+            ->sortBy('text', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Roll-number serials as runs: "1-252", "1-50, 61-80"; more than three runs is a count.
+     *
+     * @param  array<int, int|string>  $serials
+     */
+    private function serialRuns(array $serials): string
+    {
+        $serials = array_values(array_unique(array_map('intval', $serials)));
+        sort($serials);
+        if ($serials === []) {
+            return '—';
+        }
+        $runs = [];
+        foreach ($serials as $n) {
+            $last = array_key_last($runs);
+            if ($last !== null && $runs[$last][1] === $n - 1) {
+                $runs[$last][1] = $n;
+            } else {
+                $runs[] = [$n, $n];
+            }
+        }
+        if (count($runs) > 3) {
+            return count($serials) . ' OTs';
+        }
+
+        return implode(', ', array_map(fn ($r) => $r[0] === $r[1] ? (string) $r[0] : $r[0] . '-' . $r[1], $runs));
     }
 
     public function edit(int $id)
@@ -956,6 +1496,7 @@ class VenueAllocationController extends Controller
             ->leftJoin('exam_building_master as eb', 'eb.pk', '=', 'vm.building_master_pk')
             ->leftJoin('exam_floor_master as ef', 'ef.pk', '=', 'vm.floor_master_pk')
             ->leftJoin('coe_venue_seat_layouts as vsl', 'vsl.venue_id', '=', 'spv.venue_id')
+            ->leftJoin('examination_drive_component_maps as dcm', 'dcm.id', '=', 'sp.examination_drive_component_map_id')
             ->when($scope === 'active', fn ($q) => $q->where('cm.active_inactive', 1)->where('cm.end_date', '>=', $today))
             ->when($scope === 'archived', fn ($q) => $q->where(fn ($w) => $w->where('cm.active_inactive', '!=', 1)
                 ->orWhereNull('cm.active_inactive')->orWhere('cm.end_date', '<', $today)))
@@ -968,7 +1509,7 @@ class VenueAllocationController extends Controller
                 DB::raw('COALESCE(rp.room_laptops, vm.laptop_capacity) as laptop_capacity'),
                 DB::raw('COALESCE(rp.building_name, eb.building_name) as building_name'),
                 DB::raw('COALESCE(rp.floor_name, ef.floor_name) as floor_name'),
-                'vsl.laptop_seats', 'vsl.scriber_seats']);
+                'vsl.laptop_seats', 'vsl.scriber_seats', 'dcm.exam_type']);
 
         $counts = DB::table('coe_seat_allocations')
             ->whereIn('seat_plan_pk', $rows->pluck('seat_plan_pk')->unique()->all())
@@ -1006,6 +1547,8 @@ class VenueAllocationController extends Controller
                 'empty_laptop' => max(0, $availLaptop - $laptopReq),
                 'status' => (int) $r->status === SeatPlan::STATUS_PUBLISHED ? 'Frozen' : 'Pending',
                 'unallocated' => (int) $r->unallocated_count,
+                // An Offline Objective paper takes no invigilators.
+                'invigilators' => $r->exam_type !== self::OFFLINE_OBJECTIVE,
             ];
         });
     }

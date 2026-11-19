@@ -2230,6 +2230,14 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('venue-allocation.index');
     Route::get('venue-allocation/components', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'components'])
         ->name('venue-allocation.components');
+    Route::get('venue-allocation/drive/{id}', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'drive'])
+        ->whereNumber('id')->name('venue-allocation.drive');
+    Route::post('venue-allocation/drive', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'storeDrive'])
+        ->name('venue-allocation.store-drive');
+    Route::get('venue-allocation/{id}/invigilators', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'invigilators'])
+        ->whereNumber('id')->name('venue-allocation.invigilators');
+    Route::post('venue-allocation/invigilators', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'storeInvigilators'])
+        ->name('venue-allocation.invigilators.store');
     Route::post('venue-allocation', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'store'])
         ->name('venue-allocation.store');
     Route::post('venue-allocation/{id}/freeze', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'freeze'])

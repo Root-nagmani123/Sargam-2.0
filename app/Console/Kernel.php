@@ -17,6 +17,8 @@ class Kernel extends ConsoleKernel
     {
         // Runs twice daily; system cron should call `php artisan schedule:run` every minute.
         $schedule->command('send:stock_alert')->twiceDaily(12, 17);
+        // COE: tell faculty when a component's exam is over and its marks entry opens.
+        $schedule->command('coe:notify-marks-entry-ready')->dailyAt('07:00')->withoutOverlapping();
     }
 
     /**

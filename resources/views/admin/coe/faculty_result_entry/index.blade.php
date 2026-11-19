@@ -191,7 +191,7 @@
             @if ($editable)
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mt-4">
                     <button type="button" class="btn btn-link p-0 rre-reset" id="rreResetBtn">Reset the data</button>
-                    <button type="button" class="btn coe-btn coe-btn-primary" id="rreApproveBtn">Approved</button>
+                    <button type="button" class="btn coe-btn coe-btn-primary" id="rreApproveBtn">Approve</button>
                 </div>
             @endif
         </div>
@@ -221,7 +221,7 @@
                     <h6 class="coe-instructions__title">Instructions &amp; Excel Template</h6>
                     <ul class="coe-instructions__list">
                         <li><a href="{{ route('admin.coe.faculty-result-entry.template', $filters) }}">Download the template file</a> to ensure your Excel file has the correct format for importing marks. It lists every pending row of this table ({{ $pendingCount }}); fill in Attendance and Marks{{ $withRemarks ? ', and Remarks if any' : '' }}.</li>
-                        <li><span class="coe-tip">Tip:</span> Make sure your Excel file matches the template format exactly to avoid import errors. Imported marks are saved as a draft — press Approved once you have checked them.</li>
+                        <li><span class="coe-tip">Tip:</span> Make sure your Excel file matches the template format exactly to avoid import errors. Imported marks are saved as a draft — press Approve once you have checked them.</li>
                     </ul>
                 </div>
             </div>
@@ -262,6 +262,18 @@ $(function () {
     });
 
     if (!$('#rreApproveBtn').length) { return; }
+
+    // After a save, back to this sheet with its Course / Subject / Component kept
+    // (they are often not in the address bar, e.g. when opened from the menu);
+    // approved marks are shown on Completed. Other query params (menu) are kept.
+    var SHEET_FILTERS = @json((object) $filters);
+    function reloadSheet(tab) {
+        var url = new URL(window.location.href);
+        ['course', 'subject', 'component', 'tab'].forEach(function (k) { url.searchParams.delete(k); });
+        $.each(SHEET_FILTERS, function (k, v) { url.searchParams.set(k, v); });
+        if (tab === 'completed') { url.searchParams.set('tab', 'completed'); }
+        window.location.href = url.toString();
+    }
 
     function validMark(value, max) {
         value = $.trim(value);
@@ -324,7 +336,7 @@ $(function () {
             headers: CSRF
         }).done(function (res) {
             Swal.fire({ icon: 'success', title: 'Success', text: res.message })
-                .then(function () { window.location.reload(); });
+                .then(function () { reloadSheet(approve ? 'completed' : 'pending'); });
         }).fail(function (xhr) {
             var res = xhr.responseJSON || {};
             $.each(res.errors || {}, function (cell, message) {
@@ -396,7 +408,7 @@ $(function () {
         }).done(function (res) {
             bootstrap.Modal.getOrCreateInstance(document.getElementById('rreImportModal')).hide();
             Swal.fire({ icon: 'success', title: 'Imported', text: res.message })
-                .then(function () { window.location.reload(); });
+                .then(function () { reloadSheet('pending'); });
         }).fail(function (xhr) {
             var res = xhr.responseJSON || {};
             var $html = $('<div class="text-start"></div>').append($('<p class="mb-2"></p>').text(res.message || 'Could not import the file.'));

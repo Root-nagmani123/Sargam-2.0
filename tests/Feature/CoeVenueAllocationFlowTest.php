@@ -302,6 +302,210 @@ class CoeVenueAllocationFlowTest extends TestCase
         $this->assertFalse(SeatAllocation::where('seat_plan_pk', $planVenue->seat_plan_pk)->exists());
     }
 
+    // ── Map Seating Plan by examination drive ───────────────────────────────
+
+    /** The fixture component's drive, open and pointed at the batch numbered in setUp(). */
+    private function driveId(): int
+    {
+        $id = (int) DB::table('examination_drive_component_maps')->where('id', $this->componentMapId)->value('examination_drive_id');
+        $update = ['status' => \App\Models\ExaminationDrive::STATUS_ACTIVE];
+        if ($this->batch >= 1901 && $this->batch <= 2155) {
+            $update['academic_session'] = $this->batch;
+        }
+        DB::table('examination_drives')->where('id', $id)->update($update);
+
+        return $id;
+    }
+
+    private function driveData(): array
+    {
+        return $this->actingAs($this->admin)
+            ->getJson(route('admin.coe.venue-allocation.drive', $this->driveId()))
+            ->assertOk()->json();
+    }
+
+    private function mapDrive(array $rows)
+    {
+        return $this->actingAs($this->admin)->postJson(route('admin.coe.venue-allocation.store-drive'), [
+            'drive_id' => $this->driveId(),
+            'rows' => $rows,
+            'rule_odd_even' => 0,
+            'seat_gap' => 0,
+        ]);
+    }
+
+    public function test_drive_lists_its_subjects_components_and_ots(): void
+    {
+        $data = $this->driveData();
+
+        $ids = collect($data['subjects'])->flatMap(fn ($s) => collect($s['components'])->pluck('id'))->all();
+        $this->assertContains($this->componentMapId, $ids);
+        $this->assertSame(count($data['ots']), $data['ot_count']);
+        $this->assertNotEmpty($data['ots']);
+    }
+
+    public function test_drive_row_seats_the_ots_picked_for_its_room(): void
+    {
+        $picked = collect($this->driveData()['ots'])->take(2)->pluck('pk')->all();
+
+        $this->mapDrive([['component_map_id' => $this->componentMapId, 'venue_id' => $this->venueId, 'ots' => $picked]])
+            ->assertOk()->assertJsonCount(1, 'results');
+
+        $planVenue = $this->planVenue();
+        $plan = SeatPlan::find($planVenue->seat_plan_pk);
+        $this->assertTrue($planVenue->isManual());
+        $this->assertSame($this->componentMapId, (int) $plan->examination_drive_component_map_id);
+        $this->assertSame(SeatPlan::CATEGORY_ALL, (int) $plan->candidate_category);
+        $seated = SeatAllocation::where('seat_plan_pk', $plan->pk)->pluck('student_master_pk')->map(fn ($pk) => (int) $pk)->sort()->values()->all();
+        $this->assertSame(collect($picked)->sort()->values()->all(), $seated);
+
+        // Listed OTs come back as taken for that component, and cannot be listed again.
+        $taken = collect($this->driveData()['subjects'])->flatMap(fn ($s) => $s['components'])
+            ->firstWhere('id', $this->componentMapId)['taken'];
+        $this->assertEqualsCanonicalizing($picked, $taken);
+        $other = $this->addRoom('PHPUNIT2', 5);
+        $this->mapDrive([['component_map_id' => $this->componentMapId, 'venue_id' => $other, 'ots' => [$picked[0]]]])
+            ->assertStatus(422)->assertJsonValidationErrors('rows.0.ots');
+    }
+
+    public function test_drive_row_errors_are_keyed_to_the_row(): void
+    {
+        $ot = $this->driveData()['ots'][0]['pk'];
+        $small = $this->addRoom('PHPUNIT2', 1);
+
+        // Missing room → that row's room; too many OTs for the room → that row's OTs.
+        $this->mapDrive([['component_map_id' => $this->componentMapId, 'ots' => [$ot]]])
+            ->assertStatus(422)->assertJsonValidationErrors('rows.0.venue_id');
+        $two = collect($this->driveData()['ots'])->take(2)->pluck('pk')->all();
+        $this->mapDrive([['component_map_id' => $this->componentMapId, 'venue_id' => $small, 'ots' => $two]])
+            ->assertStatus(422)->assertJsonValidationErrors('rows.0.ots');
+        $this->assertFalse(SeatPlanVenue::where('venue_id', $small)->exists());
+    }
+
+    public function test_one_component_maps_to_several_rooms_in_one_save(): void
+    {
+        $ots = collect($this->driveData()['ots'])->pluck('pk')->all();
+        if (count($ots) < 2) {
+            $this->markTestSkipped('Needs at least two OTs with a roll number.');
+        }
+        $second = $this->addRoom('PHPUNIT2', count($ots));
+        [$first, $rest] = [[$ots[0]], array_slice($ots, 1)];
+
+        $this->mapDrive([
+            ['component_map_id' => $this->componentMapId, 'venue_id' => $this->venueId, 'ots' => $first],
+            ['component_map_id' => $this->componentMapId, 'venue_id' => $second, 'ots' => $rest],
+        ])->assertOk()->assertJsonCount(1, 'results');
+
+        $plan = (int) SeatPlanVenue::where('venue_id', $this->venueId)->value('seat_plan_pk');
+        $this->assertSame($plan, (int) SeatPlanVenue::where('venue_id', $second)->value('seat_plan_pk'));
+        $seatedIn = fn (int $venue) => SeatAllocation::where('seat_plan_pk', $plan)->where('venue_id', $venue)
+            ->pluck('student_master_pk')->map(fn ($pk) => (int) $pk)->sort()->values()->all();
+        $this->assertSame($first, $seatedIn($this->venueId));
+        $this->assertSame(collect($rest)->sort()->values()->all(), $seatedIn($second));
+    }
+
+    public function test_one_component_refuses_a_room_or_an_ot_twice(): void
+    {
+        $ots = collect($this->driveData()['ots'])->pluck('pk')->all();
+        $second = $this->addRoom('PHPUNIT2', 5);
+
+        $this->mapDrive([
+            ['component_map_id' => $this->componentMapId, 'venue_id' => $this->venueId, 'ots' => [$ots[0]]],
+            ['component_map_id' => $this->componentMapId, 'venue_id' => $this->venueId, 'ots' => [$ots[1] ?? $ots[0]]],
+        ])->assertStatus(422)->assertJsonValidationErrors('rows.1.venue_id');
+
+        $this->mapDrive([
+            ['component_map_id' => $this->componentMapId, 'venue_id' => $this->venueId, 'ots' => [$ots[0]]],
+            ['component_map_id' => $this->componentMapId, 'venue_id' => $second, 'ots' => [$ots[0]]],
+        ])->assertStatus(422)->assertJsonValidationErrors('rows.1.ots');
+        $this->assertFalse(SeatPlanVenue::whereIn('venue_id', [$this->venueId, $second])->exists());
+    }
+
+    public function test_drive_refuses_a_component_of_another_drive(): void
+    {
+        $foreign = (int) DB::table('examination_drive_component_maps')
+            ->where('examination_drive_id', '!=', $this->driveId())->value('id');
+        if ($foreign === 0) {
+            $this->markTestSkipped('Needs a second examination drive.');
+        }
+
+        $this->mapDrive([['component_map_id' => $foreign, 'venue_id' => $this->venueId, 'ots' => [$this->driveData()['ots'][0]['pk']]]])
+            ->assertStatus(422)->assertJsonValidationErrors('rows.0.component_map_id');
+    }
+
+    // ── Add Invigilators ────────────────────────────────────────────────────
+
+    /** @return array{0: array<int, int>, 1: int} two active faculty pks and one active MTS employee pk */
+    private function people(): array
+    {
+        $faculty = DB::table('faculty_master')->where('active_inactive', 1)->limit(2)->pluck('pk')->map(fn ($pk) => (int) $pk)->all();
+        $mts = DB::table('employee_master as em')->join('designation_master as dm', 'dm.pk', '=', 'em.designation_master_pk')
+            ->where('dm.designation_name', 'MULTI TASKING STAFF')->where('em.status', 1)->value('em.pk');
+        if (count($faculty) < 2 || $mts === null) {
+            $this->markTestSkipped('Needs two active faculty and an active Multi Tasking Staff employee.');
+        }
+
+        return [$faculty, (int) $mts];
+    }
+
+    private function saveInvigilators(array $rows)
+    {
+        return $this->actingAs($this->admin)->postJson(route('admin.coe.venue-allocation.invigilators.store'), ['rows' => $rows]);
+    }
+
+    public function test_invigilators_are_saved_and_shown_again(): void
+    {
+        [[$chief, $invigilator], $mts] = $this->people();
+        DB::table('examination_drive_component_maps')->where('id', $this->componentMapId)->update(['exam_type' => 'Online Objective']);
+        $this->map()->assertOk();
+        $room = $this->planVenue()->pk;
+
+        $this->saveInvigilators([['id' => $room, 'chief' => $chief, 'invigilator' => $invigilator, 'mts' => $mts]])
+            ->assertOk()->assertJsonPath('status', 'success');
+
+        $rooms = collect($this->actingAs($this->admin)->getJson(route('admin.coe.venue-allocation.invigilators', $room))
+            ->assertOk()->json('subjects'))->flatMap(fn ($s) => $s['rooms']);
+        $mine = $rooms->firstWhere('id', $room);
+        $this->assertSame([$chief, $invigilator, null, $mts], [$mine['chief'], $mine['invigilator'], $mine['assistant'], $mine['mts']]);
+        $this->assertNotSame('—', $mine['ot']);
+
+        // Clearing every role removes the row.
+        $this->saveInvigilators([['id' => $room]])->assertOk();
+        $this->assertFalse(DB::table('coe_seat_plan_venue_invigilators')->where('seat_plan_venue_pk', $room)->exists());
+    }
+
+    public function test_one_person_cannot_hold_two_roles_or_two_rooms_of_a_paper(): void
+    {
+        [[$chief], ] = $this->people();
+        DB::table('examination_drive_component_maps')->where('id', $this->componentMapId)->update(['exam_type' => 'Online Objective']);
+        $second = $this->addRoom('PHPUNIT2', 5);
+        $this->map(['venue_ids' => [$this->venueId, $second]])->assertOk();
+        [$a, $b] = SeatPlanVenue::whereIn('venue_id', [$this->venueId, $second])->orderBy('venue_id')->pluck('pk')->all();
+
+        $this->saveInvigilators([['id' => $a, 'chief' => $chief, 'assistant' => $chief]])
+            ->assertStatus(422)->assertJsonValidationErrors('rows.0.assistant');
+        $this->saveInvigilators([['id' => $a, 'chief' => $chief], ['id' => $b, 'invigilator' => $chief]])
+            ->assertStatus(422)->assertJsonValidationErrors('rows.1.invigilator');
+
+        // Also against a room of the same paper saved earlier.
+        $this->saveInvigilators([['id' => $a, 'chief' => $chief]])->assertOk();
+        $this->saveInvigilators([['id' => $b, 'chief' => $chief]])
+            ->assertStatus(422)->assertJsonValidationErrors('rows.0.chief');
+    }
+
+    public function test_an_offline_objective_paper_takes_no_invigilators(): void
+    {
+        [[$chief], ] = $this->people();
+        DB::table('examination_drive_component_maps')->where('id', $this->componentMapId)->update(['exam_type' => 'Offline Objective']);
+        $this->map()->assertOk();
+        $room = $this->planVenue()->pk;
+
+        $this->actingAs($this->admin)->getJson(route('admin.coe.venue-allocation.invigilators', $room))->assertStatus(422);
+        $this->saveInvigilators([['id' => $room, 'chief' => $chief]])->assertStatus(422)->assertJsonValidationErrors('rows.0.id');
+        $this->actingAs($this->admin)->get(route('admin.coe.venue-allocation.index'))->assertOk()
+            ->assertDontSee(route('admin.coe.venue-allocation.invigilators', $room), false);
+    }
+
     public function test_index_show_and_edit_render(): void
     {
         $this->map()->assertOk();
