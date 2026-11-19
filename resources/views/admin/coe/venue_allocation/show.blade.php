@@ -10,6 +10,14 @@
    coe-admin.css, shared with Edit Seating Plan; drawn by public/js/coe-seat-map.js. */
 .vsp-legend           { display:flex;flex-wrap:wrap;gap:14px;justify-content:center;font-size:12px;color:#667085;margin-top:18px; }
 .vsp-picked           { min-height:22px;text-align:center;font-size:13px;color:#344054;margin-top:12px; }
+/* Invigilators of this room */
+.vsp-inv              { margin-top:22px;border-top:1px solid var(--ds-line);padding-top:16px; }
+.vsp-inv__title       { font-weight:600;font-size:15px;color:#004384;margin-bottom:10px; }
+.vsp-inv__grid        { display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px; }
+.vsp-inv__item        { border:1px solid var(--ds-line);border-radius:8px;padding:10px 12px; }
+.vsp-inv__role        { font-size:12px;color:#667085; }
+.vsp-inv__name        { font-size:14px;color:#101828;font-weight:500;margin-top:2px;overflow-wrap:anywhere; }
+.vsp-inv__name.is-empty { color:#98a2b3;font-weight:400; }
 @media print {
     .vsp-actions, .modern-breadcrumb-back { display:none !important; }
     .vsp-hall { overflow:visible; }
@@ -62,6 +70,25 @@
                 <span><span class="vsp-dot" style="background:#eaecf0;box-shadow:inset 0 -3px 0 #8e44ad"></span>Scriber desk</span>
                 <span>Total Seats: <strong>{{ $allocation['capacity'] }}</strong></span>
             </div>
+
+            {{-- Who invigilates this room (Add / Edit Invigilators on the listing). --}}
+            <section class="vsp-inv" aria-labelledby="vspInvTitle">
+                <div class="vsp-inv__title" id="vspInvTitle">Invigilators</div>
+                @if (! $allocation['takes_invigilators'])
+                    <div class="small text-muted">An Offline Objective paper takes no invigilators.</div>
+                @elseif (collect($allocation['invigilators'])->pluck('name')->filter()->isEmpty())
+                    <div class="small text-muted">No invigilators added yet — use Add Invigilators on the Venue Allocation list.</div>
+                @else
+                    <div class="vsp-inv__grid">
+                        @foreach ($allocation['invigilators'] as $inv)
+                            <div class="vsp-inv__item">
+                                <div class="vsp-inv__role">{{ $inv['role'] }}</div>
+                                <div class="vsp-inv__name {{ $inv['name'] ? '' : 'is-empty' }}">{{ $inv['name'] ?? 'Not assigned' }}</div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </section>
         </div>
     </div>
 </div>

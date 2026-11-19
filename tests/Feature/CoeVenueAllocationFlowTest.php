@@ -469,6 +469,16 @@ class CoeVenueAllocationFlowTest extends TestCase
         $this->assertSame([$chief, $invigilator, null, $mts], [$mine['chief'], $mine['invigilator'], $mine['assistant'], $mine['mts']]);
         $this->assertNotSame('—', $mine['ot']);
 
+        // View shows who invigilates; the listing offers Edit (not Add) Invigilators.
+        $name = fn (int $pk) => trim((string) DB::table('faculty_master')->where('pk', $pk)->value('full_name'));
+        $view = $this->actingAs($this->admin)->get(route('admin.coe.venue-allocation.show', $room))->assertOk()
+            ->assertSee('Invigilators')->assertSee('Chief Invigilator');
+        if ($name($chief) !== '') {
+            $view->assertSee($name($chief));
+        }
+        $listing = $this->actingAs($this->admin)->get(route('admin.coe.venue-allocation.index'))->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('/data-coe-id="' . $room . '"[^>]*data-va-invig-has="1"/s', $listing);
+
         // Clearing every role removes the row.
         $this->saveInvigilators([['id' => $room]])->assertOk();
         $this->assertFalse(DB::table('coe_seat_plan_venue_invigilators')->where('seat_plan_venue_pk', $room)->exists());
