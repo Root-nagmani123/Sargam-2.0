@@ -453,6 +453,18 @@ class NotificationService
             }
         }
 
+        // COE marks entry open: reference_pk is the component map; open that component's sheet.
+        if ($type === 'coe_result_entry' && $moduleName === 'facultyresultentryready') {
+            $map = \App\Models\ExaminationDriveComponentMap::with('drive')->find((int) $notification->reference_pk);
+            if ($map && $map->drive) {
+                return route('admin.coe.faculty-result-entry.index', [
+                    'course' => $map->drive->course_master_pk,
+                    'subject' => $map->subject_master_pk,
+                    'component' => $map->drive->id.':'.$map->subject_master_pk.':'.$map->component_master_pk,
+                ]);
+            }
+        }
+
         // Single-voucher mess payment: payment-only receipt (no itemized bill).
         if ($type === 'mess' && $moduleName === 'messpayment') {
             $parsed = self::parseMessCombinedReceiptPayload($notification->message);

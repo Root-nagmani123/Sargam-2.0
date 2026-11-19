@@ -217,7 +217,7 @@
             @if ($isPending)
             <div class="d-flex align-items-center justify-content-between gap-3 mt-3">
                 <button type="button" id="femResetBtn" class="btn btn-link fem-reset">Reset the data</button>
-                <button type="button" id="femApproveBtn" class="btn btn-primary rounded-3 px-4">Approved</button>
+                <button type="button" id="femApproveBtn" class="btn btn-primary rounded-3 px-4">Approve</button>
             </div>
             @elseif ($isRecheck)
             <div class="d-flex justify-content-end mt-3">

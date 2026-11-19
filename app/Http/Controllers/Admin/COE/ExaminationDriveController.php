@@ -898,6 +898,12 @@ class ExaminationDriveController extends Controller
         ]);
 
         $notice = $this->notifyFacultyApproved($drive);
+        // Components whose exam is already over open for marks entry right away.
+        try {
+            app(\App\Services\COE\ResultMarksService::class)->notifyEntryReady((int) $drive->id);
+        } catch (\Throwable $e) {
+            Log::error('Marks entry ready notification failed', ['drive_id' => $drive->id, 'error' => $e->getMessage()]);
+        }
 
         return response()->json(['message' => trim('Examination drive approved. ' . $notice)]);
     }

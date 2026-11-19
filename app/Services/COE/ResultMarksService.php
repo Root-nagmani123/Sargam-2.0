@@ -1278,6 +1278,130 @@ class ResultMarksService
         return ['moderated' => $moderated, 'values' => $values, 'saved' => true, 'error' => null];
     }
 
+    /* ───────────── Entry ready ───────────── */
+
+    /** notifications.module_name of the "marks entry is open" bell; reference_pk is the component map id. */
+    public const READY_MODULE = 'FacultyResultEntryReady';
+
+    /**
+     * Bell notification to each faculty the moment a component opens for them on
+     * Evaluation & Marks Entry: drive Active and approved by the CC, and the
+     * component's exam over (see entryDrives(), examOver()). Recipients are the
+     * subject's faculty plus the component evaluators of its unapproved cells, as
+     * in notifyPending(). Sent once per faculty and component — an earlier bell of
+     * this module on the same map stops a repeat — so it is safe to run daily and
+     * again on CC approval. A component with every mark approved is skipped.
+     * A failure to send is logged, never thrown.
+     *
+     * @return array{components:int, notified:int, unreachable:int}
+     */
+    public function notifyEntryReady(?int $driveId = null, bool $dryRun = false): array
+    {
+        $drives = $this->entryDrives()->when($driveId, fn ($c) => $c->where('id', $driveId));
+        $marks = $this->marks($drives->pluck('id')->all());
+
+        // map id => [drive, map, faculty pks]
+        $ready = [];
+        $allNames = [];
+        foreach ($drives as $drive) {
+            foreach ($drive->componentMaps as $map) {
+                if (! $this->examOver($drive, $map)) {
+                    continue;
+                }
+                $key = $drive->id.':'.$map->subject_master_pk.':'.$map->component_master_pk;
+                $names = [];
+                $pending = false;
+                foreach ($this->participants($drive) as $pk => $p) {
+                    if (($marks[$key][$pk] ?? null)?->isApproved()) {
+                        continue;
+                    }
+                    $pending = true;
+                    array_push($names, ...$this->evaluatorNames($map, $p));
+                }
+                if (! $pending) {
+                    continue;
+                }
+                $names = array_values(array_unique($names));
+                array_push($allNames, ...$names);
+                $ready[(int) $map->id] = [
+                    'drive' => $drive,
+                    'map' => $map,
+                    'faculty' => $this->subjectFacultyPks($drive, (int) $map->subject_master_pk),
+                    'names' => $names,
+                ];
+            }
+        }
+
+        if ($ready === []) {
+            return ['components' => 0, 'notified' => 0, 'unreachable' => 0];
+        }
+
+        $pkByName = [];
+        if ($allNames) {
+            FacultyMaster::whereIn(DB::raw('TRIM(full_name)'), array_values(array_unique($allNames)))
+                ->get(['pk', 'full_name'])
+                ->each(function ($f) use (&$pkByName) {
+                    $pkByName[trim((string) $f->full_name)][] = (int) $f->pk;
+                });
+        }
+        $allPks = [];
+        foreach ($ready as $id => $r) {
+            $pks = $r['faculty'];
+            foreach ($r['names'] as $name) {
+                array_push($pks, ...($pkByName[$name] ?? []));
+            }
+            $ready[$id]['faculty'] = array_values(array_unique(array_map('intval', $pks)));
+            array_push($allPks, ...$ready[$id]['faculty']);
+        }
+
+        // faculty pk => login user_id (faculty_master.employee_master_pk = user_credentials.user_id)
+        $userOf = FacultyMaster::whereIn('pk', array_values(array_unique($allPks)))
+            ->whereIn('employee_master_pk', DB::table('user_credentials')->select('user_id'))
+            ->pluck('employee_master_pk', 'pk')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $already = DB::table('notifications')
+            ->where('type', 'coe_result_entry')
+            ->where('module_name', self::READY_MODULE)
+            ->whereIn('reference_pk', array_keys($ready))
+            ->get(['reference_pk', 'receiver_user_id'])
+            ->mapWithKeys(fn ($n) => [$n->reference_pk.'|'.$n->receiver_user_id => true])
+            ->all();
+
+        $service = app(NotificationService::class);
+        $notified = 0;
+        $unreachable = 0;
+        foreach ($ready as $mapId => $r) {
+            $userIds = [];
+            foreach ($r['faculty'] as $pk) {
+                if (! isset($userOf[$pk])) {
+                    $unreachable++;
+                } elseif (! isset($already[$mapId.'|'.$userOf[$pk]])) {
+                    $userIds[] = $userOf[$pk];
+                }
+            }
+            $userIds = array_values(array_unique($userIds));
+            if ($userIds === [] || $dryRun) {
+                $notified += $dryRun ? count($userIds) : 0;
+                continue;
+            }
+
+            $col = $this->column($r['drive'], $r['map']);
+            try {
+                $notified += $service->createMultiple(
+                    $userIds, 'coe_result_entry', self::READY_MODULE, $mapId, 'Evaluation & Marks Entry Ready',
+                    "Evaluation & Marks Entry is open for {$col['subject']} — {$col['component']} ({$col['drive']}, {$col['course']}). "
+                        .'Enter the marks and approve them.'
+                );
+            } catch (\Throwable $e) {
+                Log::error('Marks entry ready notification failed', ['component_map_id' => $mapId, 'error' => $e->getMessage()]);
+            }
+        }
+
+        return ['components' => count($ready), 'notified' => $notified, 'unreachable' => $unreachable];
+    }
+
     /* ───────────── Notify for Pending ───────────── */
 
     /**

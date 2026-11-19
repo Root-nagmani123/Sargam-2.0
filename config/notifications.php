@@ -227,6 +227,12 @@ return [
             'route' => 'admin.coe.faculty-result-entry.index',
             'params' => ['course' => 'reference_pk'],
         ],
+        // ResultMarksService::notifyEntryReady(): reference_pk is the component map id;
+        // NotificationService::getRedirectUrl() opens that course/subject/component.
+        'FacultyResultEntryReady' => [
+            'route' => 'admin.coe.faculty-result-entry.index',
+            'params' => [],
+        ],
     ],
 
     // COE question papers (App\Services\COE\QuestionPaperNotifier): each receiver's own list.
