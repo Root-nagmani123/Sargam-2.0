@@ -382,6 +382,45 @@ class CoeVenueAllocationFlowTest extends TestCase
         $this->assertFalse(SeatPlanVenue::where('venue_id', $small)->exists());
     }
 
+    public function test_one_component_maps_to_several_rooms_in_one_save(): void
+    {
+        $ots = collect($this->driveData()['ots'])->pluck('pk')->all();
+        if (count($ots) < 2) {
+            $this->markTestSkipped('Needs at least two OTs with a roll number.');
+        }
+        $second = $this->addRoom('PHPUNIT2', count($ots));
+        [$first, $rest] = [[$ots[0]], array_slice($ots, 1)];
+
+        $this->mapDrive([
+            ['component_map_id' => $this->componentMapId, 'venue_id' => $this->venueId, 'ots' => $first],
+            ['component_map_id' => $this->componentMapId, 'venue_id' => $second, 'ots' => $rest],
+        ])->assertOk()->assertJsonCount(1, 'results');
+
+        $plan = (int) SeatPlanVenue::where('venue_id', $this->venueId)->value('seat_plan_pk');
+        $this->assertSame($plan, (int) SeatPlanVenue::where('venue_id', $second)->value('seat_plan_pk'));
+        $seatedIn = fn (int $venue) => SeatAllocation::where('seat_plan_pk', $plan)->where('venue_id', $venue)
+            ->pluck('student_master_pk')->map(fn ($pk) => (int) $pk)->sort()->values()->all();
+        $this->assertSame($first, $seatedIn($this->venueId));
+        $this->assertSame(collect($rest)->sort()->values()->all(), $seatedIn($second));
+    }
+
+    public function test_one_component_refuses_a_room_or_an_ot_twice(): void
+    {
+        $ots = collect($this->driveData()['ots'])->pluck('pk')->all();
+        $second = $this->addRoom('PHPUNIT2', 5);
+
+        $this->mapDrive([
+            ['component_map_id' => $this->componentMapId, 'venue_id' => $this->venueId, 'ots' => [$ots[0]]],
+            ['component_map_id' => $this->componentMapId, 'venue_id' => $this->venueId, 'ots' => [$ots[1] ?? $ots[0]]],
+        ])->assertStatus(422)->assertJsonValidationErrors('rows.1.venue_id');
+
+        $this->mapDrive([
+            ['component_map_id' => $this->componentMapId, 'venue_id' => $this->venueId, 'ots' => [$ots[0]]],
+            ['component_map_id' => $this->componentMapId, 'venue_id' => $second, 'ots' => [$ots[0]]],
+        ])->assertStatus(422)->assertJsonValidationErrors('rows.1.ots');
+        $this->assertFalse(SeatPlanVenue::whereIn('venue_id', [$this->venueId, $second])->exists());
+    }
+
     public function test_drive_refuses_a_component_of_another_drive(): void
     {
         $foreign = (int) DB::table('examination_drive_component_maps')

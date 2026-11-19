@@ -47,8 +47,15 @@
 .va-subject        { border:1px solid var(--ds-line);border-radius:12px;padding:16px 16px 18px; }
 .va-subject + .va-subject { margin-top:16px; }
 .va-subject__title { color:#004384;font-weight:600;font-size:18px;margin:0 0 12px; }
+.va-comp + .va-comp { margin-top:14px;padding-top:14px;border-top:1px dashed var(--ds-line); }
 .va-comp-row + .va-comp-row { margin-top:4px; }
-.va-comp-row--frozen { opacity:.7; }
+.va-comp--frozen   { opacity:.7; }
+.va-add-room       { padding:0;margin-top:8px;font-size:13px;text-decoration:none; }
+.va-room-extra__inner { display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:38px; }
+.va-room-extra__label { font-size:13px;color:#667085;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.va-remove-room    { padding:0;font-size:13px;text-decoration:none;flex:none; }
+.va-ot-item--elsewhere { display:none !important; }
+.va-ot-range:disabled { opacity:.45;cursor:default; }
 .va-comp-row .form-control, .va-comp-row .va-ot-toggle { white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
 /* OT Roll No. picker */
 .va-ot-toggle      { width:100%; }
@@ -685,7 +692,7 @@ $(function () {
         subjects.forEach(function (s) {
             var $card = $('<section class="va-subject"></section>').appendTo($subjects);
             $('<h6 class="va-subject__title"></h6>').text('Subject: ' + s.subject).appendTo($card);
-            s.components.forEach(function (c) { $card.append(buildRow(c)); });
+            s.components.forEach(function (c) { $card.append(buildComponent(c)); });
         });
     }
 
@@ -698,36 +705,104 @@ $(function () {
         return $col;
     }
 
-    function buildRow(c) {
-        var $row = $('<div class="row g-3 va-comp-row"></div>').attr('data-map-id', c.id).data('taken', (c.taken || []).map(String));
+    /*
+     * One component = one group of room rows. The first row carries the component and its
+     * date; "Add another room" adds rows below it, so one paper can sit in several rooms
+     * (each with its own OTs). Saved together, they all join that component's seating plan.
+     */
+    function buildComponent(c) {
+        var $group = $('<div class="va-comp"></div>').attr('data-map-id', c.id)
+            .data('taken', (c.taken || []).map(String)).data('comp', c);
+        $group.append(buildRoomRow($group, true));
+
+        if (c.frozen) {
+            $group.addClass('va-comp--frozen');
+            $group.find('select, button').prop('disabled', true);
+            $('<div class="small text-muted mt-1"></div>')
+                .text('The seating plan of this component is frozen and cannot take another room.').appendTo($group);
+        } else {
+            if (c.taken && c.taken.length) {
+                $('<div class="small text-muted mt-1 va-comp-note"></div>')
+                    .text(c.taken.length + ' OT(s) already have a room for this component; mapping adds more rooms.').appendTo($group);
+            }
+            $('<button type="button" class="btn btn-link va-add-room"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add another room</button>')
+                .attr('aria-label', 'Add another room for ' + c.component).appendTo($group);
+        }
+        return $group;
+    }
+
+    function buildRoomRow($group, first) {
+        var c = $group.data('comp');
+        var $row = $('<div class="row g-3 va-comp-row"></div>');
         var readonly = function (v) { return $('<input type="text" class="form-control coe-control va-readonly" readonly>').val(v).attr('title', v); };
 
-        $row.append(field('Component Name', readonly(c.component).addClass('va-row-component')));
-        $row.append(field('Exam Date', readonly(c.exam_date)));
+        if (first) {
+            $row.append(field('Component Name', readonly(c.component).addClass('va-row-component')));
+            $row.append(field('Exam Date', readonly(c.exam_date)));
+        } else {
+            // Same width as Component Name + Exam Date, so the room fields line up under the first row's.
+            $row.append($('<div class="col-12 col-lg-4 va-room-extra"></div>').append(
+                '<span class="coe-form-label d-none d-lg-block" aria-hidden="true">&nbsp;</span>',
+                $('<div class="va-room-extra__inner"></div>').append(
+                    $('<span class="va-room-extra__label"></span>').text('Another room — ' + c.component),
+                    '<button type="button" class="btn btn-link text-danger va-remove-room"><i class="bi bi-trash3" aria-hidden="true"></i> Remove</button>'
+                )
+            ));
+        }
         var $b = $('<select class="form-select coe-control va-row-building" data-placeholder="Select Building"></select>');
         var $f = $('<select class="form-select coe-control va-row-floor" data-placeholder="Select Floor"></select>');
         var $r = $('<select class="form-select coe-control va-row-room" data-placeholder="Select Room"></select>');
         $row.append(field('Building Name', $b), field('Floor', $f), field('Room', $r));
-        $row.append(field('OT Roll No.', otPicker($row)));
+        $row.append(field('OT Roll No.', otPicker($group.data('taken'))));
 
         $b.append(new Option('Select Building', '', true, true));
         BUILDINGS.forEach(function (x) { $b.append(new Option(x.name, x.id)); });
         resetSelect($f, 'Select Floor', true);
         resetSelect($r, 'Select Room', true);
         [$b, $f, $r].forEach(select2On);
-
-        if (c.frozen) {
-            $row.addClass('va-comp-row--frozen');
-            $row.find('select, button').prop('disabled', true);
-            $('<div class="col-12 small text-muted mt-1"></div>')
-                .text('The seating plan of this component is frozen and cannot take another room.').appendTo($row);
-        } else if (c.taken && c.taken.length) {
-            $('<div class="col-12 small text-muted mt-1"></div>')
-                .text(c.taken.length + ' OT(s) already have a room for this component; mapping adds another room.').appendTo($row);
-        }
         paintPicker($row);
         return $row;
     }
+
+    /*
+     * Inside one component an OT sits in one room, and a room is used once: an OT picked
+     * in one row leaves the other rows' lists; a room picked in one row is greyed in theirs.
+     */
+    function syncComponent($group) {
+        var $rows = $group.find('.va-comp-row');
+        $rows.each(function () {
+            var $row = $(this), otherOts = {}, otherRooms = {};
+            $rows.not($row).each(function () {
+                picked($(this)).forEach(function (pk) { otherOts[pk] = true; });
+                var room = $(this).find('.va-row-room').val();
+                if (room) { otherRooms[room] = true; }
+            });
+            $row.find('.va-ot-box').each(function () {
+                var $item = $(this).closest('.va-ot-item'), elsewhere = !!otherOts[this.value];
+                if (!$item.hasClass('is-taken')) { this.disabled = elsewhere; }
+                $item.toggleClass('va-ot-item--elsewhere', elsewhere);
+            });
+            $row.find('.va-row-room option').each(function () {
+                if (this.value) { this.disabled = !!otherRooms[this.value]; }
+            });
+            paintPicker($row);
+        });
+    }
+
+    $subjects.on('click', '.va-add-room', function () {
+        var $group = $(this).closest('.va-comp');
+        $(this).before(buildRoomRow($group, false));
+        syncComponent($group);
+    });
+
+    $subjects.on('click', '.va-remove-room', function () {
+        var $row = $(this).closest('.va-comp-row'), $group = $row.closest('.va-comp');
+        $row.find('select').each(function () { if ($(this).data('select2')) { $(this).select2('destroy'); } });
+        var dd = bootstrap.Dropdown.getInstance($row.find('.va-ot-toggle')[0]);
+        if (dd) { dd.dispose(); }
+        $row.remove();
+        syncComponent($group);
+    });
 
     $subjects.on('change', '.va-row-building', function () {
         var floors = ROOMS[this.value] || {};
@@ -746,12 +821,15 @@ $(function () {
             $r.append(new Option(rm.name + ' (' + rm.capacity + ' seats, ' + rm.laptop + ' laptops)', rm.id));
         });
         $r.trigger('change.select2');
+        syncComponent($row.closest('.va-comp'));
     });
+
+    $subjects.on('change', '.va-row-room', function () { syncComponent($(this).closest('.va-comp')); });
 
     $subjects.on('change', 'select', function () { fieldError($(this), ''); });
 
     /* ── OT Roll No. picker: quick ranges, Select All, search, one box per OT ── */
-    function otPicker($row) {
+    function otPicker(taken) {
         var $wrap = $('<div class="dropdown va-ot"></div>');
         var $btn = $('<button type="button" class="form-select coe-control text-start va-ot-toggle" data-bs-toggle="dropdown" aria-expanded="false">Select OT</button>').appendTo($wrap);
         var $menu = $('<div class="dropdown-menu dropdown-menu-end va-ot-menu"></div>').appendTo($wrap);
@@ -761,7 +839,6 @@ $(function () {
         $('<label class="va-ot-item va-ot-item--all"><input type="checkbox" class="form-check-input va-ot-all"> <span>Select All</span></label>').appendTo($menu);
         var $list = $('<div class="va-ot-list"></div>').appendTo($menu);
 
-        var taken = $row.data('taken');
         var free = ots.filter(function (o) { return taken.indexOf(String(o.pk)) === -1; });
         for (var i = 0; i < free.length; i += RANGE) {
             var block = free.slice(i, i + RANGE);
@@ -813,17 +890,19 @@ $(function () {
         var text = summary($row);
         $row.find('.va-ot-toggle').text(text).attr('title', on ? on + ' OT(s) selected' : '').toggleClass('is-placeholder', !on);
         $row.find('.va-ot-all').prop({ checked: on > 0 && on === $boxes.length, indeterminate: on > 0 && on < $boxes.length });
-        var chosen = picked($row);
+        var chosen = picked($row), open = {};
+        $boxes.each(function () { open[this.value] = true; });
         $row.find('.va-ot-range').each(function () {
-            var pks = $(this).data('pks');
-            $(this).toggleClass('is-active', pks.every(function (pk) { return chosen.indexOf(pk) !== -1; }));
+            var avail = $(this).data('pks').filter(function (pk) { return open[pk]; });
+            $(this).toggleClass('is-active', avail.length > 0 && avail.every(function (pk) { return chosen.indexOf(pk) !== -1; }))
+                .prop('disabled', avail.length === 0);
         });
     }
 
     $subjects.on('change', '.va-ot-box', function () {
         var $row = $(this).closest('.va-comp-row');
-        paintPicker($row);
         fieldError($row.find('.va-ot-toggle'), '');
+        syncComponent($row.closest('.va-comp'));
     });
     $subjects.on('change', '.va-ot-all', function () {
         var $row = $(this).closest('.va-comp-row');
@@ -833,7 +912,7 @@ $(function () {
     $subjects.on('click', '.va-ot-range', function () {
         var $row = $(this).closest('.va-comp-row');
         var pks = $(this).data('pks'), off = $(this).hasClass('is-active');
-        $row.find('.va-ot-box').each(function () { if (pks.indexOf(this.value) !== -1) { this.checked = !off; } });
+        $row.find('.va-ot-box:not(:disabled)').each(function () { if (pks.indexOf(this.value) !== -1) { this.checked = !off; } });
         $row.find('.va-ot-box').first().trigger('change');
     });
     $subjects.on('input', '.va-ot-search', function () {
@@ -855,7 +934,7 @@ $(function () {
     /* ── Submit ───────────────────────────────────────────────────────── */
     // Rows the administrator touched, in dialog order; untouched rows are not sent.
     function touchedRows() {
-        return $subjects.find('.va-comp-row').not('.va-comp-row--frozen').filter(function () {
+        return $subjects.find('.va-comp').not('.va-comp--frozen').find('.va-comp-row').filter(function () {
             var $r = $(this);
             return $r.find('.va-row-building').val() || picked($r).length;
         }).toArray().map(function (el) { return $(el); });
@@ -888,7 +967,7 @@ $(function () {
         return {
             drive_id: $drive.val(),
             rows: $rows.map(function ($r) {
-                return { component_map_id: $r.attr('data-map-id'), venue_id: $r.find('.va-row-room').val(), ots: picked($r) };
+                return { component_map_id: $r.closest('.va-comp').attr('data-map-id'), venue_id: $r.find('.va-row-room').val(), ots: picked($r) };
             }),
             rule_avoid_same_service: checked('#vaRuleService'),
             rule_avoid_same_cadre: checked('#vaRuleCadre'),
@@ -910,7 +989,7 @@ $(function () {
                 : !$r ? null
                 : m[2] === 'ots' ? $r.find('.va-ot-toggle')
                 : m[2] === 'venue_id' ? $r.find('.va-row-room')
-                : $r.find('.va-row-component');
+                : $r.closest('.va-comp').find('.va-row-component');
             if ($f && $f.length) { fieldError($f, errors[k][0]); } else { loose.push(errors[k][0]); }
         });
         var $first = $mapModal.find('.coe-field-error').first();
