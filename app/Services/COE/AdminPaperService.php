@@ -97,14 +97,15 @@ class AdminPaperService
      * Unfreeze (Published only): the paper goes back to the faculty's Pending
      * Verification - they can freeze it again (OTP), edit the translation
      * themselves, or edit the original, which sends it back to Rajbhasha.
-     * Logged, as the release is undone.
+     * Logged, as the release is undone. $remarks (why, required) is kept on the
+     * paper as unfreeze_remarks.
      *
      * @throws ModelNotFoundException
      * @throws ValidationException when it is not published
      */
-    public function unfreeze(int $paperId): QuestionPaper
+    public function unfreeze(int $paperId, string $remarks): QuestionPaper
     {
-        return DB::transaction(function () use ($paperId) {
+        return DB::transaction(function () use ($paperId, $remarks) {
             $paper = QuestionPaper::lockForUpdate()->findOrFail($paperId);
             if ($paper->status !== QuestionPaper::STATUS_PUBLISHED) {
                 throw ValidationException::withMessages(['paper' => 'Only a published question paper can be unfrozen.']);
@@ -116,6 +117,7 @@ class AdminPaperService
                 'frozen_at' => $paper->frozen_at?->toDateTimeString(),
                 'frozen_by' => $paper->frozen_by,
                 'unfrozen_by' => auth()->id(),
+                'remarks' => $remarks,
             ]);
 
             $paper->update([
@@ -124,6 +126,7 @@ class AdminPaperService
                 'frozen_by' => null,
                 // The faculty may now also edit the translation (QuestionPaperService).
                 'unfrozen_at' => now(),
+                'unfreeze_remarks' => $remarks,
             ]);
 
             return $paper;

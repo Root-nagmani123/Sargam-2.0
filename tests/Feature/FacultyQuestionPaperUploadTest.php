@@ -433,7 +433,7 @@ class FacultyQuestionPaperUploadTest extends TestCase
         $saveUrl = route('admin.coe.faculty-question-paper.translation.store', $this->map->id);
 
         $this->paper()->update(['status' => QuestionPaper::STATUS_PUBLISHED, 'frozen_at' => now()]);
-        app(AdminPaperService::class)->unfreeze($this->paper()->id);
+        app(AdminPaperService::class)->unfreeze($this->paper()->id, 'Correct question 2.');
         $this->assertNotNull($this->paper()->unfrozen_at);
 
         $this->actingAs($this->faculty)->get(route('admin.coe.faculty-question-paper.index'))
@@ -472,7 +472,7 @@ class FacultyQuestionPaperUploadTest extends TestCase
         $this->write()->assertOk();
         $this->sentBackTranslated();
         $this->paper()->update(['status' => QuestionPaper::STATUS_PUBLISHED, 'frozen_at' => now()]);
-        app(AdminPaperService::class)->unfreeze($this->paper()->id);
+        app(AdminPaperService::class)->unfreeze($this->paper()->id, 'Correct question 2.');
 
         $this->upload(['paper_html' => '<p>Q1 Explain the Constitution again.</p>'])->assertOk();
 

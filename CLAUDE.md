@@ -8,6 +8,13 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-19: Unfreeze needs remarks.** COE must enter a reason (required, max 500) in
+  the Unfreeze popup; the server refuses it without one. Saved on the paper
+  (`question_papers.unfreeze_remarks`, latest only), in the Question Paper Logs detail
+  (`V2 · reason`, cut to 100 chars) and `laravel.log`, and added to the "Question Paper
+  Reopened" bell for faculty and Rajbhasha. Details: Question papers → "Flow". Tests:
+  `AdminQuestionPaperTest::test_unfreeze_sends_a_published_paper_back_to_the_faculty`.
+
 - **2026-11-18: Faculty edits the translated paper, then freezes.** As soon as Rajbhasha
   sends the translation back (Pending Verification), the faculty sees **Edit Translated
   Paper**, not only after a COE unfreeze. The edited translation stays with the faculty
@@ -177,7 +184,10 @@ Table `question_papers` (one per drive + subject, soft deletes), `question_paper
   `QuestionPaperService::translationEditable()`: stays `sent-for-approval`, no trip back
   to Rajbhasha, `translated_by` unchanged, logged as Faculty / Translation / Updated), then
   **freezes with a 5-digit SMS OTP** → `published`. COE can **unfreeze** (back to
-  `sent-for-approval`, same choices again) or **delete** (route only, no button, any status).
+  `sent-for-approval`, same choices again; **remarks required**,
+  `QuestionPaperListController::unfreeze` validates `remarks` required|max:500, the popup
+  keeps itself open while the box is empty; stored in `unfreeze_remarks`, logged, and sent
+  in the Reopened bell) or **delete** (route only, no button, any status).
 - Faculty routes use the **`examination_drive_faculty_maps.id`** as `{paper}`; Rajbhasha
   and admin routes use `question_papers.id`.
 - **OTP** (`FreezeOtpService`): hashed in cache 10 min, 5 sends / 5 wrong tries per 10 min,

@@ -87,12 +87,22 @@ class QuestionPaperListController extends Controller
         return $response;
     }
 
-    /** Unfreeze (Published only) → back to the faculty's Pending Verification. */
-    public function unfreeze(int $paper): JsonResponse
+    /** Unfreeze (Published only, remarks required) → back to the faculty's Pending Verification. */
+    public function unfreeze(Request $request, int $paper): JsonResponse
     {
-        $qp = $this->papers->unfreeze($paper);
-        $this->log->record(QuestionPaperLogger::ROLE_COE, QuestionPaperLogger::MODULE_PAPER, QuestionPaperLogger::UNFROZEN, $qp, 'V'.$qp->version);
-        $this->notify->reopened($qp);
+        $data = $request->validate([
+            'remarks' => ['required', 'string', 'max:500'],
+        ], [
+            'remarks.required' => 'Enter the reason for unfreezing.',
+            'remarks.max' => 'The reason may not be longer than 500 characters.',
+        ]);
+        $remarks = trim($data['remarks']);
+
+        $qp = $this->papers->unfreeze($paper, $remarks);
+        // The log's detail column holds 100 characters; the full reason is on the paper.
+        $this->log->record(QuestionPaperLogger::ROLE_COE, QuestionPaperLogger::MODULE_PAPER, QuestionPaperLogger::UNFROZEN, $qp,
+            mb_strimwidth('V'.$qp->version.' · '.$remarks, 0, 100, '…'));
+        $this->notify->reopened($qp, $remarks);
 
         return response()->json(['message' => 'Question paper unfrozen. It is back with the faculty for verification.']);
     }

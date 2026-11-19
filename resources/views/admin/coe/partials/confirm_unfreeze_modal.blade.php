@@ -13,6 +13,13 @@
                     The paper will no longer be published. It goes back to the faculty, who can
                     edit it or freeze it again.
                 </p>
+                {{-- Required: the reason is saved on the paper, logged and sent to the faculty and Rajbhasha. --}}
+                <div class="text-start mt-3">
+                    <label for="qpUnfreezeRemarks" class="form-label small fw-semibold mb-1">Remarks <span class="text-danger">*</span></label>
+                    <textarea id="qpUnfreezeRemarks" class="form-control coe-control" rows="3" maxlength="500"
+                              placeholder="Why is this question paper being unfrozen?" aria-describedby="qpUnfreezeRemarksError"></textarea>
+                    <div class="coe-field-error d-none" id="qpUnfreezeRemarksError">Enter the reason for unfreezing.</div>
+                </div>
                 <div class="coe-confirm__actions">
                     <button type="button" class="btn coe-btn coe-btn-cancel coe-btn-cancel--brand" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn coe-btn coe-btn-primary" id="qpUnfreezeConfirm">Yes, Unfreeze</button>

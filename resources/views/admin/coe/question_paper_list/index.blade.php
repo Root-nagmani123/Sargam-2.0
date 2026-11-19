@@ -318,7 +318,26 @@ $(function () {
 
     /* ── Unfreeze (Published only) ───────────────────────────────────────────
        Sent first; on success the page reloads, so the row is repainted from the
-       database (back to Pending at Faculty, for the faculty to verify). */
+       database (back to Pending at Faculty, for the faculty to verify).
+       Remarks are required: an empty box keeps the dialog open (this handler is
+       bound before CoeGrid.confirm's, so it can stop it). */
+    var $unfreezeRemarks = $('#qpUnfreezeRemarks');
+    var $unfreezeError = $('#qpUnfreezeRemarksError');
+    function unfreezeRemarksError(show) {
+        $unfreezeRemarks.toggleClass('is-invalid', show);
+        $unfreezeError.toggleClass('d-none', !show);
+    }
+    $('#qpUnfreezeConfirm').on('click', function (e) {
+        if ($(this).data('busy')) { return; }
+        if (!$.trim($unfreezeRemarks.val())) {
+            e.stopImmediatePropagation();
+            unfreezeRemarksError(true);
+            $unfreezeRemarks.trigger('focus');
+        }
+    });
+    $unfreezeRemarks.on('input', function () { if ($.trim(this.value)) { unfreezeRemarksError(false); } });
+    $('#qpUnfreezeModal').on('hidden.bs.modal', function () { $unfreezeRemarks.val(''); unfreezeRemarksError(false); });
+
     CoeGrid.confirm({
         table: '#qplTable',
         trigger: '.coe-act--unfreeze',
@@ -329,7 +348,8 @@ $(function () {
             $.ajax({
                 url: url('unfreeze', $row),
                 method: 'POST',
-                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+                data: { remarks: $.trim($unfreezeRemarks.val()) }
             }).done(function (res) {
                 d.resolve();
                 Swal.fire({ icon: 'success', title: 'Success', text: (res && res.message) || 'Question paper unfrozen.' })

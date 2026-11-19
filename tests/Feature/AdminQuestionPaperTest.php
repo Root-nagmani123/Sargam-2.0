@@ -9,6 +9,7 @@ use App\Models\ExaminationTypeMaster;
 use App\Models\FacultyMaster;
 use App\Models\Notification;
 use App\Models\QuestionPaper;
+use App\Models\QuestionPaperLog;
 use App\Models\SubjectMaster;
 use App\Models\TermMaster;
 use App\Models\User;
@@ -45,7 +46,11 @@ class AdminQuestionPaperTest extends TestCase
         parent::setUp();
         Storage::fake(QuestionPaper::DISK);
 
-        $users = User::whereDoesntHave('roles', fn ($q) => $q->where('name', 'Super Admin'))->limit(2)->get();
+        // The outsider must not already hold the permission (on the dev DB the second
+        // user does), so pick the first one who doesn't.
+        $candidates = User::whereDoesntHave('roles', fn ($q) => $q->where('name', 'Super Admin'))->limit(50)->get();
+        $outsider = $candidates->slice(1)->first(fn (User $u) => ! $u->getAllPermissions()->contains('name', self::PERMISSION));
+        $users = collect([$candidates->first(), $outsider])->filter()->values();
         $this->facultyPk = (int) FacultyMaster::where('active_inactive', 1)->value('pk');
         $this->subjects = SubjectMaster::where('active_inactive', 1)->limit(4)->pluck('pk')->all();
         $typePk = ExaminationTypeMaster::value('pk');
@@ -165,13 +170,25 @@ class AdminQuestionPaperTest extends TestCase
         $paper = $this->paperFor(3);
         $paper->update(['frozen_at' => now(), 'frozen_by' => $this->admin->pk]);
 
+        $url = route('admin.coe.question-paper.unfreeze', $paper->id);
+
+        // Remarks are required (blank or missing), and may be at most 500 characters.
+        foreach ([[], ['remarks' => '   ']] as $body) {
+            $this->actingAs($this->admin)->postJson($url, $body)
+                ->assertStatus(422)
+                ->assertJsonValidationErrors(['remarks' => 'Enter the reason for unfreezing.']);
+        }
+        $this->actingAs($this->admin)->postJson($url, ['remarks' => str_repeat('a', 501)])
+            ->assertStatus(422)->assertJsonValidationErrors('remarks');
+        $this->assertSame(QuestionPaper::STATUS_PUBLISHED, $this->paperFor(3)->status);
+
         // Not published: refused.
-        $this->actingAs($this->admin)->postJson(route('admin.coe.question-paper.unfreeze', $this->paperFor(2)->id))
+        $this->actingAs($this->admin)->postJson(route('admin.coe.question-paper.unfreeze', $this->paperFor(2)->id), ['remarks' => 'Typo'])
             ->assertStatus(422)
             ->assertJsonValidationErrors('paper');
         $this->assertSame(QuestionPaper::STATUS_TRANSLATED, $this->paperFor(2)->status);
 
-        $this->actingAs($this->admin)->postJson(route('admin.coe.question-paper.unfreeze', $paper->id))
+        $this->actingAs($this->admin)->postJson($url, ['remarks' => '  Question 4 has the wrong marks.  '])
             ->assertOk()
             ->assertJson(['message' => 'Question paper unfrozen. It is back with the faculty for verification.']);
 
@@ -179,14 +196,20 @@ class AdminQuestionPaperTest extends TestCase
         $this->assertSame(QuestionPaper::STATUS_SENT_FOR_APPROVAL, $paper->status);
         $this->assertNull($paper->frozen_at);
         $this->assertNull($paper->frozen_by);
+        $this->assertSame('Question 4 has the wrong marks.', $paper->unfreeze_remarks);
         $this->assertNotNull($paper->translated_file_path);   // the faculty verifies the same translation
+
+        // Logged with the version and the reason.
+        $log = QuestionPaperLog::where('question_paper_id', $paper->id)->where('action', 'Unfrozen')->sole();
+        $this->assertSame(['COE', 'V'.$paper->version.' · Question 4 has the wrong marks.'], [$log->role, $log->detail]);
 
         $html = $this->actingAs($this->admin)->get(route('admin.coe.question-paper.index'))->getContent();
         $this->assertSame('pending-faculty', $this->statusOf($html, 3));
         $this->assertStringNotContainsString('coe-act--unfreeze', $this->rowOf($html, 3));
 
         // Only once.
-        $this->actingAs($this->admin)->postJson(route('admin.coe.question-paper.unfreeze', $paper->id))->assertStatus(422);
+        $this->actingAs($this->admin)->postJson($url, ['remarks' => 'Again'])
+            ->assertStatus(422)->assertJsonValidationErrors('paper');
     }
 
     public function test_unfreeze_and_delete_ring_the_faculty_and_rajbhasha(): void
@@ -195,12 +218,12 @@ class AdminQuestionPaperTest extends TestCase
         $rajbhasha->givePermissionTo(RajbhashaPaperService::PERMISSION);   // rolled back with the test
         $paper = $this->paperFor(3);
 
-        $this->actingAs($this->admin)->postJson(route('admin.coe.question-paper.unfreeze', $paper->id))->assertOk();
+        $this->actingAs($this->admin)->postJson(route('admin.coe.question-paper.unfreeze', $paper->id), ['remarks' => 'Wrong marks.'])->assertOk();
         $this->actingAs($this->admin)->deleteJson(route('admin.coe.question-paper.destroy', $paper->id))->assertOk();
 
         $subject = $paper->paper_name.' ('.$paper->paper_code.')';
         $expected = fn (string $module) => [
-            [$module, 'Question Paper Reopened', 'The published question paper for '.$subject.' has been reopened and is pending verification.'],
+            [$module, 'Question Paper Reopened', 'The published question paper for '.$subject.' has been reopened and is pending verification. Remarks: Wrong marks.'],
             [$module, 'Question Paper Deleted', 'The question paper for '.$subject.' has been deleted. Please contact COE if this was unexpected.'],
         ];
         $this->assertSame($expected(QuestionPaperNotifier::MODULE_RAJBHASHA), $this->bell($rajbhasha->user_id, $paper->id));

@@ -68,10 +68,11 @@ class QuestionPaperNotifier
     }
 
     /** N-037: COE unfroze a published paper → the faculty and Rajbhasha. */
-    public function reopened(QuestionPaper $paper): void
+    public function reopened(QuestionPaper $paper, string $remarks): void
     {
         $title = 'Question Paper Reopened';
-        $message = 'The published question paper for '.$this->subject($paper).' has been reopened and is pending verification.';
+        $message = 'The published question paper for '.$this->subject($paper).' has been reopened and is pending verification.'
+            .' Remarks: '.$remarks;
         $this->send($paper, self::MODULE_FACULTY, $this->facultyUserIds($paper), $title, $message);
         $this->send($paper, self::MODULE_RAJBHASHA, $this->rajbhashaUserIds(), $title, $message);
     }
