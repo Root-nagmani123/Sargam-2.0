@@ -24,6 +24,11 @@
 .ms-sign-cap { text-align: left; margin-bottom: 6px; }
 .ms-sign img { max-width: 120px; max-height: 44px; object-fit: contain; display: block; margin: 0 auto 4px; }
 .ms-sign-empty { height: 44px; display: flex; align-items: center; justify-content: center; color: #b54708; font-size: 11px; }
+/* LBSNAA logo watermark, 12% opacity, behind the text (isolation keeps z-index -1 inside the sheet). */
+.ms-sheet { position: relative; isolation: isolate; }
+.ms-watermark { position: absolute; left: 50%; top: 50%; width: 55%; max-width: 340px; height: auto;
+                transform: translate(-50%, -50%); opacity: .12; z-index: -1; pointer-events: none; user-select: none;
+                -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 @media print {
     @page { size: A4; margin: 12mm; }
     body * { visibility: hidden !important; }
@@ -51,6 +56,7 @@
     </x-breadcrum>
 
     <div class="ms-sheet">
+        <img class="ms-watermark" src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="" aria-hidden="true">
         <div class="ms-head">
             <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA emblem">
             <div class="ms-hi">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी<br>(भारत सरकार)<br>मसूरी- 248179</div>

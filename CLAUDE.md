@@ -327,7 +327,9 @@ All rules in `ResultMarksService` (RMS) and `MarksModeration`.
   with "Upload the UDC signature…". The two must be reconciled (mapping or codes).
 - No server PDF: `marksheet/show.blade.php` prints A4 via `window.print()`. The sheet
   itself doesn't print the marksheet number; under the table it has a blank
-  "Remarks: ____" line (handwritten) next to Result.
+  "Remarks: ____" line (handwritten) next to Result. The LBSNAA logo
+  (`images/lbsnaa_logo.jpg`) sits centred behind the sheet as a 12% opacity watermark
+  (`.ms-watermark`, also printed).
 
 ## Notifications
 
