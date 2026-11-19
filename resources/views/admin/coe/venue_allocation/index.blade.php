@@ -180,7 +180,8 @@
                                 data-va-edit-url="{{ route('admin.coe.venue-allocation.edit', $row['id']) }}"
                                 data-va-freeze-url="{{ route('admin.coe.venue-allocation.freeze', $row['id']) }}"
                                 data-va-delete-url="{{ route('admin.coe.venue-allocation.destroy', $row['id']) }}"
-                                @if ($row['invigilators']) data-va-invig-url="{{ route('admin.coe.venue-allocation.invigilators', $row['id']) }}" @endif>
+                                @if ($row['invigilators']) data-va-invig-url="{{ route('admin.coe.venue-allocation.invigilators', $row['id']) }}" @endif
+                                data-va-invig-has="{{ $row['has_invigilators'] ? 1 : 0 }}">
                                 <td></td>
                                 <td>{{ $row['course'] }} <span class="text-muted small">({{ $row['batch'] }})</span></td>
                                 <td>{{ $row['category'] }}</td>
@@ -366,8 +367,10 @@ $(function () {
         // View on every row; a frozen plan can only be viewed.
         html += '<a href="' + $row.attr('data-va-view-url') + '" class="va-act va-act--edit"><i class="bi bi-eye"></i><span>View</span></a>';
         // Not for an Offline Objective paper: it takes no invigilators.
+        // "Edit" once anyone is assigned to the room; the same dialog opens, prefilled.
         if ($row.attr('data-va-invig-url')) {
-            html += '<button type="button" class="va-act va-act--invig"><i class="bi bi-person-walking"></i><span>Add<br>Invigilators</span></button>';
+            var invVerb = $row.attr('data-va-invig-has') === '1' ? 'Edit' : 'Add';
+            html += '<button type="button" class="va-act va-act--invig"><i class="bi bi-person-walking"></i><span>' + invVerb + '<br>Invigilators</span></button>';
         }
         if (!isFrozen) {
             html += '<a href="' + $row.attr('data-va-edit-url') + '" class="va-act va-act--edit"><i class="bi bi-pencil-square"></i><span>Edit Seating</span></a>';
@@ -540,7 +543,8 @@ $(function () {
     });
 
     $table.on('click', '.va-act--invig', function () {
-        var url = $(this).closest('tr').attr('data-va-invig-url');
+        var $from = $(this).closest('tr'), url = $from.attr('data-va-invig-url');
+        $('#vaInvModalLabel').text(($from.attr('data-va-invig-has') === '1' ? 'Edit' : 'Add') + ' Invigilators');
         invClear();
         $invBody.html('<div class="text-muted py-3">Loading…</div>');
         $('#vaInvSubmit').prop('disabled', true);
@@ -570,7 +574,8 @@ $(function () {
         $.ajax({ url: INVIG_STORE_URL, method: 'POST', headers: { 'X-CSRF-TOKEN': CSRF }, data: { rows: rows } })
             .done(function (r) {
                 bootstrap.Modal.getOrCreateInstance($invModal[0]).hide();
-                Swal.fire({ icon: 'success', title: 'Saved', text: r.message });
+                // Reload: rooms that now have (or no longer have) invigilators show Add / Edit accordingly.
+                Swal.fire({ icon: 'success', title: 'Saved', text: r.message }).then(function () { location.reload(); });
             })
             .fail(function (xhr) {
                 var errors = (xhr.responseJSON || {}).errors;
@@ -614,6 +619,13 @@ $(function () {
     var $drive    = $('#vaMapDrive');
     var $subjects = $('#vaSubjects');
     var ots = [];          // the drive cohort's OTs with a roll number, in roll order
+    var OT_BY_PK = {};     // pk -> OT, for the live room check (laptop need)
+    var ROOM_BY_ID = {};   // venue id -> { name, capacity, laptop }
+    Object.keys(ROOMS).forEach(function (b) {
+        Object.keys(ROOMS[b]).forEach(function (f) {
+            ROOMS[b][f].rooms.forEach(function (rm) { ROOM_BY_ID[rm.id] = rm; });
+        });
+    });
     var uid = 0;           // ids for the generated labels
     var driveXhr = null;
     var RANGE = 50;        // OT Roll No. quick picks: blocks of this many
@@ -667,6 +679,8 @@ $(function () {
         driveXhr = $.getJSON(DRIVE_URL.replace('__ID__', encodeURIComponent($drive.val())))
             .done(function (r) {
                 ots = r.ots || [];
+                OT_BY_PK = {};
+                ots.forEach(function (o) { OT_BY_PK[o.pk] = o; });
                 $('#vaMapOtCount').val(r.ot_count);
                 $('#vaMapLaptop').val(r.laptop_required);
                 renderSubjects(r.subjects || []);
@@ -788,7 +802,41 @@ $(function () {
                 if (this.value) { this.disabled = !!otherRooms[this.value]; }
             });
             paintPicker($row);
+            checkRoom($row);
         });
+    }
+
+    /*
+     * Can the chosen room take the OTs picked for it? Same arithmetic as the server
+     * (checkManualRooms): with a gap of g a room seats ceil(capacity / (g + 1)), and the
+     * OTs who need a laptop must fit the room's laptop desks. '' when it fits.
+     */
+    function roomProblem($row) {
+        var room = ROOM_BY_ID[$row.find('.va-row-room').val()], chosen = picked($row);
+        if (!room || !chosen.length) { return ''; }
+        var gap = $('#vaRuleGap').is(':checked') ? (parseInt($('#vaGapCount').val(), 10) || 1) : 0;
+        var seats = Math.ceil(room.capacity / (gap + 1));
+        if (chosen.length > seats) {
+            return room.name + ' seats ' + seats + ' OT(s)' + (gap ? ' with the gap in seating' : '') +
+                ', but ' + chosen.length + ' are selected. Remove ' + (chosen.length - seats) + ' or add another room.';
+        }
+        var laptops = chosen.filter(function (pk) { return (OT_BY_PK[pk] || {}).laptop; }).length;
+        if (laptops > room.laptop) {
+            return room.name + ' has ' + room.laptop + ' laptop(s), but ' + laptops + ' of the selected OTs need one.';
+        }
+        return '';
+    }
+
+    // Shows (or clears) the room message under OT Roll No.; leaves any other error there alone.
+    function checkRoom($row) {
+        var msg = roomProblem($row), $t = $row.find('.va-ot-toggle');
+        if (msg) {
+            fieldError($t, msg);
+        } else if ($t.data('roomError')) {
+            fieldError($t, '');
+        }
+        $t.data('roomError', !!msg);
+        return !msg;
     }
 
     $subjects.on('click', '.va-add-room', function () {
@@ -928,6 +976,10 @@ $(function () {
     $('#vaRuleGap').on('change', function () {
         $('#vaGapBox').toggleClass('d-none', !this.checked);
     });
+    // A gap shrinks what every room seats: check them all again.
+    $('#vaRuleGap, #vaGapCount').on('change input', function () {
+        $subjects.find('.va-comp').each(function () { syncComponent($(this)); });
+    });
 
     $('#vaMapBtn').on('click', function () {
         bootstrap.Modal.getOrCreateInstance($mapModal[0]).show();
@@ -960,6 +1012,7 @@ $(function () {
             var none = !picked($r).length;
             fieldError($r.find('.va-ot-toggle'), none ? 'Select the OTs for this room.' : '');
             ok = ok && !none;
+            if (!none) { ok = checkRoom($r) && ok; }
         });
         return ok;
     }

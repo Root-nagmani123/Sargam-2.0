@@ -238,12 +238,14 @@ class VenueAllocationController extends Controller
         $ots = $this->participantQuery($courseId, $batch, SeatPlan::CATEGORY_ALL)
             ->orderBy('rn.serial_number')
             ->orderBy('sm.pk')
-            ->get(['sm.pk', 'rn.roll_number', 'rn.serial_number', 'sm.display_name', 'sm.first_name', 'sm.middle_name', 'sm.last_name'])
+            ->get(['sm.pk', 'rn.roll_number', 'rn.serial_number', 'lr.laptop_required', 'sm.display_name', 'sm.first_name', 'sm.middle_name', 'sm.last_name'])
             ->map(fn ($o) => [
                 'pk' => (int) $o->pk,
                 'roll' => (string) $o->roll_number,
                 'serial' => (int) $o->serial_number,
                 'name' => $this->studentName($o),
+                // Needs a laptop desk under the drive's policy (Laptop Required = Yes) — for the dialog's live room check.
+                'laptop' => $this->requiresLaptop(SeatPlan::LAPTOP_REQ_DECLARED_YES, $o->laptop_required),
             ]);
 
         $laptops = (int) $this->participantQuery($courseId, $batch, SeatPlan::CATEGORY_ALL)
@@ -1124,7 +1126,43 @@ class VenueAllocationController extends Controller
             'laptop_seats' => $room->laptop_seats,
             'scriber_seats' => $room->scriber_seats,
             'seats' => $seats->values(),
+            // An Offline Objective paper takes no invigilators; otherwise who is assigned, by role.
+            'takes_invigilators' => $plan->examination_drive_component_map_id === null
+                || DB::table('examination_drive_component_maps')->where('id', $plan->examination_drive_component_map_id)
+                    ->value('exam_type') !== self::OFFLINE_OBJECTIVE,
+            'invigilators' => $this->roomInvigilators((int) $planVenue->pk),
         ];
+    }
+
+    /**
+     * Who invigilates one room of a plan, in role order; an unfilled role has a null name.
+     *
+     * @return array<int, array{role: string, name: ?string}>
+     */
+    private function roomInvigilators(int $seatPlanVenuePk): array
+    {
+        $inv = DB::table('coe_seat_plan_venue_invigilators as inv')
+            ->leftJoin('faculty_master as f1', 'f1.pk', '=', 'inv.chief_faculty_pk')
+            ->leftJoin('faculty_master as f2', 'f2.pk', '=', 'inv.invigilator_faculty_pk')
+            ->leftJoin('faculty_master as f3', 'f3.pk', '=', 'inv.assistant_faculty_pk')
+            ->leftJoin('employee_master as em', 'em.pk', '=', 'inv.mts_employee_pk')
+            ->where('inv.seat_plan_venue_pk', $seatPlanVenuePk)
+            // Faculty: full_name, else first/middle/last — as facultyOptions() names them.
+            ->first([
+                DB::raw("COALESCE(NULLIF(TRIM(f1.full_name), ''), TRIM(CONCAT_WS(' ', f1.first_name, f1.middle_name, f1.last_name))) as chief_name"), 'f1.faculty_code as chief_code',
+                DB::raw("COALESCE(NULLIF(TRIM(f2.full_name), ''), TRIM(CONCAT_WS(' ', f2.first_name, f2.middle_name, f2.last_name))) as invigilator_name"), 'f2.faculty_code as invigilator_code',
+                DB::raw("COALESCE(NULLIF(TRIM(f3.full_name), ''), TRIM(CONCAT_WS(' ', f3.first_name, f3.middle_name, f3.last_name))) as assistant_name"), 'f3.faculty_code as assistant_code',
+                DB::raw("TRIM(CONCAT_WS(' ', em.first_name, em.middle_name, em.last_name)) as mts_name"), 'em.emp_id as mts_code',
+            ]);
+
+        $out = [];
+        foreach (self::INVIGILATOR_ROLES as $role => $def) {
+            $name = trim((string) ($inv->{$role . '_name'} ?? ''));
+            $code = trim((string) ($inv->{$role . '_code'} ?? ''));
+            $out[] = ['role' => $def['label'], 'name' => $name === '' ? null : $name . ($code !== '' ? " ({$code})" : '')];
+        }
+
+        return $out;
     }
 
     /**
@@ -1497,6 +1535,7 @@ class VenueAllocationController extends Controller
             ->leftJoin('exam_floor_master as ef', 'ef.pk', '=', 'vm.floor_master_pk')
             ->leftJoin('coe_venue_seat_layouts as vsl', 'vsl.venue_id', '=', 'spv.venue_id')
             ->leftJoin('examination_drive_component_maps as dcm', 'dcm.id', '=', 'sp.examination_drive_component_map_id')
+            ->leftJoin('coe_seat_plan_venue_invigilators as inv', 'inv.seat_plan_venue_pk', '=', 'spv.pk')
             ->when($scope === 'active', fn ($q) => $q->where('cm.active_inactive', 1)->where('cm.end_date', '>=', $today))
             ->when($scope === 'archived', fn ($q) => $q->where(fn ($w) => $w->where('cm.active_inactive', '!=', 1)
                 ->orWhereNull('cm.active_inactive')->orWhere('cm.end_date', '<', $today)))
@@ -1509,7 +1548,8 @@ class VenueAllocationController extends Controller
                 DB::raw('COALESCE(rp.room_laptops, vm.laptop_capacity) as laptop_capacity'),
                 DB::raw('COALESCE(rp.building_name, eb.building_name) as building_name'),
                 DB::raw('COALESCE(rp.floor_name, ef.floor_name) as floor_name'),
-                'vsl.laptop_seats', 'vsl.scriber_seats', 'dcm.exam_type']);
+                'vsl.laptop_seats', 'vsl.scriber_seats', 'dcm.exam_type',
+                DB::raw('(inv.chief_faculty_pk IS NOT NULL OR inv.invigilator_faculty_pk IS NOT NULL OR inv.assistant_faculty_pk IS NOT NULL OR inv.mts_employee_pk IS NOT NULL) as has_invigilators')]);
 
         $counts = DB::table('coe_seat_allocations')
             ->whereIn('seat_plan_pk', $rows->pluck('seat_plan_pk')->unique()->all())
@@ -1549,6 +1589,8 @@ class VenueAllocationController extends Controller
                 'unallocated' => (int) $r->unallocated_count,
                 // An Offline Objective paper takes no invigilators.
                 'invigilators' => $r->exam_type !== self::OFFLINE_OBJECTIVE,
+                // Add Invigilators becomes Edit Invigilators once someone is assigned.
+                'has_invigilators' => (bool) $r->has_invigilators,
             ];
         });
     }
