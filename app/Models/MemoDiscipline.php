@@ -16,6 +16,9 @@ class MemoDiscipline extends Model
     /** status: 1 Recorded, 2 Memo Sent, 3 Closed (see MemoDisciplineController). */
     public const STATUS_CLOSED = 3;
 
+    /** Not yet closed: Recorded and Memo Sent (the listing's "Open" status filter). */
+    public const OPEN_STATUSES = [1, 2];
+
     /**
      * Marks actually deducted from this OT — the dashboard's "Total Marks Deducted
      * in Discipline".

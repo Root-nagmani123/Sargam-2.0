@@ -34,6 +34,17 @@ class EmployeeIDCardRequestController extends Controller
         DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'EmployeeIDCardRequestController@index');
     }
 
+    /**
+     * "My Pending ID Card Requests" dashboard card: the requests this page lists for the
+     * signed-in user on ?list_status=pending, from the same merged list.
+     */
+    public function dashboardPendingCount(): int
+    {
+        return $this->buildEmployeeIdcardIndexMergedCollection(Request::create('/', 'GET', ['list_status' => 'pending']))
+            ->filter(fn ($r) => ($r->status ?? '') === 'Pending')
+            ->count();
+    }
+
     public function index(Request $request)
     {
         $filter = $request->get('filter', 'all');

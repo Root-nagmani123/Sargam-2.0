@@ -10,7 +10,20 @@
     <!-- Data Table Card -->
     <div class="card shadow-sm">
         <div class="card-body">
-            <p class="text-body-secondary small mb-3">House-wise status: Occupied, Vacant, or Under Renovation.</p>
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                <p class="text-body-secondary small mb-0">House-wise status: Occupied, Vacant, or Under Renovation.</p>
+                {{-- ?status= (a dashboard card) preselects. --}}
+                @php $houseStatusFromUrl = is_string(request()->query('status')) ? request()->query('status') : ''; @endphp
+                <div class="d-flex align-items-center gap-2">
+                    <label for="houseStatusFilter" class="form-label small fw-semibold mb-0">Status</label>
+                    <select id="houseStatusFilter" class="form-select form-select-sm" style="min-width: 11rem;">
+                        <option value="">All</option>
+                        @foreach (['Occupied', 'Vacant', 'Under Renovation'] as $houseStatusOption)
+                        <option value="{{ $houseStatusOption }}" @selected($houseStatusFromUrl === $houseStatusOption)>{{ $houseStatusOption }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
             <div class="table-responsive">
                 <table class="table text-nowrap" id="houseStatusTable">
                     <thead>
@@ -114,6 +127,7 @@ $(document).ready(function() {
                     autoWidth: false,
                     dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>'
                 });
+                applyHouseStatusFilter();
                 // Print button next to search (same row as DataTable filter)
                 var $filter = $('#houseStatusTable_wrapper .dataTables_filter');
                 if ($filter.length && !$('#btnPrintHouseStatus').length) {
@@ -127,6 +141,14 @@ $(document).ready(function() {
             }
         });
     }
+
+    // Exact match on the Status column, so "Vacant" does not also match other labels.
+    function applyHouseStatusFilter() {
+        if (!dataTableInstance) return;
+        var v = $('#houseStatusFilter').val() || '';
+        dataTableInstance.column(10).search(v ? '^' + $.fn.dataTable.util.escapeRegex(v) + '$' : '', true, false).draw();
+    }
+    $('#houseStatusFilter').on('change', applyHouseStatusFilter);
 
     loadHouseStatus();
 

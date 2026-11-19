@@ -226,6 +226,13 @@ $(document).ready(function() {
             loadPendingMeterReading();
         }
     });
+
+    // A dashboard card opens this page on ?bill_month=YYYY-MM: show that month straight away.
+    var urlBillMonth = new URLSearchParams(window.location.search).get('bill_month');
+    if (urlBillMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(urlBillMonth)) {
+        $('#bill_month').val(urlBillMonth);
+        loadPendingMeterReading();
+    }
 });
 </script>
 @endpush

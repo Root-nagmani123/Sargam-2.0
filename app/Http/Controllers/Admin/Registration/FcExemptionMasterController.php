@@ -189,6 +189,22 @@ class FcExemptionMasterController extends Controller
             ->orderBy('Exemption_name')
             ->get();
 
+        $submissions = $this->exemptionListQuery($filter, $typeFilter)->get();
+
+        return view('admin.forms.exemption_datalist', compact('submissions', 'categories', 'filter', 'typeFilter'));
+    }
+
+    /**
+     * FC dashboard cards: the rows exemption_list() shows for ?application_type=$type
+     * (1 = Registration, 2 = Exemption), on that page's own query.
+     */
+    public function dashboardApplicationCount(int $type): int
+    {
+        return $this->exemptionListQuery(null, $type)->count();
+    }
+
+    private function exemptionListQuery($filter, $typeFilter)
+    {
         // Base query
         $query = DB::table('fc_registration_master as r')
             ->leftJoin('fc_exemption_master as e', 'r.fc_exemption_master_pk', '=', 'e.Pk')
@@ -236,9 +252,7 @@ class FcExemptionMasterController extends Controller
             $query->where('r.application_type', intval($typeFilter));
         }
 
-        $submissions = $query->get();
-
-        return view('admin.forms.exemption_datalist', compact('submissions', 'categories', 'filter', 'typeFilter'));
+        return $query;
     }
 
 

@@ -274,12 +274,16 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 <a href="{{ $card['link'] }}" class="text-decoration-none d-block h-100">
                 @endif
                     <div class="card stat-card h-100 p-3">
-                        <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex align-items-center gap-3 stat-card-row">
                             <div class="stat-icon-wrapper {{ $card['color_class'] }}">
-                                <i class="material-symbols-rounded">{{ $card['icon'] }}</i>
+                                <i class="material-symbols-rounded" aria-hidden="true">{{ $card['icon'] }}</i>
                             </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">{{ $card['label'] }}</p>
+                            <div class="stat-card-body flex-grow-1 min-w-0">
+                                {{-- Two lines are reserved for the label, set on its bottom edge,
+                                     so the figure sits right under it and lines up across a row. --}}
+                                <div class="stat-title-box">
+                                    <p class="stat-title" title="{{ $card['label'] }}">{{ $card['label'] }}</p>
+                                </div>
                                 @if($card['show_count'] ?? true)
                                 @php
                                     // Counts are whole numbers and keep their 0-padding, but a

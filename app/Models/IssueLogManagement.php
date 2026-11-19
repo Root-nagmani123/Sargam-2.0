@@ -20,6 +20,9 @@ class IssueLogManagement extends Model
     const STATUS_PENDING = 3;
     const STATUS_REOPENED = 6;
 
+    /** Still needing work: every labelled status except Completed (Centcom "Open" filter). */
+    const OPEN_STATUSES = [self::STATUS_REPORTED, self::STATUS_IN_PROGRESS, self::STATUS_PENDING, self::STATUS_REOPENED];
+
     // Behalf constants
     const BEHALF_CENTCOM = 0; // On behalf (Centcom)
     const BEHALF_SELF = 1; // MySelf

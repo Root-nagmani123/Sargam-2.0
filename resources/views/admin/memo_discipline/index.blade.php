@@ -240,6 +240,7 @@
 
                     <select class="form-select" id="status" name="status" aria-label="Status">
                         <option value="">Status</option>
+                        <option value="open" {{ $statusFilter === 'open' ? 'selected' : '' }} title="Recorded or Memo Sent">Open</option>
                         <option value="1" {{ $statusFilter == '1' ? 'selected' : '' }}>Recorded</option>
                         <option value="2" {{ $statusFilter == '2' ? 'selected' : '' }}>Memo Sent</option>
                         <option value="3" {{ $statusFilter == '3' ? 'selected' : '' }}>Closed</option>

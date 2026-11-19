@@ -101,6 +101,19 @@ class FacultyLeaveApprovalController extends Controller
         ]);
     }
 
+    /**
+     * "Pending Leave Approvals" dashboard card: the rows this page's Pending tab (its
+     * landing view) lists for the signed-in approver, on the page's own query.
+     */
+    public function dashboardPendingCount(): int
+    {
+        if (! $this->approvalService->canUserAccessLeaveApprovals()) {
+            return 0;
+        }
+
+        return $this->baseQuery(Request::create('/', 'GET', ['status' => LeaveApplication::STATUS_PENDING]))->count();
+    }
+
     protected function baseQuery(Request $request)
     {
         $coursePks = $this->approvalService->getAccessibleCourseIds();

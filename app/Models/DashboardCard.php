@@ -60,6 +60,13 @@ class DashboardCard extends Model
 
         return [
             'my_groups' => $notSecurity && $isStudentOT,
+            // Counted only for a Student-OT login; any other holder of the role would see 0.
+            'medical_exception' => $notSecurity && $isStudentOT,
+            'ot_mdo_escort' => $notSecurity && $isStudentOT,
+            // The ID card page lists every request to an admin, so "My ..." would show everyone's.
+            'my_idcard_requests_pending' => ! (hasRole('Admin') || hasRole('SuperAdmin')),
+            // Mess roles already have "Unpaid Mess Bills" (everyone's); "My ..." beside it confused.
+            'my_mess_bills_unpaid' => ! (hasRole('Mess Admin') || hasRole('Mess Billing')),
             'discipline_marks_deducted' => $notSecurity && $isOtUser,
             'pending_feedback' => $notSecurity && $isOtUser,
             'total_sessions' => $notSecurity && $faculty,

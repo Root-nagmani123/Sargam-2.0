@@ -329,9 +329,8 @@ class StudentMedicalExemptionExport implements FromCollection, WithColumnWidths,
         $currentDate = now()->format('Y-m-d');
 
         if ($this->filter === 'active') {
-            $query->whereHas('course', function ($q) use ($currentDate) {
-                $q->where('end_date', '>', $currentDate);
-            });
+            // Same as the listing's Active tab: a course ending today still counts.
+            $query->onRunningCourse();
         } elseif ($this->filter === 'archive') {
             $query->whereHas('course', function ($q) use ($currentDate) {
                 $q->where('end_date', '<', $currentDate);
@@ -350,22 +349,11 @@ class StudentMedicalExemptionExport implements FromCollection, WithColumnWidths,
             $query->where('exemption_category_master_pk', $this->exemptionCategoryFilter);
         }
 
-        if ($this->fromDateFilter || $this->toDateFilter) {
-            if ($this->fromDateFilter && $this->toDateFilter) {
-                $query->where(function ($q) {
-                    $q->where('to_date', '>=', $this->fromDateFilter)
-                      ->orWhereNull('to_date');
-                })
-                ->where('from_date', '<=', $this->toDateFilter);
-            } elseif ($this->fromDateFilter) {
-                $query->where(function ($q) {
-                    $q->where('to_date', '>=', $this->fromDateFilter)
-                      ->orWhereNull('to_date');
-                });
-            } elseif ($this->toDateFilter) {
-                $query->where('from_date', '<=', $this->toDateFilter);
-            }
-        }
+        // Whole days, so an exemption starting later on the last day still counts.
+        $query->overlapping(
+            is_string($this->fromDateFilter) && $this->fromDateFilter !== '' ? $this->fromDateFilter : null,
+            is_string($this->toDateFilter) && $this->toDateFilter !== '' ? $this->toDateFilter : null
+        );
 
         if ($this->search && $this->search != '') {
             $query->where(function ($q) {

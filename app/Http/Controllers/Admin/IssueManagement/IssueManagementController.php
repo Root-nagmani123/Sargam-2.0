@@ -253,8 +253,13 @@ class IssueManagementController extends Controller
         }
 
         // Single list: all complaints. Status filter only when user selects from dropdown.
+        // "open" = every status but Completed (the Employee dashboard card links here with it).
         if ($request->filled('status')) {
-            $query->where('issue_status', (int) $request->status);
+            if ($request->status === 'open') {
+                $query->whereIn('issue_status', IssueLogManagement::OPEN_STATUSES);
+            } else {
+                $query->where('issue_status', (int) $request->status);
+            }
         }
 
         $applyFilters($query);
@@ -855,7 +860,9 @@ class IssueManagementController extends Controller
         }
         if (isset($filters['status']) && $filters['status'] !== '') {
             $statusLabels = [0 => 'Reported', 1 => 'In Progress', 2 => 'Completed', 3 => 'Pending', 6 => 'Reopened'];
-            $labels['status'] = $statusLabels[(int) $filters['status']] ?? $filters['status'];
+            $labels['status'] = $filters['status'] === 'open'
+                ? 'Open (not completed)'
+                : ($statusLabels[(int) $filters['status']] ?? $filters['status']);
         }
         if (!empty($filters['category'])) {
             $cat = IssueCategoryMaster::find($filters['category']);
@@ -929,8 +936,13 @@ class IssueManagementController extends Controller
         // pinned to status 0 and an assigned complaint in any other state
         // vanished from this grid while still showing on All Requests.
         // filled() drops null and "" and keeps "0", which is what "Reported" needs.
+        // "open" = every status but Completed (the Centcom dashboard card links here with it).
         if ($request->filled('status')) {
-            $query->where('issue_status', (int) $request->status);
+            if ($request->status === 'open') {
+                $query->whereIn('issue_status', IssueLogManagement::OPEN_STATUSES);
+            } else {
+                $query->where('issue_status', (int) $request->status);
+            }
         }
 
         if ($request->filled('category')) {
@@ -1058,6 +1070,36 @@ class IssueManagementController extends Controller
      * Rows arrive over ajax from {@see centcomData()}, so this renders no issues
      * and runs no listing query; the filters below only need their options.
      */
+    /**
+     * Centcom dashboard cards: how many complaints the Centcom Assigned grid lists for the
+     * signed-in user with ?status=$status, on the grid's own query.
+     */
+    public function dashboardCentcomCount(string $status): int
+    {
+        return (int) $this->issueManagementCentcomFilteredQuery(Request::create('/', 'GET', ['status' => $status]))
+            ->toBase()->getCountForPagination();
+    }
+
+    /**
+     * "My Open Issues" dashboard card: what the All Requests grid lists on its "Raised By You"
+     * tab with ?status=open, on the grid's own query.
+     */
+    /**
+     * "All Open Complaints" dashboard card (Super Admin): what the All Requests grid lists on
+     * ?status=open - every complaint for an admin, the user's own for anyone else.
+     */
+    public function dashboardAllOpenCount(): int
+    {
+        return (int) $this->issueManagementIndexFilteredQuery(Request::create('/', 'GET', ['status' => 'open']))
+            ->toBase()->getCountForPagination();
+    }
+
+    public function dashboardMyOpenIssuesCount(): int
+    {
+        return (int) $this->issueManagementIndexFilteredQuery(Request::create('/', 'GET', ['raised_by' => 'self', 'status' => 'open']))
+            ->toBase()->getCountForPagination();
+    }
+
     public function centcom(Request $request)
     {
         $categories = IssueCategoryMaster::active()->get();

@@ -49,6 +49,22 @@ class CourseRepositoryController extends Controller
      * GET /course-repository
      * Optional parent_pk query parameter to show children of a specific parent
      */
+    /** The folders this page lists at its root: not deleted, no parent. */
+    private function rootRepositoriesQuery()
+    {
+        return CourseRepositoryMaster::where('del_folder_status', 1)
+            ->where(function ($query) {
+                $query->whereNull('parent_type')
+                    ->orWhere('parent_type', 0);
+            });
+    }
+
+    /** "Course Repository Folders" dashboard card: the folders index() lists at its root. */
+    public function dashboardRootFolderCount(): int
+    {
+        return $this->rootRepositoriesQuery()->count();
+    }
+
     public function index(Request $request)
     {
         try {
@@ -88,11 +104,7 @@ class CourseRepositoryController extends Controller
                 }
             } else {
                 // Show only root repositories (no parent or parent_type = 0)
-                $repositories = CourseRepositoryMaster::where('del_folder_status', 1)
-                    ->where(function($query) {
-                        $query->whereNull('parent_type')
-                              ->orWhere('parent_type', 0);
-                    })
+                $repositories = $this->rootRepositoriesQuery()
                     ->with(['children', 'documents'])
                     ->orderBy('created_date', 'desc')
                     ->get();

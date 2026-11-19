@@ -542,6 +542,41 @@ class UserController extends Controller
             'protocol_pending_my_action'    => ['count' => $protocolCounts['pending'],          'link' => $isProtocolStaff ? route('protocol.approval.queue') : null,                        'visible' => $isProtocolStaff],
             'protocol_recommend_action'     => ['count' => $protocolCounts['recommended'],      'link' => $isProtocolStaff ? route('protocol.requests.all', ['status' => 'recommended']) : null,                         'visible' => $isProtocolStaff],
             'my_protocol_request'         => ['count' => $myProtocolCount,                    'link' => $canRaiseProtocol ? route('protocol.requests.my') : null,                          'visible' => $canRaiseProtocol],
+            // Doctor: exemptions covering today on running courses. Opens the exemption
+            // listing filtered to Today (Active tab), which lists exactly these rows.
+            'medical_exemptions_today' => ['count' => fn () => StudentMedicalExemption::onRunningCourse()->overlapping(now()->toDateString(), now()->toDateString())->count(), 'link' => route('student.medical.exemption.index', ['from_date' => now()->toDateString(), 'to_date' => now()->toDateString()])],
+            // Mess cards. Each counts on the query of the page it opens, so the tile and the
+            // page's rows agree; closures, because the low-stock and bills counts are heavy.
+            'mess_pending_purchase_orders' => ['count' => fn () => \App\Models\Mess\PurchaseOrder::where('status', 'pending')->count(), 'link' => route('admin.mess.purchaseorders.index', ['status' => 'pending'])],
+            'mess_low_stock_items'         => ['count' => fn () => count(\App\Http\Controllers\Mess\ReportController::getLowStockAlertItems(now()->toDateString(), null)), 'link' => route('admin.mess.reports.low-stock')],
+            'mess_unpaid_bills'            => ['count' => fn () => app(\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class)->dashboardBillCount('unpaid'), 'link' => route('admin.mess.process-mess-bills-employee.index', ['status' => 'unpaid'])],
+            'mess_items_sold_today'        => ['count' => fn () => app(\App\Http\Controllers\Mess\KitchenIssueController::class)->dashboardItemsSoldTodayCount(), 'link' => route('admin.mess.material-management.index', ['start_date' => now()->toDateString(), 'end_date' => now()->toDateString()])],
+            // Estate cards: each counts the rows the page it opens lists, on that page's own query.
+            'estate_pending_requests'      => ['count' => fn () => $this->dataTableRowCount(\App\DataTables\EstateRequestForEstateDataTable::class, \App\Models\EstateHomeRequestDetails::class, ['status_filter' => '0']), 'link' => route('admin.estate.request-for-estate', ['status_filter' => '0'])],
+            'estate_put_in_hac'            => ['count' => fn () => $this->dataTableRowCount(\App\DataTables\EstateRequestPutInHacDataTable::class, \App\Models\EstateHomeRequestDetails::class), 'link' => route('admin.estate.put-in-hac')],
+            'estate_hac_pending'           => ['count' => fn () => $this->dataTableRowCount(\App\DataTables\EstateHacApprovedDataTable::class, \App\Models\EstateHacApprovedRow::class, ['status_filter' => 'pending']), 'link' => route('admin.estate.change-request-hac-approved', ['status_filter' => 'pending'])],
+            'estate_vacant_houses'         => ['count' => fn () => collect(app(\App\Http\Controllers\Admin\EstateController::class)->getHouseStatusData(request())->getData(true)['data'] ?? [])->where('status', 'Vacant')->count(), 'link' => route('admin.estate.reports.house-status', ['status' => 'Vacant'])],
+            // Training: the leave approval page's landing (Pending) tab, and the discipline memo
+            // listing on its "Open" status across all dates; each counted on that page's query.
+            'pending_leave_approvals'      => ['count' => fn () => app(\App\Http\Controllers\Admin\FacultyLeaveApprovalController::class)->dashboardPendingCount(), 'link' => route('faculty.leave-approval.index')],
+            'open_discipline_memos'        => ['count' => fn () => app(\App\Http\Controllers\Admin\MemoDisciplineController::class)->dashboardOpenCount(), 'link' => route('memo.discipline.index', ['status' => 'open', 'from_date' => '', 'to_date' => ''])],
+            // FC: Applications Registration Exemption page filtered by application type (totals,
+            // all time: the register has no pending state).
+            'fc_registration_applications' => ['count' => fn () => app(\App\Http\Controllers\Admin\Registration\FcExemptionMasterController::class)->dashboardApplicationCount(1), 'link' => route('exemptions.datalist', ['application_type' => 1])],
+            'fc_exemption_applications'    => ['count' => fn () => app(\App\Http\Controllers\Admin\Registration\FcExemptionMasterController::class)->dashboardApplicationCount(2), 'link' => route('exemptions.datalist', ['application_type' => 2])],
+            // Employee self-service: the signed-in user's own items, each counted on the page it opens.
+            'my_idcard_requests_pending'   => ['count' => fn () => app(\App\Http\Controllers\Admin\EmployeeIDCardRequestController::class)->dashboardPendingCount(), 'link' => route('admin.employee_idcard.index', ['list_status' => 'pending'])],
+            'my_estate_requests_pending'   => ['count' => fn () => $this->dataTableRowCount(\App\DataTables\EstateRequestForEstateDataTable::class, \App\Models\EstateHomeRequestDetails::class, ['scope' => 'self', 'status_filter' => '0']), 'link' => route('admin.estate.request-for-estate', ['scope' => 'self', 'status_filter' => '0'])],
+            'my_mess_bills_unpaid'         => ['count' => fn () => app(\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class)->dashboardMyUnpaidCount(), 'link' => route('admin.mess.my-bills.index')],
+            'my_open_issues'               => ['count' => fn () => app(\App\Http\Controllers\Admin\IssueManagement\IssueManagementController::class)->dashboardMyOpenIssuesCount(), 'link' => route('admin.issue-management.index', ['raised_by' => 'self', 'status' => 'open'])],
+            'pending_feedback_students'    => ['count' => fn () => app(\App\Http\Controllers\Admin\FeedbackController::class)->dashboardPendingStudentsCount(), 'link' => route('admin.feedback.pending.students')],
+            'course_repository_folders'    => ['count' => fn () => app(\App\Http\Controllers\Admin\CourseRepositoryController::class)->dashboardRootFolderCount(), 'link' => route('course-repository.index')],
+            // Centcom: the complaints the Centcom Assigned grid lists for this user (nodal officer
+            // or handler), counted on that grid's query with the status the link selects.
+            'centcom_open_complaints'      => ['count' => fn () => app(\App\Http\Controllers\Admin\IssueManagement\IssueManagementController::class)->dashboardCentcomCount('open'), 'link' => route('admin.issue-management.centcom', ['status' => 'open'])],
+            'centcom_all_open_complaints'  => ['count' => fn () => app(\App\Http\Controllers\Admin\IssueManagement\IssueManagementController::class)->dashboardAllOpenCount(), 'link' => route('admin.issue-management.index', ['status' => 'open'])],
+            'centcom_reported_complaints'  => ['count' => fn () => app(\App\Http\Controllers\Admin\IssueManagement\IssueManagementController::class)->dashboardCentcomCount('0'), 'link' => route('admin.issue-management.centcom', ['status' => '0'])],
+            'estate_pending_meter_readings' => ['count' => fn () => count(app(\App\Http\Controllers\Admin\EstateController::class)->getPendingMeterReadingData(Request::create('/', 'GET', ['bill_month' => now()->format('Y-m'), 'bill_year' => now()->format('Y')]))->getData(true)['data'] ?? []), 'link' => route('admin.estate.reports.pending-meter-reading', ['bill_month' => now()->format('Y-m')])],
         ];
 
         // Count map for custom cards added via UI.
@@ -594,7 +629,8 @@ class UserController extends Controller
                 'icon' => $card->icon,
                 'color_class' => $card->color_class,
                 'link'        => $def['link'] ?? null,
-                'count'       => $def['count'] ?? ($cardCounts[$card->key] ?? 0),
+                // A closure count runs only here, for a card this user actually sees.
+                'count'       => value($def['count'] ?? ($cardCounts[$card->key] ?? 0)),
                 // A definition that omits 'count' is a card that opens something
                 // rather than counting it (the timetables) — it renders as a tile
                 // with no number, not as a zero.
@@ -1628,6 +1664,24 @@ class UserController extends Controller
             'feedExpandedWishes',
             'notificationBadgeCount'
         );
+    }
+
+    /**
+     * Rows a Yajra DataTable lists (its recordsTotal) for the query params $params: the
+     * class's own query(), which reads request(), built while the request carries $params.
+     * The request's query string is put back afterwards.
+     */
+    private function dataTableRowCount(string $dataTable, string $model, array $params = []): int
+    {
+        $query = request()->query;
+        $saved = $query->all();
+        $query->add($params);
+
+        try {
+            return DB::query()->fromSub(app($dataTable)->query(new $model), 'dt_rows')->count();
+        } finally {
+            $query->replace($saved);
+        }
     }
 
     /**
