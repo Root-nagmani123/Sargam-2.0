@@ -442,7 +442,8 @@ $(function () {
     // Someone who cannot be picked here (see invSync) is left out of the list, not just greyed.
     function invSelect2($s) {
         $s.select2({
-            width: '100%', dropdownParent: $invBody,
+            // On the modal itself, not the scrolling body: a list opened on a short body was clipped.
+            width: '100%', dropdownParent: $invModal,
             templateResult: function (o) { return o.element && o.element.disabled && o.element.value !== '' ? null : o.text; }
         });
     }
@@ -618,7 +619,8 @@ $(function () {
     var RANGE = 50;        // OT Roll No. quick picks: blocks of this many
 
     function select2On($s) {
-        $s.select2({ width: '100%', dropdownParent: $body, placeholder: $s.data('placeholder') || '' });
+        // On the modal itself, not the scrolling body, so a list near the bottom is never clipped.
+        $s.select2({ width: '100%', dropdownParent: $mapModal, placeholder: $s.data('placeholder') || '' });
     }
     select2On($drive);
 
