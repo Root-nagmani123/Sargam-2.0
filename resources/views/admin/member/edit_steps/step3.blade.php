@@ -4,6 +4,11 @@
     // editStep() passes the offered options the login actually holds, so a role changed on
     // Role & Permission > Users shows here too. Any other caller keeps the mapping.
     $selectedRoles = old('userrole', $selectedRoleOptions ?? $memberRoles);
+    // The offered options displayed ticked, posted back so update() revokes only a role the
+    // administrator saw ticked and unticked, not one granted after this form was rendered.
+    $tickedAtRender = $userRoleOptions->keys()
+        ->filter(fn ($pk) => in_array($pk, (array) $selectedRoles))
+        ->implode(',');
 @endphp
 <div class="row">
     <div class="col-12">
@@ -12,6 +17,7 @@
                  nothing, so without it "nothing ticked" and "step never loaded" look the same
                  (PR #343 review, F-013). --}}
             <input type="hidden" name="userrole_step_shown" value="1">
+            <input type="hidden" name="userrole_ticked_at_render" value="{{ $tickedAtRender }}">
             <label class="form-label" for="role">Role Option <span class="text-danger">*</span></label>
             <div class="controls">
                 <div class="mbrw-role-grid">

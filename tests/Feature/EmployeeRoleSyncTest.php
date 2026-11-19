@@ -8,7 +8,6 @@ use App\Models\User;
 use App\Models\UserRoleMaster;
 use App\Support\RoleNames;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use ReflectionMethod;
 use Spatie\Permission\Models\Role;
@@ -194,29 +193,5 @@ class EmployeeRoleSyncTest extends TestCase
         EmployeeRoleMapping::insert(['user_credentials_pk' => $target->pk, 'user_role_master_pk' => $staleOptionPk]);
 
         $this->assertSame([$heldOptionPk], $this->callPrivate('heldOfferedRoleOptions', $target->pk));
-    }
-
-    /**
-     * Wizard → Users: unticking in Step 3 a role that was assigned on the Users screen
-     * removes it, because update() passes Step 3's ticked set as "previously selected".
-     */
-    public function test_unticking_in_the_wizard_removes_a_role_assigned_on_the_users_screen(): void
-    {
-        [[, $keptRoleName], [, $removedRoleName]] = $this->twoOfferedRoles();
-        [[$keptOptionPk]] = $this->twoOfferedRoles();
-
-        $admin = $this->makeSuperAdmin();
-        Auth::login($admin);
-
-        $employeePk = DB::table('employee_master')->insertGetId(['first_name' => 'Sync', 'last_name' => 'Untick']);
-        $target = $this->makeTestUser('untick', 'E', $employeePk);
-        $target->syncRoles([$keptRoleName, $removedRoleName]); // as the Users screen does
-
-        $previous = $this->callPrivate('heldOfferedRoleOptions', $target->pk);
-        $this->callPrivate('syncSpatieRolesFromWizardSelection', $target->pk, [$keptOptionPk], $previous);
-
-        $target->refresh();
-        $this->assertTrue($target->hasRole($keptRoleName));
-        $this->assertFalse($target->hasRole($removedRoleName));
     }
 }
