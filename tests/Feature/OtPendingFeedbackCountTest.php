@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\Admin\UserController;
 use App\Models\User;
+use App\Support\FeedbackReportCache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
@@ -69,7 +70,19 @@ class OtPendingFeedbackCountTest extends TestCase
         ]);
     }
 
+    /**
+     * The count as the SQL computes it. It is cached for TTL_STATS and these fixtures are raw
+     * writes that bypass the submit path's bust, so retire the cached value first.
+     */
     private function pending(): int
+    {
+        FeedbackReportCache::bust();
+
+        return $this->cachedPending();
+    }
+
+    /** The count as the dashboard reads it, cache included. */
+    private function cachedPending(): int
     {
         $method = new \ReflectionMethod(UserController::class, 'getOtPendingFeedbackCount');
         $method->setAccessible(true);
@@ -90,8 +103,10 @@ class OtPendingFeedbackCountTest extends TestCase
             'topic_name' => 'F-075 session', 'is_submitted' => 0,
         ]);
         $this->assertSame(1, $this->pending(), 'drafts are still pending');
+        $this->assertSame(1, $this->cachedPending(), 'control: the count is now cached');
         DB::table('topic_feedback')->where('timetable_pk', $pk)->update(['is_submitted' => 1]);
-        $this->assertSame(0, $this->pending(), 'submission is reflected immediately');
+        FeedbackReportCache::bust(); // what the submit action (CalendarController) does after inserting feedback
+        $this->assertSame(0, $this->cachedPending(), 'submission is reflected immediately');
     }
 
     public function test_master_shapes_preserve_the_original_string_membership_rule(): void

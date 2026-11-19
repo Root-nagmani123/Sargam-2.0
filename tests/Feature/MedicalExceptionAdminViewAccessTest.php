@@ -208,10 +208,13 @@ class MedicalExceptionAdminViewAccessTest extends TestCase
 
     public function test_the_migration_reruns_cleanly_and_rolls_back_to_the_rows_it_found(): void
     {
+        $migration = require base_path('database/migrations/2026_10_12_000001_put_screen_permissions_on_their_menu_rows.php');
+        // Start from the pre-migration rows: on a database that has already run it, the rows
+        // found would otherwise be the migrated ones, which down() rightly does not restore.
+        $migration->down();
         $before = DB::table('menus')->whereIn('route', ['medical-exception-faculty-view', 'master/mdo'])
             ->orderBy('id')->get(['id', 'permission_name', 'is_active']);
         $this->runMenuMigration();
-        $migration = require base_path('database/migrations/2026_10_12_000001_put_screen_permissions_on_their_menu_rows.php');
         $migration->up();
         $this->assertSame(1, DB::table('menus')->where('permission_name', self::PERMISSION)->count(), 'one row after a re-run');
 

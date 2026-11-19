@@ -45,20 +45,93 @@
         ? ['scope' => 'self']
         : [];
 @endphp
-<div class="estate-workflow-stepper mb-4" role="navigation" aria-label="Estate workflow flow">
-    <div class="alert alert-light border rounded-3 mb-0 py-2 px-3">
-        <p class="small text-muted mb-2"><i class="bi bi-arrow-repeat me-1"></i><strong>Workflow:</strong> All new entries follow this flow</p>
-        <nav class="d-flex flex-wrap align-items-center gap-1 gap-sm-2">
-            @foreach ($stages as $key => $stage)
+{{-- Figma "Workflow for New Entries" card: caption over a hairline, then one pill
+     per stage (current = brand tint) joined by arrow_forward_ios chevrons. --}}
+<nav class="estate-workflow-stepper mb-3" aria-label="Workflow for new entries">
+    <p class="estate-workflow-stepper__caption">Workflow for New Entries</p>
+    <ol class="estate-workflow-stepper__steps">
+        @foreach ($stages as $key => $stage)
+            <li class="estate-workflow-stepper__item">
                 @if ($key === $current)
-                    <span class="badge bg-primary px-2 py-1">{{ $stage['label'] }}</span>
+                    <span class="estate-workflow-stepper__step is-current" aria-current="step">{{ $stage['label'] }}</span>
                 @else
-                    <a href="{{ route($stage['route'], $estateStepperRouteParams) }}" class="badge bg-light text-dark border px-2 py-1 text-decoration-none">{{ $stage['label'] }}</a>
+                    <a href="{{ route($stage['route'], $estateStepperRouteParams) }}" class="estate-workflow-stepper__step">{{ $stage['label'] }}</a>
                 @endif
                 @if (!$loop->last)
-                    <i class="bi bi-chevron-right text-muted small" aria-hidden="true"></i>
+                    <i class="material-icons material-symbols-rounded estate-workflow-stepper__sep" aria-hidden="true">arrow_forward_ios</i>
                 @endif
-            @endforeach
-        </nav>
-    </div>
-</div>
+            </li>
+        @endforeach
+    </ol>
+</nav>
+
+@once
+@push('styles')
+<style>
+    .estate-workflow-stepper {
+        display: flex;
+        flex-direction: column;
+        gap: 0.9375rem;
+        padding: 0.9375rem var(--ds-space-4);
+        background: var(--ds-surface);
+        border-radius: var(--ds-radius-card);
+    }
+
+    .estate-workflow-stepper__caption {
+        margin: 0;
+        padding-bottom: var(--ds-space-1);
+        border-bottom: 1px solid var(--ds-line);
+        font-size: 0.75rem;
+        line-height: 0.875rem;
+        color: var(--ds-ink);
+    }
+
+    .estate-workflow-stepper__steps {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.3125rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .estate-workflow-stepper__item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3125rem;
+    }
+
+    .estate-workflow-stepper__step {
+        display: inline-block;
+        padding: 0.3125rem 0.75rem;
+        border-radius: 1.125rem;
+        background: var(--ds-surface-2);
+        font-size: 0.75rem;
+        font-weight: 500;
+        line-height: 1.125rem;
+        color: var(--ds-ink);
+        text-decoration: none;
+    }
+
+    a.estate-workflow-stepper__step:hover {
+        color: var(--ds-primary);
+    }
+
+    a.estate-workflow-stepper__step:focus-visible {
+        outline: 0;
+        box-shadow: var(--ds-focus-ring);
+    }
+
+    .estate-workflow-stepper__step.is-current {
+        background: rgba(var(--bs-primary-rgb), 0.1);
+        color: var(--ds-primary);
+    }
+
+    .estate-workflow-stepper__sep {
+        font-size: 0.836rem;
+        color: var(--ds-ink-muted);
+    }
+</style>
+@endpush
+@endonce

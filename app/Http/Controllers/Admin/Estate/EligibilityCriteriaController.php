@@ -10,27 +10,42 @@ use App\Models\UnitType;
 use App\Models\UnitSubType;
 use App\DataTables\EligibilityCriteriaDataTable;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class EligibilityCriteriaController extends Controller
 {
     use AuthorizesEstateMaster;
 
+    /**
+     * Option lists for the Pay Scale / Unit Type / Unit Sub Type dropdowns — one
+     * definition for the index (Add / Edit modal) and the full-page form.
+     *
+     * @return array{payScales: Collection, unitTypes: Collection, unitSubTypes: Collection}
+     */
+    private function formOptions(): array
+    {
+        return [
+            'payScales' => SalaryGrade::whereNotNull('salary_grade')
+                ->where('salary_grade', '!=', '')
+                ->orderBy('pk')
+                ->get()
+                ->mapWithKeys(fn ($p) => [$p->pk => $p->display_label_text]),
+            'unitTypes' => UnitType::orderBy('unit_type')->pluck('unit_type', 'pk'),
+            'unitSubTypes' => UnitSubType::orderBy('unit_sub_type')->pluck('unit_sub_type', 'pk'),
+        ];
+    }
+
     public function index(EligibilityCriteriaDataTable $dataTable)
     {
-        return $dataTable->render('admin.estate.eligibility_criteria.index');
+        // Add / Edit is a modal on the index, so the option lists render with it.
+        return $dataTable->render('admin.estate.eligibility_criteria.index', $this->formOptions());
     }
 
     public function create()
     {
         $item = null;
-        $payScales = SalaryGrade::whereNotNull('salary_grade')
-            ->where('salary_grade', '!=', '')
-            ->orderBy('pk')
-            ->get()
-            ->mapWithKeys(fn ($p) => [$p->pk => $p->display_label_text]);
-        $unitTypes = UnitType::orderBy('unit_type')->pluck('unit_type', 'pk');
-        $unitSubTypes = UnitSubType::orderBy('unit_sub_type')->pluck('unit_sub_type', 'pk');
-        return view('admin.estate.eligibility_criteria.form', compact('item', 'payScales', 'unitTypes', 'unitSubTypes'));
+
+        return view('admin.estate.eligibility_criteria.form', ['item' => $item] + $this->formOptions());
     }
 
     public function store(Request $request)
@@ -47,14 +62,8 @@ class EligibilityCriteriaController extends Controller
     public function edit(string $id)
     {
         $item = EligibilityCriterion::findOrFail($id);
-        $payScales = SalaryGrade::whereNotNull('salary_grade')
-            ->where('salary_grade', '!=', '')
-            ->orderBy('pk')
-            ->get()
-            ->mapWithKeys(fn ($p) => [$p->pk => $p->display_label_text]);
-        $unitTypes = UnitType::orderBy('unit_type')->pluck('unit_type', 'pk');
-        $unitSubTypes = UnitSubType::orderBy('unit_sub_type')->pluck('unit_sub_type', 'pk');
-        return view('admin.estate.eligibility_criteria.form', compact('item', 'payScales', 'unitTypes', 'unitSubTypes'));
+
+        return view('admin.estate.eligibility_criteria.form', ['item' => $item] + $this->formOptions());
     }
 
     public function update(Request $request, string $id)

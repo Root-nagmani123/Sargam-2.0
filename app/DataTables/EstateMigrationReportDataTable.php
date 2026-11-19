@@ -2,6 +2,7 @@
 
 namespace App\DataTables;
 
+use App\DataTables\Concerns\AppliesHeaderSort;
 use App\Models\EstateMigrationReport;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Yajra\DataTables\EloquentDataTable;
@@ -11,6 +12,8 @@ use Yajra\DataTables\Services\DataTable;
 
 class EstateMigrationReportDataTable extends DataTable
 {
+    use AppliesHeaderSort;
+
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
@@ -28,6 +31,7 @@ class EstateMigrationReportDataTable extends DataTable
             ->editColumn('occupancy_status', fn ($row) => $row->occupancy_status ?? '—')
             ->editColumn('stay_period_text', fn ($row) => $row->stay_period_text ?? '—')
             ->setRowId('id')
+            ->order(fn ($query) => $this->applyHeaderSort($query, 'id'))
             ->filter(function ($query) {
                 $req = request();
                 if ($req->filled('filter_allotment_year')) {
@@ -136,17 +140,17 @@ class EstateMigrationReportDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
+            Column::computed('DT_RowIndex')->title('S. No.')->addClass('text-center')->orderable(false)->searchable(false)->width('50px'),
             Column::make('allotment_year')->title('Allotment Year')->orderable(true)->searchable(true),
             Column::make('campus_name')->title('Campus Name')->orderable(true)->searchable(true),
             Column::make('building_name')->title('Building Name')->orderable(true)->searchable(true),
-            Column::make('type_of_building')->title('Type of Building')->orderable(true)->searchable(true),
-            Column::make('house_no')->title('House No.')->orderable(true)->searchable(true),
+            Column::make('type_of_building')->title('Building Type')->orderable(true)->searchable(true),
+            Column::make('house_no')->title('House Number')->orderable(true)->searchable(true),
             Column::make('employee_name')->title('Employee Name')->orderable(true)->searchable(true),
             Column::make('department_name')->title('Department')->orderable(true)->searchable(true),
             Column::make('employee_type')->title('Employee Type')->orderable(true)->searchable(true),
-            Column::make('date_of_allotment')->title('Date of Allotment')->orderable(true)->searchable(false),
-            Column::make('date_of_exit')->title('Date of Exit')->orderable(true)->searchable(false),
+            Column::make('date_of_allotment')->title('Allotment Date')->orderable(true)->searchable(false),
+            Column::make('date_of_exit')->title('Exit Date')->orderable(true)->searchable(false),
             Column::make('occupancy_status')->title('Occupancy Status')->orderable(true)->searchable(true),
             Column::make('stay_period_text')->title('Stay Period')->orderable(true)->searchable(true),
         ];

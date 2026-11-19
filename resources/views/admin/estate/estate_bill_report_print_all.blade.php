@@ -209,38 +209,54 @@
     font-size: 9pt; font-weight: 700; text-align: center; color: #1e3a5f;
 }
 .bill-footer .sign-sub { font-size: 8pt; margin-top: 2px; color: #718096; }
+
+/* ── Print All Estate Bills — screen chrome only (namespaced .ebpa-page, §7),
+   built on the --ds-* tokens (design.md Layer A). Everything it styles carries
+   `no-print`, so the A4 bills are unaffected. ── */
+.ebpa-page .ebpa-secondary-actions .btn i { font-size: 1rem; line-height: 1; }
+.ebpa-page .ebpa-note {
+    font-size: 0.8125rem;
+    color: var(--ds-ink-muted, #667085);
+}
 </style>
-<div class="container-fluid">
+<div class="container-fluid ebpa-page">
     <div class="no-print">
         <x-breadcrum title="Print All Estate Bills"></x-breadcrum>
     </div>
 
     @if($bills->isNotEmpty())
-    <div class="no-print card shadow-sm border-0 rounded-3 mb-4">
-        <div class="card-body p-4">
-            <p class="text-muted mb-3">
-                @if(!empty($isSelectedPrint))
-                    Selected {{ $bills->count() }} bill(s) are shown below. You can print all selected bills at once.
-                @else
-                    All {{ $bills->count() }} bill(s) for the selected month and unit type are shown below. You can print them all at once or download as a single PDF.
-                @endif
-            </p>
-            <div class="d-flex flex-wrap gap-2 align-items-center">
-                @if(empty($isSelectedPrint))
-                <a href="{{ route('admin.estate.reports.bill-report-print-all-pdf', ['bill_month' => $billMonth, 'unit_sub_type_pk' => $unitSubTypePk]) }}" class="btn btn-danger d-inline-flex align-items-center gap-2" target="_blank" rel="noopener">
-                    <i class="material-symbols-rounded" style="font-size: 1.2rem;">picture_as_pdf</i>
-                    Download PDF
-                </a>
-                @endif
-                <button type="button" class="btn btn-success d-inline-flex align-items-center gap-2" onclick="window.print();" title="Print all bills at once">
-                    <i class="material-symbols-rounded" style="font-size: 1.2rem;">print</i>
-                    Print All at Once
-                </button>
-                <a href="{{ $backUrl ?? route('admin.estate.generate-estate-bill', ['bill_month' => $billMonth, 'unit_sub_type_pk' => $unitSubTypePk]) }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
-                    <i class="material-symbols-rounded" style="font-size: 1rem;">arrow_back</i>
-                    Back to Generate Bill
-                </a>
-            </div>
+    {{-- Screen chrome only — the row carries `no-print`, so the A4 output below
+         is untouched. Actions sit above the bills, right-aligned, as the export
+         row does on the index pages (new-design-index-page.md §1). --}}
+    <div
+        class="no-print d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 ebpa-secondary-actions">
+        <p class="ebpa-note mb-0">
+            @if(!empty($isSelectedPrint))
+                Selected <strong>{{ $bills->count() }}</strong> bill(s) are shown below — print them all at once.
+            @else
+                All <strong>{{ $bills->count() }}</strong> bill(s) for the selected month and unit type are shown below —
+                print them at once or download as a single PDF.
+            @endif
+        </p>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <a href="{{ $backUrl ?? route('admin.estate.generate-estate-bill', ['bill_month' => $billMonth, 'unit_sub_type_pk' => $unitSubTypePk]) }}"
+                class="btn programme-dt-btn-columns border-0 text-primary" title="Back to Generate Estate Bill">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                <span>Back</span>
+            </a>
+            @if(empty($isSelectedPrint))
+            <a href="{{ route('admin.estate.reports.bill-report-print-all-pdf', ['bill_month' => $billMonth, 'unit_sub_type_pk' => $unitSubTypePk]) }}"
+                class="btn programme-dt-btn-columns border-0 text-primary" target="_blank" rel="noopener"
+                title="Download all bills as a single PDF">
+                <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+                <span>Download PDF</span>
+            </a>
+            @endif
+            <button type="button" class="btn programme-dt-btn-columns border-0 text-primary" onclick="window.print();"
+                title="Print all bills at once">
+                <i class="bi bi-printer" aria-hidden="true"></i>
+                <span>Print All</span>
+            </button>
         </div>
     </div>
 
@@ -250,11 +266,15 @@
         @endforeach
     </div>
     @else
-    <div class="no-print card shadow-sm">
-        <div class="card-body text-center py-5">
-            <p class="text-muted mb-2">No bills found for the selected filters.</p>
-            <a href="{{ route('admin.estate.generate-estate-bill') }}" class="btn btn-primary">Back to Generate Estate Bill</a>
-        </div>
+    <div class="no-print ds-empty-state">
+        <i class="material-symbols-rounded" style="font-size: 3rem;">receipt_long</i>
+        <p class="mb-1">No bills found</p>
+        <p class="small mb-3">No bills are available for the selected filters.</p>
+        <a href="{{ route('admin.estate.generate-estate-bill') }}"
+            class="btn programme-dt-btn-columns border-0 text-primary">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+            <span>Back to Generate Estate Bill</span>
+        </a>
     </div>
     @endif
 </div>

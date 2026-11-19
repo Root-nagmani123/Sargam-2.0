@@ -42,6 +42,9 @@ class TrainingInductionUserManagementGrantTest extends TestCase
     public function test_the_migration_restores_both_screens_for_training_induction(): void
     {
         $role = $this->role();
+        // Start from the pre-migration grants: a database that has already run the
+        // migration would otherwise fail the baseline below for that reason alone.
+        $this->migration()->down();
         $actor = $this->actorHoldingOnly($role);
 
         foreach (array_keys(self::SCREENS) as $route) {

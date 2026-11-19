@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Admin\NoticeNotificationController;
 use App\Models\User;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -25,26 +26,6 @@ class NoticeAuthoringAuthorisationTest extends TestCase
     use RollsBackAgainstAppDatabase;
 
     private const PAYLOAD = '<p>PR334-SAFE-TEXT</p><img src=x onerror=alert(334334)><script>window.pr334=1</script>';
-
-    /** A staff login whose ONLY role is $role. */
-    private function staffWithOnlyRole(string $role): User
-    {
-        $roleId = DB::table('roles')->where('name', $role)->value('id');
-        $pk = $roleId ? DB::table('user_credentials as u')
-            ->where('u.user_category', '!=', 'S')
-            ->whereExists(fn ($q) => $q->from('model_has_roles as m')->whereColumn('m.model_id', 'u.pk')
-                ->where('m.model_type', User::class)->where('m.role_id', $roleId))
-            ->whereNotExists(fn ($q) => $q->from('model_has_roles as m')->whereColumn('m.model_id', 'u.pk')
-                ->where('m.model_type', User::class)->where('m.role_id', '!=', $roleId))
-            ->orderBy('u.pk')
-            ->value('u.pk') : null;
-
-        if (! $pk) {
-            $this->markTestSkipped("no staff login holding only the '{$role}' role");
-        }
-
-        return User::findOrFail($pk);
-    }
 
     /** A staff login holding admin_notice through a role (Training-Induction on the dev copy), not Super Admin. */
     private function noticeAuthor(): User
@@ -146,9 +127,39 @@ class NoticeAuthoringAuthorisationTest extends TestCase
         $this->assertRefusedEverywhere($this->officerTrainee());
     }
 
-    public function test_an_employee_is_refused_every_notice_action_and_lookup(): void
+    /**
+     * Not "the Employee role": which roles hold a Notice permission is role-screen data (the
+     * dev copy grants Employee admin_notice), so pick a staff login that holds neither.
+     */
+    public function test_a_staff_login_without_a_notice_permission_is_refused_every_notice_action_and_lookup(): void
     {
-        $this->assertRefusedEverywhere($this->staffWithOnlyRole('Employee'));
+        $this->assertRefusedEverywhere($this->staffWithoutNoticePermission());
+    }
+
+    /** A staff login with a role, not Super Admin, holding no Notice author permission by role or directly. */
+    private function staffWithoutNoticePermission(): User
+    {
+        $authorPermissions = DB::table('permissions')
+            ->whereIn('name', NoticeNotificationController::AUTHOR_PERMISSIONS)->pluck('id')->all();
+        $pk = DB::table('user_credentials as u')
+            ->where('u.user_category', '!=', 'S')
+            ->whereExists(fn ($q) => $q->from('model_has_roles as m')->whereColumn('m.model_id', 'u.pk')
+                ->where('m.model_type', User::class))
+            ->whereNotExists(fn ($q) => $q->from('model_has_roles as m')
+                ->join('roles as r', 'r.id', '=', 'm.role_id')
+                ->leftJoin('role_has_permissions as rp', 'rp.role_id', '=', 'm.role_id')
+                ->whereColumn('m.model_id', 'u.pk')->where('m.model_type', User::class)
+                ->where(fn ($w) => $w->where('r.name', 'Super Admin')->orWhereIn('rp.permission_id', $authorPermissions)))
+            ->whereNotExists(fn ($q) => $q->from('model_has_permissions as mp')->whereColumn('mp.model_id', 'u.pk')
+                ->where('mp.model_type', User::class)->whereIn('mp.permission_id', $authorPermissions))
+            ->orderBy('u.pk')
+            ->value('u.pk');
+
+        if (! $pk) {
+            $this->markTestSkipped('no staff login without a Notice author permission');
+        }
+
+        return User::findOrFail($pk);
     }
 
     public function test_a_notice_author_may_create_a_notice(): void

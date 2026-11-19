@@ -16,9 +16,10 @@ class PayScaleController extends Controller
 
     public function index()
     {
+        // Full list: the page's client-side DataTable pages, searches and exports it.
         $items = EligibilityCriterion::with(['salaryGrade', 'unitType', 'unitSubType'])
             ->orderBy('pk')
-            ->paginate(request('per_page', 10));
+            ->get();
         return view('admin.estate.define_pay_scale.index', compact('items'));
     }
 
