@@ -98,7 +98,8 @@
         </table>
 
         <div class="d-flex justify-content-between mt-2">
-            <div>Marksheet No.: <strong>{{ $m['number'] }}</strong></div>
+            {{-- Remarks are written by hand on the printed sheet (the number still shows in the lists). --}}
+            <div class="flex-grow-1 me-4">Remarks: <span class="d-inline-block border-bottom border-dark" style="width: 70%;">&nbsp;</span></div>
             <div>Result: <strong>{{ $m['result'] }}</strong></div>
         </div>
 

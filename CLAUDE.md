@@ -8,6 +8,10 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-19: Marksheet shows Remarks, not the number.** On the printed marksheet
+  (`marksheet/show.blade.php`) the "Marksheet No." line is replaced by a blank
+  "Remarks: ____" line, filled by hand. View only: nothing stored; the number is still
+  generated and shown in the Generation / Verified lists.
 - **2026-11-19: Unfreeze needs remarks.** COE must enter a reason (required, max 500) in
   the Unfreeze popup; the server refuses it without one. Saved on the paper
   (`question_papers.unfreeze_remarks`, latest only), in the Question Paper Logs detail
@@ -321,7 +325,9 @@ All rules in `ResultMarksService` (RMS) and `MarksModeration`.
   Signature Master now picks the designation from `designation_master` full names
   (e.g. `UPPER DIVISION CLERK`). Rows saved that way are never found, so verify fails
   with "Upload the UDC signature…". The two must be reconciled (mapping or codes).
-- No server PDF: `marksheet/show.blade.php` prints A4 via `window.print()`.
+- No server PDF: `marksheet/show.blade.php` prints A4 via `window.print()`. The sheet
+  itself doesn't print the marksheet number; under the table it has a blank
+  "Remarks: ____" line (handwritten) next to Result.
 
 ## Notifications
 
