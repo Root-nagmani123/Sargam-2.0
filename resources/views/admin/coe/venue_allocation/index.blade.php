@@ -56,6 +56,7 @@
 .va-remove-room    { padding:0;font-size:13px;text-decoration:none;flex:none; }
 .va-ot-item--elsewhere { display:none !important; }
 .va-ot-range:disabled { opacity:.45;cursor:default; }
+.va-comp-cover     { margin-top:8px; }
 .va-comp-row .form-control, .va-comp-row .va-ot-toggle { white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
 /* OT Roll No. picker */
 .va-ot-toggle      { width:100%; }
@@ -288,6 +289,9 @@
                     </div>
                 </div>
                 <div class="modal-footer coe-modal-footer">
+                    <span id="vaMapBlocked" class="small text-danger me-auto d-none" role="status">
+                        Every OT of a paper needs a seat — fix the errors above to map seating.
+                    </span>
                     <button type="button" class="btn coe-btn coe-btn-cancel" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" id="vaMapSubmit" class="btn coe-btn coe-btn-primary coe-btn--narrow">Map Seating</button>
                 </div>
@@ -659,6 +663,7 @@ $(function () {
         $subjects.find('select').each(function () { if ($(this).data('select2')) { $(this).select2('destroy'); } });
         $subjects.empty();
         $('#vaMapOtCount, #vaMapLaptop').val('-');
+        refreshSubmit();
     }
 
     // Reopening the dialog starts from a blank form, as the design shows it.
@@ -739,7 +744,7 @@ $(function () {
         } else {
             if (c.taken && c.taken.length) {
                 $('<div class="small text-muted mt-1 va-comp-note"></div>')
-                    .text(c.taken.length + ' OT(s) already have a room for this component; mapping adds more rooms.').appendTo($group);
+                    .text(c.taken.length + ' OT(s) already have a room for this paper; pick rooms for the rest.').appendTo($group);
             }
             $('<button type="button" class="btn btn-link va-add-room"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add another room</button>')
                 .attr('aria-label', 'Add another room for ' + c.component).appendTo($group);
@@ -804,6 +809,48 @@ $(function () {
             paintPicker($row);
             checkRoom($row);
         });
+        checkCoverage($group);
+    }
+
+    /*
+     * Map Seating saves a paper only when every OT of it has a seat (the server refuses
+     * otherwise). Once a component is being filled, the OTs that still have no room —
+     * not seated earlier and not picked in any of its rows here — are listed under it.
+     */
+    function coverageProblem($group) {
+        if ($group.hasClass('va-comp--frozen')) { return ''; }
+        var $rows = $group.find('.va-comp-row'), have = {};
+        var touched = $rows.filter(function () { return $(this).find('.va-row-building').val() || picked($(this)).length; }).length;
+        if (!touched) { return ''; }
+        ($group.data('taken') || []).forEach(function (pk) { have[pk] = true; });
+        $rows.each(function () { picked($(this)).forEach(function (pk) { have[pk] = true; }); });
+        var missing = ots.filter(function (o) { return !have[o.pk]; });
+        if (!missing.length) { return ''; }
+        var rolls = missing.slice(0, 5).map(function (o) { return o.roll; }).join(', ') +
+            (missing.length > 5 ? ' and ' + (missing.length - 5) + ' more' : '');
+        return missing.length + ' OT(s) of this paper have no room yet (Roll No. ' + rolls + '). ' +
+            'Select them in a room, or add another room — Map Seating saves only when every OT has a seat.';
+    }
+
+    function checkCoverage($group) {
+        var msg = coverageProblem($group), $note = $group.children('.va-comp-cover');
+        if (!$note.length) {
+            $note = $('<div class="coe-field-error va-comp-cover" aria-live="polite"></div>');
+            var $add = $group.children('.va-add-room');
+            if ($add.length) { $add.before($note); } else { $group.append($note); }
+        }
+        $note.text(msg).toggleClass('d-none', !msg);
+        $group.data('coverError', !!msg);
+        refreshSubmit();
+        return !msg;
+    }
+
+    // Map Seating stays disabled while any room is over capacity or any paper has OTs without a room.
+    function refreshSubmit() {
+        var blocked = $subjects.find('.va-comp').filter(function () { return $(this).data('coverError'); }).length +
+            $subjects.find('.va-ot-toggle').filter(function () { return $(this).data('roomError'); }).length;
+        $('#vaMapSubmit').prop('disabled', blocked > 0);
+        $('#vaMapBlocked').toggleClass('d-none', !blocked);
     }
 
     /*
@@ -836,6 +883,7 @@ $(function () {
             fieldError($t, '');
         }
         $t.data('roomError', !!msg);
+        refreshSubmit();
         return !msg;
     }
 
@@ -1014,6 +1062,7 @@ $(function () {
             ok = ok && !none;
             if (!none) { ok = checkRoom($r) && ok; }
         });
+        $subjects.find('.va-comp').each(function () { ok = checkCoverage($(this)) && ok; });
         return ok;
     }
 
@@ -1070,7 +1119,7 @@ $(function () {
                     .then(function () { location.reload(); });
             })
             .fail(function (xhr) { mapFail(xhr, $rows); })
-            .always(function () { $btn.prop('disabled', false); });
+            .always(function () { $btn.prop('disabled', false); refreshSubmit(); });
     });
 });
 </script>

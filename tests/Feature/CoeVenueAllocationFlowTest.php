@@ -193,18 +193,19 @@ class CoeVenueAllocationFlowTest extends TestCase
         $this->assertSame($this->participants, SeatAllocation::where('seat_plan_pk', $plan)->count());
     }
 
-    public function test_a_manual_room_seats_only_the_ots_picked_for_it(): void
+    // Every OT of the paper needs a seat: a manual room that leaves anyone out is refused, nothing saved.
+    public function test_a_manual_room_must_seat_every_ot_of_the_paper(): void
     {
-        $picked = array_slice($this->ots(), 0, 2);
+        $all = $this->ots();
 
-        $this->mapManual([['venue_id' => $this->venueId, 'ots' => $picked]])
-            ->assertOk()->assertJsonPath('status', 'warning');
+        $this->mapManual([['venue_id' => $this->venueId, 'ots' => array_slice($all, 0, 2)]])
+            ->assertStatus(422)->assertJsonValidationErrors('rooms.0.ots');
+        $this->assertFalse(SeatPlanVenue::where('venue_id', $this->venueId)->exists());
 
+        $this->mapManual([['venue_id' => $this->venueId, 'ots' => $all]])->assertOk()->assertJsonPath('status', 'success');
         $planVenue = $this->planVenue();
         $this->assertTrue($planVenue->isManual());
-        $seated = SeatAllocation::where('seat_plan_pk', $planVenue->seat_plan_pk)->pluck('student_master_pk')->map(fn ($pk) => (int) $pk)->sort()->values()->all();
-        $this->assertSame(collect($picked)->sort()->values()->all(), $seated);
-        $this->assertSame($this->participants - 2, (int) SeatPlan::find($planVenue->seat_plan_pk)->unallocated_count);
+        $this->assertSame(0, (int) SeatPlan::find($planVenue->seat_plan_pk)->unallocated_count);
     }
 
     public function test_manual_refuses_more_ots_than_the_room_seats(): void
@@ -346,7 +347,8 @@ class CoeVenueAllocationFlowTest extends TestCase
 
     public function test_drive_row_seats_the_ots_picked_for_its_room(): void
     {
-        $picked = collect($this->driveData()['ots'])->take(2)->pluck('pk')->all();
+        // Every OT of the paper, as Map Seating only saves a fully seated paper.
+        $picked = collect($this->driveData()['ots'])->pluck('pk')->all();
 
         $this->mapDrive([['component_map_id' => $this->componentMapId, 'venue_id' => $this->venueId, 'ots' => $picked]])
             ->assertOk()->assertJsonCount(1, 'results');
@@ -366,6 +368,21 @@ class CoeVenueAllocationFlowTest extends TestCase
         $other = $this->addRoom('PHPUNIT2', 5);
         $this->mapDrive([['component_map_id' => $this->componentMapId, 'venue_id' => $other, 'ots' => [$picked[0]]]])
             ->assertStatus(422)->assertJsonValidationErrors('rows.0.ots');
+    }
+
+    public function test_drive_refuses_a_paper_that_leaves_ots_without_a_seat(): void
+    {
+        $ots = collect($this->driveData()['ots'])->pluck('pk')->all();
+        if (count($ots) < 2) {
+            $this->markTestSkipped('Needs at least two OTs with a roll number.');
+        }
+
+        $this->mapDrive([['component_map_id' => $this->componentMapId, 'venue_id' => $this->venueId, 'ots' => [$ots[0]]]])
+            ->assertStatus(422)->assertJsonValidationErrors('rows.0.ots');
+        // Rolled back: no room, no plan, no seat.
+        $this->assertFalse(SeatPlanVenue::where('venue_id', $this->venueId)->exists());
+        $this->assertFalse(SeatPlan::where('examination_drive_component_map_id', $this->componentMapId)
+            ->where('batch', $this->batch)->exists());
     }
 
     public function test_drive_row_errors_are_keyed_to_the_row(): void

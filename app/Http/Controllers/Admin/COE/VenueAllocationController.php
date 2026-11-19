@@ -333,6 +333,13 @@ class VenueAllocationController extends Controller
                         throw $this->driveRowErrors($e, $rowIndexes);
                     }
                     $summary = $this->applyMapping($mapping, $allocator)['summary'];
+                    // Every OT of the paper needs a desk: one left over rolls the whole save back,
+                    // under that component's last room.
+                    if ($summary['unallocated'] > 0) {
+                        throw ValidationException::withMessages([
+                            'rows.' . end($rowIndexes) . '.ots' => $this->unseatedMessage($summary, true),
+                        ]);
+                    }
 
                     $c = $components[$mapId];
                     $messages[] = [
