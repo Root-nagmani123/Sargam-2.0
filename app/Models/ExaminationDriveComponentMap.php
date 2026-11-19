@@ -18,9 +18,27 @@ class ExaminationDriveComponentMap extends Model
         'sub_faculty_names' => 'array',
         'faculty_codes' => 'array',
         'faculty_unique_codes' => 'array',
+        // Tentative Exam Range: dates, kept in step with the times below.
         'exam_date' => 'date',
         'exam_end_date' => 'date',
+        // Tentative Exam Range with times (date + time); when set, it decides when the exam is over.
+        'exam_start_at' => 'datetime',
+        'exam_end_at' => 'datetime',
+        // The Course Coordinator's confirmed slot, set on approval.
+        'proposed_start_at' => 'datetime',
+        'proposed_end_at' => 'datetime',
     ];
+
+    /** The slot that counts: the CC's confirmed one once set, else the tentative one (may be null). */
+    public function slotStart(): ?\Carbon\Carbon
+    {
+        return $this->proposed_start_at ?? $this->exam_start_at;
+    }
+
+    public function slotEnd(): ?\Carbon\Carbon
+    {
+        return $this->proposed_end_at ?? $this->exam_end_at;
+    }
 
     public function drive(): BelongsTo
     {

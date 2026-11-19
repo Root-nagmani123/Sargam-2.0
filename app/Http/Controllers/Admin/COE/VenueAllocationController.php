@@ -109,7 +109,8 @@ class VenueAllocationController extends Controller
             ->where('ed.course_master_pk', $courseId)
             ->orderBy('sub.subject_name')
             ->orderBy('comp.component_name')
-            ->get(['dcm.id', 'dcm.exam_date', 'ed.drive_name', 'sub.subject_name', 'comp.component_name'])
+            // Exam day: the CC's confirmed slot, else the Tentative Exam Range (its time, else its date).
+            ->get(['dcm.id', DB::raw('COALESCE(DATE(dcm.proposed_start_at), DATE(dcm.exam_start_at), dcm.exam_date) as exam_date'), 'ed.drive_name', 'sub.subject_name', 'comp.component_name'])
             ->map(fn ($c) => [
                 'id' => (int) $c->id,
                 'subject' => $c->subject_name ?: 'General',
@@ -498,7 +499,7 @@ class VenueAllocationController extends Controller
             ->leftJoin('subject_master as sub', 'sub.pk', '=', 'dcm.subject_master_pk')
             ->where('dcm.id', $validated['component_map_id'])
             ->where('ed.course_master_pk', $courseId)
-            ->first(['dcm.id', 'dcm.exam_date', 'sub.subject_name', 'comp.component_name']);
+            ->first(['dcm.id', DB::raw('COALESCE(DATE(dcm.proposed_start_at), DATE(dcm.exam_start_at), dcm.exam_date) as exam_date'), 'sub.subject_name', 'comp.component_name']);
         if ($component === null) {
             throw ValidationException::withMessages(['component_map_id' => 'That component is not scheduled for this course.']);
         }

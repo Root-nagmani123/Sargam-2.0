@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\COE;
 
+use Carbon\Carbon;
 use App\DataTables\ExaminationDriveCcDataTable;
 use App\DataTables\ExaminationDriveCoeDataTable;
 use App\DataTables\ExaminationDriveDataTable;
@@ -18,11 +19,11 @@ use App\Models\ExaminationDriveFacultyMap;
 use App\Models\ExaminationTypeMaster;
 use App\Models\FacultyMaster;
 use App\Models\ServiceMaster;
-use App\Models\ServicePassingMarksMaster;
 use App\Models\SubjectMaxMarksMaster;
 use App\Models\SubjectMaster;
 use App\Models\TermMaster;
 use App\Services\COE\CourseCoordinatorService;
+use App\Services\COE\ResultMarksService;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -47,6 +48,27 @@ class ExaminationDriveController extends Controller
     public const SOURCES      = ['Faculty', 'Sargam', 'Sargam 2.0'];
     public const EXAM_MODES   = ['Online', 'Offline', 'Offline & Online'];
     public const COMPONENT_EXAM_TYPES = ['Online Objective', 'Offline Objective', 'Online Descriptive', 'Offline Descriptive'];
+
+    /**
+     * Exam Types a component may take for its Exam Mode: Online -> the Online types, Offline ->
+     * the Offline types, Offline & Online (or anything else) -> all. Matched on the type's first
+     * word, so a new "Online ..." / "Offline ..." type falls into place by itself. The faculty
+     * setup page filters its dropdown with the same rule.
+     *
+     * @return list<string>
+     */
+    public static function examTypesFor(?string $mode): array
+    {
+        $prefix = match ($mode) {
+            'Online'  => 'Online ',
+            'Offline' => 'Offline ',
+            default   => null,
+        };
+
+        return $prefix === null
+            ? self::COMPONENT_EXAM_TYPES
+            : array_values(array_filter(self::COMPONENT_EXAM_TYPES, fn ($t) => str_starts_with($t, $prefix)));
+    }
 
 
     public function index(Request $request, ExaminationDriveDataTable $dataTable)
@@ -80,10 +102,10 @@ class ExaminationDriveController extends Controller
         $data = $request->validate([
             'drive_name'       => ['required', 'string', 'max:150'],
             'course'           => ['required', 'string', Rule::exists('course_master', 'course_name')],
-            // service_master pk, not name: short names repeat (IDES, ITS).
-            'service'          => ['required', 'integer', Rule::exists('service_master', 'pk')->where('active_inactive', 1)],
+            // No Service on a drive: passing marks follow each OT's own service
+            // (ResultMarksService::passingPercent). Examination Type is optional.
             // Only active types / terms can be picked for a new drive.
-            'exam_type'        => ['required', 'string', Rule::exists('examination_type_master', 'exam_type_name')->where('active_inactive', 1)],
+            'exam_type'        => ['nullable', 'string', Rule::exists('examination_type_master', 'exam_type_name')->where('active_inactive', 1)],
             'term'             => ['required', 'string', Rule::exists('term_master', 'term_name')->where('active_inactive', 1)],
             'academic_session' => ['required', 'string', 'max:10'],
             'status'           => ['required', Rule::in(ExaminationDrive::STATUSES)],
@@ -97,7 +119,9 @@ class ExaminationDriveController extends Controller
             'mappings.required' => 'Add at least one Subject and Faculty in Subject and Faculty Mapping.',
         ]);
 
-        $examTypePk = ExaminationTypeMaster::where('exam_type_name', $data['exam_type'])->value('pk');
+        $examTypePk = filled($data['exam_type'] ?? null)
+            ? ExaminationTypeMaster::where('exam_type_name', $data['exam_type'])->value('pk')
+            : null;
         $termPk     = TermMaster::where('term_name', $data['term'])->value('pk');
         $coursePk   = CourseMaster::where('course_name', $data['course'])->value('pk');
         $this->assertWithinCourse((int) $coursePk, $data['start_date'], $data['end_date'], 'start_date', 'Drive dates');
@@ -109,7 +133,6 @@ class ExaminationDriveController extends Controller
                 'examination_type_master_pk' => $examTypePk,
                 'term_master_pk'             => $termPk,
                 'course_master_pk'           => $coursePk,
-                'service_master_pk'          => (int) $data['service'],
                 'academic_session'           => $data['academic_session'],
                 // `phase` is NOT NULL in the schema but the Create form has no
                 // separate Phase field; the academic session is the closest
@@ -172,9 +195,8 @@ class ExaminationDriveController extends Controller
         $data = $request->validate([
             'drive_name'       => ['required', 'string', 'max:150'],
             'course'           => ['required', 'string', Rule::exists('course_master', 'course_name')],
-            // service_master pk, not name: short names repeat (IDES, ITS).
-            'service'          => ['required', 'integer', Rule::exists('service_master', 'pk')->where('active_inactive', 1)],
-            'exam_type'        => ['required', 'string', $activeOrCurrent('examination_type_master', 'exam_type_name', $keepType)],
+            // No Service (see store()); Examination Type is optional.
+            'exam_type'        => ['nullable', 'string', $activeOrCurrent('examination_type_master', 'exam_type_name', $keepType)],
             'term'             => ['required', 'string', $activeOrCurrent('term_master', 'term_name', $keepTerm)],
             'academic_session' => ['required', 'string', 'max:10'],
             'status'           => ['required', Rule::in(ExaminationDrive::STATUSES)],
@@ -188,19 +210,21 @@ class ExaminationDriveController extends Controller
             'mappings.required' => 'Add at least one Subject and Faculty in Subject and Faculty Mapping.',
         ]);
 
-        $examTypePk = ExaminationTypeMaster::where('exam_type_name', $data['exam_type'])->value('pk');
+        $examTypePk = filled($data['exam_type'] ?? null)
+            ? ExaminationTypeMaster::where('exam_type_name', $data['exam_type'])->value('pk')
+            : null;
         $termPk     = TermMaster::where('term_name', $data['term'])->value('pk');
         $coursePk   = CourseMaster::where('course_name', $data['course'])->value('pk');
         $this->assertWithinCourse((int) $coursePk, $data['start_date'], $data['end_date'], 'start_date', 'Drive dates');
         $statusCode = array_search($data['status'], ExaminationDrive::STATUSES, true);
 
+        // service_master_pk is no longer written: an older drive keeps whatever it had.
         DB::transaction(function () use ($drive, $data, $examTypePk, $termPk, $coursePk, $statusCode) {
             $drive->update([
                 'drive_name'                 => $data['drive_name'],
                 'examination_type_master_pk' => $examTypePk,
                 'term_master_pk'             => $termPk,
                 'course_master_pk'           => $coursePk,
-                'service_master_pk'          => (int) $data['service'],
                 'academic_session'           => $data['academic_session'],
                 'phase'                      => $data['academic_session'],
                 'status'                     => $statusCode,
@@ -493,16 +517,22 @@ class ExaminationDriveController extends Controller
             'rows'                  => ['array'],
             'rows.*.component'      => ['required', 'string', Rule::exists('component_master', 'component_name')],
             'rows.*.max_marks'      => ['required', 'numeric', 'min:0'],
-            // Ignored: every row's passing marks come from Service Passing Marks.
+            // Ignored: passing marks are fixed — 50% of max marks, 25% for Bhutan services
+            // (ResultMarksService::passingPercent), judged per OT at result time.
             'rows.*.passing_marks'  => ['nullable', 'numeric', 'min:0'],
             'rows.*.source'         => ['required', 'string', Rule::in(self::SOURCES)],
             // A Faculty-evaluated component needs its faculty.
             'rows.*.faculty'        => ['required_if:rows.*.source,Faculty', 'nullable', 'string', 'max:150'],
-            'rows.*.weightage'      => ['required', 'numeric', 'min:0', 'max:100'],
+            // Ignored: worked out from Max Marks (withShareWeightage()).
+            'rows.*.weightage'      => ['nullable', 'numeric', 'min:0', 'max:100'],
             // Required when the page sends them (faculty setup sends all four; the admin
             // Map Faculty page sends no Exam Type / range end, which keep their stored values).
             'rows.*.exam_date'      => ['sometimes', 'required', 'date'],
             'rows.*.exam_end_date'  => ['sometimes', 'required', 'date', 'after_or_equal:rows.*.exam_date'],
+            // Tentative Exam Range with times, "Y-m-d H:i" (faculty setup). exam_date / exam_end_date
+            // are then filled from these; the admin Map Faculty page sends only exam_date.
+            'rows.*.exam_start_at'  => ['sometimes', 'required', 'date_format:Y-m-d H:i'],
+            'rows.*.exam_end_at'    => ['sometimes', 'required', 'date_format:Y-m-d H:i', 'after:rows.*.exam_start_at'],
             'rows.*.exam_mode'      => ['sometimes', 'required', 'string', Rule::in(self::EXAM_MODES)],
             'rows.*.exam_type'      => ['sometimes', 'required', 'string', Rule::in(self::COMPONENT_EXAM_TYPES)],
             // JSON-encoded string, not an array: jQuery drops an empty array from the
@@ -515,8 +545,13 @@ class ExaminationDriveController extends Controller
         ], [
             'rows.*.exam_end_date.after_or_equal' => 'An exam range cannot end before it starts.',
             'rows.*.faculty.required_if' => 'Assign the faculty for every component evaluated through Faculty.',
-            'rows.*.exam_date.required' => 'Select the Exam Range for every component.',
-            'rows.*.exam_end_date.required' => 'Select the Exam Range for every component.',
+            'rows.*.exam_date.required' => 'Select the Tentative Exam Range for every component.',
+            'rows.*.exam_end_date.required' => 'Select the Tentative Exam Range for every component.',
+            'rows.*.exam_start_at.required' => 'Select the Tentative Exam Range start (date and time) for every component.',
+            'rows.*.exam_end_at.required' => 'Select the Tentative Exam Range end (date and time) for every component.',
+            'rows.*.exam_start_at.date_format' => 'The Tentative Exam Range start must be a date and time.',
+            'rows.*.exam_end_at.date_format' => 'The Tentative Exam Range end must be a date and time.',
+            'rows.*.exam_end_at.after' => 'The Tentative Exam Range must end after it starts.',
             'rows.*.exam_mode.required' => 'Select the Exam Mode for every component.',
             'rows.*.exam_type.required' => 'Select the Exam Type for every component.',
         ]);
@@ -538,6 +573,21 @@ class ExaminationDriveController extends Controller
                 return response()->json(['message' => "The exam range of {$row['component']} must be within the drive dates ("
                     . $drive->start_date->format('d-m-Y') . ' to ' . $drive->end_date->format('d-m-Y') . ').'], 422);
             }
+            // With times: compared on the date part, any time that day allowed.
+            $startAt = isset($row['exam_start_at']) ? substr($row['exam_start_at'], 0, 10) : null;
+            $endAt = isset($row['exam_end_at']) ? substr($row['exam_end_at'], 0, 10) : null;
+            if (($startAt && $from && $startAt < $from) || ($endAt && $to && $endAt > $to)) {
+                return response()->json(['message' => "The Tentative Exam Range of {$row['component']} must be within the drive dates ("
+                    . $drive->start_date->format('d-m-Y') . ' to ' . $drive->end_date->format('d-m-Y') . ').'], 422);
+            }
+        }
+        // Exam Type must suit the Exam Mode (examTypesFor()); checked where a page sends both.
+        foreach ($data['rows'] ?? [] as $row) {
+            if (filled($row['exam_type'] ?? null) && array_key_exists('exam_mode', $row)
+                && ! in_array($row['exam_type'], self::examTypesFor($row['exam_mode']), true)) {
+                return response()->json(['message' => "{$row['component']}: Exam Type {$row['exam_type']} does not match Exam Mode {$row['exam_mode']}. "
+                    . 'Choose one of: ' . implode(', ', self::examTypesFor($row['exam_mode'])) . '.'], 422);
+            }
         }
         // Pending at CC: what was submitted stays; faculty may correct it, not remove it.
         if ($this->isMappedFaculty($drive) && $drive->cc_status === ExaminationDrive::CC_PENDING) {
@@ -558,6 +608,14 @@ class ExaminationDriveController extends Controller
                 unset($row['sub_faculty']);
             }
 
+            // The date-only columns follow the date + time ones when those are sent.
+            if (filled($row['exam_start_at'] ?? null)) {
+                $row['exam_date'] = substr($row['exam_start_at'], 0, 10);
+            }
+            if (filled($row['exam_end_at'] ?? null)) {
+                $row['exam_end_date'] = substr($row['exam_end_at'], 0, 10);
+            }
+
             foreach (['codes', 'unique_codes'] as $key) {
                 if (array_key_exists($key, $row) && $row[$key] !== null) {
                     $row[$key] = (array) json_decode($row[$key], true);
@@ -568,6 +626,11 @@ class ExaminationDriveController extends Controller
 
             return $row;
         });
+        $rows = self::withShareWeightage($rows);
+
+        if ($error = $this->slotClashError($drive, $subjectPk, $rows)) {
+            return response()->json(['message' => $error], 422);
+        }
 
         $limits = $this->marksLimits($drive, $subjectPk);
         if ($error = $this->marksLimitError($rows, $limits)) {
@@ -609,7 +672,7 @@ class ExaminationDriveController extends Controller
             // that does not send them (admin Map Faculty) does not wipe what faculty
             // set on Complete Setup.
             $previous = $subjectRows()
-                ->get(['component_master_pk', 'sub_faculty_names', 'faculty_codes', 'faculty_unique_codes', 'exam_end_date', 'exam_type'])
+                ->get(['component_master_pk', 'sub_faculty_names', 'faculty_codes', 'faculty_unique_codes', 'exam_end_date', 'exam_type', 'exam_start_at', 'exam_end_at'])
                 ->keyBy('component_master_pk');
 
             $subjectRows()->delete();
@@ -629,13 +692,25 @@ class ExaminationDriveController extends Controller
                     'component_master_pk'  => $componentPk,
                     'faculty_master_pk'    => $facultyPk,
                     'max_marks'            => $row['max_marks'],
-                    'passing_marks'        => $limits['passing_marks'],
+                    // The standard (50%) value, for reference only: the result applies the
+                    // OT's own service percentage (Bhutan 25%) to max_marks.
+                    'passing_marks'        => ResultMarksService::passingMarks((float) $row['max_marks'], null),
                     'source'               => $row['source'],
                     'weightage'            => $row['weightage'],
                     'exam_date'            => $row['exam_date'] ?? null,
                     'exam_end_date'        => array_key_exists('exam_end_date', $row)
                         ? $row['exam_end_date']
                         : ($previous[$componentPk]->exam_end_date ?? null),
+                    // Tentative Exam Range times. A page that sends only dates (admin Map
+                    // Faculty) keeps the stored times while their date is unchanged; a changed
+                    // date drops them, so the row falls back to its dates (whole days).
+                    'exam_start_at'        => array_key_exists('exam_start_at', $row)
+                        ? $row['exam_start_at']
+                        : $this->keepTime($previous[$componentPk]->exam_start_at ?? null, $row['exam_date'] ?? null),
+                    'exam_end_at'          => array_key_exists('exam_end_at', $row)
+                        ? $row['exam_end_at']
+                        : $this->keepTime($previous[$componentPk]->exam_end_at ?? null,
+                            array_key_exists('exam_end_date', $row) ? $row['exam_end_date'] : optional($previous[$componentPk]->exam_end_date ?? null)->toDateString()),
                     'exam_mode'            => $row['exam_mode'] ?? null,
                     'exam_type'            => array_key_exists('exam_type', $row)
                         ? $row['exam_type']
@@ -672,25 +747,204 @@ class ExaminationDriveController extends Controller
     }
 
     /**
+     * No two exams of a course may overlap: the OTs of a course cannot sit two at once,
+     * whichever drive, subject or faculty they belong to.
+     *
+     * The faculty setup save: each submitted row's date + time Tentative Exam Range is checked
+     * (courseSlotClash()) — this drive + subject's own stored rows are left out, as this save
+     * replaces them.
+     *
+     * @return string|null the first clash, or null
+     */
+    private function slotClashError(ExaminationDrive $drive, int $subjectPk, Collection $rows): ?string
+    {
+        $mine = $rows->filter(fn ($row) => filled($row['exam_start_at'] ?? null) && filled($row['exam_end_at'] ?? null))
+            ->map(fn ($row) => [
+                'component' => $row['component'],
+                'start'     => Carbon::createFromFormat('Y-m-d H:i', $row['exam_start_at']),
+                'end'       => Carbon::createFromFormat('Y-m-d H:i', $row['exam_end_at']),
+            ])->values();
+
+        return $this->courseSlotClash((int) $drive->course_master_pk, $mine, 'Tentative Exam Range',
+            fn ($q) => $q->where('examination_drive_component_maps.examination_drive_id', '!=', $drive->id)
+                ->orWhere('examination_drive_component_maps.subject_master_pk', '!=', $subjectPk)
+                ->orWhereNull('examination_drive_component_maps.subject_master_pk'));
+    }
+
+    /**
+     * The shared clash rule. $mine (component, start, end) is checked against
+     *  1. itself, pair by pair, and
+     *  2. every stored component of the course on a drive that is not closed, by the slot that
+     *     counts (ExaminationDriveComponentMap::slotStart/End: the CC's confirmed slot once set,
+     *     else the tentative one); rows $keep does not match are left out.
+     * Overlap means start < other end and other start < end, so back-to-back slots are allowed.
+     * A stored row with no times (only its dates, by default the whole drive) is not compared.
+     *
+     * @param  Collection<int, array{component:string, start:Carbon, end:Carbon}>  $mine
+     * @param  \Closure  $keep  where-clause selecting the stored rows to compare with
+     */
+    private function courseSlotClash(int $coursePk, Collection $mine, string $label, \Closure $keep): ?string
+    {
+        if ($mine->isEmpty()) {
+            return null;
+        }
+        $fmt = fn (Carbon $start, Carbon $end) => $start->format('d-m-Y H:i') . ' to '
+            . ($start->isSameDay($end) ? $end->format('H:i') : $end->format('d-m-Y H:i'));
+        $overlaps = fn (Carbon $aStart, Carbon $aEnd, Carbon $bStart, Carbon $bEnd) => $aStart->lt($bEnd) && $bStart->lt($aEnd);
+
+        // 1. Among the slots being saved.
+        foreach ($mine->values() as $i => $a) {
+            foreach ($mine->values()->slice($i + 1) as $b) {
+                if ($overlaps($a['start'], $a['end'], $b['start'], $b['end'])) {
+                    return "The {$label} of {$a['component']} ({$fmt($a['start'], $a['end'])}) overlaps "
+                        . "{$b['component']} ({$fmt($b['start'], $b['end'])}). Give each component its own slot.";
+                }
+            }
+        }
+
+        // 2. Against the course's other stored slots.
+        $others = ExaminationDriveComponentMap::query()
+            ->join('examination_drives as ed', 'ed.id', '=', 'examination_drive_component_maps.examination_drive_id')
+            ->where('ed.course_master_pk', $coursePk)
+            ->where('ed.status', '!=', ExaminationDrive::STATUS_CLOSED)
+            ->where(fn ($q) => $q->whereNotNull('examination_drive_component_maps.proposed_start_at')
+                ->orWhereNotNull('examination_drive_component_maps.exam_start_at'))
+            ->where($keep)
+            ->with(['component', 'subject', 'faculty'])
+            ->get(['examination_drive_component_maps.*', 'ed.drive_name']);
+
+        foreach ($mine as $a) {
+            foreach ($others as $b) {
+                $bStart = $b->slotStart();
+                $bEnd = $b->slotEnd();
+                if ($bStart && $bEnd && $overlaps($a['start'], $a['end'], $bStart, $bEnd)) {
+                    $who = trim(implode(', ', array_filter([
+                        trim((string) ($b->subject->subject_name ?? '')),
+                        trim((string) ($b->component->component_name ?? '')),
+                    ])));
+                    $faculty = trim((string) ($b->faculty->full_name ?? ''));
+                    $driveName = filled($b->drive_name) ? trim($b->drive_name) : 'Examination Drive #' . $b->examination_drive_id;
+
+                    return "The {$label} of {$a['component']} ({$fmt($a['start'], $a['end'])}) clashes with "
+                        . "{$who} on {$driveName}" . ($faculty !== '' ? " ({$faculty})" : '')
+                        . " ({$fmt($bStart, $bEnd)}). The OTs of this course cannot sit two exams at once; choose another slot.";
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Add Component (faculty setup page): a new component, saved straight into Component
+     * Master so every drive can use it from now on.
+     *
+     * Same access as the page: the drive must not be Draft, the user must be able to open one
+     * of its subjects (pageSubject()), and the setup must still be editable. Duplicates are
+     * refused, compared case- and space-insensitively ("Case  study" = "Case Study"), against
+     * inactive components too — the COE re-activates those rather than a second copy being made.
+     */
+    public function addComponent(Request $request, int $id): JsonResponse
+    {
+        $drive = $this->findDriveOrFail($id);
+        abort_if($drive->status === ExaminationDrive::STATUS_DRAFT, 404);
+        $this->pageSubject($drive, $request);
+        if ($locked = $this->facultyLockMessage($drive)) {
+            return response()->json(['message' => $locked], 422);
+        }
+
+        $request->merge(['component_name' => self::componentNameKey((string) $request->input('component_name'), false)]);
+        $data = $request->validate([
+            'component_name' => ['required', 'string', 'min:2', 'max:100', 'no_html'],
+        ], [], ['component_name' => 'Component']);
+
+        $key = self::componentNameKey($data['component_name']);
+        $existing = ComponentMaster::all(['pk', 'component_name', 'active_inactive'])
+            ->first(fn ($c) => self::componentNameKey((string) $c->component_name) === $key);
+        if ($existing) {
+            return response()->json(['message' => (int) $existing->active_inactive === 1
+                ? "\"{$existing->component_name}\" already exists. Select it from the Components list."
+                : "\"{$existing->component_name}\" already exists but is inactive. Ask the COE to activate it in Component Master."], 422);
+        }
+
+        $component = ComponentMaster::create([
+            'component_name' => $data['component_name'],
+            'active_inactive' => 1,
+            'created_date' => now(),
+            'modified_date' => now(),
+        ]);
+
+        return response()->json([
+            'message' => "Component \"{$component->component_name}\" added to Component Master.",
+            'name' => $component->component_name,
+        ]);
+    }
+
+    /**
+     * A component name tidied (trimmed, inner spaces collapsed); with $compare, also lower-cased
+     * so two spellings of the same name compare equal.
+     */
+    public static function componentNameKey(string $name, bool $compare = true): string
+    {
+        $name = trim(preg_replace('/\s+/u', ' ', $name) ?? '');
+
+        return $compare ? mb_strtolower($name) : $name;
+    }
+
+    /** A stored date + time, kept only while it still falls on $date (Y-m-d); else null. */
+    private function keepTime($stored, ?string $date)
+    {
+        if ($stored === null) {
+            return null;
+        }
+
+        return $date === null || $stored->toDateString() === substr($date, 0, 10) ? $stored : null;
+    }
+
+    /**
+     * Weightage % is not entered: each component's share of the subject's total Max
+     * Marks (40 of 90 -> 44.44). Rounded to 2 places, with the rounding remainder on the
+     * last row so a subject's rows always total exactly 100. All zero when there are no
+     * marks yet. Whatever the page sent is overwritten. Same rule as the setup screens' JS.
+     */
+    public static function withShareWeightage(Collection $rows): Collection
+    {
+        $max = fn (array $row) => (float) ($row['max_marks'] ?? 0);
+        $total = round($rows->sum($max), 2);
+        // The remainder goes to the last row that has marks, never to an empty one.
+        $last = $rows->filter(fn ($row) => $max($row) > 0)->keys()->last();
+        $given = 0.0;
+
+        return $rows->map(function (array $row, $key) use ($total, $last, $max, &$given) {
+            if ($total <= 0 || $max($row) <= 0) {
+                $row['weightage'] = 0;
+            } elseif ($key === $last) {
+                $row['weightage'] = round(100 - $given, 2);
+            } else {
+                $row['weightage'] = round($max($row) / $total * 100, 2);
+                $given += $row['weightage'];
+            }
+
+            return $row;
+        });
+    }
+
+    /**
      * Marks rules for one subject's component rows on a drive:
-     *  - passing marks of every row = the drive service's Service Passing Marks;
+     *  - passing marks are fixed: 50% of each row's max marks, 25% for Bhutan services
+     *    (ResultMarksService::passingPercent), so nothing to look up or enter here;
      *  - total max marks <= the subject's Subject Max Marks;
      *  - total weightage <= 100.
      *
-     * @return array{subject_name: string, subject_max: ?float, service_name: ?string, passing_marks: ?float}
+     * @return array{subject_name: string, subject_max: ?float}
      */
     private function marksLimits(ExaminationDrive $drive, int $subjectPk): array
     {
         $max = SubjectMaxMarksMaster::where('subject_master_pk', $subjectPk)->where('active_inactive', 1)->value('max_marks');
-        $pass = $drive->service_master_pk
-            ? ServicePassingMarksMaster::where('service_master_pk', $drive->service_master_pk)->where('active_inactive', 1)->value('passing_marks')
-            : null;
 
         return [
             'subject_name' => trim((string) SubjectMaster::where('pk', $subjectPk)->value('subject_name')),
             'subject_max' => $max === null ? null : (float) $max,
-            'service_name' => $drive->service_master_pk ? ServiceMaster::where('pk', $drive->service_master_pk)->value('service_short_name') : null,
-            'passing_marks' => $pass === null ? null : (float) $pass,
         ];
     }
 
@@ -737,12 +991,6 @@ class ExaminationDriveController extends Controller
         $weightage = round($rows->sum(fn ($row) => (float) $row['weightage']), 2);
         if ($weightage > 100) {
             return "Total weightage cannot exceed 100% (now {$weightage}%).";
-        }
-
-        if ($rows->isNotEmpty() && $limits['passing_marks'] === null) {
-            return $limits['service_name']
-                ? "Passing marks for {$limits['service_name']} are not set in Service Passing Marks master."
-                : 'Set the drive\'s Service first: passing marks come from Service Passing Marks.';
         }
 
         if ($rows->isNotEmpty() && $limits['subject_max'] === null) {
@@ -874,31 +1122,75 @@ class ExaminationDriveController extends Controller
     public function ccApprove(Request $request, int $id): JsonResponse
     {
         $drive = $this->pendingDriveForCoordinator($id);
+        $maps = $drive->componentMaps()->with(['component', 'subject'])->orderBy('id')->get();
+        if ($maps->isEmpty()) {
+            return response()->json(['message' => 'This drive has no components to schedule. Ask the faculty to complete the setup first.'], 422);
+        }
 
+        // One proposed slot per component, keyed by its row id: slots[<id>][start|end] = "Y-m-d\TH:i".
         $data = $request->validate([
-            'proposed_start_date' => ['required', 'date'],
-            'proposed_end_date'   => ['required', 'date', 'after_or_equal:proposed_start_date'],
+            'slots'         => ['required', 'array'],
+            'slots.*.start' => ['required', 'date_format:Y-m-d\TH:i'],
+            'slots.*.end'   => ['required', 'date_format:Y-m-d\TH:i'],
         ], [
-            'proposed_end_date.after_or_equal' => 'The proposed end exam date cannot be before the proposed start exam date.',
-        ]);
-        $this->assertWithinCourse((int) $drive->course_master_pk, $data['proposed_start_date'], $data['proposed_end_date'], 'proposed_start_date', 'The proposed exam dates');
-
-        // The CC's confirmed dates become the drive's dates everywhere (COE,
-        // admin and faculty lists); proposed_* keep a record of what they set.
-        $drive->update([
-            'cc_status'           => ExaminationDrive::CC_APPROVED,
-            'start_date'          => $data['proposed_start_date'],
-            'end_date'            => $data['proposed_end_date'],
-            'proposed_start_date' => $data['proposed_start_date'],
-            'proposed_end_date'   => $data['proposed_end_date'],
-            'cc_remarks'          => null,
-            'cc_action_by'        => auth()->user()->user_id,
-            'cc_action_at'        => now(),
-            'modified_date'       => now(),
+            'slots.required' => 'Enter the proposed exam date and time for every component.',
+            'slots.*.start.required' => 'Enter the proposed start exam date and time for every component.',
+            'slots.*.end.required' => 'Enter the proposed end exam date and time for every component.',
+            'slots.*.start.date_format' => 'Enter the proposed start exam date and time for every component.',
+            'slots.*.end.date_format' => 'Enter the proposed end exam date and time for every component.',
         ]);
 
-        $notice = $this->notifyFacultyApproved($drive);
-        // Components whose exam is already over open for marks entry right away.
+        $label = fn ($map) => trim(implode(' – ', array_filter([
+            trim((string) ($map->subject->subject_name ?? '')), trim((string) ($map->component->component_name ?? '')),
+        ]))) ?: 'Component #' . $map->id;
+        $slots = collect();
+        foreach ($maps as $map) {
+            $slot = $data['slots'][$map->id] ?? null;
+            if (! $slot) {
+                return response()->json(['message' => "Enter the proposed exam date and time for {$label($map)}."], 422);
+            }
+            $start = Carbon::createFromFormat('Y-m-d\TH:i', $slot['start']);
+            $end = Carbon::createFromFormat('Y-m-d\TH:i', $slot['end']);
+            if ($end->lte($start)) {
+                return response()->json(['message' => "The proposed exam of {$label($map)} must end after it starts."], 422);
+            }
+            $slots->push(['map' => $map, 'component' => $label($map), 'start' => $start, 'end' => $end]);
+        }
+
+        // Within the course dates (the drive's dates are set from these slots below).
+        $this->assertWithinCourse((int) $drive->course_master_pk, $slots->min('start')->toDateString(),
+            $slots->max('end')->toDateString(), 'slots', 'The proposed exam dates');
+        // Same clash rule as the faculty setup; this drive's own rows are replaced, so left out.
+        if ($error = $this->courseSlotClash((int) $drive->course_master_pk, $slots, 'proposed exam slot',
+            fn ($q) => $q->where('examination_drive_component_maps.examination_drive_id', '!=', $drive->id))) {
+            return response()->json(['message' => $error], 422);
+        }
+
+        DB::transaction(function () use ($drive, $slots) {
+            foreach ($slots as $slot) {
+                $slot['map']->update(['proposed_start_at' => $slot['start'], 'proposed_end_at' => $slot['end']]);
+            }
+
+            // The drive spans its components' confirmed slots; its dates take the date part
+            // (read everywhere in COE) and proposed_* keep the times.
+            $first = $slots->min('start');
+            $last = $slots->max('end');
+            $drive->update([
+                'cc_status'           => ExaminationDrive::CC_APPROVED,
+                'start_date'          => $first->toDateString(),
+                'end_date'            => $last->toDateString(),
+                'proposed_start_date' => $first,
+                'proposed_end_date'   => $last,
+                'cc_remarks'          => null,
+                'cc_action_by'        => auth()->user()->user_id,
+                'cc_action_at'        => now(),
+                'modified_date'       => now(),
+            ]);
+        });
+
+        $notice = $this->notifyFacultyApproved($drive->fresh());
+        // Components whose exam is already over open for marks entry right away. After the
+        // CC's slots are saved above, so "over" is judged on the confirmed slots.
         try {
             app(\App\Services\COE\ResultMarksService::class)->notifyEntryReady((int) $drive->id);
         } catch (\Throwable $e) {
@@ -923,7 +1215,10 @@ class ExaminationDriveController extends Controller
             ->pluck('employee_master_pk', 'pk');
 
         $name = filled($drive->drive_name) ? $drive->drive_name : 'Examination Drive #' . $drive->id;
-        $dates = optional($drive->start_date)->format('d-m-Y') . ' to ' . optional($drive->end_date)->format('d-m-Y');
+        // With the CC's times when the proposal has them.
+        $dates = $drive->proposed_start_date && $drive->proposed_end_date
+            ? $drive->proposed_start_date->format('d-m-Y H:i') . ' to ' . $drive->proposed_end_date->format('d-m-Y H:i')
+            : optional($drive->start_date)->format('d-m-Y') . ' to ' . optional($drive->end_date)->format('d-m-Y');
         $sent = 0;
         try {
             $service = app(NotificationService::class);
@@ -999,12 +1294,15 @@ class ExaminationDriveController extends Controller
                 'faculty' => trim((string) ($map->faculty->full_name ?? '')) ?: '-',
             ])->values(),
             'components' => collect($view['component_rows'])->map(fn ($row) => [
+                'id'            => $row['id'],
+                'cc_start'      => $row['cc_start'],
+                'cc_end'        => $row['cc_end'],
                 'subject'       => $row['subject'],
                 'component'     => $row['component'],
                 'max_marks'     => $row['max_marks'],
                 'passing_marks' => $row['passing_marks'],
                 'weightage'     => $row['weightage'],
-                'exam_date'     => $row['exam_date'] . ' – ' . $row['exam_end_date'],
+                'exam_date'     => $row['exam_range'],
                 'exam_mode'     => $row['exam_mode'],
                 'exam_type'     => $row['exam_type'] ?: '-',
                 'faculty'       => implode(', ', $row['sub_coordinators']) ?: $row['faculty'],
@@ -1123,6 +1421,10 @@ class ExaminationDriveController extends Controller
         return view('admin.coe.examination_drive.faculty_setup', [
             'drive'       => $this->driveViewModel($drive, $subjectPk),
             'components'  => $this->componentNames(),
+            // Every component, inactive too, for Add Component's as-you-type duplicate check.
+            'allComponents' => ComponentMaster::orderBy('component_name')->get(['component_name', 'active_inactive'])
+                ->map(fn ($c) => ['name' => trim((string) $c->component_name), 'active' => (int) $c->active_inactive === 1])->values(),
+            'addComponentUrl' => route('admin.coe.faculty-examination-drive.components.store', ['id' => $drive->id, 'subject' => $subjectPk]),
             'sources'     => self::SOURCES,
             // Assign Faculty: Internal faculty only, plus anyone already assigned on
             // this subject's rows (set before the rule) so they still show.
@@ -1165,11 +1467,11 @@ class ExaminationDriveController extends Controller
             'subject'    => ['heading' => 'Subject', 'width' => '11%', 'value' => fn ($row) => $row['subject']],
             'component'  => ['heading' => 'Component', 'width' => '11%', 'value' => fn ($row) => $row['component']],
             'max'        => ['heading' => 'Max Marks', 'width' => '6%', 'align' => 'center', 'value' => fn ($row) => $num($row['max_marks'])],
-            'pass'       => ['heading' => 'Passing Marks', 'width' => '6%', 'align' => 'center', 'value' => fn ($row) => $num($row['passing_marks'])],
+            'pass'       => ['heading' => 'Passing Marks', 'width' => '6%', 'align' => 'center', 'value' => fn ($row) => $row['passing_marks']],
             'source'     => ['heading' => 'Evaluation Through', 'width' => '8%', 'value' => fn ($row) => $row['source']],
             'faculty'    => ['heading' => 'Faculty', 'width' => '15%', 'value' => fn ($row) => implode(', ', $row['sub_coordinators']) ?: $row['faculty']],
             'weightage'  => ['heading' => 'Weightage %', 'width' => '6%', 'align' => 'center', 'value' => fn ($row) => $num($row['weightage'])],
-            'range'      => ['heading' => 'Exam Range', 'width' => '11%', 'align' => 'center', 'value' => fn ($row) => str_replace('/', '-', $row['exam_date']) . ' to ' . str_replace('/', '-', $row['exam_end_date'])],
+            'range'      => ['heading' => 'Tentative Exam Range', 'width' => '11%', 'align' => 'center', 'value' => fn ($row) => $row['exam_range']],
             'mode'       => ['heading' => 'Exam Mode', 'width' => '7%', 'value' => fn ($row) => $row['exam_mode']],
             'type'       => ['heading' => 'Exam Type', 'width' => '8%', 'value' => fn ($row) => $row['exam_type'] ?: '-'],
             'rolls'      => ['heading' => 'Roll Numbers Assigned', 'width' => '7%', 'align' => 'center', 'value' => fn ($row) => $codes($row['faculty_codes']) ?: '-'],
@@ -1180,7 +1482,7 @@ class ExaminationDriveController extends Controller
             'Course: ' . $view['course'],
             'Term: ' . $view['term'],
             'Academic Session: ' . $view['session'],
-            'Service: ' . ($view['service_name'] ?: $view['service']),
+            'Passing: 50% of max marks (Bhutan services 25%)',
             'Drive Dates: ' . ($view['start_date'] ?? '-') . ' to ' . ($view['end_date'] ?? '-'),
             'Status: ' . $view['status'],
         ]);
@@ -1225,13 +1527,13 @@ class ExaminationDriveController extends Controller
             'subject'   => ['heading' => 'Subject', 'width' => '9%', 'value' => fn ($row) => $row['subject']],
             'component' => ['heading' => 'Component', 'width' => '9%', 'value' => fn ($row) => $row['component']],
             'max'       => ['heading' => 'Max Marks', 'width' => '5%', 'align' => 'center', 'value' => fn ($row) => $num($row['max_marks'])],
-            'pass'      => ['heading' => 'Passing Marks', 'width' => '5%', 'align' => 'center', 'value' => fn ($row) => $num($row['passing_marks'])],
+            'pass'      => ['heading' => 'Passing Marks', 'width' => '5%', 'align' => 'center', 'value' => fn ($row) => $row['passing_marks']],
             'source'    => ['heading' => 'Source', 'width' => '6%', 'value' => fn ($row) => $row['source']],
             'faculty'   => ['heading' => 'Faculty / Subcoordinator', 'width' => '11%', 'value' => fn ($row) => $row['person']],
             'rolls'     => ['heading' => "OT's Roll Number", 'width' => '12%', 'value' => fn ($row) => $row['rolls']],
             'uniq'      => ['heading' => 'Unique Participant Codes', 'width' => '11%', 'value' => fn ($row) => $row['uniq']],
             'weightage' => ['heading' => 'Weightage %', 'width' => '6%', 'align' => 'center', 'value' => fn ($row) => $num($row['weightage'])],
-            'range'     => ['heading' => 'Exam Range', 'width' => '9%', 'align' => 'center', 'value' => fn ($row) => str_replace('/', '-', $row['exam_date']) . ' to ' . str_replace('/', '-', $row['exam_end_date'])],
+            'range'     => ['heading' => 'Tentative Exam Range', 'width' => '9%', 'align' => 'center', 'value' => fn ($row) => $row['exam_range']],
             'mode'      => ['heading' => 'Exam Mode', 'width' => '6%', 'value' => fn ($row) => $row['exam_mode']],
             'type'      => ['heading' => 'Exam Type', 'width' => '7%', 'value' => fn ($row) => $row['exam_type'] ?: '-'],
         ];
@@ -1571,10 +1873,17 @@ class ExaminationDriveController extends Controller
             'status'     => $drive->progress()[0],
             'archived'   => $drive->status === ExaminationDrive::STATUS_CLOSED,
             'component_rows' => $maps->map(fn ($map) => [
+                'id'             => (int) $map->id,
                 'component'      => $map->component->component_name ?? '-',
+                // CC approval pickers ("Y-m-d\TH:i"): the CC's slot if set, else the tentative
+                // one, else its dates as whole days.
+                'cc_start'       => optional($map->proposed_start_at ?? $map->exam_start_at)->format('Y-m-d\TH:i')
+                    ?? (optional($map->exam_date ?? $drive->start_date)->format('Y-m-d') ? ($map->exam_date ?? $drive->start_date)->format('Y-m-d') . 'T00:00' : ''),
+                'cc_end'         => optional($map->proposed_end_at ?? $map->exam_end_at)->format('Y-m-d\TH:i')
+                    ?? (optional($map->exam_end_date ?? $drive->end_date)->format('Y-m-d') ? ($map->exam_end_date ?? $drive->end_date)->format('Y-m-d') . 'T23:59' : ''),
                 'subject'        => trim((string) ($map->subject->subject_name ?? '')) ?: '-',
                 'max_marks'      => $map->max_marks,
-                'passing_marks'  => $map->passing_marks,
+                'passing_marks'  => ResultMarksService::passingMarksLabel($map->max_marks === null ? null : (float) $map->max_marks),
                 'source'         => $map->source ?: self::SOURCES[0],
                 'faculty'        => trim($map->faculty->full_name ?? '') ?: '-',
                 'weightage'      => $map->weightage,
@@ -1582,6 +1891,17 @@ class ExaminationDriveController extends Controller
                     ?: (optional($drive->start_date)->format('d/m/Y') ?: now()->format('d/m/Y')),
                 'exam_end_date'  => optional($map->exam_end_date)->format('d/m/Y')
                     ?: (optional($drive->end_date)->format('d/m/Y') ?: now()->format('d/m/Y')),
+                // Tentative Exam Range times: "Y-m-d H:i" for the pickers ('' when not set), and the
+                // label every list / export shows — with times when set, else the dates.
+                'exam_start_at'  => optional($map->exam_start_at)->format('Y-m-d H:i') ?? '',
+                'exam_end_at'    => optional($map->exam_end_at)->format('Y-m-d H:i') ?? '',
+                'exam_range'     => ($map->exam_start_at
+                        ? $map->exam_start_at->format('d-m-Y H:i')
+                        : (optional($map->exam_date)->format('d-m-Y') ?: (optional($drive->start_date)->format('d-m-Y') ?: '-')))
+                    . ' to '
+                    . ($map->exam_end_at
+                        ? $map->exam_end_at->format('d-m-Y H:i')
+                        : (optional($map->exam_end_date)->format('d-m-Y') ?: (optional($drive->end_date)->format('d-m-Y') ?: '-'))),
                 'exam_mode'      => $map->exam_mode ?: self::EXAM_MODES[0],
                 'exam_type'      => $map->exam_type,
                 'sub_faculty'    => $map->sub_faculty_names ?? [],

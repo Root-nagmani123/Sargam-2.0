@@ -39,8 +39,13 @@ class ExaminationDriveCcDataTable extends ExaminationDriveFacultyDataTable
             'data-coe-id' => fn ($row) => $row->id,
             'data-cc-start' => fn ($row) => optional($row->start_date)->format('Y-m-d'),
             'data-cc-end' => fn ($row) => optional($row->end_date)->format('Y-m-d'),
-            'data-cc-proposed-start' => fn ($row) => optional($row->proposed_start_date ?? $row->start_date)->format('Y-m-d'),
-            'data-cc-proposed-end' => fn ($row) => optional($row->proposed_end_date ?? $row->end_date)->format('Y-m-d'),
+            // Date + time for the dialog's pickers; without a proposal, the drive's dates as whole days.
+            'data-cc-proposed-start' => fn ($row) => $row->proposed_start_date
+                ? $row->proposed_start_date->format('Y-m-d\TH:i')
+                : (optional($row->start_date)->format('Y-m-d') ? $row->start_date->format('Y-m-d') . 'T00:00' : ''),
+            'data-cc-proposed-end' => fn ($row) => $row->proposed_end_date
+                ? $row->proposed_end_date->format('Y-m-d\TH:i')
+                : (optional($row->end_date)->format('Y-m-d') ? $row->end_date->format('Y-m-d') . 'T23:59' : ''),
             // Course dates bound the dates the CC can confirm (ExaminationDriveController::ccApprove).
             'data-cc-course-start' => fn ($row) => $row->course?->start_year ? \Carbon\Carbon::parse($row->course->start_year)->format('Y-m-d') : '',
             'data-cc-course-end' => fn ($row) => $row->course?->end_date ? \Carbon\Carbon::parse($row->course->end_date)->format('Y-m-d') : '',

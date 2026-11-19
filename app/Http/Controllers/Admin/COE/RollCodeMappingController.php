@@ -77,7 +77,7 @@ class RollCodeMappingController extends Controller
             $course !== '' ? 'Course: ' . $course : null,
             in_array($state, RollCodeMapping::STATES, true) ? 'Mapping: ' . $state : null,
             $term !== '' ? 'Search: ' . $request->query('q') : null,
-            "OTs: {$s['total']}  ·  Mapped: {$s['mapped']}  ·  Unique code missing: {$s['code_missing']}  ·  Roll number missing: {$s['roll_missing']}",
+            "OTs: {$s['total']}  ·  Mapped: {$s['mapped']}  ·  Not frozen: {$s['not_frozen']}  ·  Unique code missing: {$s['code_missing']}  ·  Roll number missing: {$s['roll_missing']}",
         ]));
 
         // renderMasterExport writes the audit line (actor, format, rows, filter) for every export.
@@ -98,7 +98,7 @@ class RollCodeMappingController extends Controller
         return in_array($request->query('scope'), RollCodeMapping::SCOPES, true) ? $request->query('scope') : 'active';
     }
 
-    /** @return array{total:int, mapped:int, code_missing:int, roll_missing:int} */
+    /** @return array{total:int, mapped:int, not_frozen:int, code_missing:int, roll_missing:int} */
     private function summary(Collection $rows): array
     {
         $by = $rows->countBy('mapping');
@@ -106,6 +106,7 @@ class RollCodeMappingController extends Controller
         return [
             'total'        => $rows->count(),
             'mapped'       => (int) ($by[RollCodeMapping::MAPPED] ?? 0),
+            'not_frozen'   => (int) ($by[RollCodeMapping::NOT_FROZEN] ?? 0),
             'code_missing' => (int) ($by[RollCodeMapping::CODE_MISSING] ?? 0),
             'roll_missing' => (int) ($by[RollCodeMapping::ROLL_MISSING] ?? 0),
         ];

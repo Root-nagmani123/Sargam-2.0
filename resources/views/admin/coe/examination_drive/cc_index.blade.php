@@ -17,6 +17,13 @@
 .ccdc-mini        { width:100%;border-collapse:collapse;font-size:12px; }
 .ccdc-mini th     { background:var(--ds-surface-2);font-weight:700;color:var(--ds-ink-muted);padding:6px 8px;border-bottom:1px solid var(--ds-line);white-space:nowrap; }
 .ccdc-mini td     { padding:6px 8px;border-bottom:1px solid var(--ds-line);vertical-align:top; }
+/* The CC's per-component slot: highlighted so it reads as the part to fill in. */
+.ccdc-mini th.ccdc-slot-col { background:#dbe8ff;color:#1e3a8a; }
+.ccdc-mini td.ccdc-slot-col { background:#f2f7ff;min-width:250px; }
+.ccdc-slot-line   { display:flex;align-items:center;gap:6px; }
+.ccdc-slot-line + .ccdc-slot-line { margin-top:4px; }
+.ccdc-slot-line span { width:34px;font-size:11px;color:var(--ds-ink-muted);flex:none; }
+.ccdc-slot-line input { font-size:12px;padding:3px 6px;height:auto; }
 </style>
 @endpush
 
@@ -157,25 +164,8 @@
                 <div class="modal-body coe-modal-body">
                     {{-- Drive details, Subject -> Faculty and components (ccDetails), filled on open --}}
                     <div id="ccdcDetails" class="mb-3"><div class="text-muted small">Loading drive details…</div></div>
-                    <div class="ccdc-sec-title mt-0">Date Confirmation</div>
-                    <div class="row g-3">
-                        <div class="col-sm-6">
-                            <label class="coe-form-label" for="ccdcStart">Start Date<span class="coe-req">*</span></label>
-                            <input type="date" id="ccdcStart" class="form-control coe-control ccdc-readonly-date" readonly>
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="coe-form-label" for="ccdcEnd">End Date<span class="coe-req">*</span></label>
-                            <input type="date" id="ccdcEnd" class="form-control coe-control ccdc-readonly-date" readonly>
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="coe-form-label" for="ccdcProposedStart">Proposed Start Exam Date<span class="coe-req">*</span></label>
-                            <input type="date" id="ccdcProposedStart" name="proposed_start_date" class="form-control coe-control" required>
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="coe-form-label" for="ccdcProposedEnd">Proposed End Exam Date<span class="coe-req">*</span></label>
-                            <input type="date" id="ccdcProposedEnd" name="proposed_end_date" class="form-control coe-control" required>
-                        </div>
-                    </div>
+                    {{-- No separate drive dates: the CC sets each component's slot in the Components
+                         table above, and the drive's dates are taken from them (ccApprove). --}}
                 </div>
                 <div class="modal-footer coe-modal-footer">
                     <button type="button" class="btn coe-btn coe-btn-cancel" data-bs-dismiss="modal">Cancel</button>
@@ -245,20 +235,38 @@ $(function () {
     var DETAILS_URL = @json(route('admin.coe.cc-examination-drive.details', ['id' => '__ID__']));
 
     /* Full drive details in the Approve window: info, Subject -> Faculty, components. */
+    // From / To date + time pickers for one component, prefilled (ccDetails cc_start / cc_end)
+    // and bounded by the course dates.
+    function slotInputs(c) {
+        var bound = function (attr, v) { return v ? ' ' + attr + '="' + v + '"' : ''; };
+        var lim = bound('min', courseRange[0] ? courseRange[0] + 'T00:00' : '') + bound('max', courseRange[1] ? courseRange[1] + 'T23:59' : '');
+        return '<div class="ccdc-slot-line"><span>From</span><input type="datetime-local" step="60" class="form-control ccdc-slot-start" data-id="' + c.id +
+                   '" data-name="' + esc(c.subject + ' – ' + c.component) + '" value="' + esc(c.cc_start || '') + '"' + lim + '></div>' +
+               '<div class="ccdc-slot-line"><span>To</span><input type="datetime-local" step="60" class="form-control ccdc-slot-end" value="' + esc(c.cc_end || '') + '"' + lim + '></div>';
+    }
+
+    @php
+        $pct = fn (float $v) => rtrim(rtrim(number_format($v, 2), '0'), '.');
+        $passingRule = $pct(\App\Services\COE\ResultMarksService::PASSING_PERCENT) . '% of Max Marks; Bhutan (RBCS, RBFoS, RBPS): '
+            . $pct(\App\Services\COE\ResultMarksService::BHUTAN_PASSING_PERCENT) . '%';
+    @endphp
+    var PASSING_RULE = @json($passingRule);
+
     function loadDetails(id) {
         var $box = $('#ccdcDetails').html('<div class="text-muted small">Loading drive details…</div>');
         $.getJSON(DETAILS_URL.replace('__ID__', id)).done(function (d) {
-            var info = [['Drive Name', d.name], ['Course', d.course], ['Service', d.service], ['Examination Type', d.exam_type],
+            // Drives no longer carry a Service; the passing rule (ResultMarksService::passingPercent) shows here instead.
+            var info = [['Drive Name', d.name], ['Course', d.course], ['Passing Marks', PASSING_RULE], ['Examination Type', d.exam_type],
                         ['Term', d.term], ['Academic Session', d.session], ['Drive Dates', (d.start_date || '-') + ' – ' + (d.end_date || '-')], ['Status', d.status]];
             var html = '<dl class="ccdc-info mb-0">' + info.map(function (i) { return '<div><dt>' + i[0] + '</dt><dd>' + esc(i[1]) + '</dd></div>'; }).join('') + '</dl>';
             html += '<div class="ccdc-sec-title">Subject &amp; Faculty</div><div class="table-responsive"><table class="ccdc-mini"><thead><tr><th>#</th><th>Subject</th><th>Faculty</th></tr></thead><tbody>' +
                 (d.mapping.length ? d.mapping.map(function (m, i) { return '<tr><td>' + (i + 1) + '</td><td>' + esc(m.subject) + '</td><td>' + esc(m.faculty) + '</td></tr>'; }).join('')
                                   : '<tr><td colspan="3" class="text-muted">No subject mapped.</td></tr>') + '</tbody></table></div>';
-            html += '<div class="ccdc-sec-title">Components</div><div class="table-responsive"><table class="ccdc-mini"><thead><tr><th>#</th><th>Subject</th><th>Component</th><th>Max Marks</th><th>Passing Marks</th><th>Weightage</th><th>Exam Range</th><th>Mode</th><th>Exam Type</th><th>Faculty</th></tr></thead><tbody>' +
+            html += '<div class="ccdc-sec-title">Components</div><div class="table-responsive"><table class="ccdc-mini"><thead><tr><th>#</th><th>Subject</th><th>Component</th><th>Max Marks</th><th>Passing Marks</th><th>Weightage</th><th>Tentative Exam Range</th><th class="ccdc-slot-col">Proposed Exam Date &amp; Time<span class="coe-req">*</span></th><th>Mode</th><th>Exam Type</th><th>Faculty</th></tr></thead><tbody>' +
                 (d.components.length ? d.components.map(function (c, i) {
                     return '<tr><td>' + (i + 1) + '</td><td>' + esc(c.subject) + '</td><td>' + esc(c.component) + '</td><td>' + esc(c.max_marks) + '</td><td>' + esc(c.passing_marks) +
-                        '</td><td>' + esc(c.weightage) + '</td><td class="text-nowrap">' + esc(c.exam_date) + '</td><td>' + esc(c.exam_mode) + '</td><td>' + esc(c.exam_type) + '</td><td>' + esc(c.faculty) + '</td></tr>';
-                }).join('') : '<tr><td colspan="10" class="text-muted">No components set up.</td></tr>') + '</tbody></table></div>';
+                        '</td><td>' + esc(c.weightage) + '</td><td class="text-nowrap">' + esc(c.exam_date) + '</td><td class="ccdc-slot-col">' + slotInputs(c) + '</td><td>' + esc(c.exam_mode) + '</td><td>' + esc(c.exam_type) + '</td><td>' + esc(c.faculty) + '</td></tr>';
+                }).join('') : '<tr><td colspan="11" class="text-muted">No components set up.</td></tr>') + '</tbody></table></div>';
             $box.html(html);
         }).fail(function (xhr) {
             $box.html('<div class="text-danger small">' + esc((xhr.responseJSON && xhr.responseJSON.message) || 'Could not load the drive details.') + '</div>');
@@ -269,37 +277,42 @@ $(function () {
     $table.on('click', '.coe-act--approve', function () {
         var $tr = $(this).closest('tr');
         driveId = $tr.attr('data-coe-id');
-        $('#ccdcStart').val($tr.attr('data-cc-start') || '');
-        $('#ccdcEnd').val($tr.attr('data-cc-end') || '');
-        $('#ccdcProposedStart').val($tr.attr('data-cc-proposed-start') || '');
-        $('#ccdcProposedEnd').val($tr.attr('data-cc-proposed-end') || '');
         // The confirmed dates must sit inside the course dates (ccApprove checks it too).
         courseRange = [$tr.attr('data-cc-course-start') || '', $tr.attr('data-cc-course-end') || ''];
-        $('#ccdcProposedStart, #ccdcProposedEnd').attr('min', courseRange[0] || null).attr('max', courseRange[1] || null);
         loadDetails(driveId);
         bootstrap.Modal.getOrCreateInstance($modal[0]).show();
     });
 
     $('#ccdcApproveForm').on('submit', function (e) {
         e.preventDefault();
-        var start = $('#ccdcProposedStart').val(), end = $('#ccdcProposedEnd').val();
-        if (!start || !end) {
-            Swal.fire({ icon: 'warning', title: 'Dates needed', text: 'Enter the proposed start and end exam dates.' });
-            return;
+        // One slot per component; the same checks as ccApprove, first, for a quicker message.
+        var slots = {}, list = [], problem = null;
+        var show = function (d) { var p = d.slice(0, 10).split('-'); return p[2] + '-' + p[1] + '-' + p[0] + (d.length > 10 ? ' ' + d.slice(11, 16) : ''); };
+        $('#ccdcDetails .ccdc-slot-start').each(function () {
+            var $s = $(this), $e = $s.closest('td').find('.ccdc-slot-end'), start = $s.val(), end = $e.val(), name = $s.attr('data-name');
+            $s.add($e).removeClass('is-invalid');
+            if (!problem && (!start || !end)) { problem = 'Enter the proposed exam date and time for ' + name + '.'; (start ? $e : $s).addClass('is-invalid'); }
+            else if (!problem && end <= start) { problem = 'The proposed exam of ' + name + ' must end after it starts.'; $e.addClass('is-invalid'); }
+            else if (!problem && ((courseRange[0] && start.slice(0, 10) < courseRange[0]) || (courseRange[1] && end.slice(0, 10) > courseRange[1]))) {
+                problem = 'The proposed exam of ' + name + ' must be within the course dates (' + show(courseRange[0]) + ' to ' + show(courseRange[1]) + ').';
+                $s.addClass('is-invalid');
+            }
+            slots[$s.attr('data-id')] = { start: start, end: end };
+            list.push({ name: name, start: start, end: end, $e: $e });
+        });
+        if (!problem && !list.length) { problem = 'This drive has no components to schedule.'; }
+        for (var i = 0; !problem && i < list.length; i++) {
+            for (var j = i + 1; j < list.length; j++) {
+                if (list[i].start < list[j].end && list[j].start < list[i].end) {
+                    problem = list[i].name + ' and ' + list[j].name + ' overlap. Give each component its own slot.';
+                    list[j].$e.addClass('is-invalid'); break;
+                }
+            }
         }
-        if (end < start) {
-            Swal.fire({ icon: 'warning', title: 'Check the dates', text: 'The proposed end exam date cannot be before the start.' });
-            return;
-        }
-        if ((courseRange[0] && start < courseRange[0]) || (courseRange[1] && end > courseRange[1])) {
-            var show = function (d) { var p = d.split('-'); return p[2] + '-' + p[1] + '-' + p[0]; };
-            Swal.fire({ icon: 'warning', title: 'Check the dates',
-                text: 'The proposed exam dates must be within the course dates (' + show(courseRange[0]) + ' to ' + show(courseRange[1]) + ').' });
-            return;
-        }
+        if (problem) { Swal.fire({ icon: 'warning', title: 'Check the exam slots', text: problem }); return; }
         var $btn = $('#ccdcApproveSubmit').prop('disabled', true);
         $.ajax({ url: BASE + '/' + driveId + '/approve', method: 'PUT', headers: { 'X-CSRF-TOKEN': CSRF },
-                 data: { proposed_start_date: start, proposed_end_date: end } })
+                 data: { slots: slots } })
             .done(function (res) {
                 bootstrap.Modal.getOrCreateInstance($modal[0]).hide();
                 dt.ajax.reload(null, false);

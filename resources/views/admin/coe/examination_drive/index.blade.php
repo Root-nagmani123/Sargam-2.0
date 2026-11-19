@@ -19,6 +19,8 @@
                         width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer; }
 .edc-map-row-del:hover{ background:#b02a37; }
 .edc-map-row-add:hover{ background:#003070; }
+/* "+" only on the last mapping row; earlier rows keep just "−" (space kept so they line up). */
+.edc-map-row:not(:last-child) .edc-map-row-add { visibility:hidden; }
 </style>
 @endpush
 
@@ -176,27 +178,21 @@
                                    placeholder="eg. Foundation Exam Drive" maxlength="150" autocomplete="off">
                         </div>
                     </div>
-                    {{-- Course + Service --}}
+                    {{-- Course. No Service: a drive is for the whole course, and each OT's
+                         passing marks follow their own service (ResultMarksService::passingPercent). --}}
                     <div class="row g-3 mb-3">
-                        <div class="col-sm-6">
+                        <div class="col-12">
                             <label class="coe-form-label" for="edcCourse">Course<span class="coe-req">*</span></label>
                             <select id="edcCourse" name="course" class="form-select coe-control">
                                 <option value="">Select Course</option>
                                 @foreach ($courses as $c)<option value="{{ $c }}">{{ $c }}</option>@endforeach
                             </select>
                         </div>
-                        <div class="col-sm-6">
-                            <label class="coe-form-label" for="edcService">Service<span class="coe-req">*</span></label>
-                            <select id="edcService" name="service" class="form-select coe-control">
-                                <option value="">Select Service</option>
-                                @foreach ($services as $pk => $name)<option value="{{ $pk }}">{{ $name }}</option>@endforeach
-                            </select>
-                        </div>
                     </div>
-                    {{-- Examination Type + Term --}}
+                    {{-- Examination Type (optional) + Term --}}
                     <div class="row g-3 mb-3">
                         <div class="col-sm-6">
-                            <label class="coe-form-label" for="edcExamType">Examination Type<span class="coe-req">*</span></label>
+                            <label class="coe-form-label" for="edcExamType">Examination Type</label>
                             <select id="edcExamType" name="exam_type" class="form-select coe-control">
                                 <option value="">Select Examination Type</option>
                                 @foreach ($activeExamTypes as $et)<option value="{{ $et }}">{{ $et }}</option>@endforeach
@@ -460,11 +456,10 @@ $(function () {
     var $editingRow = null;
 
     var $course  = $('#edcCourse');
-    var $service = $('#edcService');
     var $type    = $('#edcExamType');
     var $term    = $('#edcTerm');
     var $status  = $('#edcStatus');
-    [$course, $service, $type, $term, $status].forEach(function ($s) {
+    [$course, $type, $term, $status].forEach(function ($s) {
         $s.select2({ width: '100%', dropdownParent: $modal });
     });
 
@@ -507,7 +502,6 @@ $(function () {
             keepOption($type, $row.attr('data-edc-type'));
             keepOption($term, $row.attr('data-edc-term'));
             keepOption($course, $row.attr('data-edc-course'));
-            $service.val($row.attr('data-edc-service') || '').trigger('change.select2');
             $('#edcSession').val($row.attr('data-edc-session') || '');
             $status.val($row.attr('data-edc-status') || 'Draft').trigger('change.select2');
             // Convert dd-mm-yyyy → yyyy-mm-dd for date input
@@ -524,7 +518,6 @@ $(function () {
         } else {
             $('#edcDriveName').val('');
             $course.val('').trigger('change.select2');
-            $service.val('').trigger('change.select2');
             $type.val('').trigger('change.select2');
             $term.val('').trigger('change.select2');
             $('#edcSession').val('');
@@ -567,8 +560,6 @@ $(function () {
         var isEdit = !!$editingRow;
         ok = fieldError($('#edcDriveName'), $.trim($('#edcDriveName').val()) ? '' : 'Enter the drive name.') && ok;
         ok = fieldError($course, $course.val() ? '' : 'Select a course.') && ok;
-        ok = fieldError($service, $service.val() ? '' : 'Select a service.') && ok;
-        ok = fieldError($type,   $type.val()   ? '' : 'Select the examination type.') && ok;
         ok = fieldError($term,   $term.val()   ? '' : 'Select a term.') && ok;
         ok = fieldError($('#edcSession'), $.trim($('#edcSession').val()) ? '' : 'Enter the academic session.') && ok;
         ok = fieldError($('#edcStartDate'), $('#edcStartDate').val() ? '' : 'Select the start date.') && ok;
@@ -599,8 +590,7 @@ $(function () {
 
         var payload = {
             course: $course.val(),
-            service: $service.val(),
-            exam_type: $type.val(),
+            exam_type: $type.val() || '',
             term: $term.val(),
             academic_session: $.trim($('#edcSession').val()),
             status: $status.val(),

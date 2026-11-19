@@ -46,8 +46,9 @@ class ExaminationDrive extends Model
         'status' => 'integer',
         'start_date' => 'date',
         'end_date' => 'date',
-        'proposed_start_date' => 'date',
-        'proposed_end_date' => 'date',
+        // The Course Coordinator's proposed exam window, date + time.
+        'proposed_start_date' => 'datetime',
+        'proposed_end_date' => 'datetime',
         'cc_action_at' => 'datetime',
     ];
 

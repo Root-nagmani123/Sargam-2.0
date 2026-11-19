@@ -2294,6 +2294,9 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->whereNumber('id')->whereIn('format', ['csv', 'excel', 'pdf', 'print'])->name('faculty-examination-drive.setup.export');
     Route::get('faculty-examination-drive/{id}/setup', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'facultySetup'])
         ->whereNumber('id')->name('faculty-examination-drive.setup');
+    // Add Component from the setup page: saves straight into Component Master for every drive.
+    Route::post('faculty-examination-drive/{id}/components', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'addComponent'])
+        ->whereNumber('id')->middleware('throttle:30,1')->name('faculty-examination-drive.components.store');
     // COE -> Laptop Management
     Route::get('ot-laptop-status', [\App\Http\Controllers\Admin\COE\OtLaptopStatusController::class, 'index'])
         ->name('ot-laptop-status.index');

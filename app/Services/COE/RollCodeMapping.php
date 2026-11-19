@@ -17,7 +17,9 @@ use Illuminate\Support\Facades\DB;
  * course and batch come from its allocation (coe_roll_number_allocations).
  *
  * Every OT that has either a roll number or a code is listed, so the gaps show:
- * MAPPED (both), CODE_MISSING (roll number only), ROLL_MISSING (code only).
+ * MAPPED (both, and BOTH frozen), NOT_FROZEN (both, but either one not frozen yet),
+ * CODE_MISSING (roll number only), ROLL_MISSING (code only). A pair only counts as
+ * mapped once it is final — an unfrozen roll number or code can still change.
  *
  * Confidential: the mapping undoes the anonymity of the codes, so only the
  * COE screen (menu permission coe_roll_code_mapping) reads it.
@@ -28,11 +30,13 @@ class RollCodeMapping
 
     public const MAPPED = 'Mapped';
 
+    public const NOT_FROZEN = 'Not frozen';
+
     public const CODE_MISSING = 'Unique code missing';
 
     public const ROLL_MISSING = 'Roll number missing';
 
-    public const STATES = [self::MAPPED, self::CODE_MISSING, self::ROLL_MISSING];
+    public const STATES = [self::MAPPED, self::NOT_FROZEN, self::CODE_MISSING, self::ROLL_MISSING];
 
     /**
      * One row per OT of the scope's courses, ordered by course, batch, then roll
@@ -85,6 +89,15 @@ class RollCodeMapping
             $any = $roll ?? $code;
             $student = $students[$any->student_master_pk] ?? null;
 
+            // Only a pair where BOTH sides are frozen is mapped; unfrozen values can still change.
+            $rollFrozen = $roll && ($roll->frozen_at || (int) $roll->allocation_status === RollNumberAllocation::STATUS_FROZEN);
+            $codeFrozen = $code && (int) $code->status === ParticipantCode::STATUS_FROZEN;
+            $mapping = match (true) {
+                $roll && $code => $rollFrozen && $codeFrozen ? self::MAPPED : self::NOT_FROZEN,
+                (bool) $roll   => self::CODE_MISSING,
+                default        => self::ROLL_MISSING,
+            };
+
             return [
                 'course_pk'    => (int) $any->course_master_pk,
                 'course_name'  => trim((string) ($courses[$any->course_master_pk] ?? '—')),
@@ -94,12 +107,10 @@ class RollCodeMapping
                 'service'      => trim((string) ($student->service_short_name ?? '')) ?: '—',
                 'roll_number'  => $roll ? trim((string) $roll->roll_number) : '',
                 'serial'       => $roll ? (int) $roll->serial_number : PHP_INT_MAX,
-                'roll_status'  => $roll
-                    ? ($roll->frozen_at || (int) $roll->allocation_status === RollNumberAllocation::STATUS_FROZEN ? 'Frozen' : 'Generated')
-                    : '—',
+                'roll_status'  => $roll ? ($rollFrozen ? 'Frozen' : 'Generated') : '—',
                 'unique_code'  => $code ? trim((string) $code->unique_code) : '',
                 'code_status'  => $code ? ParticipantCode::statusLabel((int) $code->status) : '—',
-                'mapping'      => $roll && $code ? self::MAPPED : ($roll ? self::CODE_MISSING : self::ROLL_MISSING),
+                'mapping'      => $mapping,
             ];
         })
             ->sort(fn ($a, $b) => [strtolower($a['course_name']), $a['batch'], $a['serial'], $a['unique_code']]

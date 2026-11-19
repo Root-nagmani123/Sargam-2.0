@@ -20,6 +20,8 @@
 @media (max-width: 767.98px)  { .edc-info-bar { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 /* Component table */
 .edc-comp-table     { width:100%;border-collapse:separate;border-spacing:0;min-width:1080px;table-layout:fixed; }
+/* Auto-filled, not editable: shaded so they read as read-only. */
+.edc-comp-table .edc-weightage[readonly] { background:var(--ds-surface-2); padding-left:8px; padding-right:8px; cursor:default; }
 .edc-comp-table thead th { padding:10px 8px;background:var(--ds-surface-2);font-size:14px;font-weight:500;line-height:1.2;
                       color:var(--ds-ink);white-space:normal;vertical-align:middle; }
 .edc-comp-table thead th:first-child { padding-left:14px;border-radius:10px 0 0 0; }
@@ -119,13 +121,12 @@
                 <table class="edc-comp-table" id="edcCompTable">
                     <thead>
                         <tr>
-                            <th style="width:15%">Components<i class="bi bi-chevron-expand"></i></th>
+                            <th style="width:17%">Components<i class="bi bi-chevron-expand"></i></th>
                             <th style="width:8%">Max Marks<i class="bi bi-chevron-expand"></i></th>
-                            <th style="width:8%">Passing Marks<i class="bi bi-chevron-expand"></i></th>
-                            <th style="width:11%">Source</th>
-                            <th style="width:17%">Faculty</th>
+                            <th style="width:12%">Source</th>
+                            <th style="width:20%">Faculty</th>
                             <th style="width:8%">Weightage %<i class="bi bi-chevron-expand"></i></th>
-                            <th style="width:13%">Exam Date</th>
+                            <th style="width:15%">Exam Date</th>
                             <th style="width:11%">Exam Mode</th>
                             <th style="width:9%" class="text-end">Action</th>
                         </tr>
@@ -143,7 +144,6 @@
                                 </select>
                             </td>
                             <td><input type="number" class="form-control edc-max" min="0" max="1000" step="0.01" value="{{ $row['max_marks'] }}"></td>
-                            <td><input type="number" class="form-control edc-pass" min="0" max="1000" step="0.01" value="{{ $row['passing_marks'] }}"></td>
                             <td>
                                 <select class="form-select edc-sel-source">
                                     @foreach ($sources as $s)
@@ -160,7 +160,7 @@
                                     <option value="Sargam 2.0" @if($systemSource) selected @endif>Sargam 2.0</option>
                                 </select>
                             </td>
-                            <td><input type="number" class="form-control edc-weightage" min="0" max="100" step="0.01" value="{{ $row['weightage'] }}"></td>
+                            <td><input type="number" class="form-control edc-weightage" readonly title="Auto: share of the total Max Marks" value="{{ $row['weightage'] }}"></td>
                             <td><input type="date" class="form-control edc-exam-date" value="{{ \Carbon\Carbon::createFromFormat('d/m/Y', $row['exam_date'])->format('Y-m-d') }}"></td>
                             <td>
                                 <select class="form-select edc-sel-mode">
@@ -226,10 +226,9 @@ $(function () {
         return '<tr class="edc-comp-row">' +
             '<td><select class="form-select edc-sel-component"><option value="">Component</option>' + options(COMPONENTS, '') + '</select></td>' +
             '<td><input type="number" class="form-control edc-max" min="0" max="1000" step="0.01" value="100"></td>' +
-            '<td><input type="number" class="form-control edc-pass" min="0" max="1000" step="0.01" value="40"></td>' +
             '<td><select class="form-select edc-sel-source">' + options(SOURCES, SOURCES[0]) + '</select></td>' +
             '<td><select class="form-select edc-sel-faculty">' + facultyOptions('') + '</select></td>' +
-            '<td><input type="number" class="form-control edc-weightage" min="0" max="100" step="0.01" value="0"></td>' +
+            '<td><input type="number" class="form-control edc-weightage" readonly title="Auto: share of the total Max Marks" value="0"></td>' +
             '<td><input type="date" class="form-control edc-exam-date" value=""></td>' +
             '<td><select class="form-select edc-sel-mode">' + options(EXAM_MODES, EXAM_MODES[0]) + '</select></td>' +
             '<td><div class="edc-actions">' +
@@ -239,12 +238,28 @@ $(function () {
     }
 
     /* Total Weightage, live */
+    // Weightage % = each row's share of the total Max Marks; remainder on the last row
+    // with marks, so they total exactly 100 (ExaminationDriveController::withShareWeightage).
+    function recalcWeightage() {
+        var $rows = $body.find('.edc-comp-row'), total = 0, given = 0, last = -1;
+        var maxOf = function ($r) { return parseFloat($r.find('.edc-max').val()) || 0; };
+        $rows.each(function (i) { var m = maxOf($(this)); total += m; if (m > 0) { last = i; } });
+        $rows.each(function (i) {
+            var m = maxOf($(this)), w = 0;
+            if (total > 0 && m > 0) {
+                w = i === last ? Math.round((100 - given) * 100) / 100 : Math.round(m / total * 10000) / 100;
+                given += w;
+            }
+            $(this).find('.edc-weightage').val(w);
+        });
+    }
     function recalcTotal() {
+        recalcWeightage();
         var total = 0;
         $body.find('.edc-weightage').each(function () { total += parseFloat($(this).val()) || 0; });
         $('#edcTotalWeightage').text(total % 1 === 0 ? total : total.toFixed(2));
     }
-    $body.on('input', '.edc-weightage', recalcTotal);
+    $body.on('input', '.edc-max', recalcTotal);
 
     $body.on('click', '.edc-row-del', function () {
         if ($body.find('.edc-comp-row').length > 1) {
@@ -279,7 +294,7 @@ $(function () {
             rows.push({
                 component: $r.find('.edc-sel-component').val(),
                 max_marks: $r.find('.edc-max').val(),
-                passing_marks: $r.find('.edc-pass').val(),
+                // Not sent: passing marks are fixed from Max Marks on the server.
                 source: $r.find('.edc-sel-source').val(),
                 faculty: $r.find('.edc-sel-faculty').val(),
                 weightage: $r.find('.edc-weightage').val(),
@@ -310,9 +325,9 @@ $(function () {
     /* Download: CSV of the table as currently shown. */
     $('#edcDownload').on('click', function () {
         var cell = function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; };
-        var lines = [['Component', 'Max Marks', 'Passing Marks', 'Source', 'Faculty', 'Weightage %', 'Exam Date', 'Exam Mode'].map(cell).join(',')];
+        var lines = [['Component', 'Max Marks', 'Source', 'Faculty', 'Weightage %', 'Exam Date', 'Exam Mode'].map(cell).join(',')];
         collectRows().forEach(function (r) {
-            lines.push([r.component, r.max_marks, r.passing_marks, r.source, r.faculty, r.weightage, r.exam_date, r.exam_mode].map(cell).join(','));
+            lines.push([r.component, r.max_marks, r.source, r.faculty, r.weightage, r.exam_date, r.exam_mode].map(cell).join(','));
         });
         var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
         var a = document.createElement('a');

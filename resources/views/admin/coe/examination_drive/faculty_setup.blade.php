@@ -22,7 +22,12 @@
 .fedc-info-value    { font-size:17px;font-weight:600;color:var(--ds-ink);overflow-wrap:anywhere; }
 @media (max-width: 991.98px) { .fedc-info-bar { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 /* Component mapping table */
-.fedc-map-table     { width:100%;border-collapse:separate;border-spacing:0;min-width:1380px;table-layout:fixed; }
+.fedc-map-table     { width:100%;border-collapse:separate;border-spacing:0;min-width:1700px;table-layout:fixed; }
+.fedc-map-table .fedc-exam-at { padding:6px 8px;background:#fff;font-size:13px; }
+/* Tentative Exam Range: start and end on one line. */
+.fedc-exam-pair { display:flex;align-items:center;gap:6px; }
+.fedc-exam-pair .fedc-exam-at { flex:1 1 0;min-width:0; }
+.fedc-exam-pair .fedc-exam-to { font-size:12px;color:var(--ds-ink-muted);flex:none; }
 .fedc-map-table .fedc-subject { font-size:14px;font-weight:600;color:var(--ds-ink);overflow-wrap:anywhere; }
 .fedc-map-table thead th { padding:10px 8px;background:var(--ds-surface-2);font-size:14px;font-weight:500;line-height:1.2;
                       color:var(--ds-ink);white-space:normal;vertical-align:middle; }
@@ -33,7 +38,6 @@
 .fedc-map-table tbody td:first-child { padding-left:12px; }
 .fedc-map-table tbody td:last-child  { padding-right:12px; }
 .fedc-map-table thead th:last-child  { padding-right:12px; }
-.fedc-map-table .fedc-exam-range { padding:6px 8px 6px 10px;background:#fff; }
 .fedc-map-table .form-control,
 .fedc-map-table .form-select { height:40px;font-size:14px;border-color:var(--ds-line);border-radius:6px;color:var(--ds-ink); }
 .fedc-map-table .form-select  { padding-left:12px;padding-right:30px;background-position:right 10px center;text-overflow:ellipsis; }
@@ -66,7 +70,8 @@
 .fedc-total-row td:first-child { border-radius:0 0 0 10px; }
 .fedc-total-row td:last-child  { border-radius:0 0 10px 0; }
 .fedc-total-row .is-over { color:#e5141a;font-weight:600; }
-.fedc-map-table .fedc-pass-marks[readonly] { background:var(--ds-surface-2); }
+/* Auto-filled, not editable: shaded so they read as read-only. */
+.fedc-map-table .fedc-weightage[readonly] { background:var(--ds-surface-2); padding-left:8px; padding-right:8px; cursor:default; }
 .fedc-footer        { display:flex;justify-content:flex-end;gap:16px;margin-top:28px; }
 .fedc-footer .btn   { min-width:116px;height:48px;font-size:17px; }
 /* Assign Faculty modal tabs */
@@ -115,10 +120,10 @@
 
 @section('setup_content')
 @php
-    // Passing marks come from Service Passing Marks; total max marks is capped by
-    // Subject Max Marks on a single-subject drive (ExaminationDriveController::marksLimits).
-    $passFixed = $limits['passing_marks'];
-    $missingMaster = $passFixed === null || $limits['subject_max'] === null;
+    // Passing marks are fixed: 50% of a component's max marks, 25% for Bhutan services
+    // (ResultMarksService::passingPercent) — shown, never entered. Total max marks is capped
+    // by Subject Max Marks on a single-subject drive (ExaminationDriveController::marksLimits).
+    $missingMaster = $limits['subject_max'] === null;
     $num = fn ($v) => $v === null ? '' : rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
 @endphp
 <div class="container-fluid coe-page">
@@ -172,21 +177,13 @@
             <span class="fedc-info-label">Subject</span>
             <span class="fedc-info-value">{{ $subjectTabs[$subjectPk] ?? '—' }}</span>
         </div>
+        {{-- No Service on a drive: each OT's own service decides the percentage. --}}
         <div class="fedc-info-item">
-            <span class="fedc-info-label">Service</span>
-            <span class="fedc-info-value" title="{{ $drive['service_name'] }}">{{ $drive['service'] }}</span>
+            <span class="fedc-info-label">Passing Marks</span>
+            <span class="fedc-info-value">50% of Max Marks <small class="d-block text-muted">Bhutan (RBCS, RBFoS, RBPS): 25%</small></span>
         </div>
     </div>
 
-    @if ($passFixed === null)
-        <div class="alert alert-warning">
-            @if ($limits['service_name'])
-                Passing marks for <strong>{{ $limits['service_name'] }}</strong> are not set. Ask the COE admin to add them in Master Data › Service Passing Marks.
-            @else
-                This drive has no Service yet. Ask the COE admin to set it in Edit Examination Drive.
-            @endif
-        </div>
-    @endif
     @if ($limits['subject_max'] === null)
         <div class="alert alert-warning">Max marks for <strong>{{ $limits['subject_name'] }}</strong> are not set. Ask the COE admin to add them in Master Data › Subject Max Marks.</div>
     @endif
@@ -220,13 +217,12 @@
                             <th style="width:8%">Subject</th>
                             <th style="width:12%" data-sort="component">Components<i class="bi bi-chevron-expand"></i></th>
                             <th style="width:7%"  data-sort="max">Max Marks<i class="bi bi-chevron-expand"></i></th>
-                            <th style="width:8%"  data-sort="pass">Passing Marks<i class="bi bi-chevron-expand"></i></th>
                             <th style="width:8%">Evaluation Through</th>
-                            <th style="width:11%">Faculty</th>
-                            <th style="width:8%"  data-sort="weightage">Weightage %<i class="bi bi-chevron-expand"></i></th>
-                            <th style="width:13%">Exam Range</th>
+                            <th style="width:12%">Faculty</th>
+                            <th style="width:7%"  data-sort="weightage">Weightage %<i class="bi bi-chevron-expand"></i></th>
+                            <th style="width:20%">Tentative Exam Range</th>
                             <th style="width:9%">Exam Mode</th>
-                            <th style="width:9%">Exam Type</th>
+                            <th style="width:10%">Exam Type</th>
                             <th style="width:7%" class="text-end">Action</th>
                         </tr>
                     </thead>
@@ -239,15 +235,12 @@
                                     @foreach ($components as $c)
                                     <option value="{{ $c }}" @if($c === $row['component']) selected @endif>{{ $c }}</option>
                                     @endforeach
+                                    @unless ($readOnly)<option value="__add__" class="fedc-add-opt">+ Add Component</option>@endunless
                                 </select>
                             </td>
                             <td>
                                 <input type="number" class="form-control fedc-max-marks"
                                        min="0" max="1000" step="0.01" value="{{ $row['max_marks'] }}">
-                            </td>
-                            <td>
-                                <input type="number" class="form-control fedc-pass-marks" readonly
-                                       title="From Service Passing Marks" value="{{ $passFixed === null ? $row['passing_marks'] : $num($passFixed) }}">
                             </td>
                             <td>
                                 <select class="form-select fedc-source">
@@ -278,15 +271,18 @@
                                 </button>
                             </td>
                             <td>
-                                <input type="number" class="form-control fedc-weightage"
-                                       min="0" max="100" step="0.01" value="{{ $row['weightage'] }}">
+                                <input type="number" class="form-control fedc-weightage" readonly
+                                       title="Auto: share of the subject's total Max Marks" value="{{ $row['weightage'] }}">
                             </td>
-                            <td>
-                                <input type="text" class="form-control fedc-exam-range" readonly
-                                       data-start="{{ \Carbon\Carbon::createFromFormat('d/m/Y', $row['exam_date'])->format('Y-m-d') }}"
-                                       data-end="{{ \Carbon\Carbon::createFromFormat('d/m/Y', $row['exam_end_date'])->format('Y-m-d') }}"
-                                       placeholder="dd/mm/yyyy - dd/mm/yyyy">
-                            </td>
+                            {{-- Tentative Exam Range, date + time; values kept as Y-m-d H:i in data-value.
+                                 A row saved before times existed opens as its dates, whole days. --}}
+                            <td><div class="fedc-exam-pair">
+                                <input type="text" class="form-control fedc-exam-at fedc-exam-start" readonly placeholder="Start: dd/mm/yyyy hh:mm"
+                                       data-value="{{ $row['exam_start_at'] ?: \Carbon\Carbon::createFromFormat('d/m/Y', $row['exam_date'])->format('Y-m-d') . ' 00:00' }}">
+                                <span class="fedc-exam-to">to</span>
+                                <input type="text" class="form-control fedc-exam-at fedc-exam-end" readonly placeholder="End: dd/mm/yyyy hh:mm"
+                                       data-value="{{ $row['exam_end_at'] ?: \Carbon\Carbon::createFromFormat('d/m/Y', $row['exam_end_date'])->format('Y-m-d') . ' 23:59' }}">
+                            </div></td>
                             <td>
                                 <select class="form-select fedc-sel-mode">
                                     @foreach ($examModes as $m)
@@ -346,6 +342,34 @@
 </div>
 
 {{-- ── Assign Faculty modal ────────────────────────────────────────────── --}}
+{{-- Add Component: saves straight into Component Master (ExaminationDriveController::addComponent). --}}
+<div class="modal fade" id="fedcAddCompModal" tabindex="-1" aria-labelledby="fedcAddCompLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:520px">
+        <div class="modal-content coe-modal border-0 shadow">
+            <div class="modal-header coe-modal-header border-0 pb-1">
+                <h5 class="modal-title fw-bold" id="fedcAddCompLabel">Add Component</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body coe-modal-body pt-2">
+                <div class="alert alert-primary py-2 px-3 small d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-info-circle"></i> This will save directly to Component Master, for use in every drive.
+                </div>
+                <label class="coe-form-label" for="fedcAddCompSubject">Subject Name</label>
+                <input type="text" id="fedcAddCompSubject" class="form-control coe-control mb-3" readonly value="{{ $subjectTabs[$subjectPk] ?? '' }}">
+                <label class="coe-form-label" for="fedcAddCompName">Component<span class="coe-req">*</span></label>
+                <input type="text" id="fedcAddCompName" class="form-control coe-control" maxlength="100" autocomplete="off" placeholder="eg. Confidence">
+                {{-- As-you-type list of existing components, so a duplicate is caught before saving. --}}
+                <div id="fedcAddCompHint" class="small mt-2"></div>
+                <ul id="fedcAddCompMatches" class="list-unstyled small mb-0 mt-1" style="max-height:160px;overflow-y:auto;"></ul>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn coe-btn coe-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn coe-btn coe-btn-primary" id="fedcAddCompSave" disabled>Add Component</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="fedcAssignModal" tabindex="-1" aria-labelledby="fedcAssignModalLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered" style="max-width:420px">
         <div class="modal-content coe-modal border-0 shadow">
@@ -443,12 +467,15 @@ $(function () {
     var EXAM_TYPES = @json($componentExamTypes);
     // null = no limit / not set; see the warnings above the table.
     var SUBJECT_MAX  = @json($limits['subject_max']);
-    var PASS_FIXED   = @json($passFixed);
     var SUBJECT_PK   = @json($subjectPk);
     // Drive dates [start, end] (Y-m-d): the bounds of every component's exam range.
     var DRIVE_RANGE  = @json($driveRange);
     function fpDate(iso) { var p = iso.split('-'); return new Date(p[0], p[1] - 1, p[2]); }
     var SUBJECT_NAME = @json($subjectTabs[$subjectPk] ?? '');
+    var READ_ONLY = @json((bool) $readOnly);
+    // Every component (inactive too) for Add Component's duplicate check; see addComponent().
+    var ALL_COMPONENTS = @json($allComponents);
+    var ADD_COMPONENT_URL = @json($addComponentUrl);
 
     /* ── Total Weightage live update ──────────────────────────────────── */
     function sum(sel) {
@@ -456,12 +483,28 @@ $(function () {
         $('#fedcMapBody ' + sel).each(function () { total += parseFloat($(this).val()) || 0; });
         return Math.round(total * 100) / 100;
     }
+    // Weightage % = the row's share of the subject's total Max Marks, rounding remainder
+    // on the last row so the rows total exactly 100 (same as withShareWeightage() on save).
+    function recalcWeightage() {
+        var $rows = $('#fedcMapBody .fedc-map-row'), total = sum('.fedc-max-marks'), given = 0, last = -1;
+        var maxOf = function ($r) { return parseFloat($r.find('.fedc-max-marks').val()) || 0; };
+        $rows.each(function (i) { if (maxOf($(this)) > 0) { last = i; } });
+        $rows.each(function (i) {
+            var m = maxOf($(this)), w = 0;
+            if (total > 0 && m > 0) {
+                w = i === last ? Math.round((100 - given) * 100) / 100 : Math.round(m / total * 10000) / 100;
+                given += w;
+            }
+            $(this).find('.fedc-weightage').val(w);
+        });
+    }
     function recalcTotal() {
+        recalcWeightage();
         var weight = sum('.fedc-weightage'), max = sum('.fedc-max-marks');
         $('#fedcTotalWeightage').text(weight).toggleClass('is-over', weight > 100);
         $('#fedcTotalMax').text(max).toggleClass('is-over', SUBJECT_MAX !== null && max > SUBJECT_MAX);
     }
-    $('#fedcMapBody').on('input', '.fedc-weightage, .fedc-max-marks', recalcTotal);
+    $('#fedcMapBody').on('input', '.fedc-max-marks', recalcTotal);
     // A field flagged by the save check clears as soon as it is filled in.
     $('#fedcMapBody').on('change input', 'select, input', function () { $(this).removeClass('is-invalid'); });
     recalcTotal();
@@ -469,8 +512,8 @@ $(function () {
     /* ── Build a new component row ────────────────────────────────────── */
     function componentOptions(sel) {
         return COMPONENTS.map(function (c) {
-            return '<option value="' + c + '"' + (c === sel ? ' selected' : '') + '>' + c + '</option>';
-        }).join('');
+            return '<option value="' + $('<div>').text(c).html() + '"' + (c === sel ? ' selected' : '') + '>' + $('<div>').text(c).html() + '</option>';
+        }).join('') + (READ_ONLY ? '' : '<option value="__add__" class="fedc-add-opt">+ Add Component</option>');
     }
     function sourceOptions(sel) {
         return SOURCES.map(function (s) {
@@ -482,30 +525,39 @@ $(function () {
             return '<option value="' + m + '"' + (m === sel ? ' selected' : '') + '>' + m + '</option>';
         }).join('');
     }
-    function typeOptions(sel) {
-        return '<option value="">Select</option>' + EXAM_TYPES.map(function (t) {
+    // Exam Types offered for an Exam Mode: Online -> Online types, Offline -> Offline types,
+    // both -> all (same rule as ExaminationDriveController::examTypesFor on save).
+    function typesForMode(mode) {
+        var prefix = mode === 'Online' ? 'Online ' : (mode === 'Offline' ? 'Offline ' : null);
+        return prefix === null ? EXAM_TYPES : EXAM_TYPES.filter(function (t) { return t.indexOf(prefix) === 0; });
+    }
+    function typeOptions(sel, mode) {
+        return '<option value="">Select</option>' + typesForMode(mode).map(function (t) {
             return '<option value="' + t + '"' + (t === sel ? ' selected' : '') + '>' + t + '</option>';
         }).join('');
     }
+    // Rebuild a row's Exam Type list for its Exam Mode, keeping the choice if it still fits.
+    function syncExamType($row) {
+        var $type = $row.find('.fedc-sel-type'), mode = $row.find('.fedc-sel-mode').val();
+        var current = $type.val();
+        $type.html(typeOptions(typesForMode(mode).indexOf(current) !== -1 ? current : '', mode));
+    }
 
     /* ── Exam Range: one flatpickr range per row; start/end kept as Y-m-d ── */
-    function initRange(el) {
-        var $el = $(el);
+    /* ── Tentative Exam Range: a date + time picker for the start and one for the end,
+       inside the drive's dates; values kept as "Y-m-d H:i" in data-value. ── */
+    function initDateTime(el) {
+        var $el = $(el), v = $el.attr('data-value');
         flatpickr(el, {
-            mode: 'range',
-            dateFormat: 'd/m/Y',
-            locale: { rangeSeparator: ' - ' },
-            // The exam range must sit inside the drive's dates (the server checks it too).
+            enableTime: true,
+            time_24hr: true,
+            dateFormat: 'd/m/Y H:i',
             minDate: DRIVE_RANGE[0] ? fpDate(DRIVE_RANGE[0]) : null,
-            maxDate: DRIVE_RANGE[1] ? fpDate(DRIVE_RANGE[1]) : null,
-            defaultDate: [$el.attr('data-start'), $el.attr('data-end')].filter(Boolean),
-            parseDate: function (str) { var p = str.split('-'); return p.length === 3 ? new Date(p[0], p[1] - 1, p[2]) : undefined; },
-            onClose: function (dates, str, fp) {
-                // A single pick means a one-day exam.
-                var start = dates[0] ? fp.formatDate(dates[0], 'Y-m-d') : '';
-                var end = dates[1] ? fp.formatDate(dates[1], 'Y-m-d') : start;
-                $el.attr('data-start', start).attr('data-end', end);
-                if (dates.length === 1) { fp.setDate([dates[0], dates[0]], false); }
+            // Any time on the drive's last day.
+            maxDate: DRIVE_RANGE[1] ? new Date(fpDate(DRIVE_RANGE[1]).getTime() + 86399000) : null,
+            defaultDate: v ? new Date(v.replace(' ', 'T')) : null,
+            onChange: function (dates, str, fp) {
+                $el.attr('data-value', dates[0] ? fp.formatDate(dates[0], 'Y-m-d H:i') : '').removeClass('is-invalid');
             }
         });
     }
@@ -515,16 +567,16 @@ $(function () {
             '<td class="fedc-subject">' + $('<div>').text(SUBJECT_NAME).html() + '</td>' +
             '<td><select class="form-select fedc-sel-component"><option value="">Component</option>' + componentOptions('') + '</select></td>' +
             '<td><input type="number" class="form-control fedc-max-marks" min="0" step="0.01" value=""></td>' +
-            '<td><input type="number" class="form-control fedc-pass-marks" readonly title="From Service Passing Marks" value="' + (PASS_FIXED === null ? '' : PASS_FIXED) + '"></td>' +
             '<td><select class="form-select fedc-source">' + sourceOptions(SOURCES[0]) + '</select></td>' +
             '<td><button type="button" class="fedc-fac-open-btn" data-faculty="" data-sub="[]" data-codes="{}" data-uniq="{}">' +
             '<span class="fedc-fac-text"><span class="fedc-fac-placeholder">Click to add Faculty &amp; Sub coordinates.</span></span></button></td>' +
-            '<td><input type="number" class="form-control fedc-weightage" min="0" max="100" step="0.01" value="0"></td>' +
-            // A new component's exam range starts as the whole drive (narrowed in the picker).
-            '<td><input type="text" class="form-control fedc-exam-range" readonly placeholder="dd/mm/yyyy - dd/mm/yyyy"' +
-                ' data-start="' + (DRIVE_RANGE[0] || '') + '" data-end="' + (DRIVE_RANGE[1] || '') + '"></td>' +
+            '<td><input type="number" class="form-control fedc-weightage" readonly title="Auto: share of the subject\'s total Max Marks" value="0"></td>' +
+            // A new component's range starts as the whole drive, as before (narrow it to the real slot).
+            '<td><div class="fedc-exam-pair"><input type="text" class="form-control fedc-exam-at fedc-exam-start" readonly placeholder="Start: dd/mm/yyyy hh:mm" data-value="' + (DRIVE_RANGE[0] ? DRIVE_RANGE[0] + ' 00:00' : '') + '">' +
+                '<span class="fedc-exam-to">to</span>' +
+                '<input type="text" class="form-control fedc-exam-at fedc-exam-end" readonly placeholder="End: dd/mm/yyyy hh:mm" data-value="' + (DRIVE_RANGE[1] ? DRIVE_RANGE[1] + ' 23:59' : '') + '"></div></td>' +
             '<td><select class="form-select fedc-sel-mode">' + modeOptions(EXAM_MODES[0]) + '</select></td>' +
-            '<td><select class="form-select fedc-sel-type">' + typeOptions('') + '</select></td>' +
+            '<td><select class="form-select fedc-sel-type">' + typeOptions('', EXAM_MODES[0]) + '</select></td>' +
             '<td><div class="fedc-actions">' +
             '<button type="button" class="fedc-row-del fedc-row-del-btn" aria-label="Remove row"><i class="bi bi-dash"></i></button>' +
             '<button type="button" class="fedc-row-add fedc-row-add-btn" aria-label="Add row"><i class="bi bi-plus"></i></button>' +
@@ -555,14 +607,99 @@ $(function () {
     $body.on('click', '.fedc-row-add-btn', function () {
         var $row = $(buildRow());
         $(this).closest('.fedc-map-row').after($row);
-        initRange($row.find('.fedc-exam-range')[0]);
+        $row.find('.fedc-exam-at').each(function () { initDateTime(this); });
     });
 
     if ($body.find('.fedc-map-row').length === 0) {
         $body.append(buildRow());
         recalcTotal();
     }
-    $body.find('.fedc-exam-range').each(function () { initRange(this); });
+    $body.find('.fedc-exam-at').each(function () { initDateTime(this); });
+    // Exam Type follows Exam Mode: filter saved rows now, and any row when its mode changes.
+    $body.find('.fedc-map-row').each(function () { syncExamType($(this)); });
+    $body.on('change', '.fedc-sel-mode', function () { syncExamType($(this).closest('.fedc-map-row')); });
+
+    /* ── Add Component: "+ Add Component" in a Components list opens the popup; the new
+       component is saved to Component Master and offered in every row's list. ── */
+    var $addModal = $('#fedcAddCompModal'), $addName = $('#fedcAddCompName'), $addSave = $('#fedcAddCompSave');
+    var $addHint = $('#fedcAddCompHint'), $addMatches = $('#fedcAddCompMatches'), $addFor = null;
+    // Same comparison as ExaminationDriveController::componentNameKey().
+    function compKey(v) { return $.trim(String(v || '').replace(/\s+/g, ' ')).toLowerCase(); }
+
+    $body.on('focus mousedown', '.fedc-sel-component', function () {
+        if (this.value !== '__add__') { $(this).data('prev', this.value); }
+    });
+    $body.on('change', '.fedc-sel-component', function () {
+        if (this.value !== '__add__') { $(this).data('prev', this.value); return; }
+        $(this).val($(this).data('prev') || '');           // keep the row as it was until saved
+        $addFor = $(this);
+        $addName.val(''); renderMatches('');
+        bootstrap.Modal.getOrCreateInstance($addModal[0]).show();
+    });
+    $addModal.on('shown.bs.modal', function () { $addName.trigger('focus'); });
+
+    function renderMatches(text) {
+        var key = compKey(text), exact = null;
+        $addMatches.empty();
+        if (key.length) {
+            ALL_COMPONENTS.forEach(function (c) {
+                var k = compKey(c.name);
+                if (k === key) { exact = c; }
+                if (k.indexOf(key) === -1 || $addMatches.children().length >= 8) { return; }
+                var $li = $('<li class="py-1 px-2 rounded d-flex justify-content-between align-items-center"></li>')
+                    .css({ cursor: c.active ? 'pointer' : 'default', background: k === key ? '#fde8e8' : '#f3f5f9', marginTop: '4px' })
+                    .append($('<span></span>').text(c.name))
+                    .append(c.active ? $('<span class="text-primary">Use</span>') : $('<span class="text-muted fst-italic">inactive</span>'));
+                if (c.active) { $li.on('click', function () { useExisting(c.name); }); }
+                $addMatches.append($li);
+            });
+        }
+        if (exact) {
+            $addHint.attr('class', 'small mt-2 text-danger').text(exact.active
+                ? '"' + exact.name + '" already exists — click it below to use it.'
+                : '"' + exact.name + '" already exists but is inactive — ask the COE to activate it.');
+        } else if ($addMatches.children().length) {
+            $addHint.attr('class', 'small mt-2 text-muted').text('Similar components already in the master — use one if it is the same:');
+        } else {
+            $addHint.attr('class', 'small mt-2 text-muted').text(key.length ? 'No component with this name yet.' : 'Start typing to see existing components.');
+        }
+        $addSave.prop('disabled', !!exact || key.length < 2);
+    }
+    $addName.on('input', function () { renderMatches(this.value); });
+    $addName.on('keydown', function (e) { if (e.key === 'Enter' && !$addSave.prop('disabled')) { e.preventDefault(); $addSave.trigger('click'); } });
+
+    // Choose a component in the row that opened the popup (also used after adding one).
+    function useExisting(name) {
+        if ($addFor) { $addFor.val(name).data('prev', name).removeClass('is-invalid').trigger('change'); }
+        bootstrap.Modal.getOrCreateInstance($addModal[0]).hide();
+    }
+
+    $addSave.on('click', function () {
+        var name = $.trim($addName.val().replace(/\s+/g, ' '));
+        $addSave.prop('disabled', true);
+        $.ajax({
+            url: ADD_COMPONENT_URL, method: 'POST',
+            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+            data: { component_name: name }
+        }).done(function (res) {
+            var added = (res && res.name) || name;
+            COMPONENTS.push(added);
+            ALL_COMPONENTS.push({ name: added, active: true });
+            // Offer it in every row's list, just above "+ Add Component".
+            $('#fedcMapBody .fedc-sel-component').each(function () {
+                var $opt = $('<option></option>').val(added).text(added), $add = $(this).find('option[value="__add__"]');
+                $add.length ? $opt.insertBefore($add) : $(this).append($opt);
+            });
+            useExisting(added);
+            Swal.fire({ icon: 'success', title: 'Component added', text: (res && res.message) || added + ' added.', timer: 1800, showConfirmButton: false });
+        }).fail(function (xhr) {
+            var r = xhr.responseJSON || {};
+            var msg = r.message || 'Could not add the component.';
+            if (r.errors) { msg = Object.values(r.errors)[0][0]; }
+            Swal.fire({ icon: 'warning', title: 'Add Component', text: msg });
+            renderMatches($addName.val());
+        });
+    });
 
     /* ── Save ─────────────────────────────────────────────────────────── */
     $('#fedcSaveBtn').on('click', function () {
@@ -575,9 +712,10 @@ $(function () {
                 [$r.find('.fedc-sel-component'), !comp, 'Select the Component'],
                 [$r.find('.fedc-max-marks'), $.trim($r.find('.fedc-max-marks').val()) === '', 'Enter the Max Marks'],
                 [$r.find('.fedc-fac-open-btn'), $r.find('.fedc-source').val() === 'Faculty' && !$r.find('.fedc-fac-open-btn').data('faculty'), 'Assign the Faculty'],
-                [$r.find('.fedc-weightage'), $.trim($r.find('.fedc-weightage').val()) === '', 'Enter the Weightage'],
-                [$r.find('.fedc-exam-range').next('input').length ? $r.find('.fedc-exam-range').next('input') : $r.find('.fedc-exam-range'),
-                    !$r.find('.fedc-exam-range').attr('data-start'), 'Select the Exam Range'],
+                [$r.find('.fedc-exam-start'), !$r.find('.fedc-exam-start').attr('data-value'), 'Select the Tentative Exam Range start date and time'],
+                [$r.find('.fedc-exam-end'), !$r.find('.fedc-exam-end').attr('data-value'), 'Select the Tentative Exam Range end date and time'],
+                [$r.find('.fedc-exam-end'), !!$r.find('.fedc-exam-start').attr('data-value') && !!$r.find('.fedc-exam-end').attr('data-value')
+                    && $r.find('.fedc-exam-end').attr('data-value') <= $r.find('.fedc-exam-start').attr('data-value'), 'The Tentative Exam Range must end after it starts'],
                 [$r.find('.fedc-sel-mode'), !$r.find('.fedc-sel-mode').val(), 'Select the Exam Mode'],
                 [$r.find('.fedc-sel-type'), !$r.find('.fedc-sel-type').val(), 'Select the Exam Type']
             ];
@@ -586,6 +724,26 @@ $(function () {
         if (missing) {
             Swal.fire({ icon: 'warning', title: 'Complete every component', text: missing });
             return;
+        }
+
+        // No two components may share an exam slot (overlap; back-to-back is fine). The server
+        // also checks every other drive of the course (ExaminationDriveController::slotClashError).
+        var slots = [];
+        $('#fedcMapBody .fedc-map-row').each(function () {
+            var $r = $(this);
+            slots.push({ comp: $r.find('.fedc-sel-component').val(), $row: $r,
+                start: $r.find('.fedc-exam-start').attr('data-value'), end: $r.find('.fedc-exam-end').attr('data-value') });
+        });
+        for (var i = 0; i < slots.length; i++) {
+            for (var j = i + 1; j < slots.length; j++) {
+                // "Y-m-d H:i" strings compare correctly as text.
+                if (slots[i].start < slots[j].end && slots[j].start < slots[i].end) {
+                    slots[j].$row.find('.fedc-exam-at').addClass('is-invalid');
+                    Swal.fire({ icon: 'warning', title: 'Exam slots overlap',
+                        text: slots[i].comp + ' and ' + slots[j].comp + ' have overlapping Tentative Exam Ranges. Give each component its own slot.' });
+                    return;
+                }
+            }
         }
 
         // Same limits the server enforces, checked first for a quicker message.
@@ -605,7 +763,7 @@ $(function () {
             rows.push({
                 component: $r.find('.fedc-sel-component').val(),
                 max_marks: $r.find('.fedc-max-marks').val(),
-                passing_marks: $r.find('.fedc-pass-marks').val(),
+                // Not sent: the server fixes passing marks from Max Marks.
                 source: $r.find('.fedc-source').val(),
                 faculty: $r.find('.fedc-fac-open-btn').data('faculty') || '',
                 // Every name after the first; JSON so an emptied list still reaches the server.
@@ -613,8 +771,9 @@ $(function () {
                 codes: JSON.stringify($r.find('.fedc-fac-open-btn').data('codes') || {}),
                 unique_codes: JSON.stringify($r.find('.fedc-fac-open-btn').data('uniq') || {}),
                 weightage: $r.find('.fedc-weightage').val(),
-                exam_date: $r.find('.fedc-exam-range').attr('data-start') || '',
-                exam_end_date: $r.find('.fedc-exam-range').attr('data-end') || '',
+                // Date + time; the server fills the date-only exam_date / exam_end_date from these.
+                exam_start_at: $r.find('.fedc-exam-start').attr('data-value') || '',
+                exam_end_at: $r.find('.fedc-exam-end').attr('data-value') || '',
                 exam_mode: $r.find('.fedc-sel-mode').val(),
                 exam_type: $r.find('.fedc-sel-type').val()
             });

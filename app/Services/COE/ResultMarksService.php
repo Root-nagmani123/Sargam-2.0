@@ -208,6 +208,12 @@ class ResultMarksService
      */
     private function examOver(ExaminationDrive $drive, ExaminationDriveComponentMap $map): bool
     {
+        // The slot that counts, to the minute — the CC's confirmed one, else the Tentative Exam
+        // Range's times (ExaminationDriveComponentMap::slotEnd); else the end date (then the
+        // drive's), which counts from that day.
+        if ($map->slotEnd() !== null) {
+            return $map->slotEnd()->lte(now());
+        }
         $end = $map->exam_end_date ?? $map->exam_date ?? $drive->end_date;
 
         return $end === null || $end->lte(today());
@@ -744,6 +750,45 @@ class ResultMarksService
     }
 
     /**
+     * Services whose OTs pass a component at BHUTAN_PASSING_PERCENT; everyone else at
+     * PASSING_PERCENT. Matched on service_master.service_short_name, upper-cased, so the
+     * rule holds in every environment whatever pk the rows have there.
+     */
+    public const BHUTAN_SERVICES = ['RBCS', 'RBFOS', 'RBPS'];
+
+    public const BHUTAN_PASSING_PERCENT = 25.0;
+
+    public const PASSING_PERCENT = 50.0;
+
+    /** Passing percentage for an OT of this service (short name); fixed, not editable. */
+    public static function passingPercent(?string $serviceShortName): float
+    {
+        return in_array(strtoupper(trim((string) $serviceShortName)), self::BHUTAN_SERVICES, true)
+            ? self::BHUTAN_PASSING_PERCENT
+            : self::PASSING_PERCENT;
+    }
+
+    /** Passing marks of a component out of $max for an OT of this service. */
+    public static function passingMarks(float $max, ?string $serviceShortName): float
+    {
+        return round($max * self::passingPercent($serviceShortName) / 100, 2);
+    }
+
+    /**
+     * "20 (Bhutan 10)" — a component's passing marks as the setup screens show them, since
+     * the value depends on each OT's service and is not stored per component.
+     */
+    public static function passingMarksLabel(?float $max): string
+    {
+        if ($max === null) {
+            return '-';
+        }
+        $fmt = fn (float $v) => rtrim(rtrim(number_format($v, 2, '.', ''), '0'), '.');
+
+        return $fmt(self::passingMarks($max, null)).' (Bhutan '.$fmt(self::passingMarks($max, self::BHUTAN_SERVICES[0])).')';
+    }
+
+    /**
      * Merit & Ranking in $scope (as courseSheets()) of one course, or of every course
      * ($coursePk null = All; each ranked within its own course).
      *
@@ -758,9 +803,10 @@ class ResultMarksService
      *
      * An OT is ranked once every one of those marks is approved and moderated
      * (isFinal()); the rest are only counted ($pending). Equal Grand Totals share a rank (1, 2, 2, 4), in OT-code order.
-     * Pass: every qualifying paper at or above its passing marks (absent fails), and
-     * Grand Total at or above the OT's service passing marks (Service Passing Marks).
-     * With no passing marks set for the service, the result is null (not decided).
+     * Pass: every Part A and qualifying component at or above its passing marks —
+     * passingPercent() of that component's max marks, by the OT's own service (Bhutan
+     * services 25%, all others 50%). Absent counts 0, so it fails. Part B (Director
+     * Assessment) is not a pass/fail paper. Every ranked OT gets a result.
      *
      * Under All, a header max is null where the courses listed differ on it; each row
      * carries its course's own in row['max'] (subjects, a, b, max, qualifying).
@@ -908,13 +954,18 @@ class ResultMarksService
 
         $students = DB::table('student_master as s')
             ->leftJoin('service_master as sv', 'sv.pk', '=', 's.service_master_pk')
-            ->leftJoin('service_passing_marks_master as sp', fn ($j) => $j->on('sp.service_master_pk', '=', 's.service_master_pk')->where('sp.active_inactive', 1))
             ->whereIn('s.pk', array_keys($participants))
-            ->selectRaw("s.pk, COALESCE(NULLIF(TRIM(sv.service_short_name), ''), TRIM(sv.service_name)) as service, sp.passing_marks")
+            ->selectRaw("s.pk, COALESCE(NULLIF(TRIM(sv.service_short_name), ''), TRIM(sv.service_name)) as service, TRIM(sv.service_short_name) as service_code")
             ->get()->keyBy('pk');
 
         $sum = fn (array $keys, array $approved) => round(array_sum(array_map(fn ($key) => self::resultMarks($approved[$key]), $keys)), 2);
+        // Columns that must each be cleared: Part A subjects and the qualifying papers.
+        $passColumns = array_merge(
+            ...array_values(array_column($subjects, 'columns')),
+            ...array_values($qualifying)
+        );
         $rows = [];
+        // Kept for the views/marksheet contract; the fixed rule decides every result now.
         $noPassMarks = [];
         foreach ($participants as $pk => $p) {
             $approved = [];
@@ -932,19 +983,19 @@ class ResultMarksService
             $grand = round($totalA + ($director ?? 0), 2);
 
             $papers = [];
-            $qualified = true;
             foreach ($qualifying as $paper => $cols) {
                 $papers[$paper] = $cols ? $sum(array_keys($cols), $approved) : null;
-                foreach ($cols as $key => $col) {
-                    $m = $approved[$key];
-                    $qualified = $qualified && ! $m->is_absent && ($col['passing'] === null || self::resultMarks($m) >= $col['passing']);
-                }
             }
 
+            // Pass only if every Part A and qualifying component is cleared at the OT's
+            // service percentage of that component's max marks (absent counts 0).
             $student = $students[$pk] ?? null;
-            $passMarks = $student?->passing_marks === null ? null : (float) $student->passing_marks;
-            if ($passMarks === null && $qualified) {
-                $noPassMarks[] = (string) ($student?->service ?: 'No service');
+            $passed = true;
+            foreach ($passColumns as $key => $col) {
+                if (self::resultMarks($approved[$key]) < self::passingMarks((float) $col['max'], $student?->service_code)) {
+                    $passed = false;
+                    break;
+                }
             }
             $rows[] = $p + [
                 'course' => $course,
@@ -956,11 +1007,8 @@ class ResultMarksService
                 'qualifying' => $papers,
                 // Per column key, for the marksheet (MarksheetService).
                 'marks' => array_map(fn (EvaluationMark $m) => self::resultMarks($m), $approved),
-                'result' => match (true) {
-                    ! $qualified => 'Fail',
-                    $passMarks === null => null,
-                    default => $grand >= $passMarks ? 'Pass' : 'Fail',
-                },
+                'result' => $passed ? 'Pass' : 'Fail',
+                'passing_percent' => self::passingPercent($student?->service_code),
             ];
         }
 

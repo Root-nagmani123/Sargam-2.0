@@ -17,8 +17,8 @@ use Illuminate\Support\Facades\Storage;
  *
  * The flow:
  *   1. Merit & Ranking ranks an OT (every mark approved) with a Pass / Fail
- *      (ResultMarksService::meritSheets()). An OT whose service has no passing
- *      marks is not decided yet, so gets no marksheet.
+ *      (ResultMarksService::meritSheets()), decided by the fixed passing rule
+ *      (ResultMarksService::passingPercent). A row with no result is skipped.
  *   2. Their marksheet is Generated: a coe_marksheets row with its number,
  *      MS/<course short name>/<year>/<serial>, the first time it is listed.
  *   3. It is signed one by one with Verify (verify()), in order: the UDC first,

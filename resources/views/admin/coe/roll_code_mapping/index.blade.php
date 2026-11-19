@@ -22,10 +22,12 @@
 .rcm-chip span    { font-size:12px;color:var(--ds-ink-muted); }
 .rcm-chip.is-active { box-shadow:0 0 0 2px var(--ds-primary); }
 .rcm-chip--mapped strong { color:#15803d; }
+.rcm-chip--frozen strong { color:#1d4ed8; }
 .rcm-chip--code strong   { color:#b45309; }
 .rcm-chip--roll strong   { color:#b91c1c; }
 .rcm-state        { display:inline-block;border-radius:10px;padding:3px 10px;font-size:12px;font-weight:600;white-space:nowrap; }
 .rcm-state--mapped { background:#dcfce7;color:#15803d; }
+.rcm-state--frozen { background:#dbeafe;color:#1d4ed8; }
 .rcm-state--code   { background:#fef3c7;color:#b45309; }
 .rcm-state--roll   { background:#fee2e2;color:#b91c1c; }
 .rcm-missing      { color:var(--ds-ink-muted);font-style:italic; }
@@ -39,6 +41,7 @@ tr.rcm-row--gap td { background:#fffbeb; }
     $isArchived = $scope === 'archived';
     $stateClass = fn (string $s) => match ($s) {
         \App\Services\COE\RollCodeMapping::MAPPED => 'mapped',
+        \App\Services\COE\RollCodeMapping::NOT_FROZEN => 'frozen',
         \App\Services\COE\RollCodeMapping::CODE_MISSING => 'code',
         default => 'roll',
     };
@@ -91,6 +94,10 @@ tr.rcm-row--gap td { background:#fffbeb; }
         </button>
         <button type="button" class="rcm-chip rcm-chip--mapped" data-state="{{ \App\Services\COE\RollCodeMapping::MAPPED }}">
             <strong id="rcmCountMapped">{{ $summary['mapped'] }}</strong><span>Mapped</span>
+        </button>
+        <button type="button" class="rcm-chip rcm-chip--frozen" data-state="{{ \App\Services\COE\RollCodeMapping::NOT_FROZEN }}"
+                title="Roll number and unique code both exist, but at least one is not frozen yet">
+            <strong id="rcmCountNotFrozen">{{ $summary['not_frozen'] }}</strong><span>Not frozen</span>
         </button>
         <button type="button" class="rcm-chip rcm-chip--code" data-state="{{ \App\Services\COE\RollCodeMapping::CODE_MISSING }}">
             <strong id="rcmCountCode">{{ $summary['code_missing'] }}</strong><span>Unique code missing</span>
@@ -257,6 +264,7 @@ $(function () {
         });
         $('#rcmCountTotal').text(counts.total);
         $('#rcmCountMapped').text(counts[@json(\App\Services\COE\RollCodeMapping::MAPPED)] || 0);
+        $('#rcmCountNotFrozen').text(counts[@json(\App\Services\COE\RollCodeMapping::NOT_FROZEN)] || 0);
         $('#rcmCountCode').text(counts[@json(\App\Services\COE\RollCodeMapping::CODE_MISSING)] || 0);
         $('#rcmCountRoll').text(counts[@json(\App\Services\COE\RollCodeMapping::ROLL_MISSING)] || 0);
         var state = $('#rcmFilterMapping').val() || '';

@@ -88,11 +88,11 @@
                     They show here once every subject held so far is evaluated and moderated.
                 </p>
             @endif
-            @if ($noPassMarks)
-                <p class="coe-muted small mb-3">
-                    Pass / Fail is not decided for {{ implode(', ', $noPassMarks) }}: set its passing marks in Service Passing Marks.
-                </p>
-            @endif
+            <p class="coe-muted small mb-3">
+                Pass: at least {{ rtrim(rtrim(number_format(\App\Services\COE\ResultMarksService::PASSING_PERCENT, 2), '0'), '.') }}% of the max marks in
+                every component ({{ rtrim(rtrim(number_format(\App\Services\COE\ResultMarksService::BHUTAN_PASSING_PERCENT, 2), '0'), '.') }}% for
+                {{ implode(', ', ['RBCS', 'RBFoS', 'RBPS']) }}). Absent counts as 0.
+            </p>
 
             <div class="programme-dt-panel">
                 <div class="table-responsive">
