@@ -278,13 +278,42 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
         @endif
 
         
-        <div class="dashboard-stats-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-3 mb-3 mt-3">
-            @foreach($cardsToRender as $card)
+        @if(($moduleQueues ?? collect())->isNotEmpty())
+        {{-- Home only: the other modules where this login has work waiting; each chip opens that module's dashboard. --}}
+        <nav class="dashboard-module-queues mt-3" aria-label="Pending in other modules">
+            <span class="dashboard-module-queues__title">Pending across modules</span>
+            @foreach($moduleQueues as $queue)
+            <a href="{{ route('admin.dashboard', ['category' => $queue['module']->id]) }}" class="dashboard-module-queue"
+                title="{{ $queue['cards']->map(fn ($c) => $c['label'].': '.($c['count'] + 0))->implode(', ') }}">
+                <span>{{ $queue['module']->name }}</span>
+                <span class="dashboard-module-queue__count">{{ $queue['total'] + 0 }}</span>
+                <span class="visually-hidden">pending items</span>
+            </a>
+            @endforeach
+        </nav>
+        @endif
+
+        @php
+            // Queue cards with work in them come first, under their own heading; everything else
+            // (totals, empty queues) follows as the overview. Headings only when both groups exist.
+            [$actionCards, $overviewCards] = $cardsToRender->partition(fn ($c) => ($c['actionable'] ?? false)
+                && ($c['show_count'] ?? true) && is_numeric($c['count']) && $c['count'] > 0);
+            $cardGroups = $actionCards->isNotEmpty() && $overviewCards->isNotEmpty()
+                ? [['Needs your action', $actionCards], ['Overview', $overviewCards]]
+                : [[null, $cardsToRender]];
+        @endphp
+        @foreach($cardGroups as [$groupTitle, $groupCards])
+        @if($groupTitle)
+        <h2 class="dashboard-card-group-title {{ $loop->first ? 'mt-3' : '' }}">{{ $groupTitle }}</h2>
+        @endif
+        <div class="dashboard-stats-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-3 mb-3 {{ $groupTitle ? '' : 'mt-3' }}">
+            @foreach($groupCards as $card)
             <div class="col">
                 @include('admin.dashboard.partials.stat-card', ['card' => $card])
             </div>
             @endforeach
         </div>
+        @endforeach
 
         @if($cardsToRender->isEmpty() && empty($enabledWidgetKeys))
         <div class="ds-empty-state mb-4">

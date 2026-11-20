@@ -327,7 +327,12 @@ class UserController extends Controller
 
         $issueReportModules = \App\Http\Controllers\Admin\IssueReportController::moduleOptions();
 
-        $cardsToRender = $this->dashboardStatCards($baseCards);
+        // One definitions set for the page, so a count two lists share is run once.
+        $cardDefinitions = $this->dashboardCardDefinitions();
+        $cardsToRender = $this->dashboardStatCards($baseCards, $cardDefinitions);
+        $moduleQueues = $dashboardModule && $dashboardModule->slug === 'home'
+            ? $this->moduleQueues($dashboardModule->id, $cardDefinitions)
+            : collect();
 
         return view('admin.dashboard', compact(
             'year',
@@ -345,7 +350,8 @@ class UserController extends Controller
             'houseCourses',
             'houseCourseFilter',
             'issueReportModules',
-            'dashboardModule'
+            'dashboardModule',
+            'moduleQueues'
         ));
     }
 
@@ -359,8 +365,39 @@ class UserController extends Controller
             : collect();
     }
 
+    /**
+     * For Home's "Across modules" strip: each other module where this login has queue cards
+     * with work in them, with the items waiting (summed) and the cards they come from.
+     * Only queue cards are counted, so the plain totals on those dashboards cost nothing here.
+     */
+    private function moduleQueues(int $homeId, array $cardDefinitions): \Illuminate\Support\Collection
+    {
+        return DashboardCard::modules()
+            ->reject(fn ($module) => $module->id === $homeId)
+            ->map(function ($module) use ($cardDefinitions) {
+                $queued = $this->assignedDashboardCards($module->id)->filter(fn ($c) => self::isActionableCardKey($c->key));
+                $cards = $this->dashboardStatCards($queued, $cardDefinitions)
+                    ->filter(fn ($c) => $c['show_count'] && is_numeric($c['count']) && $c['count'] > 0)
+                    ->values();
+
+                return $cards->isEmpty() ? null : ['module' => $module, 'total' => $cards->sum('count'), 'cards' => $cards];
+            })
+            ->filter()
+            ->values();
+    }
+
+    /**
+     * A queue someone must work through (pending / open / unpaid ...), as opposed to a plain total.
+     * shortcut: read from the key; a new queue card whose key has none of these words shows as
+     * a plain total until it is added here.
+     */
+    private static function isActionableCardKey(string $key): bool
+    {
+        return (bool) preg_match('/(^|_)(pending|open|unpaid|low_stock|reported|requested|duplicate|put_in_hac)(_|$)/', $key);
+    }
+
     /** The stat cards of $cards the logged-in user may see, as the dashboard renders them. */
-    private function dashboardStatCards(\Illuminate\Support\Collection $cards): \Illuminate\Support\Collection
+    private function dashboardStatCards(\Illuminate\Support\Collection $cards, ?array $cardDefinitions = null): \Illuminate\Support\Collection
     {
         // Only the OT and faculty-portal cards are gated (DashboardCard::gatedCardVisibility(),
         // shared with the header's module landing). The older cards' role mappings are
@@ -370,7 +407,7 @@ class UserController extends Controller
         $cards = $cards->filter(fn ($c) => ! str_starts_with($c->key, 'widget_'))
             ->filter(fn ($card) => $gatedCardVisibility[$card->key] ?? true)
             ->values();
-        $cardDefinitions = $this->dashboardCardDefinitions();
+        $cardDefinitions ??= $this->dashboardCardDefinitions();
 
         return $cards->map(function ($card) use ($cardDefinitions) {
             $def = $cardDefinitions[$card->key] ?? null;
@@ -387,10 +424,7 @@ class UserController extends Controller
                 // rather than counting it (the timetables) — it renders as a tile
                 // with no number, not as a zero.
                 'show_count'  => $def === null || array_key_exists('count', $def),
-                // A queue someone must work through (pending / open / unpaid ...), as opposed to
-                // a plain total. shortcut: read from the key; a new queue card whose key has none
-                // of these words shows as a plain total until it is added here.
-                'actionable'  => (bool) preg_match('/(^|_)(pending|open|unpaid|low_stock|reported|requested|duplicate|put_in_hac)(_|$)/', $card->key),
+                'actionable'  => self::isActionableCardKey($card->key),
             ];
         })->values();
     }

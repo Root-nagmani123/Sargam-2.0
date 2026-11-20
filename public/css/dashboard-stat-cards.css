@@ -465,3 +465,73 @@
 
 .module-dashboard-preview-tab__count.is-action { background: rgba(232, 163, 23, 0.18); color: #8a5d00; }
 .module-dashboard-preview-tab[aria-pressed="true"] .module-dashboard-preview-tab__count { background: rgba(255, 255, 255, 0.2); color: #fff; }
+
+/* ============================================================
+   Card groups (Needs your action / Overview)
+   ============================================================ */
+.dashboard-card-group-title {
+    margin-bottom: var(--ds-space-2);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ds-ink-muted);
+}
+
+/* ============================================================
+   Home: pending across modules
+   ============================================================ */
+.dashboard-module-queues {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ds-space-2);
+}
+
+.dashboard-module-queues__title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ds-ink-muted);
+    margin-right: var(--ds-space-1);
+}
+
+.dashboard-module-queue {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    min-height: var(--ds-control-h-sm);
+    padding: 0 var(--ds-space-2) 0 var(--ds-space-3);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius);
+    background: var(--ds-surface);
+    color: var(--ds-ink);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.dashboard-module-queue:hover,
+.dashboard-module-queue:focus {
+    background: var(--ds-surface-2);
+    border-color: #c98a0e;
+    color: var(--ds-ink);
+    text-decoration: none;
+}
+
+.dashboard-module-queue:focus-visible {
+    outline: 2px solid #004384;
+    outline-offset: 2px;
+}
+
+.dashboard-module-queue__count {
+    min-width: 1.5rem;
+    padding: 0 var(--ds-space-1);
+    border-radius: var(--ds-radius);
+    background: rgba(232, 163, 23, 0.18);
+    color: #8a5d00;
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
