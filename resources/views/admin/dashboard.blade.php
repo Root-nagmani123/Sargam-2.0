@@ -273,12 +273,12 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 @include('admin.dashboard.partials.stat-card', ['card' => $card])
             </div>
             @endforeach
-            {{-- A grid item: it takes the space the last row leaves free, or a full row. --}}
-            @include('admin.dashboard.partials.module-preview')
         </div>
 
         <div class="row g-3 g-lg-4">
             <div class="col">
+                {{-- Level with the right-hand panels (House wise Performance, ...). --}}
+                @include('admin.dashboard.partials.module-preview')
                 @if(in_array('widget_notices', $enabledWidgetKeys))
                 @php
                 $noticeCategoryLabels = [

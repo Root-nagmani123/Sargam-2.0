@@ -1,7 +1,6 @@
 {{-- Dashboard Preview: on a module's own dashboard (any header tab but Home), the page its
-     first card opens, embedded as the last item of the card grid. It takes the columns the
-     last row of cards leaves free, or a full row when that row is full. It is that page
-     itself (?embed=1 hides the layout chrome and breadcrumb, see admin.layouts.master), so the
+     first card opens, embedded at the top of the panels' left column, level with the
+     right-hand panels (House wise Performance, ...). It is that page itself (?embed=1 hides the layout chrome and breadcrumb, see admin.layouts.master), so the
      rows, filters, permission checks and record scope are the page's own, not a copy. A first
      card with no link falls back to its tile. A dashboard with no stat card shows nothing. --}}
 @php
@@ -13,7 +12,7 @@
         : null;
 @endphp
 @if($previewCard)
-<section class="module-dashboard-preview d-print-none" aria-labelledby="moduleDashboardPreviewTitle">
+<section class="module-dashboard-preview mb-3 d-print-none" aria-labelledby="moduleDashboardPreviewTitle">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
         <h2 id="moduleDashboardPreviewTitle" class="h5 mb-0">Dashboard Preview: {{ $previewCard['label'] }}</h2>
         @if($previewUrl)
@@ -38,22 +37,7 @@
     (function () {
         'use strict';
         var section = document.querySelector('.module-dashboard-preview');
-        var grid = section && section.parentElement;
-        if (!grid) { return; }
-
-        // Fill what the last row of cards leaves free. A full last row, or free space too
-        // narrow for a page (phones, two-column widths), means a row of its own.
-        var MIN_WIDTH = 480;
-        var place = function () {
-            var cols = getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length || 1;
-            var free = cols - (grid.querySelectorAll(':scope > .col').length % cols);
-            var fits = free < cols && grid.clientWidth * free / cols >= MIN_WIDTH;
-            section.style.gridColumn = fits ? 'span ' + free : '1 / -1';
-        };
-        place();
-        window.addEventListener('resize', place);
-
-        var frame = section.querySelector('.module-dashboard-preview-frame');
+        var frame = section && section.querySelector('.module-dashboard-preview-frame');
         if (!frame) { return; }
         frame.addEventListener('load', function () {
             var loading = section.querySelector('.module-dashboard-preview-loading');
