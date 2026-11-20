@@ -280,149 +280,15 @@ class UserController extends Controller
             $upcomingBirthdays = $upcomingBirthdays->merge($upcoming);
         }
 
-        $totalActiveCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '<=', now()->toDateString())->where('end_date', '>=', now()->toDateString())->count();
-        $upcomingCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '>', now()->toDateString())->count();
-        $upcomingEventsCount = Holiday::active()->where('holiday_date', '>', now())->count();
-
-        $total_guest_faculty = FacultyMaster::where('active_inactive', 1)->where('faculty_type', 2)->count();
-        $total_internal_faculty = FacultyMaster::where('active_inactive', 1)->where('faculty_type', 1)->count();
-        //   print_r($emp_data);exit;
-        $exemptionCount = 0;
-        $MDO_count = 0;
-        $myGroupsCount = 0;
-        $todayTimetable = collect([]);
-        $totalSessions = 0;
-        $totalStudents = 0;
-        $facultyTotalSessions = 0;
-        $facultyTotalFeedback = 0;
-        $facultyCounsellees = 0;
-        $facultyHouses = 0;
-        $isCCorACC = false;
+        // Today's timetable for the logged-in student, or the faculty's when the login
+        // is both. The card counts are in dashboardCardDefinitions(), run per card shown.
         $userId = Auth::user()->user_id;
+        $todayTimetable = collect([]);
         if (hasRole('Student-OT')) {
-            $exemptionQuery = StudentMedicalExemption::where('student_master_pk', $userId)
-                ->where('active_inactive', 1);
-            $exemptionCount = $exemptionQuery->count();
-
-            $MDO_count = MDOEscotDutyMap::where('selected_student_list', $userId)
-                ->with(['courseMaster', 'mdoDutyTypeMaster', 'facultyMaster'])
-                ->count();
-
-            // "My Groups" card: how many Course Group Mapping groups this OT is in.
-            // Same trainee check as the page it opens (F-055).
-            $myGroupsCount = $this->isMyGroupsTrainee()
-                ? $this->myGroupsQuery($userId)->distinct()->count('gmap.pk')
-                : 0;
-
-            // Fetch today's timetable for the logged-in student
             $todayTimetable = $this->getTodayTimetableForStudent($userId);
         }
-
-         // "Total Marks Deducted in Discipline" — every concluded deduction against
-         // this OT, from BOTH registers: Discipline Memos and Memo/Notices. Counted
-         // through the service the page behind the card lists from, so the tile and
-         // the rows agree.
-         //
-         // Gated on isOfficerTraineeUser(), not hasRole('Student-OT') like the block
-         // above: Student-OT is a session pseudo-role set at login, so an OT who
-         // arrives holding only the Spatie "Officer Trainee" role would have been
-         // shown a card reading zero over real deductions.
-         //
-         // And only for user_category 'S' (PR #334 F-047): user_id is a student_master
-         // pk only for a trainee login. A staff login that also holds the role has an
-         // employee / faculty pk there, which can equal another trainee's pk — the
-         // pages behind both cards refuse it for that reason.
-         $disciplineMarksDeducted = 0;
-         $pendingFeedbackCount = 0;
-         if (isOfficerTraineeUser() && auth_student_master_pk() !== null) { // one identity rule (PR #334 F-074)
-             $disciplineMarksDeducted = app(OtMarksDeductedService::class)->totalFor((int) $userId);
-             $pendingFeedbackCount = $this->getOtPendingFeedbackCount($userId);
-         }
-
-         // Calculate total sessions for faculty portal users (Faculty / Internal / Guest)
-         if (is_faculty_portal_user()) {
-             $facultyPk = get_auth_faculty_master_pk();
-
-            if ($facultyPk) {
-                $totalSessions = CalendarEvent::where('active_inactive', 1)
-                    ->where(function ($query) use ($facultyPk) {
-                        $query->whereRaw('JSON_CONTAINS(faculty_master, ?)', ['"'.$facultyPk.'"'])
-                            ->orWhereRaw('FIND_IN_SET(?, faculty_master)', [$facultyPk]);
-                    })
-                    ->count();
-
-                 // "Total Sessions" card — the sessions this faculty TEACHES, across
-                 // active and ended courses alike. Counted through the same scope the
-                 // Timetable Session Report filters by, and the card links to that
-                 // report's All Courses tab with the Role filter on Teaching, so the
-                 // page it opens holds exactly these rows.
-                 $facultyTotalSessions = FacultySessionScope::countFor(
-                     $facultyPk,
-                     'all',
-                     FacultySessionScope::ROLE_TEACHING
-                 );
-
-                 // "Total Running Courses Feedback" card — this faculty's submitted
-                 // feedback on running (active, not yet ended) courses, counted the way
-                 // the Faculty Feedback with Comments page the card opens counts it, so
-                 // the figure is verifiable on the page it leads to.
-                 $facultyTotalFeedback = app(FacultyFeedbackReportService::class)
-                     ->getTotalFeedbackCount($facultyPk);
-
-                 // Both cards count students off the Course Group Mapping page, for
-                 // the groups mapped to THIS faculty, and open the OT / Participants
-                 // list on exactly that scope so the number and the rows agree.
-                 //
-                 //   My Counsellees     -> their Counsellor Groups (the cadres)
-                 //   House Wise Details -> their House Groups, i.e. how many
-                 //                         students their house holds
-                 //
-                 // Both on current courses only: a course switched off in the master,
-                 // or one whose end date has passed, stops counting.
-                 // A COUNT(DISTINCT) over the same mappings facultyGroupRows() reads,
-                 // not the full hydrated rows: this runs on every faculty dashboard
-                 // load (PR #334 F-010; measured 22 -> 6 queries, ~50 -> ~8 ms for a
-                 // faculty with 48 + 46 students, identical counts).
-                 $facultyCounsellees = $this->facultyGroupStudentCount($facultyPk, '%counsel%', true);
-
-                 $facultyHouses = $this->facultyGroupStudentCount($facultyPk, '%house%', true);
-
-                 // Check if faculty is CC or ACC
-                 $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
-
-                // Flag CC/ACC so the "Total Students" / "Student Details" cards
-                // become visible for them (card visibility is unchanged).
-                if ($coordinatorCourses->isNotEmpty()) {
-                    $isCCorACC = true;
-                }
-
-                // "Total Students" / "Student Details" both open the student list,
-                // so their count has to be that list's own roster — see
-                // dashboardCoordinatorStudentsCount(). A CC/ACC is reached through
-                // their faculty pk, which is also what makes the cards visible at
-                // all; counting by get_Role_by_course() instead read a DIFFERENT
-                // scope (role → course_master.user_role_master_pk) and showed a
-                // plain Faculty coordinator 0 while the page they opened listed
-                // their full roster, because that helper returns [-1] for a role
-                // with no mapped courses.
-                $totalStudents = $isCCorACC
-                    ? $this->dashboardCoordinatorStudentsCount($facultyPk)
-                    : $this->dashboardTotalStudentsCount(get_Role_by_course());
-            } else {
-                $totalSessions = 0;
-            }
-
-            // Fetch today's timetable for the logged-in faculty
+        if (is_faculty_portal_user()) {
             $todayTimetable = $this->getTodayTimetableForFaculty($userId);
-        }
-
-        // Super Admin / PA / Admin also see the "Total Students" / "Student Details"
-        // cards, but they are NOT faculty-portal users, so the block above skips them
-        // and $totalStudents stayed 0. Compute it here on the same basis as the
-        // faculty branch (see dashboardTotalStudentsCount()).
-        if (! hasRole('Student-OT') && ! is_faculty_portal_user()) {
-            $roleCourseIds = get_Role_by_course();
-            $totalStudents = $this->dashboardTotalStudentsCount($roleCourseIds);
         }
 
         if ($request->boolean('calendar_only')) {
@@ -439,81 +305,207 @@ class UserController extends Controller
             ]);
         }
 
-        $todayFamilyApprovals = $this->getTodayPendingFamilyApprovalsCount(true);
-        $fullFamilyApprovals = $this->getTodayPendingFamilyApprovalsCount(false);
-        $todayVehicleApprovals = $this->getTodayPendingVehicleApprovalsCount(true);
-        $fullVehicleApprovals = $this->getTodayPendingVehicleApprovalsCount(false);
-        $todayIdCardRequests = $this->getTodayPendingIdCardRequestsCount();
-        $todayPendingSplit = $this->getTodayPendingIdCardRequestsSplit(true);
-        $todayPendingPermanentIdCardRequests = (int) ($todayPendingSplit['perm'] ?? 0);
-        $todayPendingContractualIdCardRequests = (int) ($todayPendingSplit['cont'] ?? 0);
-        $fullPendingSplit = $this->getTodayPendingIdCardRequestsSplit(false);
-        $fullPendingPermanentIdCardRequests = (int) ($fullPendingSplit['perm'] ?? 0);
-        $fullPendingContractualIdCardRequests = (int) ($fullPendingSplit['cont'] ?? 0);
-        $todayApproval1Split = $this->getTodayPendingSecurityApproval1Split();
-        $todayApproval1IdCardRequests = (int) ($todayApproval1Split['idcard'] ?? 0);
-        $todayApproval1DuplicateIdCardRequests = (int) ($todayApproval1Split['duplicate'] ?? 0);
-        $todayDuplicatePermIdCardRequests = $this->getTodayDuplicatePermanentIdCardRequestsCount(true);
-        $todayDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount(true);
-        $fullDuplicatePermIdCardRequests = $this->getTodayDuplicatePermanentIdCardRequestsCount(false);
-        $fullDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount(false);
-        $idCardApprovalRoute = route('admin.security.employee_idcard_approval.all');
+        // The cards this user's roles have on the requested header module's
+        // dashboard (?category=, the same parameter that selects the header tab);
+        // no or an unknown module is Home.
+        $dashboardModule = DashboardCard::resolveModule($request->query('category'));
+        $baseCards = $this->assignedDashboardCards($dashboardModule?->id);
 
-        // Role flags used for card visibility
-        $isSecurityRole = hasRole('Security Card') || hasRole('Admin Security');
-        $isSuperAdmin   = hasRole('Super Admin');
-        $isStudentOT    = hasRole('Student-OT');
+        $enabledWidgetKeys = $baseCards->filter(fn ($c) => str_starts_with($c->key, 'widget_'))->pluck('key')->toArray();
+
+        // House wise Performance panel. Built only when the panel is actually on
+        // this dashboard — it is four queries, and no other card needs them.
+        $houseOnDashboard = in_array('widget_house_performance', $enabledWidgetKeys, true);
+        // ?house_course= narrows the panel; the select posts back to the dashboard
+        // rather than fetching, so the figure and the page agree without a second
+        // code path computing it.
+        $houseCourseFilter = $request->filled('house_course') ? (int) $request->input('house_course') : null;
+        $housePerformance = $houseOnDashboard
+            ? $this->houseWisePerformance($houseCourseFilter)
+            : collect();
+        $houseCourses = $houseOnDashboard ? $this->houseCourseOptions() : collect();
+
+        $issueReportModules = \App\Http\Controllers\Admin\IssueReportController::moduleOptions();
+
+        $cardsToRender = $this->dashboardStatCards($baseCards);
+
+        return view('admin.dashboard', compact(
+            'year',
+            'month',
+            'events',
+            'emp_dob_data',
+            'isMyBirthday',
+            'myBirthdayWishCount',
+            'birthdayWishCounts',
+            'upcomingBirthdays',
+            'todayTimetable',
+            'cardsToRender',
+            'enabledWidgetKeys',
+            'housePerformance',
+            'houseCourses',
+            'houseCourseFilter',
+            'issueReportModules',
+            'dashboardModule'
+        ));
+    }
+
+    /** Every card (stat cards and widget panels) the logged-in user's roles have on module $moduleId's dashboard, in order. */
+    private function assignedDashboardCards(?int $moduleId): \Illuminate\Support\Collection
+    {
+        $roleIds = (Auth::user()->roles ?? collect())->pluck('id')->all();
+
+        return ($roleIds !== [] && $moduleId)
+            ? DashboardCard::assignedTo($roleIds, $moduleId)->orderBy('sort_order')->get()
+            : collect();
+    }
+
+    /** The stat cards of $cards the logged-in user may see, as the dashboard renders them. */
+    private function dashboardStatCards(\Illuminate\Support\Collection $cards): \Illuminate\Support\Collection
+    {
+        // Only the OT and faculty-portal cards are gated (DashboardCard::gatedCardVisibility(),
+        // shared with the header's module landing). The older cards' role mappings are
+        // what admins have tuned against, so they show to whoever's role has them.
+        $gatedCardVisibility = DashboardCard::gatedCardVisibility();
+
+        $cards = $cards->filter(fn ($c) => ! str_starts_with($c->key, 'widget_'))
+            ->filter(fn ($card) => $gatedCardVisibility[$card->key] ?? true)
+            ->values();
+        $cardDefinitions = $this->dashboardCardDefinitions();
+
+        return $cards->map(function ($card) use ($cardDefinitions) {
+            $def = $cardDefinitions[$card->key] ?? null;
+
+            return [
+                'key' => $card->key,
+                'label' => $card->label,
+                'icon' => $card->icon,
+                'color_class' => $card->color_class,
+                'link'        => $def['link'] ?? null,
+                // A closure count runs only here, for a card this user actually sees.
+                'count'       => value($def['count'] ?? 0),
+                // A definition that omits 'count' is a card that opens something
+                // rather than counting it (the timetables) — it renders as a tile
+                // with no number, not as a zero.
+                'show_count'  => $def === null || array_key_exists('count', $def),
+            ];
+        })->values();
+    }
+
+    /**
+     * Every stat card's count and link, by dashboard_cards.key. Counts are closures,
+     * run only for a card that is shown, so a dashboard never counts a card nobody
+     * on it sees. A card also needs its dashboard_cards row assigned
+     * to a role; to give a custom card a real count, add its key here.
+     */
+    private function dashboardCardDefinitions(): array
+    {
+        // Memoises a count that two cards share, or one query that feeds several.
+        $once = static function (callable $fn): \Closure {
+            $done = false;
+            $value = null;
+
+            return static function () use ($fn, &$done, &$value) {
+                if (! $done) {
+                    $value = $fn();
+                    $done = true;
+                }
+
+                return $value;
+            };
+        };
+
+        $userId = Auth::user()->user_id;
+        $isStudentOT = hasRole('Student-OT');
         // Student-OT is a pseudo-role set at login; an OT who arrives holding only
         // the Spatie "Officer Trainee" role does not have it. The OT cards below
         // key off this instead, or their links would resolve to the staff pages —
         // the same trap the discipline card documents.
-        $isOtUser       = $isStudentOT || isOfficerTraineeUser();
-        $isFacultyRole  = hasRole('Internal Faculty') || hasRole('Guest Faculty');
-        // The OT and faculty cards' visibility is DashboardCard::gatedCardVisibility().
+        $isOtUser = $isStudentOT || isOfficerTraineeUser();
+        // "Total Marks Deducted in Discipline" and pending feedback: gated on
+        // isOfficerTraineeUser(), not hasRole('Student-OT'), so an OT holding only the
+        // Spatie role is not shown zero over real deductions. And only for user_category
+        // 'S' (PR #334 F-047): user_id is a student_master pk only for a trainee login;
+        // a staff login holding the role has an employee / faculty pk there, which can
+        // equal another trainee's pk. One identity rule (PR #334 F-074).
+        $isTraineeLogin = isOfficerTraineeUser() && auth_student_master_pk() !== null;
+        $facultyPk = $once(fn () => is_faculty_portal_user() ? get_auth_faculty_master_pk() : null);
 
-        // Role-scoped course IDs for "My Course Participant" ([] = all, [-1] = none, [pks] = restricted)
-        $myCourseIds = get_Role_by_course();
+        $idCardApprovalRoute = route('admin.security.employee_idcard_approval.all');
+        $todayPendingSplit = $once(fn () => $this->getTodayPendingIdCardRequestsSplit(true));
+        $todayApproval1Split = $once(fn () => $this->getTodayPendingSecurityApproval1Split());
+
+        // "Total Students" / "Student Details" both open the student list, so their
+        // count has to be that list's own roster — see dashboardCoordinatorStudentsCount().
+        // A CC/ACC is reached through their faculty pk; counting by get_Role_by_course()
+        // instead read a DIFFERENT scope (role → course_master.user_role_master_pk) and
+        // showed a plain Faculty coordinator 0 while the page they opened listed their
+        // full roster, because that helper returns [-1] for a role with no mapped courses.
+        $totalStudents = $once(function () use ($facultyPk, $isStudentOT) {
+            if (is_faculty_portal_user()) {
+                $pk = $facultyPk();
+                if (! $pk) {
+                    return 0;
+                }
+
+                return $this->getCoordinatorCourseIds($pk)->isNotEmpty()
+                    ? $this->dashboardCoordinatorStudentsCount($pk)
+                    : $this->dashboardTotalStudentsCount(get_Role_by_course());
+            }
+
+            // Super Admin / PA / Admin are not faculty-portal users: same basis as above.
+            return $isStudentOT ? 0 : $this->dashboardTotalStudentsCount(get_Role_by_course());
+        });
 
         // Protocol Staff counts, same scope as the cards on the /protocol dashboard
         $isProtocolStaff = Auth::user()->can('protocol.protocol_requests');
-        $protocolCounts = ['guesthouse' => 0, 'vehicle' => 0, 'ticket' => 0, 'pending' => 0, 'recommended' => 0];
-        if ($isProtocolStaff) {
-            $protocolApproval = app(\Modules\Protocol\Services\ApprovalService::class);
-            foreach ($protocolApproval->allowedRequestTypes() as $type) {
-                $protocolCounts[$type] = $protocolApproval->scopedQuery()->where('request_type', $type)->count();
+        $protocolCounts = $once(function () use ($isProtocolStaff) {
+            $counts = ['guesthouse' => 0, 'vehicle' => 0, 'ticket' => 0, 'pending' => 0, 'recommended' => 0];
+            if ($isProtocolStaff) {
+                $protocolApproval = app(\Modules\Protocol\Services\ApprovalService::class);
+                foreach ($protocolApproval->allowedRequestTypes() as $type) {
+                    $counts[$type] = $protocolApproval->scopedQuery()->where('request_type', $type)->count();
+                }
+                $counts['pending'] = \Modules\Protocol\Entities\ProtocolRequest::awaitingProtocolStaff(Auth::id())->count();
+                // Recommended requests in the All Requests scope that still await a decision
+                $counts['recommended'] = $protocolApproval->scopedQuery()->where('status', \Modules\Protocol\Entities\ProtocolRequest::STATUS_RECOMMENDED)->count();
             }
-            $protocolCounts['pending'] = \Modules\Protocol\Entities\ProtocolRequest::awaitingProtocolStaff(Auth::id())->count();
-            // Recommended requests in the All Requests scope that still await a decision
-            $protocolCounts['recommended'] = $protocolApproval->scopedQuery()->where('status', \Modules\Protocol\Entities\ProtocolRequest::STATUS_RECOMMENDED)->count();
-        }
+
+            return $counts;
+        });
 
         // Employee's own protocol requests, same count as the "All" tab on My Requests
         $canRaiseProtocol = Auth::user()->can('protocol.my_requests');
-        $myProtocolCount = $canRaiseProtocol ? \Modules\Protocol\Entities\ProtocolRequest::forUser(Auth::id())->count() : 0;
 
-        // Hardcoded card definitions: count, link, visibility
-        $cardDefinitions = [
-            'pending_permanent_id'    => ['count' => $todayPendingPermanentIdCardRequests ?? 0,    'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
-            'pending_contractual_id'  => ['count' => $todayPendingContractualIdCardRequests ?? 0,  'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
-            'duplicate_permanent_id'  => ['count' => $todayDuplicatePermIdCardRequests ?? 0,       'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
-            'duplicate_contractual_id'=> ['count' => $todayDuplicateContractualIdCardRequests ?? 0,'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
-            'requested_family_id'     => ['count' => $todayFamilyApprovals ?? 0,                   'link' => route('admin.security.family_idcard_approval.index'),          'visible' => $isSecurityRole || $isSuperAdmin],
-            'requested_vehicle_pass'  => ['count' => $todayVehicleApprovals ?? 0,                  'link' => route('admin.security.vehicle_pass_approval.index'),           'visible' => $isSecurityRole || $isSuperAdmin],
-            'total_active_courses'    => ['count' => $totalActiveCourses,                          'link' => route('admin.dashboard.active_course'),                        'visible' => !$isSecurityRole],
-            'upcoming_courses'        => ['count' => $upcomingCourses,                             'link' => route('admin.dashboard.incoming_course'),                      'visible' => !$isSecurityRole],
-            'upcoming_events'         => ['count' => $upcomingEventsCount,                         'link' => route('admin.dashboard.upcoming_events'),                      'visible' => !$isSecurityRole],
-            'medical_exception'       => ['count' => $exemptionCount ?? 0,                         'link' => route('medical.exception.ot.view'),                            'visible' => !$isSecurityRole && $isStudentOT],
-            'total_guest_faculty'     => ['count' => $total_guest_faculty,                         'link' => route('admin.dashboard.guest_faculty'),                        'visible' => !$isSecurityRole && !$isStudentOT],
-            'pending_id_approval1'    => ['count' => $todayApproval1IdCardRequests ?? 0,           'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1IdCardRequests ?? 0) > 0],
-            'pending_dup_id_approval1'=> ['count' => $todayApproval1DuplicateIdCardRequests ?? 0,  'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1DuplicateIdCardRequests ?? 0) > 0],
-            'ot_mdo_escort'           => ['count' => $MDO_count ?? 0,                              'link' => route('ot.mdo.escrot.exemption.view'),                         'visible' => !$isSecurityRole && $isStudentOT],
-            'my_groups'               => ['count' => $myGroupsCount ?? 0,                          'link' => route('admin.dashboard.my-groups')],
-            'total_inhouse_faculty'   => ['count' => $total_internal_faculty,                      'link' => route('admin.dashboard.inhouse_faculty'),                      'visible' => !$isSecurityRole && !$isStudentOT],
-            'session_details'         => ['count' => $totalSessions,                               'link' => route('admin.dashboard.sessions'),                             'visible' => !$isSecurityRole && ($isFacultyRole || $isSuperAdmin)],
+        return [
+            'pending_permanent_id'    => ['count' => fn () => (int) ($todayPendingSplit()['perm'] ?? 0),          'link' => $idCardApprovalRoute],
+            'pending_contractual_id'  => ['count' => fn () => (int) ($todayPendingSplit()['cont'] ?? 0),          'link' => $idCardApprovalRoute],
+            'duplicate_permanent_id'  => ['count' => fn () => $this->getTodayDuplicatePermanentIdCardRequestsCount(true),    'link' => $idCardApprovalRoute],
+            'duplicate_contractual_id'=> ['count' => fn () => $this->getTodayDuplicateContractualIdCardRequestsCount(true), 'link' => $idCardApprovalRoute],
+            'requested_family_id'     => ['count' => fn () => $this->getTodayPendingFamilyApprovalsCount(true),  'link' => route('admin.security.family_idcard_approval.index')],
+            'requested_vehicle_pass'  => ['count' => fn () => $this->getTodayPendingVehicleApprovalsCount(true), 'link' => route('admin.security.vehicle_pass_approval.index')],
+            'total_active_courses'    => ['count' => fn () => CourseMaster::where('active_inactive', 1)->where('start_year', '<=', now()->toDateString())->where('end_date', '>=', now()->toDateString())->count(), 'link' => route('admin.dashboard.active_course')],
+            'upcoming_courses'        => ['count' => fn () => CourseMaster::where('active_inactive', 1)->where('start_year', '>', now()->toDateString())->count(), 'link' => route('admin.dashboard.incoming_course')],
+            'upcoming_events'         => ['count' => fn () => Holiday::active()->where('holiday_date', '>', now())->count(), 'link' => route('admin.dashboard.upcoming_events')],
+            'medical_exception'       => ['count' => fn () => $isStudentOT ? StudentMedicalExemption::where('student_master_pk', $userId)->where('active_inactive', 1)->count() : 0, 'link' => route('medical.exception.ot.view')],
+            'total_guest_faculty'     => ['count' => fn () => FacultyMaster::where('active_inactive', 1)->where('faculty_type', 2)->count(), 'link' => route('admin.dashboard.guest_faculty')],
+            'pending_id_approval1'    => ['count' => fn () => (int) ($todayApproval1Split()['idcard'] ?? 0),    'link' => route('admin.security.employee_idcard_approval.approval1')],
+            'pending_dup_id_approval1'=> ['count' => fn () => (int) ($todayApproval1Split()['duplicate'] ?? 0), 'link' => route('admin.security.employee_idcard_approval.approval1')],
+            'ot_mdo_escort'           => ['count' => fn () => $isStudentOT ? MDOEscotDutyMap::where('selected_student_list', $userId)->with(['courseMaster', 'mdoDutyTypeMaster', 'facultyMaster'])->count() : 0, 'link' => route('ot.mdo.escrot.exemption.view')],
+            // How many Course Group Mapping groups this OT is in. Same trainee check as
+            // the page it opens (F-055).
+            'my_groups'               => ['count' => fn () => $isStudentOT && $this->isMyGroupsTrainee() ? $this->myGroupsQuery($userId)->distinct()->count('gmap.pk') : 0, 'link' => route('admin.dashboard.my-groups')],
+            'total_inhouse_faculty'   => ['count' => fn () => FacultyMaster::where('active_inactive', 1)->where('faculty_type', 1)->count(), 'link' => route('admin.dashboard.inhouse_faculty')],
+            'session_details'         => ['count' => fn () => ($pk = $facultyPk()) ? CalendarEvent::where('active_inactive', 1)
+                ->where(fn ($query) => $query->whereRaw('JSON_CONTAINS(faculty_master, ?)', ['"'.$pk.'"'])->orWhereRaw('FIND_IN_SET(?, faculty_master)', [$pk]))
+                ->count() : 0, 'link' => route('admin.dashboard.sessions')],
             // Faculty-only cards. Both open a report that scopes itself to the
             // logged-in faculty server-side, so the count and the page agree.
-            'total_sessions'          => ['count' => $facultyTotalSessions,                        'link' => route('timetable-report.index', ['course_mode' => 'all', 'faculty_role' => FacultySessionScope::ROLE_TEACHING])],
-            'total_feedback'          => ['count' => $facultyTotalFeedback,                        'link' => route('faculty.session_feedback.comments', ['course_type' => 'current', 'program_id' => 'all'])],
+            // Total Sessions: the sessions this faculty TEACHES, across active and ended
+            // courses alike, through the scope the Timetable Session Report filters by.
+            'total_sessions'          => ['count' => fn () => ($pk = $facultyPk()) ? FacultySessionScope::countFor($pk, 'all', FacultySessionScope::ROLE_TEACHING) : 0, 'link' => route('timetable-report.index', ['course_mode' => 'all', 'faculty_role' => FacultySessionScope::ROLE_TEACHING])],
+            // Total Running Courses Feedback: counted the way the Faculty Feedback with
+            // Comments page it opens counts it.
+            'total_feedback'          => ['count' => fn () => ($pk = $facultyPk()) ? app(FacultyFeedbackReportService::class)->getTotalFeedbackCount($pk) : 0, 'link' => route('faculty.session_feedback.comments', ['course_type' => 'current', 'program_id' => 'all'])],
             // No count on the two timetable cards: they open a calendar, not a list
             // whose rows could be counted. Academic = the whole Academy's timetable
             // (?scope=academy), My Timetable = the same page scoped to the viewer,
@@ -526,22 +518,27 @@ class UserController extends Controller
             'my_timetable'            => ['link' => $isOtUser ? route('calendar.ot.index') : route('calendar.index')],
             // Both open the OT / Participants list — the second ordered by House so it
             // opens house-wise, with the page's House filter to narrow to one.
-            'my_counsellees'          => ['count' => $facultyCounsellees,                          'link' => route('admin.dashboard.ot-participants', ['view' => 'counsellees'])],
-            'house_wise_details'      => ['count' => $facultyHouses,                               'link' => route('admin.dashboard.ot-participants', ['view' => 'house'])],
+            'my_counsellees'          => ['count' => fn () => ($pk = $facultyPk()) ? $this->facultyGroupStudentCount($pk, '%counsel%', true) : 0,                          'link' => route('admin.dashboard.ot-participants', ['view' => 'counsellees'])],
+            'house_wise_details'      => ['count' => fn () => ($pk = $facultyPk()) ? $this->facultyGroupStudentCount($pk, '%house%', true) : 0,                               'link' => route('admin.dashboard.ot-participants', ['view' => 'house'])],
             // No count: Who's Who opens on a course picker, so there is no single
             // number the tile could honestly show — same as the timetable cards.
             'whos_who'                => [                                                         'link' => route('admin.faculty.whos-who')],
-            'total_students'          => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
-            'student_details'         => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
-            'my_course_participant'   => ['count' => StudentMasterCourseMap::query()->when(!empty($myCourseIds), fn($q) => $q->whereIn('course_master_pk', $myCourseIds))->count(), 'link' => route('my.course.participant'),                                'visible' => true],
-            'discipline_marks_deducted' => ['count' => $disciplineMarksDeducted,                   'link' => route('memo.discipline.ot_marks')],
-            'pending_feedback'        => ['count' => $pendingFeedbackCount,                        'link' => route('feedback.get.studentFeedbackUrl')],
-            'protocol_guest_house_requests' => ['count' => $protocolCounts['guesthouse'],       'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'guesthouse']) : null, 'visible' => $isProtocolStaff],
-            'protocol_vehicle_pass_requests'=> ['count' => $protocolCounts['vehicle'],          'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'vehicle']) : null,    'visible' => $isProtocolStaff],
-            'protocol_ticket_requests'      => ['count' => $protocolCounts['ticket'],           'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'ticket']) : null,     'visible' => $isProtocolStaff],
-            'protocol_pending_my_action'    => ['count' => $protocolCounts['pending'],          'link' => $isProtocolStaff ? route('protocol.approval.queue') : null,                        'visible' => $isProtocolStaff],
-            'protocol_recommend_action'     => ['count' => $protocolCounts['recommended'],      'link' => $isProtocolStaff ? route('protocol.requests.all', ['status' => 'recommended']) : null,                         'visible' => $isProtocolStaff],
-            'my_protocol_request'         => ['count' => $myProtocolCount,                    'link' => $canRaiseProtocol ? route('protocol.requests.my') : null,                          'visible' => $canRaiseProtocol],
+            'total_students'          => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students')],
+            'student_details'         => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students')],
+            // Role-scoped course IDs ([] = all, [-1] = none, [pks] = restricted)
+            'my_course_participant'   => ['count' => function () {
+                $myCourseIds = get_Role_by_course();
+
+                return StudentMasterCourseMap::query()->when(! empty($myCourseIds), fn ($q) => $q->whereIn('course_master_pk', $myCourseIds))->count();
+            }, 'link' => route('my.course.participant')],
+            'discipline_marks_deducted' => ['count' => fn () => $isTraineeLogin ? app(OtMarksDeductedService::class)->totalFor((int) $userId) : 0, 'link' => route('memo.discipline.ot_marks')],
+            'pending_feedback'        => ['count' => fn () => $isTraineeLogin ? $this->getOtPendingFeedbackCount($userId) : 0, 'link' => route('feedback.get.studentFeedbackUrl')],
+            'protocol_guest_house_requests' => ['count' => fn () => $protocolCounts()['guesthouse'],  'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'guesthouse']) : null],
+            'protocol_vehicle_pass_requests'=> ['count' => fn () => $protocolCounts()['vehicle'],     'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'vehicle']) : null],
+            'protocol_ticket_requests'      => ['count' => fn () => $protocolCounts()['ticket'],      'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'ticket']) : null],
+            'protocol_pending_my_action'    => ['count' => fn () => $protocolCounts()['pending'],     'link' => $isProtocolStaff ? route('protocol.approval.queue') : null],
+            'protocol_recommend_action'     => ['count' => fn () => $protocolCounts()['recommended'], 'link' => $isProtocolStaff ? route('protocol.requests.all', ['status' => 'recommended']) : null],
+            'my_protocol_request'         => ['count' => fn () => $canRaiseProtocol ? \Modules\Protocol\Entities\ProtocolRequest::forUser(Auth::id())->count() : 0, 'link' => $canRaiseProtocol ? route('protocol.requests.my') : null],
             // Doctor: exemptions covering today on running courses. Opens the exemption
             // listing filtered to Today (Active tab), which lists exactly these rows.
             'medical_exemptions_today' => ['count' => fn () => StudentMedicalExemption::onRunningCourse()->overlapping(now()->toDateString(), now()->toDateString())->count(), 'link' => route('student.medical.exemption.index', ['from_date' => now()->toDateString(), 'to_date' => now()->toDateString()])],
@@ -578,113 +575,6 @@ class UserController extends Controller
             'centcom_reported_complaints'  => ['count' => fn () => app(\App\Http\Controllers\Admin\IssueManagement\IssueManagementController::class)->dashboardCentcomCount('0'), 'link' => route('admin.issue-management.centcom', ['status' => '0'])],
             'estate_pending_meter_readings' => ['count' => fn () => count(app(\App\Http\Controllers\Admin\EstateController::class)->getPendingMeterReadingData(Request::create('/', 'GET', ['bill_month' => now()->format('Y-m'), 'bill_year' => now()->format('Y')]))->getData(true)['data'] ?? []), 'link' => route('admin.estate.reports.pending-meter-reading', ['bill_month' => now()->format('Y-m')])],
         ];
-
-        // Count map for custom cards added via UI.
-        // Add an entry here when a custom card needs a real count.
-        $cardCounts = [
-            // 'my_card_key' => SomeModel::where('status', 'pending')->count(),
-        ];
-
-        // The cards this user's roles have on the requested header module's
-        // dashboard (?category=, the same parameter that selects the header tab);
-        // no or an unknown module is Home.
-        $dashboardModule = DashboardCard::resolveModule($request->query('category'));
-        $roleIds = (Auth::user()->roles ?? collect())->pluck('id')->all();
-        $enabledCards = ($roleIds !== [] && $dashboardModule)
-            ? DashboardCard::assignedTo($roleIds, $dashboardModule->id)->orderBy('sort_order')->get()
-            : collect();
-
-        $baseCards = $enabledCards;
-
-        $enabledWidgetKeys = $baseCards->filter(fn ($c) => str_starts_with($c->key, 'widget_'))->pluck('key')->toArray();
-
-        // House wise Performance panel. Built only when the panel is actually on
-        // this dashboard — it is four queries, and no other card needs them.
-        $houseOnDashboard = in_array('widget_house_performance', $enabledWidgetKeys, true);
-        // ?house_course= narrows the panel; the select posts back to the dashboard
-        // rather than fetching, so the figure and the page agree without a second
-        // code path computing it.
-        $houseCourseFilter = $request->filled('house_course') ? (int) $request->input('house_course') : null;
-        $housePerformance = $houseOnDashboard
-            ? $this->houseWisePerformance($houseCourseFilter)
-            : collect();
-        $houseCourses = $houseOnDashboard ? $this->houseCourseOptions() : collect();
-
-        $issueReportModules = \App\Http\Controllers\Admin\IssueReportController::moduleOptions();
-
-        // Only the OT and faculty-portal cards are gated (DashboardCard::gatedCardVisibility(),
-        // shared with the header's module landing). The older cards' 'visible' flags
-        // above were never applied and their role mappings are what admins have
-        // tuned against, so they are left as they are.
-        $gatedCardVisibility = DashboardCard::gatedCardVisibility();
-
-        $cardsToRender = $baseCards->filter(fn ($c) => ! str_starts_with($c->key, 'widget_'))->filter(function ($card) use ($gatedCardVisibility) {
-            return $gatedCardVisibility[$card->key] ?? true;
-        })->map(function ($card) use ($cardDefinitions, $cardCounts) {
-            $def = $cardDefinitions[$card->key] ?? null;
-
-            return [
-                'key' => $card->key,
-                'label' => $card->label,
-                'icon' => $card->icon,
-                'color_class' => $card->color_class,
-                'link'        => $def['link'] ?? null,
-                // A closure count runs only here, for a card this user actually sees.
-                'count'       => value($def['count'] ?? ($cardCounts[$card->key] ?? 0)),
-                // A definition that omits 'count' is a card that opens something
-                // rather than counting it (the timetables) — it renders as a tile
-                // with no number, not as a zero.
-                'show_count'  => $def === null || array_key_exists('count', $def),
-            ];
-        })->values();
-
-        return view('admin.dashboard', compact(
-            'year',
-            'month',
-            'events',
-            'emp_dob_data',
-            'isMyBirthday',
-            'myBirthdayWishCount',
-            'birthdayWishCounts',
-            'upcomingBirthdays',
-            'totalActiveCourses',
-            'upcomingCourses',
-            'upcomingEventsCount',
-            'total_guest_faculty',
-            'total_internal_faculty',
-            'exemptionCount',
-            'MDO_count',
-            'disciplineMarksDeducted',
-            'todayTimetable',
-            'totalSessions',
-            'totalStudents',
-            'facultyTotalSessions',
-            'facultyTotalFeedback',
-            'isCCorACC',
-            'todayFamilyApprovals',
-            'fullFamilyApprovals',
-            'todayVehicleApprovals',
-            'fullVehicleApprovals',
-            'todayIdCardRequests',
-            'todayPendingPermanentIdCardRequests',
-            'todayPendingContractualIdCardRequests',
-            'fullPendingPermanentIdCardRequests',
-            'fullPendingContractualIdCardRequests',
-            'todayApproval1IdCardRequests',
-            'todayApproval1DuplicateIdCardRequests',
-            'todayDuplicatePermIdCardRequests',
-            'todayDuplicateContractualIdCardRequests',
-            'fullDuplicatePermIdCardRequests',
-            'fullDuplicateContractualIdCardRequests',
-            'idCardApprovalRoute',
-            'cardsToRender',
-            'enabledWidgetKeys',
-            'housePerformance',
-            'houseCourses',
-            'houseCourseFilter',
-            'issueReportModules',
-            'dashboardModule'
-        ));
     }
 
     /**
@@ -1675,7 +1565,9 @@ class UserController extends Controller
     {
         $query = request()->query;
         $saved = $query->all();
-        $query->add($params);
+        // replace, not add: the card counts on its own filters, never on whatever
+        // query string (filters, search, scope) the calling page carries.
+        $query->replace($params);
 
         try {
             return DB::query()->fromSub(app($dataTable)->query(new $model), 'dt_rows')->count();

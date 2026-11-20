@@ -223,6 +223,30 @@
     outline-offset: 2px;
 }
 
+/* Dashboard Preview is the grid's last item (full row until its script places it beside the
+   last cards). Rows size to their content here, or every card row would grow to the
+   preview's height through grid-auto-rows: 1fr. */
+.dashboard-stats-grid.row:has(> .module-dashboard-preview) {
+    grid-auto-rows: auto;
+    align-items: start;
+}
+
+.dashboard-stats-grid.row > .module-dashboard-preview {
+    grid-column: 1 / -1;
+    min-width: 0;
+    width: auto;
+    max-width: none;
+    margin-top: 0;
+    padding: 0;
+}
+
+/* Module-page Dashboard Preview: keyboard focus lands on the links, not .stat-card, and
+   Bootstrap's 20%-alpha button ring is too faint to see (WCAG 2.4.7 / 1.4.11). */
+.module-dashboard-preview a:focus-visible {
+    outline: 2px solid #004384;
+    outline-offset: 2px;
+}
+
 @media (max-width: 767.98px) {
     .stat-icon-wrapper {
         width: 48px;

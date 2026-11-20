@@ -115,6 +115,25 @@
     </script>
 
     @include('admin.layouts.pre_header')
+    @if(request()->query('embed') === '1')
+    {{-- Embedded (the dashboard's Dashboard Preview frame): the page's own content only.
+         The chrome is hidden, not skipped, because its scripts are globals the page JS
+         relies on. Links and forms leave the frame for the full page. --}}
+    <base target="_top">
+    <style>
+        .sargam-embed #sargamLoader, .sargam-embed header.topbar, .sargam-embed #sidebarTabContent,
+        .sargam-embed .skip-link, .sargam-embed .modern-breadcrumb-wrapper { display: none !important; }
+        /* The id is doubled on purpose: sidebar-menu-enhanced.css places the sidebar and the
+           page offset with selectors up to (1,4,1) specificity, which a class rule cannot beat. */
+        .sargam-embed #main-wrapper#main-wrapper aside.side-mini-panel { display: none !important; }
+        .sargam-embed #main-wrapper#main-wrapper .page-wrapper,
+        .sargam-embed #main-wrapper#main-wrapper .body-wrapper { margin: 0 !important; padding: 0 !important; min-height: 0 !important; width: 100% !important; max-width: none !important; flex: 1 1 100% !important; }
+        .sargam-embed, .sargam-embed #main-wrapper { min-height: 0 !important; background: transparent; }
+        /* The page's own container gutter (24px, often px-md-4 utilities, which are !important)
+           would indent the content from the dashboard's edge. */
+        .sargam-embed #mainNavbarContent > .tab-pane > [class*="container"] { padding-left: 0 !important; padding-right: 0 !important; padding-top: 0 !important; }
+    </style>
+    @endif
     <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }} - Sargam 2.0 | Lal Bahadur Shastri National Academy of
         Administration</title>
     {{-- These styles are emitted here, in <head>, with no @section wrapper.
@@ -743,7 +762,7 @@
 
 </head>
 
-<body data-sidebartype="full" @class(['has-dynamic-sidebar', 'admin-mess-module' => request()->routeIs('admin.mess.*')])>
+<body data-sidebartype="full" @class(['has-dynamic-sidebar', 'admin-mess-module' => request()->routeIs('admin.mess.*'), 'sargam-embed' => request()->query('embed') === '1'])>
     <!-- Preloader - Advanced Sargam 2.0 Loader (Bootstrap 5) -->
     <div class="sargam-loader d-flex align-items-center justify-content-center" id="sargamLoader" role="status"
         aria-live="polite" aria-label="Loading Sargam 2.0">
