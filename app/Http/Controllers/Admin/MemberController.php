@@ -967,7 +967,10 @@ class MemberController extends Controller
                 . 'managed from the Member wizard. Remove it from Role & Permission > Users.');
         }
 
-        // Only unchecking a role this same screen previously granted removes it.
+        // Only a role in the caller's "previously selected" set that is unticked now is
+        // removed. With rendered ticks, that set is the roles Step 3 displayed ticked and
+        // the login still holds, whichever screen granted them; without them (legacy
+        // form), it is the mapping rows this screen wrote (PR #354 review, F-008).
         $toRemove = array_diff($oldSpatieRoles, $newSpatieRoles);
         // Only a role ticked now that Step 3 did not display ticked is granted (F-007).
         $toAdd = array_diff($newSpatieRoles, $currentRoleNames, $renderedSpatieRoles);
