@@ -46,6 +46,32 @@ class UserRoleMaster extends Model
     }
 
     /**
+     * Pks of the offered Role Assignment options (getUserRoleList()) that name one of
+     * these `roles` names, matched on RoleNames::normalize() exactly as the list itself
+     * is. A role with no offered option is skipped.
+     *
+     * @param  iterable<string>  $roleNames
+     * @return int[]
+     */
+    public static function offeredOptionPksForRoles(iterable $roleNames): array
+    {
+        $wanted = collect($roleNames)
+            ->map(fn ($name) => RoleNames::normalize((string) $name))
+            ->flip();
+
+        if ($wanted->isEmpty()) {
+            return [];
+        }
+
+        return self::getUserRoleList()
+            ->filter(fn ($displayName) => isset($wanted[RoleNames::normalize((string) $displayName)]))
+            ->keys()
+            ->map(fn ($pk) => (int) $pk)
+            ->values()
+            ->all();
+    }
+
+    /**
      * Options of ANY status whose display name matches this role name, oldest first.
      * Status is ignored on purpose: a deactivated option still belongs to its role, and
      * treating it as missing created an active duplicate that put the role back in the

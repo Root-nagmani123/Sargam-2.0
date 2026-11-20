@@ -622,6 +622,10 @@ class MemberWizardPayrollAndStepsTest extends TestCase
         ]);
         DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->delete();
         DB::table('employee_role_mapping')->insert(['user_credentials_pk' => $credentialPk, 'user_role_master_pk' => $hiddenPk]);
+        // The member still holds the role granted at creation (PR #354 review, F-005): this
+        // post carries no userrole_ticked_at_render, so update() keeps the mapping-based
+        // "previously selected" set, which no longer names that role. It must survive.
+        $this->assertNotSame([], User::find($credentialPk)->getRoleNames()->all(), 'Fixture: the member holds a role.');
         $rolesBefore = User::find($credentialPk)->getRoleNames()->sort()->values()->all();
 
         $updatePayload = $this->basicMemberPayload('HiddenOnly', $employeePk);
@@ -824,6 +828,335 @@ class MemberWizardPayrollAndStepsTest extends TestCase
             User::find($credentialPk)->getRoleNames()->values()->all(),
             'Doctor, granted through the wizard, is revoked; nothing is granted for the hidden option.'
         );
+    }
+
+    /**
+     * Creates a member through member.store (granted Doctor through the wizard) and returns
+     * [employeePk, credentialPk, createPayload].
+     */
+    private function createMemberThroughWizard(User $actor, string $suffix): array
+    {
+        $createPayload = $this->basicMemberPayload($suffix);
+        $this->actingAs($actor)->post(route('member.store'), $createPayload)->assertOk();
+
+        $employeePk = DB::table('employee_master')->where('emp_id', $createPayload['id'])->value('pk');
+        $credentialPk = DB::table('user_credentials')->where('user_name', $createPayload['userid'])->value('pk');
+        $this->assertNotNull($employeePk);
+        $this->assertNotNull($credentialPk);
+
+        return [(int) $employeePk, (int) $credentialPk, $createPayload];
+    }
+
+    /** An offered Step 3 option naming a grantable role other than Doctor, as [optionPk, roleName]. */
+    private function anotherGrantableOfferedRole(): array
+    {
+        $roleByKey = Role::pluck('name')
+            ->reject(fn ($name) => \App\Support\RoleNames::isNotGrantableFromMemberWizard($name))
+            ->keyBy(fn ($name) => \App\Support\RoleNames::normalize($name));
+
+        foreach (UserRoleMaster::getUserRoleList() as $pk => $displayName) {
+            $key = \App\Support\RoleNames::normalize((string) $displayName);
+
+            if ($key !== \App\Support\RoleNames::normalize('Doctor') && isset($roleByKey[$key])) {
+                return [(int) $pk, $roleByKey[$key]];
+            }
+        }
+
+        $this->markTestSkipped('Fixture assumption: an offered option naming a grantable role other than Doctor.');
+    }
+
+    /** Renders Step 3 through member.edit-step and returns [tickedOptionPks, userrole_ticked_at_render]. */
+    private function renderStep3(User $actor, int $employeePk): array
+    {
+        $html = $this->actingAs($actor)
+            ->get(route('member.edit-step', ['step' => 3, 'id' => $employeePk]))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertSame(1, preg_match('/name="userrole_ticked_at_render" value="([^"]*)"/', $html, $field), 'Step 3 posts its rendered ticks.');
+        preg_match_all('/name="userrole\[\]"\s+id="userrole\d+" value="(\d+)"\s+checked/', $html, $ticked);
+
+        return [array_map('intval', $ticked[1]), $field[1]];
+    }
+
+    private function mappedOptionPks(int $credentialPk): array
+    {
+        return DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)
+            ->orderBy('user_role_master_pk')->pluck('user_role_master_pk')->map(fn ($pk) => (int) $pk)->all();
+    }
+
+    private function heldRoleNames(int $credentialPk): array
+    {
+        return User::find($credentialPk)->getRoleNames()->sort()->values()->all();
+    }
+
+    /**
+     * PR #354 review, F-001: a role granted on Role & Permission > Users after Step 3 was
+     * rendered is not revoked by saving the wizard as displayed, and its mapping is kept so
+     * the show/print pages list it too.
+     */
+    public function test_a_role_granted_on_the_users_screen_after_step3_rendered_survives_the_wizard_save(): void
+    {
+        $actor = $this->makeActor('late_grant');
+        $actor->assignRole('Super Admin');
+        [$otherOptionPk, $otherRoleName] = $this->anotherGrantableOfferedRole();
+        [$employeePk, $credentialPk, $createPayload] = $this->createMemberThroughWizard($actor, 'LateGrant');
+        $doctorPk = (int) $createPayload['userrole'][0];
+
+        [$displayedTicks, $tickedAtRender] = $this->renderStep3($actor, $employeePk);
+        $this->assertSame([$doctorPk], $displayedTicks, 'Fixture: Step 3 shows Doctor ticked.');
+
+        // Another administrator then grants a second role on the Users screen.
+        $this->actingAs($actor)->post(route('admin.users.assignRoleSave'), [
+            'user_id' => $credentialPk,
+            'roles'   => Role::whereIn('name', ['Doctor', $otherRoleName])->pluck('id')->all(),
+        ])->assertRedirect();
+
+        $updatePayload = $this->basicMemberPayload('LateGrant', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['userrole'] = $displayedTicks;
+        $updatePayload['userrole_step_shown'] = '1';
+        $updatePayload['userrole_ticked_at_render'] = $tickedAtRender;
+
+        $response = $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
+
+        $this->assertArrayNotHasKey('warning', $response->json());
+        $this->assertEqualsCanonicalizing(['Doctor', $otherRoleName], $this->heldRoleNames($credentialPk), 'The later grant must be retained.');
+        $this->assertEqualsCanonicalizing([$doctorPk, $otherOptionPk], $this->mappedOptionPks($credentialPk), 'The mapping must list both held roles.');
+    }
+
+    /** Companion to F-001: unticking a role Step 3 displayed ticked still removes it, whichever screen granted it. */
+    public function test_unticking_a_displayed_role_granted_on_the_users_screen_removes_it(): void
+    {
+        $actor = $this->makeActor('untick_users_role');
+        $actor->assignRole('Super Admin');
+        [$otherOptionPk, $otherRoleName] = $this->anotherGrantableOfferedRole();
+        [$employeePk, $credentialPk, $createPayload] = $this->createMemberThroughWizard($actor, 'UntickUsersRole');
+        $doctorPk = (int) $createPayload['userrole'][0];
+
+        $this->actingAs($actor)->post(route('admin.users.assignRoleSave'), [
+            'user_id' => $credentialPk,
+            'roles'   => Role::whereIn('name', ['Doctor', $otherRoleName])->pluck('id')->all(),
+        ])->assertRedirect();
+
+        [$displayedTicks, $tickedAtRender] = $this->renderStep3($actor, $employeePk);
+        $this->assertEqualsCanonicalizing([$doctorPk, $otherOptionPk], $displayedTicks, 'Fixture: Step 3 shows both held roles ticked.');
+
+        $updatePayload = $this->basicMemberPayload('UntickUsersRole', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['userrole'] = [$doctorPk];
+        $updatePayload['userrole_step_shown'] = '1';
+        $updatePayload['userrole_ticked_at_render'] = $tickedAtRender;
+
+        $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
+
+        $this->assertSame(['Doctor'], $this->heldRoleNames($credentialPk));
+        $this->assertSame([$doctorPk], $this->mappedOptionPks($credentialPk));
+    }
+
+    /**
+     * PR #354 review, F-002: saving a Super Admin member as Step 3 displays it gives no
+     * "No permissions were granted" warning, and Super Admin is still held.
+     */
+    public function test_saving_a_super_admin_member_as_displayed_gives_no_refusal_warning(): void
+    {
+        $actor = $this->makeActor('sa_member_save');
+        $actor->assignRole('Super Admin');
+        [$employeePk, $credentialPk, $createPayload] = $this->createMemberThroughWizard($actor, 'SaMemberSave');
+
+        $superAdminOptionPk = UserRoleMaster::offeredOptionPksForRoles(['Super Admin'])[0] ?? null;
+
+        if ($superAdminOptionPk === null) {
+            $this->markTestSkipped('Fixture assumption: Step 3 offers a Super Admin option.');
+        }
+
+        User::find($credentialPk)->assignRole('Super Admin');
+
+        [$displayedTicks, $tickedAtRender] = $this->renderStep3($actor, $employeePk);
+        $this->assertContains($superAdminOptionPk, $displayedTicks, 'Fixture: Step 3 shows Super Admin ticked for a holder.');
+
+        $updatePayload = $this->basicMemberPayload('SaMemberSave', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['userrole'] = $displayedTicks;
+        $updatePayload['userrole_step_shown'] = '1';
+        $updatePayload['userrole_ticked_at_render'] = $tickedAtRender;
+
+        for ($save = 1; $save <= 2; $save++) {
+            $response = $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
+            $this->assertArrayNotHasKey('warning', $response->json(), "Save {$save} must not warn.");
+            $this->assertContains('Super Admin', $this->heldRoleNames($credentialPk));
+        }
+    }
+
+    /** F-002 companion: ticking Super Admin for a member who does NOT hold it is still refused and reported. */
+    public function test_ticking_super_admin_for_a_non_holder_is_still_refused_with_a_warning(): void
+    {
+        $actor = $this->makeActor('sa_non_holder');
+        $actor->assignRole('Super Admin');
+        [$employeePk, $credentialPk, $createPayload] = $this->createMemberThroughWizard($actor, 'SaNonHolder');
+
+        $superAdminOptionPk = UserRoleMaster::offeredOptionPksForRoles(['Super Admin'])[0] ?? null;
+
+        if ($superAdminOptionPk === null) {
+            $this->markTestSkipped('Fixture assumption: Step 3 offers a Super Admin option.');
+        }
+
+        [$displayedTicks, $tickedAtRender] = $this->renderStep3($actor, $employeePk);
+
+        $updatePayload = $this->basicMemberPayload('SaNonHolder', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['userrole'] = array_merge($displayedTicks, [$superAdminOptionPk]);
+        $updatePayload['userrole_step_shown'] = '1';
+        $updatePayload['userrole_ticked_at_render'] = $tickedAtRender;
+
+        $response = $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
+
+        $this->assertStringContainsString('No permissions were granted', (string) $response->json('warning'));
+        $this->assertNotContains('Super Admin', $this->heldRoleNames($credentialPk));
+    }
+
+    /**
+     * PR #354 review, F-007: a role revoked on Role & Permission > Users after Step 3 was
+     * rendered stays revoked when the wizard is saved as displayed, and its mapping row is
+     * gone so the show/print pages agree with the Users screen.
+     */
+    public function test_a_role_revoked_on_the_users_screen_after_step3_rendered_stays_revoked(): void
+    {
+        $actor = $this->makeActor('late_revoke');
+        $actor->assignRole('Super Admin');
+        [$otherOptionPk, $otherRoleName] = $this->anotherGrantableOfferedRole();
+        [$employeePk, $credentialPk, $createPayload] = $this->createMemberThroughWizard($actor, 'LateRevoke');
+        $doctorPk = (int) $createPayload['userrole'][0];
+
+        $this->actingAs($actor)->post(route('admin.users.assignRoleSave'), [
+            'user_id' => $credentialPk,
+            'roles'   => Role::whereIn('name', ['Doctor', $otherRoleName])->pluck('id')->all(),
+        ])->assertRedirect();
+
+        [$displayedTicks, $tickedAtRender] = $this->renderStep3($actor, $employeePk);
+        $this->assertEqualsCanonicalizing([$doctorPk, $otherOptionPk], $displayedTicks, 'Fixture: Step 3 shows both held roles ticked.');
+
+        // Another administrator then revokes the second role on the Users screen.
+        $this->actingAs($actor)->post(route('admin.users.assignRoleSave'), [
+            'user_id' => $credentialPk,
+            'roles'   => Role::whereIn('name', ['Doctor'])->pluck('id')->all(),
+        ])->assertRedirect();
+        $this->assertSame(['Doctor'], $this->heldRoleNames($credentialPk), 'Fixture: the Users screen revoked the second role.');
+
+        $updatePayload = $this->basicMemberPayload('LateRevoke', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['userrole'] = $displayedTicks;
+        $updatePayload['userrole_step_shown'] = '1';
+        $updatePayload['userrole_ticked_at_render'] = $tickedAtRender;
+
+        $response = $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
+
+        $this->assertArrayNotHasKey('warning', $response->json());
+        $this->assertSame(['Doctor'], $this->heldRoleNames($credentialPk), 'The later revocation must hold.');
+        $this->assertSame([$doctorPk], $this->mappedOptionPks($credentialPk), 'The revoked role must not stay mapped.');
+    }
+
+    /** F-007 companion: ticking a role Step 3 did not display ticked still grants it. */
+    public function test_ticking_a_role_not_displayed_ticked_still_grants_it(): void
+    {
+        $actor = $this->makeActor('new_tick');
+        $actor->assignRole('Super Admin');
+        [$otherOptionPk, $otherRoleName] = $this->anotherGrantableOfferedRole();
+        [$employeePk, $credentialPk, $createPayload] = $this->createMemberThroughWizard($actor, 'NewTick');
+        $doctorPk = (int) $createPayload['userrole'][0];
+
+        [$displayedTicks, $tickedAtRender] = $this->renderStep3($actor, $employeePk);
+        $this->assertSame([$doctorPk], $displayedTicks, 'Fixture: Step 3 shows Doctor ticked.');
+
+        $updatePayload = $this->basicMemberPayload('NewTick', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['userrole'] = [$doctorPk, $otherOptionPk];
+        $updatePayload['userrole_step_shown'] = '1';
+        $updatePayload['userrole_ticked_at_render'] = $tickedAtRender;
+
+        $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
+
+        $this->assertEqualsCanonicalizing(['Doctor', $otherRoleName], $this->heldRoleNames($credentialPk));
+        $this->assertEqualsCanonicalizing([$doctorPk, $otherOptionPk], $this->mappedOptionPks($credentialPk));
+    }
+
+    /**
+     * F-007 / F-002: Super Admin displayed ticked, then removed on the Users screen, then the
+     * wizard saved as displayed. Nothing is refused (nothing was asked for), Super Admin stays
+     * removed, and its mapping row is gone.
+     */
+    public function test_super_admin_revoked_after_step3_rendered_stays_revoked_without_a_warning(): void
+    {
+        $actor = $this->makeActor('sa_late_revoke');
+        $actor->assignRole('Super Admin');
+        [$employeePk, $credentialPk, $createPayload] = $this->createMemberThroughWizard($actor, 'SaLateRevoke');
+        $doctorPk = (int) $createPayload['userrole'][0];
+
+        $superAdminOptionPk = UserRoleMaster::offeredOptionPksForRoles(['Super Admin'])[0] ?? null;
+
+        if ($superAdminOptionPk === null) {
+            $this->markTestSkipped('Fixture assumption: Step 3 offers a Super Admin option.');
+        }
+
+        User::find($credentialPk)->assignRole('Super Admin');
+
+        [$displayedTicks, $tickedAtRender] = $this->renderStep3($actor, $employeePk);
+        $this->assertEqualsCanonicalizing([$doctorPk, $superAdminOptionPk], $displayedTicks, 'Fixture: Step 3 shows Doctor and Super Admin ticked.');
+
+        $this->actingAs($actor)->post(route('admin.users.assignRoleSave'), [
+            'user_id' => $credentialPk,
+            'roles'   => Role::whereIn('name', ['Doctor'])->pluck('id')->all(),
+        ])->assertRedirect();
+        $this->assertSame(['Doctor'], $this->heldRoleNames($credentialPk), 'Fixture: the Users screen removed Super Admin.');
+
+        $updatePayload = $this->basicMemberPayload('SaLateRevoke', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['userrole'] = $displayedTicks;
+        $updatePayload['userrole_step_shown'] = '1';
+        $updatePayload['userrole_ticked_at_render'] = $tickedAtRender;
+
+        $response = $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
+
+        $this->assertArrayNotHasKey('warning', $response->json());
+        $this->assertSame(['Doctor'], $this->heldRoleNames($credentialPk));
+        $this->assertSame([$doctorPk], $this->mappedOptionPks($credentialPk));
+    }
+
+    /**
+     * PR #354 review, F-005 remainder: the rendered-ticks path for a member holding a hidden
+     * option. Saved as displayed, the hidden option and the held role are both kept unchanged.
+     */
+    public function test_saving_a_member_with_a_hidden_option_as_displayed_keeps_both(): void
+    {
+        $actor = $this->makeActor('hidden_rendered');
+        $actor->assignRole('Super Admin');
+        [$employeePk, $credentialPk, $createPayload] = $this->createMemberThroughWizard($actor, 'HiddenRendered');
+        $doctorPk = (int) $createPayload['userrole'][0];
+
+        $hiddenPk = DB::table('user_role_master')->insertGetId([
+            'user_role_name'         => 'Hidden Tag ' . uniqid(),
+            'user_role_display_name' => 'Hidden Tag ' . uniqid(),
+            'active_inactive'        => 1,
+        ]);
+        DB::table('employee_role_mapping')->insert(['user_credentials_pk' => $credentialPk, 'user_role_master_pk' => $hiddenPk]);
+        $this->assertFalse(UserRoleMaster::getUserRoleList()->has($hiddenPk), 'Fixture: the hidden option is not offered by Step 3.');
+
+        [$displayedTicks, $tickedAtRender] = $this->renderStep3($actor, $employeePk);
+        $this->assertSame([$doctorPk], $displayedTicks, 'Fixture: Step 3 shows Doctor ticked, the hidden option not.');
+
+        $updatePayload = $this->basicMemberPayload('HiddenRendered', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['first_name'] = 'Changed';
+        $updatePayload['userrole'] = $displayedTicks;
+        $updatePayload['userrole_step_shown'] = '1';
+        $updatePayload['userrole_ticked_at_render'] = $tickedAtRender;
+
+        $response = $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
+
+        $this->assertArrayNotHasKey('warning', $response->json());
+        $this->assertSame('Changed', DB::table('employee_master')->where('pk', $employeePk)->value('first_name'));
+        $this->assertSame(['Doctor'], $this->heldRoleNames($credentialPk));
+        $this->assertEqualsCanonicalizing([$doctorPk, $hiddenPk], $this->mappedOptionPks($credentialPk), 'Doctor and the hidden option, each exactly once.');
     }
 
     /**
