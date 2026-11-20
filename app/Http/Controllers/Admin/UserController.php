@@ -327,12 +327,21 @@ class UserController extends Controller
 
         $issueReportModules = \App\Http\Controllers\Admin\IssueReportController::moduleOptions();
 
-        // One definitions set for the page, so a count two lists share is run once.
-        $cardDefinitions = $this->dashboardCardDefinitions();
-        $cardsToRender = $this->dashboardStatCards($baseCards, $cardDefinitions);
-        $moduleQueues = $dashboardModule && $dashboardModule->slug === 'home'
-            ? $this->moduleQueues($dashboardModule->id, $cardDefinitions)
-            : collect();
+        // The tiles without their figures: counts can take seconds (an unpaid-bills total
+        // alone is ~4s on a full database), so the page opens at once and the grid, the
+        // hero's action line and Home's module strip arrive from dashboardCards().
+        $cardsToRender = $this->dashboardStatCards($baseCards, null, false);
+        $hasCountedCards = $cardsToRender->contains(fn ($c) => $c['show_count']);
+
+        // Customise: every card the login's roles have here, hidden ones included, in its order.
+        $layout = $dashboardModule ? DashboardCard::userLayout((int) Auth::id(), $dashboardModule->id) : ['order' => [], 'hidden' => []];
+        $allCards = DashboardCard::orderByLayout($this->assignedDashboardCards($dashboardModule?->id, false), $layout);
+        $customiseCards = $this->dashboardStatCards($allCards, null, false)
+            ->map(fn ($c) => $c + ['hidden' => in_array($c['key'], $layout['hidden'], true)]);
+        $customisePanels = $allCards->filter(fn ($c) => str_starts_with($c->key, 'widget_'))
+            ->map(fn ($c) => ['key' => $c->key, 'label' => $c->label, 'hidden' => in_array($c->key, $layout['hidden'], true)])
+            ->values();
+        $hiddenCardCount = count(array_intersect($layout['hidden'], $allCards->pluck('key')->all()));
 
         return view('admin.dashboard', compact(
             'year',
@@ -351,18 +360,57 @@ class UserController extends Controller
             'houseCourseFilter',
             'issueReportModules',
             'dashboardModule',
-            'moduleQueues'
+            'hasCountedCards',
+            'customiseCards',
+            'customisePanels',
+            'hiddenCardCount'
         ));
     }
 
-    /** Every card (stat cards and widget panels) the logged-in user's roles have on module $moduleId's dashboard, in order. */
-    private function assignedDashboardCards(?int $moduleId): \Illuminate\Support\Collection
+    /**
+     * The dashboard's count-bearing parts for ?category=, as the page fetches them: each
+     * card's figure, plus the card grid (grouped Needs your action / Overview), the hero's
+     * action line and, on Home, the Pending across modules strip, rendered here so the
+     * grouping rules live in one place.
+     */
+    public function dashboardCards(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $module = DashboardCard::resolveModule($request->query('category'));
+        // One definitions set for the response, so a count two lists share is run once.
+        $cardDefinitions = $this->dashboardCardDefinitions();
+        $cards = $this->dashboardStatCards($this->assignedDashboardCards($module?->id), $cardDefinitions);
+        $moduleQueues = $module && $module->slug === 'home'
+            ? $this->moduleQueues($module->id, $cardDefinitions)
+            : collect();
+
+        return response()->json([
+            'counts' => $cards->filter(fn ($c) => $c['show_count'])->pluck('count', 'key'),
+            'grid' => view('admin.dashboard.partials.card-grid', ['cardsToRender' => $cards])->render(),
+            'hero' => view('admin.dashboard.partials.hero-action', ['cardsToRender' => $cards])->render(),
+            'queues' => view('admin.dashboard.partials.module-queues', ['moduleQueues' => $moduleQueues])->render(),
+        ])->header('Cache-Control', 'no-store, private');
+    }
+
+    /**
+     * Every card (stat cards and widget panels) the logged-in user's roles have on module
+     * $moduleId's dashboard, in order. With $applyLayout, in the login's own order and without
+     * the cards it hid (user_dashboard_layouts); a layout only hides, it never adds a card.
+     */
+    private function assignedDashboardCards(?int $moduleId, bool $applyLayout = true): \Illuminate\Support\Collection
     {
         $roleIds = (Auth::user()->roles ?? collect())->pluck('id')->all();
+        if ($roleIds === [] || ! $moduleId) {
+            return collect();
+        }
+        $cards = DashboardCard::assignedTo($roleIds, $moduleId)->orderBy('sort_order')->get();
+        if (! $applyLayout || $cards->isEmpty()) {
+            return $cards;
+        }
+        $layout = DashboardCard::userLayout((int) Auth::id(), $moduleId);
 
-        return ($roleIds !== [] && $moduleId)
-            ? DashboardCard::assignedTo($roleIds, $moduleId)->orderBy('sort_order')->get()
-            : collect();
+        return DashboardCard::orderByLayout($cards, $layout)
+            ->reject(fn ($c) => in_array($c->key, $layout['hidden'], true))
+            ->values();
     }
 
     /**
@@ -397,7 +445,7 @@ class UserController extends Controller
     }
 
     /** The stat cards of $cards the logged-in user may see, as the dashboard renders them. */
-    private function dashboardStatCards(\Illuminate\Support\Collection $cards, ?array $cardDefinitions = null): \Illuminate\Support\Collection
+    private function dashboardStatCards(\Illuminate\Support\Collection $cards, ?array $cardDefinitions = null, bool $withCounts = true): \Illuminate\Support\Collection
     {
         // Only the OT and faculty-portal cards are gated (DashboardCard::gatedCardVisibility(),
         // shared with the header's module landing). The older cards' role mappings are
@@ -409,7 +457,7 @@ class UserController extends Controller
             ->values();
         $cardDefinitions ??= $this->dashboardCardDefinitions();
 
-        return $cards->map(function ($card) use ($cardDefinitions) {
+        return $cards->map(function ($card) use ($cardDefinitions, $withCounts) {
             $def = $cardDefinitions[$card->key] ?? null;
 
             return [
@@ -418,8 +466,9 @@ class UserController extends Controller
                 'icon' => $card->icon,
                 'color_class' => $card->color_class,
                 'link'        => $def['link'] ?? null,
-                // A closure count runs only here, for a card this user actually sees.
-                'count'       => value($def['count'] ?? 0),
+                // A closure count runs only here, for a card this user actually sees, and
+                // only when asked: the page itself renders a placeholder (null).
+                'count'       => $withCounts ? value($def['count'] ?? 0) : null,
                 // A definition that omits 'count' is a card that opens something
                 // rather than counting it (the timetables) — it renders as a tile
                 // with no number, not as a zero.

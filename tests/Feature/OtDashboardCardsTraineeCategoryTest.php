@@ -45,10 +45,8 @@ class OtDashboardCardsTraineeCategoryTest extends TestCase
         DB::table('model_has_roles')->insert(['role_id' => $role, 'model_type' => User::class, 'model_id' => $user->pk]);
         DB::table('role_dashboard_cards')->insert(['role_id' => $role, 'dashboard_card_id' => $card, 'sidebar_category_id' => $home]);
 
-        $response = $this->as($user->fresh(), $sessionRoles)->get(route('admin.dashboard'));
-        $response->assertOk();
-
-        return collect($response->viewData('cardsToRender'))->firstWhere('key', 'discipline_marks_deducted')['count'] ?? null;
+        return $this->as($user->fresh(), $sessionRoles)->getJson(route('admin.dashboard.cards'))
+            ->assertOk()->json('counts.discipline_marks_deducted');
     }
 
     public function test_a_non_trainee_login_holding_the_ot_role_sees_no_marks(): void

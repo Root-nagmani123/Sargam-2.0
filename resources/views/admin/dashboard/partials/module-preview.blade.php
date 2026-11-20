@@ -28,8 +28,9 @@
         <button type="button" class="module-dashboard-preview-tab" aria-pressed="{{ $isCurrent ? 'true' : 'false' }}"
             data-key="{{ $tab['key'] }}" data-src="{{ $embedUrl($tab['link']) }}" data-href="{{ $tab['link'] }}" data-label="{{ $tab['label'] }}">
             <span class="module-dashboard-preview-tab__label">{{ $tab['label'] }}</span>
-            @if(($tab['show_count'] ?? true) && is_numeric($tab['count']))
-            <span @class(['module-dashboard-preview-tab__count', 'is-action' => ($tab['actionable'] ?? false) && $tab['count'] > 0])>{{ $tab['count'] + 0 }}</span>
+            @if($tab['show_count'] ?? true)
+            {{-- Filled in when the dashboard's figures arrive (admin.dashboard.cards). --}}
+            <span class="module-dashboard-preview-tab__count" data-count-for="{{ $tab['key'] }}" @if($tab['actionable'] ?? false) data-actionable="1" @endif hidden></span>
             @endif
         </button>
         @endforeach

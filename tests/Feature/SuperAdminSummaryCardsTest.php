@@ -29,7 +29,7 @@ class SuperAdminSummaryCardsTest extends TestCase
         session(['user_roles' => $roles]);
         request()->query->replace([]);
 
-        $cards = collect(app(UserController::class)->dashboard(request())->getData()['cardsToRender'])->pluck('count', 'key')->all();
+        $cards = app(UserController::class)->dashboardCards(request())->getData(true)['counts'];
 
         foreach (['estate_pending_requests', 'estate_hac_pending', 'estate_vacant_houses', 'mess_pending_purchase_orders', 'mess_low_stock_items', 'centcom_all_open_complaints'] as $key) {
             $this->assertArrayHasKey($key, $cards, "$key missing from Super Admin's Home");

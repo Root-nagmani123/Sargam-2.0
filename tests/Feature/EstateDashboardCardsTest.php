@@ -40,7 +40,7 @@ class EstateDashboardCardsTest extends TestCase
 
         $setupId = DB::table('sidebar_categories')->where('slug', 'setup')->value('id');
         request()->query->set('category', (string) $setupId);
-        $cards = collect(app(UserController::class)->dashboard(request())->getData()['cardsToRender'])->pluck('count', 'key')->all();
+        $cards = app(UserController::class)->dashboardCards(request())->getData(true)['counts'];
 
         // dataTableRowCount() put the request's query string back.
         $this->assertSame(['category' => (string) $setupId], request()->query->all());

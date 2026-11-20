@@ -25,7 +25,7 @@ class FcDashboardCardsTest extends TestCase
         session(['user_roles' => $roles]);
 
         request()->query->set('category', (string) DB::table('sidebar_categories')->where('slug', 'setup')->value('id'));
-        $cards = collect(app(UserController::class)->dashboard(request())->getData()['cardsToRender'])->pluck('count', 'key')->all();
+        $cards = app(UserController::class)->dashboardCards(request())->getData(true)['counts'];
 
         $page = fn (int $type) => $this->get(route('exemptions.datalist', ['application_type' => $type]))->assertOk()->viewData('submissions')->count();
 

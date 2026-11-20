@@ -23,8 +23,7 @@ class MessDashboardCardsTest extends TestCase
         $this->actingAs($user)->withSession(['user_roles' => $user->roles()->pluck('name')->all()]);
         session(['user_roles' => $user->roles()->pluck('name')->all()]);
 
-        return collect(app(UserController::class)->dashboard(request())->getData()['cardsToRender'])
-            ->pluck('count', 'key')->all();
+        return app(UserController::class)->dashboardCards(request())->getData(true)['counts'];
     }
 
     private function pageTotal(string $url): int

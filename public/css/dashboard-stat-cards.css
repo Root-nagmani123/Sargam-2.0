@@ -13,9 +13,11 @@
     margin-left: 0;
 }
 
-/* Every row as tall as its tallest tile. */
+/* Every row as tall as its tallest tile. No top margin: Bootstrap's .row.g-3 pulls a row up by
+   its gutter (-1rem), which slid the grid over the group heading above it. */
 .dashboard-stats-grid.row {
     grid-auto-rows: 1fr;
+    margin-top: 0;
 }
 
 /* The theme's .card margin-bottom would add 16px of dead space under the
@@ -535,3 +537,48 @@
     font-variant-numeric: tabular-nums;
     text-align: center;
 }
+
+/* ============================================================
+   Figure placeholder while admin.dashboard.cards loads
+   ============================================================ */
+.stat-value-skeleton {
+    display: inline-block;
+    width: 3.5rem;
+    height: 1.75rem;
+    border-radius: var(--ds-radius);
+    background: linear-gradient(90deg, var(--ds-surface-2) 25%, var(--ds-line) 50%, var(--ds-surface-2) 75%);
+    background-size: 200% 100%;
+    animation: stat-skeleton 1.2s ease-in-out infinite;
+    vertical-align: middle;
+}
+
+@keyframes stat-skeleton {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stat-value-skeleton { animation: none; }
+}
+
+/* ============================================================
+   Customise modal
+   ============================================================ */
+.dashboard-customise-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-1);
+}
+
+.dashboard-customise-item {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    padding: var(--ds-space-2) var(--ds-space-3);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-2);
+    background: var(--ds-surface);
+}
+
+.dashboard-customise-item .form-check-label { font-size: 0.875rem; }
+

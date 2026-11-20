@@ -212,18 +212,19 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                         @php
                             $dashboardTitle = $dashboardModule && $dashboardModule->slug !== 'home'
                                 ? $dashboardModule->name.' Dashboard' : 'Dashboard';
-                            $actionCardCount = $cardsToRender->filter(fn ($c) => ($c['actionable'] ?? false)
-                                && ($c['show_count'] ?? true) && is_numeric($c['count']) && $c['count'] > 0)->count();
                         @endphp
                         <h1 class="h3 fw-bold text-dark mb-0">{{ $dashboardTitle }}</h1>
-                        @if($actionCardCount > 0)
-                        <p class="dashboard-hero-action mb-0 mt-1">
-                            <i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>
-                            {{ $actionCardCount }} {{ \Illuminate\Support\Str::plural('card', $actionCardCount) }} need{{ $actionCardCount === 1 ? 's' : '' }} your action
-                        </p>
-                        @endif
+                        <div id="dashboard-hero-action" aria-live="polite">
+                            @include('admin.dashboard.partials.hero-action')
+                        </div>
                     </div>
-                    <div class="ms-auto d-flex align-items-center gap-2">
+                    <div class="ms-auto d-flex align-items-center gap-2 gap-md-3">
+                        @if($customiseCards->isNotEmpty() || $customisePanels->isNotEmpty())
+                        <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
+                            data-bs-toggle="modal" data-bs-target="#dashboardCustomiseModal">
+                            <i class="bi bi-sliders" aria-hidden="true"></i> Customise
+                        </button>
+                        @endif
                         <i class="bi bi-clock text-primary lh-1 fs-5" aria-hidden="true"></i>
                         <div class="lh-sm text-end">
                             <div class="text-primary fw-bold tabular-nums lh-1 fs-5">
@@ -278,48 +279,68 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
         @endif
 
         
-        @if(($moduleQueues ?? collect())->isNotEmpty())
-        {{-- Home only: the other modules where this login has work waiting; each chip opens that module's dashboard. --}}
-        <nav class="dashboard-module-queues mt-3" aria-label="Pending in other modules">
-            <span class="dashboard-module-queues__title">Pending across modules</span>
-            @foreach($moduleQueues as $queue)
-            <a href="{{ route('admin.dashboard', ['category' => $queue['module']->id]) }}" class="dashboard-module-queue"
-                title="{{ $queue['cards']->map(fn ($c) => $c['label'].': '.($c['count'] + 0))->implode(', ') }}">
-                <span>{{ $queue['module']->name }}</span>
-                <span class="dashboard-module-queue__count">{{ $queue['total'] + 0 }}</span>
-                <span class="visually-hidden">pending items</span>
-            </a>
-            @endforeach
-        </nav>
+        @if($hasCountedCards || ($dashboardModule && $dashboardModule->slug === 'home'))
+        {{-- Figures, grouping, the hero's action line and Home's module strip come from
+             admin.dashboard.cards; until then the tiles show placeholders. --}}
+        <div id="dashboard-module-queues" aria-live="polite"></div>
         @endif
-
-        @php
-            // Queue cards with work in them come first, under their own heading; everything else
-            // (totals, empty queues) follows as the overview. Headings only when both groups exist.
-            [$actionCards, $overviewCards] = $cardsToRender->partition(fn ($c) => ($c['actionable'] ?? false)
-                && ($c['show_count'] ?? true) && is_numeric($c['count']) && $c['count'] > 0);
-            $cardGroups = $actionCards->isNotEmpty() && $overviewCards->isNotEmpty()
-                ? [['Needs your action', $actionCards], ['Overview', $overviewCards]]
-                : [[null, $cardsToRender]];
-        @endphp
-        @foreach($cardGroups as [$groupTitle, $groupCards])
-        @if($groupTitle)
-        <h2 class="dashboard-card-group-title {{ $loop->first ? 'mt-3' : '' }}">{{ $groupTitle }}</h2>
-        @endif
-        <div class="dashboard-stats-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-3 mb-3 {{ $groupTitle ? '' : 'mt-3' }}">
-            @foreach($groupCards as $card)
-            <div class="col">
-                @include('admin.dashboard.partials.stat-card', ['card' => $card])
-            </div>
-            @endforeach
+        <div id="dashboard-card-grid" @if($hasCountedCards || ($dashboardModule && $dashboardModule->slug === 'home')) data-src="{{ route('admin.dashboard.cards', ['category' => $dashboardModule?->id]) }}" aria-busy="true" @endif>
+            @include('admin.dashboard.partials.card-grid')
         </div>
-        @endforeach
+        <p id="dashboard-card-error" class="small text-danger mb-3" role="alert" hidden>
+            The card figures could not be loaded.
+            <button type="button" class="btn btn-link btn-sm p-0 align-baseline" id="dashboard-card-retry">Try again</button>
+        </p>
+        <script>
+            (function () {
+                'use strict';
+                var grid = document.getElementById('dashboard-card-grid');
+                if (!grid || !grid.getAttribute('data-src')) { return; }
+                var error = document.getElementById('dashboard-card-error');
+                var load = function () {
+                    error.hidden = true;
+                    grid.setAttribute('aria-busy', 'true');
+                    fetch(grid.getAttribute('data-src'), {
+                        credentials: 'same-origin',
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    }).then(function (r) {
+                        if (!r.ok) { throw new Error(r.status); }
+                        return r.json();
+                    }).then(function (data) {
+                        grid.innerHTML = data.grid;
+                        document.getElementById('dashboard-hero-action').innerHTML = data.hero;
+                        var queues = document.getElementById('dashboard-module-queues');
+                        if (queues) { queues.innerHTML = data.queues; }
+                        // The Dashboard Preview tabs carry the same figures.
+                        document.querySelectorAll('[data-count-for]').forEach(function (el) {
+                            var n = Number((data.counts || {})[el.getAttribute('data-count-for')]);
+                            if (!isFinite(n)) { return; }
+                            el.textContent = String(n);
+                            el.classList.toggle('is-action', el.hasAttribute('data-actionable') && n > 0);
+                            el.hidden = false;
+                        });
+                    }).catch(function () {
+                        // A lapsed session answers with the login page, which is not JSON: lands here too.
+                        grid.querySelectorAll('.stat-value-skeleton').forEach(function (el) { el.parentNode.textContent = '–'; });
+                        error.hidden = false;
+                    }).finally(function () {
+                        grid.setAttribute('aria-busy', 'false');
+                    });
+                };
+                document.getElementById('dashboard-card-retry').addEventListener('click', load);
+                load();
+            })();
+        </script>
 
         @if($cardsToRender->isEmpty() && empty($enabledWidgetKeys))
         <div class="ds-empty-state mb-4">
             <i class="bi bi-grid-3x3-gap fs-2 d-block mb-2 opacity-50" aria-hidden="true"></i>
             <p class="fw-semibold text-body mb-1">Nothing on this dashboard yet</p>
+            @if($hiddenCardCount > 0)
+            <p class="small mb-0">You have hidden every card here. Use <strong>Customise</strong> to show them again.</p>
+            @else
             <p class="small mb-0">No cards are assigned to your role here. Ask your administrator to add them under Assign Dashboard.</p>
+            @endif
         </div>
         @endif
 
@@ -852,6 +873,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
         </div>
     </div>
 
+    @include('admin.dashboard.partials.customise')
     @include('admin.dashboard.partials.report_issue')
 
     {{-- Notice detail modal — driven by the data-notice-* payload on

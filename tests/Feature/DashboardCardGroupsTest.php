@@ -63,17 +63,36 @@ class DashboardCardGroupsTest extends TestCase
         return $this->as($user, ['Super Admin'])->get(route('admin.dashboard', $query))->assertOk();
     }
 
-    public function test_queue_cards_with_work_lead_under_needs_your_action(): void
+    /** What the page fetches for its figures: counts plus the grid, hero line and module strip HTML. */
+    private function cards(User $user, array $query = []): array
+    {
+        return $this->as($user, ['Super Admin'])->getJson(route('admin.dashboard.cards', $query))->assertOk()->json();
+    }
+
+    public function test_the_page_opens_without_running_the_counts(): void
     {
         $response = $this->dashboard($this->viewer(), ['category' => $this->setupId]);
-        $cards = $response->viewData('cardsToRender');
-        $busy = $cards->first(fn ($c) => $c['actionable'] && is_numeric($c['count']) && $c['count'] > 0);
+
+        $counted = $response->viewData('cardsToRender')->filter(fn ($c) => $c['show_count']);
+        $this->assertNotEmpty($counted->all());
+        $this->assertTrue($counted->every(fn ($c) => $c['count'] === null), 'no figure on the first paint');
+        $response->assertSee('stat-value-skeleton', false)
+            ->assertSee('data-src="'.e(route('admin.dashboard.cards', ['category' => $this->setupId])).'"', false)
+            ->assertDontSee('>Needs your action</h2>', false);
+    }
+
+    public function test_queue_cards_with_work_lead_under_needs_your_action(): void
+    {
+        $user = $this->viewer();
+        $cards = $this->dashboard($user, ['category' => $this->setupId])->viewData('cardsToRender');
+        $data = $this->cards($user, ['category' => $this->setupId]);
+        $busy = $cards->first(fn ($c) => $c['actionable'] && ($data['counts'][$c['key']] ?? 0) > 0);
         if (! $busy) {
             $this->markTestSkipped('no queue card has work in it on this database');
         }
         $this->assertFalse($cards->firstWhere('key', 'upcoming_events')['actionable'], 'a plain total is not a queue');
 
-        $html = $response->getContent();
+        $html = $data['grid'];
         $action = strpos($html, '>Needs your action</h2>');
         $overview = strpos($html, '>Overview</h2>');
         $this->assertNotFalse($action);
@@ -82,22 +101,26 @@ class DashboardCardGroupsTest extends TestCase
         $this->assertTrue($busyAt > $action && $busyAt < $overview, 'the busy queue sits under Needs your action');
         $this->assertGreaterThan($overview, strpos($html, 'title="'.e($cards->firstWhere('key', 'upcoming_events')['label']).'"', $action));
         $this->assertStringContainsString('stat-action-badge', $html);
-        $this->assertSame([], $response->viewData('moduleQueues')->all(), 'the strip is for Home only');
+        $this->assertStringNotContainsString('stat-value-skeleton', $html);
+        $this->assertStringContainsString('need', $data['hero']);
+        $this->assertSame('', trim($data['queues']), 'the strip is for Home only');
     }
 
     public function test_home_lists_the_modules_with_work_waiting(): void
     {
-        $response = $this->dashboard($this->viewer());
-        $queues = $response->viewData('moduleQueues');
-        if ($queues->isEmpty()) {
+        $user = $this->viewer();
+        $setup = $this->cards($user, ['category' => $this->setupId]);
+        $cards = $this->dashboard($user, ['category' => $this->setupId])->viewData('cardsToRender');
+        $waiting = $cards->filter(fn ($c) => $c['actionable'] && ($setup['counts'][$c['key']] ?? 0) > 0);
+        if ($waiting->isEmpty()) {
             $this->markTestSkipped('no queue card has work in it on this database');
         }
 
-        $this->assertSame([$this->setupId], $queues->pluck('module.id')->all(), 'only the module holding the cards');
-        $setup = $queues->first();
-        $this->assertSame($setup['cards']->sum('count'), $setup['total']);
-        $this->assertTrue($setup['cards']->every(fn ($c) => $c['actionable'] && $c['count'] > 0));
-        $response->assertSee('href="'.e(route('admin.dashboard', ['category' => $this->setupId])).'" class="dashboard-module-queue"', false);
+        $queues = $this->cards($user)['queues'];
+        $this->assertSame(1, substr_count($queues, 'class="dashboard-module-queue"'), 'only the module holding the cards');
+        $this->assertStringContainsString('href="'.e(route('admin.dashboard', ['category' => $this->setupId])).'" class="dashboard-module-queue"', $queues);
+        $total = $waiting->sum(fn ($c) => $setup['counts'][$c['key']]) + 0;
+        $this->assertStringContainsString('dashboard-module-queue__count">'.$total.'</span>', $queues);
     }
 
     public function test_home_shows_no_strip_without_waiting_work(): void
@@ -106,8 +129,6 @@ class DashboardCardGroupsTest extends TestCase
         $roleIds = DB::table('model_has_roles')->where('model_type', User::class)->where('model_id', $user->pk)->pluck('role_id');
         DB::table('role_dashboard_cards')->whereIn('role_id', $roleIds)->where('sidebar_category_id', '!=', $this->homeId)->delete();
 
-        $response = $this->dashboard($user->fresh());
-        $this->assertTrue($response->viewData('moduleQueues')->isEmpty());
-        $response->assertDontSee('class="dashboard-module-queues', false);
+        $this->assertStringNotContainsString('dashboard-module-queues', $this->cards($user->fresh())['queues']);
     }
 }

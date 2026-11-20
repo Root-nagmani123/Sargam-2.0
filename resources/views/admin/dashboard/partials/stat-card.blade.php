@@ -19,7 +19,10 @@
                 <div class="stat-title-box">
                     <p class="stat-title" title="{{ $card['label'] }}">{{ $card['label'] }}</p>
                 </div>
-                @if($card['show_count'] ?? true)
+                @if(($card['show_count'] ?? true) && $card['count'] === null)
+                {{-- First paint: the figure is on its way from admin.dashboard.cards. --}}
+                <p class="stat-value"><span class="stat-value-skeleton" aria-hidden="true"></span><span class="visually-hidden">Loading</span></p>
+                @elseif($card['show_count'] ?? true)
                 @php
                     // Counts are whole numbers and keep their 0-padding, but a
                     // marks total can carry a half mark, and (int) would have

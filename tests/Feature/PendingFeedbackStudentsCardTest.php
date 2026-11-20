@@ -26,7 +26,7 @@ class PendingFeedbackStudentsCardTest extends TestCase
         session(['user_roles' => $roles]);
 
         request()->query->set('category', (string) DB::table('sidebar_categories')->where('slug', 'home')->value('id'));
-        $cards = collect(app(UserController::class)->dashboard(request())->getData()['cardsToRender'])->pluck('count', 'key')->all();
+        $cards = app(UserController::class)->dashboardCards(request())->getData(true)['counts'];
 
         // The course the page pre-selects, then the request its first load sends.
         $defaultCourse = $this->get(route('admin.feedback.pending.students'))->assertOk()->viewData('activeCourse');

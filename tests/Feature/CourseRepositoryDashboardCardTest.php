@@ -22,7 +22,7 @@ class CourseRepositoryDashboardCardTest extends TestCase
         session(['user_roles' => $roles]);
 
         request()->query->set('category', (string) DB::table('sidebar_categories')->where('slug', 'setup')->value('id'));
-        $cards = collect(app(UserController::class)->dashboard(request())->getData()['cardsToRender'])->pluck('count', 'key')->all();
+        $cards = app(UserController::class)->dashboardCards(request())->getData(true)['counts'];
 
         $page = $this->get(route('course-repository.index'))->assertOk()->viewData('repositories');
 

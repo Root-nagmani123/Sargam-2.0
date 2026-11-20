@@ -20,7 +20,7 @@ class TrainingInductionDashboardCardsTest extends TestCase
     {
         request()->query->set('category', (string) DB::table('sidebar_categories')->where('slug', $tabSlug)->value('id'));
 
-        return collect(app(UserController::class)->dashboard(request())->getData()['cardsToRender'])->pluck('count', 'key')->all();
+        return app(UserController::class)->dashboardCards(request())->getData(true)['counts'];
     }
 
     public function test_training_cards_match_the_pages_they_open(): void

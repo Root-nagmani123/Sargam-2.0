@@ -37,7 +37,7 @@ class EmployeeSelfServiceCardsTest extends TestCase
         session(['user_roles' => $roles]);
         request()->query->replace([]);
 
-        return collect(app(UserController::class)->dashboard(request())->getData()['cardsToRender'])->pluck('count', 'key')->all();
+        return app(UserController::class)->dashboardCards(request())->getData(true)['counts'];
     }
 
     private function pageJson(string $url): array

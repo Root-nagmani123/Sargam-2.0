@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\SidebarMenu\SidebarCategory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
 class DashboardCard extends Model
@@ -95,6 +96,23 @@ class DashboardCard extends Model
     }
 
     /** Cards any of $roleIds has on module $moduleId's dashboard. */
+    /** Login $userId's own layout of module $moduleId's dashboard (user_dashboard_layouts): ['order' => keys, 'hidden' => keys]. */
+    public static function userLayout(int $userId, int $moduleId): array
+    {
+        $row = DB::table('user_dashboard_layouts')->where('user_id', $userId)->where('sidebar_category_id', $moduleId)->first();
+        $keys = fn ($json) => array_values(array_filter((array) json_decode((string) $json, true), 'is_string'));
+
+        return ['order' => $row ? $keys($row->card_order) : [], 'hidden' => $row ? $keys($row->hidden_cards) : []];
+    }
+
+    /** $cards in the login's chosen order: ordered keys first, the rest after them in their default order. */
+    public static function orderByLayout(Collection $cards, array $layout): Collection
+    {
+        $position = array_flip($layout['order']);
+
+        return $cards->values()->sortBy(fn ($card, $i) => $position[$card->key] ?? count($position) + $i)->values();
+    }
+
     public function scopeAssignedTo($query, array $roleIds, int $moduleId)
     {
         return $query->whereIn('id', fn ($q) => $q->select('dashboard_card_id')
