@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Super Admin's Home: an Estate / Mess / Centcom summary. The estate and mess cards already
@@ -18,6 +19,11 @@ return new class extends Migration
 
     public function up(): void
     {
+        // Cards are placed per tab: needs the column 2026_11_13_000000_add_module_to_role_dashboard_cards adds.
+        if (! Schema::hasColumn('role_dashboard_cards', 'sidebar_category_id')) {
+            throw new RuntimeException('Run 2026_11_13_000000_add_module_to_role_dashboard_cards first: role_dashboard_cards has no sidebar_category_id column yet.');
+        }
+
         $cardIds = DB::table('dashboard_cards')->whereIn('key', self::EXISTING)->pluck('id')->all();
 
         $cardIds[] = DB::table('dashboard_cards')->where('key', 'centcom_all_open_complaints')->value('id')
@@ -32,7 +38,7 @@ return new class extends Migration
             ]);
 
         $roleId = DB::table('roles')->where('name', 'Super Admin')->value('id');
-        $homeId = DB::table('sidebar_categories')->where('slug', 'home')->whereNull('deleted_at')->value('id');
+        $homeId = DB::table('sidebar_categories')->where('slug', 'home')->when(Schema::hasColumn('sidebar_categories', 'deleted_at'), fn ($q) => $q->whereNull('deleted_at'))->value('id');
         if (! $roleId || ! $homeId) {
             return;
         }

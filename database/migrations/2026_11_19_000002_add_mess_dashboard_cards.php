@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Mess cards on the Home dashboard of Mess Admin and Mess Billing. Count and link:
@@ -20,7 +21,12 @@ return new class extends Migration
 
     public function up(): void
     {
-        $homeId = DB::table('sidebar_categories')->where('slug', 'home')->whereNull('deleted_at')->value('id');
+        // Cards are placed per tab: needs the column 2026_11_13_000000_add_module_to_role_dashboard_cards adds.
+        if (! Schema::hasColumn('role_dashboard_cards', 'sidebar_category_id')) {
+            throw new RuntimeException('Run 2026_11_13_000000_add_module_to_role_dashboard_cards first: role_dashboard_cards has no sidebar_category_id column yet.');
+        }
+
+        $homeId = DB::table('sidebar_categories')->where('slug', 'home')->when(Schema::hasColumn('sidebar_categories', 'deleted_at'), fn ($q) => $q->whereNull('deleted_at'))->value('id');
         $roles = DB::table('roles')->pluck('id', 'name');
 
         foreach (self::CARDS as $key => [$label, $icon, $colour, $roleNames]) {

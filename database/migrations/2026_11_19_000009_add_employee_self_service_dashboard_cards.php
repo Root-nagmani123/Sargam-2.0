@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Employee self-service cards on the Employee role's Home dashboard: the signed-in user's
@@ -20,8 +21,13 @@ return new class extends Migration
 
     public function up(): void
     {
+        // Cards are placed per tab: needs the column 2026_11_13_000000_add_module_to_role_dashboard_cards adds.
+        if (! Schema::hasColumn('role_dashboard_cards', 'sidebar_category_id')) {
+            throw new RuntimeException('Run 2026_11_13_000000_add_module_to_role_dashboard_cards first: role_dashboard_cards has no sidebar_category_id column yet.');
+        }
+
         $roleId = DB::table('roles')->where('name', 'Employee')->value('id');
-        $homeId = DB::table('sidebar_categories')->where('slug', 'home')->whereNull('deleted_at')->value('id');
+        $homeId = DB::table('sidebar_categories')->where('slug', 'home')->when(Schema::hasColumn('sidebar_categories', 'deleted_at'), fn ($q) => $q->whereNull('deleted_at'))->value('id');
 
         foreach (self::CARDS as $key => [$label, $icon, $colour]) {
             $cardId = DB::table('dashboard_cards')->where('key', $key)->value('id')

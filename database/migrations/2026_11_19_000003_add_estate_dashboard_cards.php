@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Estate cards: Estate Admin's menus all sit on the Setup tab, so its cards go there.
@@ -21,7 +22,12 @@ return new class extends Migration
 
     public function up(): void
     {
-        $tabs = DB::table('sidebar_categories')->whereNull('deleted_at')->pluck('id', 'slug');
+        // Cards are placed per tab: needs the column 2026_11_13_000000_add_module_to_role_dashboard_cards adds.
+        if (! Schema::hasColumn('role_dashboard_cards', 'sidebar_category_id')) {
+            throw new RuntimeException('Run 2026_11_13_000000_add_module_to_role_dashboard_cards first: role_dashboard_cards has no sidebar_category_id column yet.');
+        }
+
+        $tabs = DB::table('sidebar_categories')->when(Schema::hasColumn('sidebar_categories', 'deleted_at'), fn ($q) => $q->whereNull('deleted_at'))->pluck('id', 'slug');
         $roles = DB::table('roles')->pluck('id', 'name');
 
         foreach (self::CARDS as $key => [$label, $icon, $colour, $assignments]) {

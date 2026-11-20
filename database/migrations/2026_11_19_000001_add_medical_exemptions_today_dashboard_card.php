@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * "Medical Exemptions Today" card on the Doctor's Home dashboard: OTs whose
@@ -13,6 +14,11 @@ return new class extends Migration
 
     public function up(): void
     {
+        // Cards are placed per tab: needs the column 2026_11_13_000000_add_module_to_role_dashboard_cards adds.
+        if (! Schema::hasColumn('role_dashboard_cards', 'sidebar_category_id')) {
+            throw new RuntimeException('Run 2026_11_13_000000_add_module_to_role_dashboard_cards first: role_dashboard_cards has no sidebar_category_id column yet.');
+        }
+
         $cardId = DB::table('dashboard_cards')->where('key', self::KEY)->value('id')
             ?? DB::table('dashboard_cards')->insertGetId([
                 'key' => self::KEY,
@@ -25,7 +31,7 @@ return new class extends Migration
             ]);
 
         $roleId = DB::table('roles')->where('name', 'Doctor')->value('id');
-        $homeId = DB::table('sidebar_categories')->where('slug', 'home')->whereNull('deleted_at')->value('id');
+        $homeId = DB::table('sidebar_categories')->where('slug', 'home')->when(Schema::hasColumn('sidebar_categories', 'deleted_at'), fn ($q) => $q->whereNull('deleted_at'))->value('id');
         if ($roleId && $homeId) {
             DB::table('role_dashboard_cards')->insertOrIgnore([
                 'role_id' => $roleId,
