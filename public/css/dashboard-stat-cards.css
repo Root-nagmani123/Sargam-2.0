@@ -373,3 +373,95 @@
         display: none;
     }
 }
+
+/* ============================================================
+   Needs-action tiles, empty tiles, hero action line
+   ============================================================ */
+/* A queue with work in it: amber edge always on (not only on hover) and a badge. */
+.stat-card.stat-card--action::before { background: #c98a0e; }
+.stat-card.stat-card--action:hover::before { background: #c98a0e; }
+
+.stat-action-badge {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: var(--ds-space-2);
+    padding: 0.125rem var(--ds-space-2);
+    border-radius: var(--ds-radius);
+    background: rgba(232, 163, 23, 0.14);
+    color: #8a5d00;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+/* A zero steps back so the live figures stand out. Text stays at AA contrast. */
+.stat-card.stat-card--empty .stat-value { color: var(--ds-ink-muted); font-weight: 600; }
+.stat-card.stat-card--empty .stat-icon-wrapper { filter: grayscale(1); opacity: 0.6; }
+
+.dashboard-hero-action {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #8a5d00;
+}
+
+/* Right-hand panels sit beside the main column from xl up only (stacked below). */
+@media (min-width: 1200px) {
+    .dashboard-side-col { width: 480px; }
+}
+
+/* ============================================================
+   Dashboard Preview tab row
+   ============================================================ */
+.module-dashboard-preview-tabs {
+    display: flex;
+    gap: var(--ds-space-2);
+    overflow-x: auto;
+    padding-bottom: var(--ds-space-2);
+    margin-bottom: var(--ds-space-2);
+    scrollbar-width: thin;
+}
+
+.module-dashboard-preview-tab {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    min-height: var(--ds-control-h-sm);
+    padding: 0 var(--ds-space-3);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius);
+    background: var(--ds-surface);
+    color: var(--ds-ink);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.module-dashboard-preview-tab:hover { background: var(--ds-surface-2); }
+
+.module-dashboard-preview-tab[aria-pressed="true"] {
+    border-color: #004384;
+    background: #004384;
+    color: #fff;
+}
+
+.module-dashboard-preview-tab:focus-visible {
+    outline: 2px solid #004384;
+    outline-offset: 2px;
+}
+
+.module-dashboard-preview-tab__count {
+    min-width: 1.5rem;
+    padding: 0 var(--ds-space-1);
+    border-radius: var(--ds-radius);
+    background: var(--ds-surface-2);
+    color: var(--ds-ink-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
+
+.module-dashboard-preview-tab__count.is-action { background: rgba(232, 163, 23, 0.18); color: #8a5d00; }
+.module-dashboard-preview-tab[aria-pressed="true"] .module-dashboard-preview-tab__count { background: rgba(255, 255, 255, 0.2); color: #fff; }

@@ -387,6 +387,10 @@ class UserController extends Controller
                 // rather than counting it (the timetables) — it renders as a tile
                 // with no number, not as a zero.
                 'show_count'  => $def === null || array_key_exists('count', $def),
+                // A queue someone must work through (pending / open / unpaid ...), as opposed to
+                // a plain total. shortcut: read from the key; a new queue card whose key has none
+                // of these words shows as a plain total until it is added here.
+                'actionable'  => (bool) preg_match('/(^|_)(pending|open|unpaid|low_stock|reported|requested|duplicate|put_in_hac)(_|$)/', $card->key),
             ];
         })->values();
     }

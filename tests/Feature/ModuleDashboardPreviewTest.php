@@ -100,6 +100,36 @@ class ModuleDashboardPreviewTest extends TestCase
         $this->assertGreaterThan(strpos($html, 'dashboard-stats-grid row row-cols-1'), strpos($html, self::PREVIEW));
     }
 
+    public function test_two_page_cards_get_a_tab_row_starting_on_the_first(): void
+    {
+        [$user, $role] = $this->viewer();
+        DB::table('dashboard_cards')->where('key', 'upcoming_courses')->update(['sort_order' => 9001]);
+        DB::table('dashboard_cards')->where('key', 'upcoming_events')->update(['sort_order' => 9000]);
+        $this->assign($role, 'upcoming_courses', $this->setupId);
+        $this->assign($role, 'upcoming_events', $this->setupId);
+
+        $response = $this->dashboard($user, ['category' => $this->setupId]);
+        [$first, $second] = $response->viewData('cardsToRender')->all();
+        $preview = $this->preview($response->getContent());
+
+        $this->assertSame(2, substr_count($preview, 'class="module-dashboard-preview-tab"'));
+        $this->assertMatchesRegularExpression('/aria-pressed="true"\s+data-key="upcoming_events"/', $preview);
+        $this->assertMatchesRegularExpression('/aria-pressed="false"\s+data-key="upcoming_courses"/', $preview);
+        $this->assertStringContainsString('data-src="'.e($second['link'].'?embed=1').'"', $preview);
+        $this->assertSame(1, substr_count($preview, '<iframe'), 'tabs switch the one frame');
+        // The hero names the module instead of a bare "Dashboard".
+        $response->assertSee('>Setup Dashboard</h1>', false);
+    }
+
+    public function test_one_page_card_gets_no_tab_row(): void
+    {
+        [$user, $role] = $this->viewer();
+        $this->assign($role, 'upcoming_events', $this->setupId);
+
+        $preview = $this->preview($this->dashboard($user, ['category' => $this->setupId])->getContent());
+        $this->assertStringNotContainsString('module-dashboard-preview-tabs', $preview);
+    }
+
     public function test_the_embedded_page_hides_the_layout_and_sends_links_to_the_full_page(): void
     {
         [$user] = $this->viewer();

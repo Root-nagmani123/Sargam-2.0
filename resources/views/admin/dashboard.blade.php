@@ -209,16 +209,27 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             {{ $greeting }},
                             <span class="text-primary fw-semibold">{{ $userName }}</span>
                         </p>
-                        <h1 class="h3 fw-bold text-dark mb-0">Dashboard</h1>
+                        @php
+                            $dashboardTitle = $dashboardModule && $dashboardModule->slug !== 'home'
+                                ? $dashboardModule->name.' Dashboard' : 'Dashboard';
+                            $actionCardCount = $cardsToRender->filter(fn ($c) => ($c['actionable'] ?? false)
+                                && ($c['show_count'] ?? true) && is_numeric($c['count']) && $c['count'] > 0)->count();
+                        @endphp
+                        <h1 class="h3 fw-bold text-dark mb-0">{{ $dashboardTitle }}</h1>
+                        @if($actionCardCount > 0)
+                        <p class="dashboard-hero-action mb-0 mt-1">
+                            <i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>
+                            {{ $actionCardCount }} {{ \Illuminate\Support\Str::plural('card', $actionCardCount) }} need{{ $actionCardCount === 1 ? 's' : '' }} your action
+                        </p>
+                        @endif
                     </div>
-                    <div class="ms-auto d-flex align-items-center gap-2 gap-sm-3">
-                        <i class="bi bi-clock text-primary lh-1" style="font-size: 1.85rem;" aria-hidden="true"></i>
-                        <div class="lh-sm">
-                            <div class="text-primary fw-bold tabular-nums lh-1"
-                                style="font-size: 1.7rem; letter-spacing: -0.01em;">
+                    <div class="ms-auto d-flex align-items-center gap-2">
+                        <i class="bi bi-clock text-primary lh-1 fs-5" aria-hidden="true"></i>
+                        <div class="lh-sm text-end">
+                            <div class="text-primary fw-bold tabular-nums lh-1 fs-5">
                                 <span id="dashboard-live-time">{{ now()->format('H:i') }}</span>
                             </div>
-                            <p class="text-body-secondary mb-0 mt-1" style="font-size: 0.9rem;">
+                            <p class="text-body-secondary small mb-0 mt-1">
                                 {{ now()->format('l, d F Y') }}
                             </p>
                         </div>
@@ -275,8 +286,16 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
             @endforeach
         </div>
 
+        @if($cardsToRender->isEmpty() && empty($enabledWidgetKeys))
+        <div class="ds-empty-state mb-4">
+            <i class="bi bi-grid-3x3-gap fs-2 d-block mb-2 opacity-50" aria-hidden="true"></i>
+            <p class="fw-semibold text-body mb-1">Nothing on this dashboard yet</p>
+            <p class="small mb-0">No cards are assigned to your role here. Ask your administrator to add them under Assign Dashboard.</p>
+        </div>
+        @endif
+
         <div class="row g-3 g-lg-4">
-            <div class="col">
+            <div class="col-12 col-xl">
                 {{-- Level with the right-hand panels (House wise Performance, ...). --}}
                 @include('admin.dashboard.partials.module-preview')
                 @if(in_array('widget_notices', $enabledWidgetKeys))
@@ -541,7 +560,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
             </div>
 
             @if(in_array('widget_todays_birthdays', $enabledWidgetKeys) || in_array('widget_calendar', $enabledWidgetKeys) || in_array('widget_house_performance', $enabledWidgetKeys))
-            <div class="col-auto" style="width: 480px; min-width: 480px;">
+            {{-- Side by side from xl only: below that a fixed 480px column squeezed the left one to nothing (and overflowed phones). --}}
+            <div class="col-12 col-xl-auto dashboard-side-col">
                 @if(in_array('widget_house_performance', $enabledWidgetKeys))
                 {{-- House wise Performance: every house on the courses running now,
                      least against it first. The figure is the marks its officer
