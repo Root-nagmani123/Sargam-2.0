@@ -2246,10 +2246,22 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->whereNumber('id')->name('venue-allocation.destroy');
     Route::post('venue-allocation/{id}/swap', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'swap'])
         ->whereNumber('id')->name('venue-allocation.swap');
+    Route::post('venue-allocation/{id}/move', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'move'])
+        ->whereNumber('id')->name('venue-allocation.move');
     Route::get('evaluation-marks', [\App\Http\Controllers\Admin\COE\EvaluationMarksController::class, 'index'])
         ->name('evaluation-marks.index');
     Route::get('faculty-evaluation-marks', [\App\Http\Controllers\Admin\COE\EvaluationMarksController::class, 'facultyIndex'])
         ->name('faculty-evaluation-marks.index');
+    // OT: their own seats on frozen seating plans (bell: coe_seat_allocation).
+    Route::get('my-exam-seat', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'mySeats'])
+        ->name('my-exam-seat.index');
+    // Faculty / MTS: their own invigilation duties on frozen seating plans (bell: coe_invigilation).
+    Route::get('my-invigilation-duty', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'myDuties'])
+        ->name('my-invigilation.index');
+    Route::get('venue-allocation/{id}/print', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'printSheet'])
+        ->whereNumber('id')->name('venue-allocation.print');
+    Route::get('venue-allocation/{id}/export/{format}', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'seatsExport'])
+        ->whereNumber('id')->whereIn('format', ['csv', 'excel', 'pdf'])->name('venue-allocation.export');
     Route::get('venue-allocation/{id}/edit', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'edit'])
         ->whereNumber('id')->name('venue-allocation.edit');
     Route::get('venue-allocation/{id}', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'show'])

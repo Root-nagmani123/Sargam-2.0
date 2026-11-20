@@ -8,6 +8,66 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-20: OTs see their exam seat.** The freeze bell (`coe_seat_allocation`, already sent)
+  now opens **My Exam Seat** (`GET admin/coe/my-exam-seat`, `VenueAllocationController::mySeats`,
+  OT from the session like Laptop Declaration; frozen plans only): a card per exam with date,
+  Today/Upcoming/Completed, paper, drive, room, building/floor, seat + block, laptop/scriber,
+  and a hall map marking only their desk. Sidebar entry: add at /sidebar/menus. Tests:
+  `CoeVenueAllocationFlowTest::test_an_ot_sees_their_seat_once_the_plan_is_frozen`.
+- **2026-11-20: Invigilators are notified on freeze and see their duties.** Freezing a seating
+  plan sends each invigilator (faculty via `employee_master_pk`, MTS via their own
+  `employee_master.pk`) a `coe_invigilation` bell: role, paper, date, room. Their page **My
+  Invigilation Duty** (`GET admin/coe/my-invigilation-duty`, `VenueAllocationController::myDuties`,
+  auth only, own duties on frozen plans only) lists date, Today/Upcoming/Completed, role, drive,
+  course, paper, room, OTs, with View Seating / Print. Sidebar entry: add at /sidebar/menus.
+  Tests: `CoeVenueAllocationFlowTest::test_freeze_notifies_invigilators_and_lists_their_duty`.
+- **2026-11-20: Freezing a seating plan locks its invigilators.** Frozen rows lose Add / Edit
+  Invigilators; the dialog refuses to open from one (422) and shows a drive's frozen rooms
+  read-only (`frozen`, not sent on save); `storeInvigilators` refuses a frozen room. Assign
+  invigilators before freezing. Tests: `CoeVenueAllocationFlowTest::test_a_frozen_plan_locks_its_invigilators`.
+- **2026-11-20: An invigilator takes one room per exam date.** Was "one room per paper"; now a
+  person (any role; faculty and MTS separately) in any room on a date is hidden from every other
+  room that day, across papers and drives (`busy` in the `invigilators` JSON), and the save
+  refuses it (`storeInvigilators`, `dayRoomsOutside()`, day = `COALESCE(dcm.exam_date,
+  sp.exam_date)`). Tests: `CoeVenueAllocationFlowTest::test_one_person_invigilates_one_room_a_day_across_papers`.
+- **2026-11-20: Add / Edit Invigilators pickers show full names.** The open list is 340–440px
+  wide (`.va-inv-dd`, one name per line) and slides left to stay inside the dialog; the chosen
+  name wraps to two lines (full name in the tooltip). `invSelect2()` in `venue_allocation/index`.
+- **2026-11-20: Venue Allocation Delete works.** The list's Delete buttons (`.va-act--del`) never
+  opened the confirm: `CoeGrid.confirmDelete` was called without `trigger`, so it listened for
+  `.coe-act--del`. Server rule unchanged: any room of a not-frozen plan can be removed.
+- **2026-11-20: View Seating Plan lists every OT.** Details panel (drive, course, paper, date,
+  room, status, counts) and a searchable Seat Details table; a row and its desk highlight
+  together. `allocationDetail()` now carries `drive` and decodes HTML-encoded names. Tests:
+  `CoeVenueAllocationFlowTest::test_view_lists_every_seated_ot_with_the_plan_details`.
+- **2026-11-20: Seating plan Download: Excel, PDF, CSV.** Edit / View Seating Plan's Download
+  menu calls `GET venue-allocation/{id}/export/{excel|pdf|csv}` (`seatsExport`, the shared
+  `ExportsMasterGrid` export: branded, exam + room in the filter band, audit-logged). Tests:
+  `CoeVenueAllocationFlowTest::test_seat_list_exports_as_excel_pdf_and_csv`.
+- **2026-11-20: Seating plan Print is a branded sheet.** Print on Edit / View Seating Plan
+  opens `GET venue-allocation/{id}/print` (`printSheet`, view `venue_allocation/print`): a
+  standalone A4 landscape page with the masters' LBSNAA print header, exam details, the hall
+  with each desk's roll number, seat list, invigilators (signature column) and signature
+  lines; it prints itself. Tests: `CoeVenueAllocationFlowTest::test_print_renders_the_branded_seating_plan`.
+- **2026-11-20: Edit Seating Plan asks for Verify & Save before leaving.** After a swap or
+  Change Room (each saved at once), leaving by a link or the back arrow shows "Please Verify &
+  Save" and stays; reload/close gets the browser prompt. Flag in `sessionStorage`
+  (`coeSeatPlanEdit:unverified:{id}`, this tab only), cleared when Verify & Save passes.
+  Client-side only: nothing stops another tab or a direct URL.
+- **2026-11-20: Edit Seating Plan can change an OT's room.** Tick OTs → Change Room →
+  another room of the paper, or a free exam room (joins the plan as a Manual room). Details:
+  Venue and seat allocation → "Change Room". Tests: `CoeVenueAllocationFlowTest::test_change_room_*`.
+- **2026-11-20: Venue Allocation list has an Examination Drive column** (with a filter),
+  from the plan's component map (`—` for plans made before drives). Tests:
+  `CoeVenueAllocationFlowTest::test_the_list_shows_the_examination_drive`.
+- **2026-11-20: Venue Allocation shows the exam date, not the range.** Map Seating Plan and
+  Edit Invigilators show the component's `exam_date` only (as Faculty Coordinates &
+  Components does), not `exam_date – exam_end_date`. Tests:
+  `CoeVenueAllocationFlowTest::test_drive_shows_the_component_exam_date_not_the_range`.
+- **2026-11-20: Venue Allocation offers only CC-approved drives.** Map Seating Plan's drive
+  list (and the course-first component list) skips drives pending / rejected at CC; the
+  server refuses them too (`VenueAllocationController::mappableDrives`, `resolveValidated`).
+  Tests: `CoeVenueAllocationFlowTest::test_a_drive_pending_at_cc_is_not_offered_or_accepted`.
 - **2026-11-19: Marksheet shows Remarks, not the number.** On the printed marksheet
   (`marksheet/show.blade.php`) the "Marksheet No." line is replaced by a blank
   "Remarks: ____" line, filled by hand. View only: nothing stored; the number is still
@@ -93,7 +153,8 @@ Masters (type, term, component, building/floor/room, subject max marks,
   `coe_signature_master`, `coe_marksheet_generation`, `coe_verified_marksheet`.
 - **Not enforced (`auth` only):** all Master Data routes, Examination Drive (admin,
   faculty, CC, COE), Roll Numbers, UPC, Laptop & Scriber Seats, OT Laptop Status,
-  Venue Allocation, Scriber Master, the Evaluation & Marks mock screens. The menu keys
+  Venue Allocation, My Invigilation Duty / My Exam Seat (each shows only the user's own data), Scriber Master,
+  the Evaluation & Marks mock screens. The menu keys
   exist but no route checks them. Some controllers check access themselves (`coeIndex`
   needs role COE/Super Admin, CC approve/reject checks coordinator, Laptop Declaration
   checks the user is an OT).
@@ -278,6 +339,15 @@ Table `question_papers` (one per drive + subject, soft deletes), `question_paper
   their listed OTs, laptop OTs first, spread service/cadre/gender, honour seat gap.
   Seat labels: blocks A=4, B=13, C=6 per row (`B-A05`). **`VenueAllocationController::SEAT_BLOCKS`
   and `public/js/coe-seat-map.js` must match.**
+- Only drives that are not Closed **and** `cc_status = approved` (and whose course has roll
+  numbers) can be seated; pending / rejected drives are neither listed nor accepted.
+- **Change Room** (`VenueAllocationController::move`, `POST venue-allocation/{id}/move`, Edit
+  Seating Plan only, not on a frozen plan): moves the ticked OTs of one room to a room from
+  `moveRooms()` (the plan's other rooms with a free desk, then exam rooms no other plan holds
+  on the paper's date; a new one is added as a Manual room). `freeDesk()` picks the first free
+  desk: laptop desk if needed (else Room Master laptop count caps it), scriber desk for
+  scriber OTs, seat gap first. The seat becomes `is_manual`; the OT's
+  `coe_seat_plan_venue_ots` listing follows them. Other OTs are not re-seated.
 - Saving is **blocked if any OT is left without a seat**; freeze (publish) also needs
   zero unseated. Manual rows hide OTs/rooms already picked in other rows (client-side,
   re-checked on the server). No unpublish.
@@ -333,9 +403,10 @@ All rules in `ResultMarksService` (RMS) and `MarksModeration`.
 
 In-app bell only (`NotificationService::createMultiple`, routes in
 `config/notifications.php`), no mail. Types: `exam_drive`, `coe_question_paper`,
-`coe_roll_number`, `coe_seat_allocation`, `coe_result_entry`. Failures are logged and
-never block the action. `coe_roll_number` and `coe_seat_allocation` have no entry in
-`config/notifications.php`, so clicking them falls back to the dashboard.
+`coe_roll_number`, `coe_seat_allocation`, `coe_result_entry`, `coe_invigilation` (opens My
+Invigilation Duty). Failures are logged and
+never block the action. `coe_roll_number` has no entry in `config/notifications.php`, so clicking it falls back to the
+dashboard; `coe_seat_allocation` opens My Exam Seat.
 
 ## Conventions
 
