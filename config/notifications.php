@@ -222,6 +222,24 @@ return [
     ],
 
     // COE Result Compilation "Notify for Pending": the faculty's Result Entry sheet for that course.
+    // VenueAllocationController::notifySeats(): a frozen seating plan tells each OT their
+    // seat; the bell opens their My Exam Seat page.
+    'coe_seat_allocation' => [
+        'COE' => [
+            'route' => 'admin.coe.my-exam-seat.index',
+            'params' => [],
+        ],
+    ],
+
+    // VenueAllocationController::notifyInvigilators(): a frozen seating plan tells each
+    // invigilator of their duty; the bell opens their My Invigilation Duty page.
+    'coe_invigilation' => [
+        'Invigilation' => [
+            'route' => 'admin.coe.my-invigilation.index',
+            'params' => [],
+        ],
+    ],
+
     'coe_result_entry' => [
         'FacultyResultEntry' => [
             'route' => 'admin.coe.faculty-result-entry.index',

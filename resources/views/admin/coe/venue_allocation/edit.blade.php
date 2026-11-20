@@ -17,6 +17,7 @@
 .esp-verify-btn  { display:inline-flex;align-items:center;gap:6px;background:#004384;color:#fff;border:none;border-radius:6px;
                    padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer; }
 .esp-verify-btn:hover { background:#00356a; }
+.esp-verify-btn.is-pending { box-shadow:0 0 0 3px #fdb022; }
 .esp-wrap        { display:flex;gap:24px;align-items:flex-start; }
 .esp-map-side    { flex:1;min-width:0; }
 .esp-panel-side  { width:580px;flex-shrink:0; }
@@ -48,7 +49,11 @@
 .esp-badge--sel  { background:#004384;color:#fff; }
 .esp-badge--swap { background:#f5a623;color:#fff; }
 .esp-stats       { display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:#667085;margin-top:10px; }
-@media print { .esp-tools, .esp-swap-card, .vsp-actions, .modern-breadcrumb-back { display:none !important; } }
+.esp-pick        { width:36px; }
+.esp-move-btn    { display:inline-flex;align-items:center;gap:6px;background:#fff;color:#004384;border:1.5px solid #004384;border-radius:6px;
+                   padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer; }
+.esp-move-btn:disabled { opacity:.5;cursor:not-allowed; }
+@media print { .esp-tools, .esp-swap-card, .vsp-actions, .modern-breadcrumb-back, .esp-pick { display:none !important; } }
 </style>
 @endpush
 
@@ -62,9 +67,20 @@
                  :items="['Setup', 'COE', 'Examination Management', 'Edit Seating Plan']" />
 
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 coe-secondary-actions vsp-actions">
-        <button type="button" class="btn programme-dt-btn-columns" id="espDownloadBtn" title="Download as CSV">
-            <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-        </button>
+        <div class="dropdown">
+            <button type="button" class="btn programme-dt-btn-columns dropdown-toggle" id="espDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false" title="Download">
+                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+            </button>
+            {{-- Server export (VenueAllocationController::seatsExport); `download` keeps them out of Edit's leave-page guard. --}}
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="espDownloadBtn">
+                <li><a class="dropdown-item" download href="{{ route('admin.coe.venue-allocation.export', ['id' => $allocation['id'], 'format' => 'excel']) }}">
+                    <i class="bi bi-file-earmark-excel me-1" aria-hidden="true"></i> Excel (.xlsx)</a></li>
+                <li><a class="dropdown-item" download href="{{ route('admin.coe.venue-allocation.export', ['id' => $allocation['id'], 'format' => 'pdf']) }}">
+                    <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF</a></li>
+                <li><a class="dropdown-item" download href="{{ route('admin.coe.venue-allocation.export', ['id' => $allocation['id'], 'format' => 'csv']) }}">
+                    <i class="bi bi-filetype-csv me-1" aria-hidden="true"></i> CSV</a></li>
+            </ul>
+        </div>
         <button type="button" class="btn programme-dt-btn-columns" id="espPrintBtn" title="Print">
             <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
         </button>
@@ -96,6 +112,10 @@
                     @unless ($allocation['frozen'])
                         <button type="button" id="espSwapToggle" class="esp-swap-toggle is-off" aria-pressed="false">
                             <i class="bi bi-arrow-left-right" aria-hidden="true"></i><span>Swap Mode: OFF</span>
+                        </button>
+                        <button type="button" id="espMoveBtn" class="esp-move-btn" disabled
+                                title="Tick the OTs in the list, then move them to another room">
+                            <i class="bi bi-door-open" aria-hidden="true"></i>Change Room
                         </button>
                         <button type="button" id="espVerifyBtn" class="esp-verify-btn">
                             <i class="bi bi-check2-circle" aria-hidden="true"></i>Verify &amp; Save
@@ -144,12 +164,21 @@
                     <div class="esp-assign-wrap">
                         <table class="esp-assign-table">
                             <thead>
-                                <tr><th>Roll No.</th><th>Name</th><th>Seat</th><th>Block</th><th>Status</th></tr>
+                                <tr>
+                                    @unless ($allocation['frozen'])
+                                        <th class="esp-pick"><input type="checkbox" class="form-check-input" id="espPickAll" aria-label="Select every OT"></th>
+                                    @endunless
+                                    <th>Roll No.</th><th>Name</th><th>Seat</th><th>Block</th><th>Status</th>
+                                </tr>
                             </thead>
                             <tbody id="espAssignBody">
                                 @forelse ($allocation['seats'] as $a)
                                     @php $parts = explode('-', $a['label'], 2); @endphp
                                     <tr data-seat="{{ $a['seat'] }}">
+                                        @unless ($allocation['frozen'])
+                                            <td class="esp-pick"><input type="checkbox" class="form-check-input esp-pick-one" value="{{ $a['seat'] }}"
+                                                                        aria-label="Select {{ $a['roll'] }}"></td>
+                                        @endunless
                                         <td>{{ $a['roll'] }}</td>
                                         <td>{{ $a['name'] }}</td>
                                         <td>{{ $parts[1] ?? $a['label'] }}</td>
@@ -160,7 +189,7 @@
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="5" class="text-center text-muted">Nobody is seated in this room.</td></tr>
+                                    <tr><td colspan="{{ $allocation['frozen'] ? 5 : 6 }}" class="text-center text-muted">Nobody is seated in this room.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
@@ -178,6 +207,42 @@
         </div>
     </div>
 </div>
+@unless ($allocation['frozen'])
+{{-- Change Room: move the ticked OTs to another room of this paper, or a free room. --}}
+<div class="modal fade" id="espMoveModal" tabindex="-1" aria-labelledby="espMoveModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content coe-modal border-0 shadow">
+            <div class="modal-header coe-modal-header coe-modal-header--rule">
+                <h5 class="modal-title" id="espMoveModalLabel">Change Room</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body coe-modal-body">
+                <p class="mb-2">Move <strong id="espMoveCount">0</strong> OT(s): <span id="espMoveRolls" class="text-muted"></span></p>
+                <label class="coe-form-label" for="espMoveRoom">Move to Room<span class="coe-req">*</span></label>
+                <select id="espMoveRoom" class="form-select coe-control">
+                    <option value="">Select Room</option>
+                    @foreach (collect($moveRooms)->groupBy('group') as $group => $rooms)
+                        <optgroup label="{{ $group }}">
+                            @foreach ($rooms as $r)
+                                <option value="{{ $r['id'] }}">{{ $r['name'] }} ({{ $r['free'] }} free desk(s), {{ $r['laptop'] }} laptop(s))</option>
+                            @endforeach
+                        </optgroup>
+                    @endforeach
+                </select>
+                <div class="invalid-feedback" id="espMoveError"></div>
+                <div class="form-text">Each OT gets a free desk there (a laptop desk if they need one). A free room is added to this paper.</div>
+                @if (empty($moveRooms))
+                    <div class="text-danger small mt-2">No other examination room has a free desk on this paper's exam date.</div>
+                @endif
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-danger rounded-3 px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary rounded-3 px-4" id="espMoveConfirm">Move</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endunless
 @endsection
 
 @push('scripts')
@@ -188,6 +253,7 @@ $(function () {
 
     var ROOM = @json($allocation);
     var SWAP_URL = @json(route('admin.coe.venue-allocation.swap', $allocation['id']));
+    var MOVE_URL = @json(route('admin.coe.venue-allocation.move', $allocation['id']));
     var CSRF = $('meta[name="csrf-token"]').attr('content');
 
     var laptop = {};
@@ -201,6 +267,60 @@ $(function () {
     function seatName(n) { var l = CoeSeatMap.label(n); return 'Seat ' + (l.split('-')[1] || l); }
 
     if (ROOM.frozen) { return; }
+
+    /* ── Unverified changes: a swap / room change is saved at once and the page reloads,
+       so the "not verified yet" flag is kept in sessionStorage (this tab only) until
+       Verify & Save passes. Until then, leaving the page is stopped with a reminder. ── */
+    var UNVERIFIED_KEY = 'coeSeatPlanEdit:unverified:' + ROOM.id;
+    var reloading = false;
+    function storage(fn) { try { return fn(window.sessionStorage); } catch (e) { return null; } }
+    var unverified = storage(function (s) { return s.getItem(UNVERIFIED_KEY) === '1'; }) === true;
+    function setUnverified(on) {
+        unverified = on;
+        storage(function (s) { if (on) { s.setItem(UNVERIFIED_KEY, '1'); } else { s.removeItem(UNVERIFIED_KEY); } });
+    }
+    // Our own reload after a saved change is not "leaving".
+    function reloadAfterChange() { setUnverified(true); reloading = true; location.reload(); }
+
+    function remindToVerify() {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Please Verify & Save',
+            text: 'The seating of this room was changed. Verify & Save it before leaving this page.',
+            showCancelButton: true,
+            confirmButtonText: 'Verify & Save',
+            cancelButtonText: 'Stay on this page'
+        }).then(function (r) { if (r.isConfirmed) { $('#espVerifyBtn').trigger('click'); } });
+    }
+
+    // In-page ways out: any link to another page, and the breadcrumb's back arrow
+    // (an inline history.back()). Caught in the capture phase, before they act.
+    document.addEventListener('click', function (e) {
+        if (!unverified) { return; }
+        var back = e.target.closest('.modern-breadcrumb-back');
+        var link = e.target.closest('a[href]');
+        if (link) {
+            var href = link.getAttribute('href') || '';
+            if (href === '' || href.charAt(0) === '#' || /^javascript:/i.test(href) || link.target === '_blank'
+                || link.hasAttribute('download') || link.getAttribute('data-bs-toggle')) { link = null; }
+        }
+        if (!back && !link) { return; }
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        remindToVerify();
+    }, true);
+
+    // Reload, close, typed URL, browser Back: the browser shows its own "Leave site?" prompt
+    // (it does not allow custom text).
+    window.addEventListener('beforeunload', function (e) {
+        if (!unverified || reloading) { return; }
+        e.preventDefault();
+        e.returnValue = '';
+    });
+
+    if (unverified) {
+        $('#espVerifyBtn').addClass('is-pending').attr('title', 'Seating changed: verify and save it before leaving');
+    }
 
     /* ── Swap: click an assigned seat, then any other seat (empty = move) ── */
     var swapMode = false, from = null, to = null;
@@ -267,8 +387,9 @@ $(function () {
         var $btn = $(this).prop('disabled', true);
         $.ajax({ url: SWAP_URL, method: 'POST', headers: { 'X-CSRF-TOKEN': CSRF }, data: { from_seat: from, to_seat: to } })
             .done(function (r) {
-                Swal.fire({ icon: 'success', title: 'Swapped', text: r.message, timer: 1500, showConfirmButton: false })
-                    .then(function () { location.reload(); });
+                setUnverified(true);
+                Swal.fire({ icon: 'success', title: 'Swapped', text: r.message + ' Verify & Save before leaving.', timer: 1800, showConfirmButton: false })
+                    .then(reloadAfterChange);
             })
             .fail(function (xhr) {
                 var res = xhr.responseJSON || {};
@@ -276,6 +397,47 @@ $(function () {
                 Swal.fire({ icon: 'error', title: 'Not swapped', text: msg });
                 $btn.prop('disabled', false);
             });
+    });
+
+    /* ── Change Room: tick OTs in the list, pick a room ── */
+    function picked() { return $('.esp-pick-one:checked').map(function () { return parseInt(this.value, 10); }).get(); }
+    function paintPicked() {
+        var n = picked().length, all = $('.esp-pick-one').length;
+        $('#espMoveBtn').prop('disabled', n === 0);
+        $('#espPickAll').prop('checked', n > 0 && n === all).prop('indeterminate', n > 0 && n < all);
+    }
+    // A tick is not a swap pick.
+    $('#espAssignBody').on('click', '.esp-pick', function (e) { e.stopPropagation(); });
+    $('#espAssignBody').on('change', '.esp-pick-one', paintPicked);
+    $('#espPickAll').on('change', function () { $('.esp-pick-one').prop('checked', this.checked); paintPicked(); });
+
+    $('#espMoveBtn').on('click', function () {
+        var seats = picked();
+        if (!seats.length) { return; }
+        $('#espMoveCount').text(seats.length);
+        $('#espMoveRolls').text(seats.map(function (n) { return bySeat[n] ? bySeat[n].roll : n; }).join(', '));
+        $('#espMoveRoom').val('').removeClass('is-invalid');
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('espMoveModal')).show();
+    });
+
+    $('#espMoveConfirm').on('click', function () {
+        var $room = $('#espMoveRoom'), venue = $room.val();
+        $room.removeClass('is-invalid');
+        if (!venue) { $('#espMoveError').text('Select the room to move them to.'); $room.addClass('is-invalid'); return; }
+        var $btn = $(this).prop('disabled', true);
+        $.ajax({ url: MOVE_URL, method: 'POST', headers: { 'X-CSRF-TOKEN': CSRF }, data: { seats: picked(), venue_id: venue } })
+            .done(function (r) {
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('espMoveModal')).hide();
+                setUnverified(true);
+                Swal.fire({ icon: 'success', title: 'Room Changed', text: r.message + ' Verify & Save before leaving.', timer: 1800, showConfirmButton: false })
+                    .then(reloadAfterChange);
+            })
+            .fail(function (xhr) {
+                var res = xhr.responseJSON || {};
+                var msg = res.errors ? Object.keys(res.errors).map(function (k) { return res.errors[k][0]; }).join('\n') : (res.message || 'The room could not be changed.');
+                $('#espMoveError').text(msg); $room.addClass('is-invalid');
+            })
+            .always(function () { $btn.prop('disabled', false); });
     });
 
     /* ── Verify: every swap is saved as it is confirmed; this checks the room as saved ── */
@@ -287,30 +449,23 @@ $(function () {
             });
         }
         if (from && to) { problems.push('A swap is selected but not confirmed.'); }
-        Swal.fire(problems.length
-            ? { icon: 'warning', title: 'Check the seating', text: problems.join('\n') }
-            : { icon: 'success', title: 'Verified', text: ROOM.seats.length + ' OT(s) seated. All swaps are saved.' });
+        if (problems.length) {
+            Swal.fire({ icon: 'warning', title: 'Check the seating', text: problems.join('\n') });
+            return;
+        }
+        // Verified: leaving the page is free again.
+        setUnverified(false);
+        $('#espVerifyBtn').removeClass('is-pending').removeAttr('title');
+        Swal.fire({ icon: 'success', title: 'Verified', text: ROOM.seats.length + ' OT(s) seated. All swaps are saved.' });
     });
 });
 </script>
 <script>
 $(function () {
-    /* Download: the assignment list as CSV. */
-    $('#espDownloadBtn').on('click', function () {
-        var rows = [['Roll No.', 'Name', 'Seat', 'Block', 'Status']];
-        $('#espAssignBody tr[data-seat]').each(function () {
-            var cells = $(this).children('td').map(function () { return $(this).text().trim(); }).get();
-            cells[4] = $(this).find('.esp-assign-status').attr('data-status');
-            rows.push(cells);
-        });
-        var csv = rows.map(function (r) { return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(','); }).join('\r\n');
-        var a = document.createElement('a');
-        a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-        a.download = 'seating-plan.csv';
-        document.body.appendChild(a); a.click();
-        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+    // Print = the branded Seating Plan sheet (venue_allocation/print), not this screen.
+    $('#espPrintBtn').on('click', function () {
+        window.open(@json(route('admin.coe.venue-allocation.print', $allocation['id'])), '_blank');
     });
-    $('#espPrintBtn').on('click', function () { window.print(); });
 });
 </script>
 @endpush

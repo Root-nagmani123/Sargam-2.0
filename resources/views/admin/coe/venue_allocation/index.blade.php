@@ -27,6 +27,9 @@
 .va-inv-subject:not(:first-child) { margin-top:22px; }
 .va-inv-wrap       { overflow-x:auto; }
 .va-inv-table      { width:100%;min-width:1080px;margin-bottom:0;table-layout:fixed; }
+.va-inv-frozen    { display:inline-block;margin-left:4px;padding:0 7px;border-radius:9px;font-size:11px;font-weight:500;
+                     background:#eef4ff;color:#004384;vertical-align:middle; }
+.va-inv-table tr.is-frozen td { color:#667085; }
 .va-inv-table thead th { background:#eef0f3;font-weight:500;font-size:13px;color:#344054;vertical-align:middle;border-bottom:0; }
 .va-inv-table td   { vertical-align:middle;font-size:14px;padding-top:14px;padding-bottom:14px;overflow-wrap:anywhere; }
 .va-inv-table .va-inv-c-comp { width:14%; }
@@ -35,6 +38,18 @@
 .va-inv-table .va-inv-c-ot   { width:6%; }
 .va-inv-table .va-inv-pick   { width:12.5%; }
 /* Role headers read as "Chief Invigilator ▾": no box, the pick applies to every room below */
+.va-inv-table tbody .select2-container--default .select2-selection--single { height:auto;min-height:38px;display:flex;align-items:center;
+                     padding:6px 0; }
+/* Up to two lines of the chosen name (the full name is the tooltip), never a third half-line. */
+.va-inv-table tbody .select2-container--default .select2-selection--single .select2-selection__rendered {
+                     white-space:normal;line-height:1.3;max-height:2.6em;padding:0 26px 0 10px;overflow-wrap:break-word;
+                     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; }
+.va-inv-table tbody .select2-container--default .select2-selection--single .select2-selection__arrow { top:50%;transform:translateY(-50%); }
+/* The open list is wider than its column (names like "Air Commodore YK Dixit VSM (GUE-00350)"):
+   one name per line, no sideways scroll. invSelect2() keeps it inside the window. */
+.va-inv-dd.select2-dropdown { min-width:340px;max-width:min(440px, calc(100vw - 32px)); }
+.va-inv-dd .select2-results__options { overflow-x:hidden; }
+.va-inv-dd .select2-results__option { white-space:normal;overflow-wrap:break-word;line-height:1.35;padding:7px 10px;font-size:14px; }
 .va-inv-table thead .select2-container--default .select2-selection--single { border:0;background:transparent;box-shadow:none;padding-left:0; }
 .va-inv-table thead .select2-container--default .select2-selection--single .select2-selection__rendered { color:#344054;font-weight:500;padding-left:0;white-space:normal;line-height:1.25; }
 /* Modal: readonly computed fields */
@@ -118,6 +133,7 @@
                     <span class="programme-dt-filters-label">Filter</span>
 @php
     $vaFilters = [
+        'vaFilterDrive' => ['Examination Drive', 'drive'],
         'vaFilterCourse' => ['Course Name', 'course'],
         'vaFilterCategory' => ['Candidate Category', 'category'],
         'vaFilterSubject' => ['Subject', 'subject'],
@@ -154,6 +170,7 @@
                         <thead>
                             <tr>
                                 <th>S.No</th>
+                                <th>Examination Drive</th>
                                 <th>Course</th>
                                 <th>Candidate Category</th>
                                 <th>Subject</th>
@@ -184,6 +201,7 @@
                                 @if ($row['invigilators']) data-va-invig-url="{{ route('admin.coe.venue-allocation.invigilators', $row['id']) }}" @endif
                                 data-va-invig-has="{{ $row['has_invigilators'] ? 1 : 0 }}">
                                 <td></td>
+                                <td>{{ $row['drive'] }}</td>
                                 <td>{{ $row['course'] }} <span class="text-muted small">({{ $row['batch'] }})</span></td>
                                 <td>{{ $row['category'] }}</td>
                                 <td>{{ $row['subject'] }}</td>
@@ -346,7 +364,7 @@
 $(function () {
     'use strict';
 
-    var COL = { sno:0,course:1,cat:2,subj:3,comp:4,ot:5,lap:6,scr:7,bld:8,flr:9,room:10,cap:11,avail:12,scrAvail:13,empty:14,status:15,action:16 };
+    var COL = { sno:0,drive:1,course:2,cat:3,subj:4,comp:5,ot:6,lap:7,scr:8,bld:9,flr:10,room:11,cap:12,avail:13,scrAvail:14,empty:15,status:16,action:17 };
 
     var ROOMS = @json($roomsByBuildingFloor);
     var BUILDINGS = @json($buildings);
@@ -394,20 +412,22 @@ $(function () {
         order: [[COL.course, 'asc']],
         noSort: [COL.sno, COL.action],
         exclude: [COL.action],
-        filters: { '#vaFilterCourse': COL.course, '#vaFilterCategory': COL.cat, '#vaFilterSubject': COL.subj, '#vaFilterComponent': COL.comp },
+        filters: { '#vaFilterDrive': COL.drive, '#vaFilterCourse': COL.course, '#vaFilterCategory': COL.cat, '#vaFilterSubject': COL.subj, '#vaFilterComponent': COL.comp },
         reset: '#vaResetFilters',
         download: '#vaDownloadBtn',
         print: '#vaPrintBtn',
         searchToggle: '#vaSearchToggle',
         searchSlot: '#vaDtSearch',
         colvisGrid: '#vaColumnToggleGrid',
-        colvisKey: 'coeVenueAllocation:hiddenColumns:v1',
+        colvisKey: 'coeVenueAllocation:hiddenColumns:v2',
         empty: { title: 'No Venue Allocations', text: 'Map a seating plan to get started.' }
     });
 
     /* ── Delete (one room of a plan; its OTs are re-seated in the plan's other rooms) ── */
     CoeGrid.confirmDelete({
         table: '#vaTable',
+        // This page's buttons are .va-act--del; the CoeGrid default (.coe-act--del) never matched.
+        trigger: '.va-act--del',
         modal: '#vaDeleteModal',
         confirm: '#vaDeleteConfirm',
         onConfirm: function ($row) {
@@ -428,6 +448,7 @@ $(function () {
         { key: 'mts', label: 'MTS', list: 'mts' }
     ];
     var invPeople = { faculty: [], mts: [] };
+    var invBusy = {};   // day -> { f: [ids], m: [ids] } held in rooms outside this dialog
 
     function invClear() {
         $invBody.find('select').each(function () { if ($(this).data('select2')) { $(this).select2('destroy'); } });
@@ -453,13 +474,34 @@ $(function () {
             width: '100%', dropdownParent: $invModal,
             templateResult: function (o) { return o.element && o.element.disabled && o.element.value !== '' ? null : o.text; }
         });
+        // The list is wider than the column (.va-inv-dd); in the right-hand columns, slide it
+        // left so it stays in the window. Select2 re-positions on scroll, so re-check then too.
+        var fit = function () {
+            var $dd = $('.va-inv-dd');
+            if (!$dd.length) { return; }
+            var $box = $dd.parent();   // .select2-container--open, absolutely positioned by Select2
+            $box.css('margin-left', 0);
+            // Against the dialog's own right edge: both move together if the page scrolls.
+            var edge = ($invModal.find('.modal-content')[0] || $invModal[0]).getBoundingClientRect().right;
+            var limit = Math.min(edge, document.documentElement.clientWidth) - 8;
+            var over = $dd[0].getBoundingClientRect().right - limit;
+            if (over > 0) { $box.css('margin-left', -over); }
+        };
+        $s.on('select2:open', function () {
+            $($s.data('select2').$dropdown).find('.select2-dropdown').addClass('va-inv-dd');
+            setTimeout(fit, 0);
+        });
+        $s.on('select2:closing', function () {
+            $($s.data('select2').$dropdown).css('margin-left', '').find('.select2-dropdown').removeClass('va-inv-dd');
+        });
+        $invModal.find('.modal-body').off('scroll.vaInvDd').on('scroll.vaInvDd', function () { setTimeout(fit, 0); });
     }
 
     /*
-     * One person, one role, one room per paper: rooms of the same paper (component) sit at
-     * the same time, so a person picked anywhere in a paper — any role of this room, or any
-     * room of the same paper — is taken out of every other list of that paper. Faculty
-     * (Chief / Invigilator / Assistant) and MTS are separate lists.
+     * One person, one role, one room a day: a person picked for any room of an exam date —
+     * here, or in another drive's room that day (invBusy) — is taken out of every other list
+     * of that date. Faculty (Chief / Invigilator / Assistant) and MTS are separate lists.
+     * A room's key (data-paper) is its exam date. The server checks the same rule.
      */
     function invSync() {
         var held = {};   // paper -> 'f' | 'm' -> person id -> [select elements holding them]
@@ -473,9 +515,13 @@ $(function () {
         $selects.each(function () {
             var sel = this, p = $(sel).closest('tr').attr('data-paper'), list = $(sel).attr('data-role') === 'mts' ? 'm' : 'f';
             var taken = (held[p] || { f: {}, m: {} })[list];
+            var outside = ((invBusy[p] || {})[list] || []).map(String);
             for (var i = 0; i < sel.options.length; i++) {
                 var o = sel.options[i];
-                if (o.value) { o.disabled = (taken[o.value] || []).some(function (h) { return h !== sel; }); }
+                if (!o.value) { continue; }
+                // A person this room already holds stays visible, so it can be seen and changed.
+                o.disabled = o.value !== sel.value
+                    && ((taken[o.value] || []).some(function (h) { return h !== sel; }) || outside.indexOf(o.value) !== -1);
             }
         });
     }
@@ -501,12 +547,15 @@ $(function () {
                     .attr('title', 'Apply to every room of ' + s.subject)).appendTo($head);
             });
             s.rooms.forEach(function (r) {
-                var $tr = $('<tr></tr>').attr('data-id', r.id).attr('data-paper', r.paper);
+                var $tr = $('<tr></tr>').attr('data-id', r.id).attr('data-paper', r.paper).toggleClass('is-frozen', !!r.frozen);
                 [r.component, r.exam_date, r.building, r.floor, r.room, r.ot].forEach(function (v) {
                     $('<td></td>').text(v).appendTo($tr);
                 });
+                // Frozen seating plan: shown for reference, locked, and not sent on save.
+                if (r.frozen) { $tr.children().first().append(' <span class="va-inv-frozen">Frozen</span>'); }
                 ROLES.forEach(function (role) {
-                    $('<td class="va-inv-pick"></td>').append(invSelect(role, r[role.key], 'Select').addClass('va-inv-one')).appendTo($tr);
+                    $('<td class="va-inv-pick"></td>').append(invSelect(role, r[role.key], 'Select').addClass('va-inv-one')
+                        .prop('disabled', !!r.frozen)).appendTo($tr);
                 });
                 $table.find('tbody').append($tr);
             });
@@ -514,6 +563,7 @@ $(function () {
         });
         invSync();
         $invBody.find('select').each(function () { invSelect2($(this)); });
+        $('#vaInvSubmit').prop('disabled', !$invBody.find('tbody tr:not(.is-frozen)').length);
     }
 
     function invError($s, msg) {
@@ -523,27 +573,27 @@ $(function () {
         if (msg) { $('<div class="coe-field-error"></div>').text(msg).appendTo($td); }
     }
 
-    // A pick changes who is free elsewhere in the paper; earlier errors of that room no longer hold.
+    // A pick changes who is free elsewhere that day; earlier errors of that room no longer hold.
     $invBody.on('change', '.va-inv-one', function () {
         $(this).closest('tr').find('.va-inv-one').each(function () { invError($(this), ''); });
         invSync();
     });
 
     // Header pick: the person goes to every room of the subject where they are still free —
-    // so to one room per paper, never two roles in a room.
+    // so to one room per exam date, never two roles in a room.
     $invBody.on('select2:select', '.va-inv-all', function () {
         var $all = $(this), role = $all.attr('data-role'), v = $all.val(), skipped = 0;
         invError($all, '');
         if (v) {
             $all.closest('table').find('tbody .va-inv-one[data-role="' + role + '"]').each(function () {
                 var $s = $(this), opt = $s.find('option').filter(function () { return this.value === v; })[0];
-                if ($s.val() === v) { return; }
+                if ($s.val() === v || $s.prop('disabled')) { return; }   // frozen room: left as it is
                 if (!opt || opt.disabled) { skipped++; return; }
                 $s.val(v).trigger('change');
             });
         }
         $all.val('').trigger('change.select2');
-        if (skipped) { invError($all, 'Not set in ' + skipped + ' room(s): already picked there or in another room of that paper.'); }
+        if (skipped) { invError($all, 'Not set in ' + skipped + ' room(s): already invigilating another room on that exam date.'); }
     });
 
     $table.on('click', '.va-act--invig', function () {
@@ -556,6 +606,7 @@ $(function () {
         $.getJSON(url)
             .done(function (r) {
                 invPeople = { faculty: r.faculty || [], mts: r.mts || [] };
+                invBusy = r.busy || {};
                 invRender(r.subjects || []);
             })
             .fail(function (xhr) {
@@ -566,7 +617,7 @@ $(function () {
 
     $('#vaInvForm').on('submit', function (e) {
         e.preventDefault();
-        var $rows = $invBody.find('tbody tr');
+        var $rows = $invBody.find('tbody tr:not(.is-frozen)');
         var rows = $rows.map(function () {
             var $tr = $(this), row = { id: $tr.attr('data-id') };
             ROLES.forEach(function (role) { row[role.key] = $tr.find('.va-inv-one[data-role="' + role.key + '"]').val() || ''; });
