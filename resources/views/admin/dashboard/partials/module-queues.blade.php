@@ -5,9 +5,9 @@
     <span class="dashboard-module-queues__title">Pending across modules</span>
     @foreach($moduleQueues as $queue)
     <a href="{{ route('admin.dashboard', ['category' => $queue['module']->id]) }}" class="dashboard-module-queue"
-        title="{{ $queue['cards']->map(fn ($c) => $c['label'].': '.($c['count'] + 0))->implode(', ') }}">
+        title="{{ $queue['cards']->map(fn ($c) => $c['label'].': '.number_format($c['count']))->implode(', ') }}">
         <span>{{ $queue['module']->name }}</span>
-        <span class="dashboard-module-queue__count">{{ $queue['total'] + 0 }}</span>
+        <span class="dashboard-module-queue__count">{{ number_format($queue['total']) }}</span>
         <span class="visually-hidden">pending items</span>
     </a>
     @endforeach

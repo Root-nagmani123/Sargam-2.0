@@ -423,6 +423,12 @@
     scrollbar-width: thin;
 }
 
+/* From tablet width the tabs wrap: a row that ran off the right edge cut the last tab in half
+   with nothing saying more were there. Phones keep the one swipeable row. */
+@media (min-width: 768px) {
+    .module-dashboard-preview-tabs { flex-wrap: wrap; overflow-x: visible; padding-bottom: 0; }
+}
+
 .module-dashboard-preview-tab {
     flex: 0 0 auto;
     display: inline-flex;
@@ -582,3 +588,55 @@
 
 .dashboard-customise-item .form-check-label { font-size: 0.875rem; }
 
+.dashboard-card-group-count {
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+/* ============================================================
+   Folded zero cards ("N cards with nothing to show")
+   ============================================================ */
+.dashboard-empty-cards > summary {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    min-height: var(--ds-control-h-sm);
+    padding: var(--ds-space-2) var(--ds-space-3);
+    border: 1px dashed var(--ds-line);
+    border-radius: var(--ds-radius-2);
+    background: var(--ds-surface);
+    color: var(--ds-ink-muted);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+}
+
+.dashboard-empty-cards > summary::-webkit-details-marker { display: none; }
+
+.dashboard-empty-cards > summary::before {
+    content: "\25B8";
+    flex: 0 0 auto;
+    transition: transform 0.15s ease;
+}
+
+.dashboard-empty-cards[open] > summary::before { transform: rotate(90deg); }
+
+.dashboard-empty-cards > summary:hover { background: var(--ds-surface-2); }
+
+.dashboard-empty-cards > summary:focus-visible {
+    outline: 2px solid #004384;
+    outline-offset: 2px;
+}
+
+/* The count stays on one line; the names take what is left. */
+.dashboard-empty-cards > summary > span:first-child { flex: 0 0 auto; white-space: nowrap; }
+
+/* The names, so a user looking for one card knows it is in here; cut to one line. */
+.dashboard-empty-cards__names {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 400;
+}

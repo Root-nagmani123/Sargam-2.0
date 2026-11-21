@@ -149,16 +149,16 @@ private function exportFacultyList(int $facultyType, string $reportTitle, Reques
 }
 function sessions(Request $request)
 {
-    $userId = Auth::user()->user_id;
     $sessions = collect([]);
     
-    // Fetch sessions for Internal Faculty or Guest Faculty
-    if(hasRole('Internal Faculty') || hasRole('Guest Faculty')){
-        // Get faculty_master.pk from user_id
-        $faculty = FacultyMaster::where('employee_master_pk', $userId)->first();
-        
-        if ($faculty) {
-            $facultyPk = $faculty->pk;
+    // A faculty login's own sessions. Same gate and faculty resolver as the dashboard's
+    // Session Details card (is_faculty_portal_user(), get_auth_faculty_master_pk()), so the
+    // page lists what the card counts: it checked only "Internal Faculty" / "Guest Faculty",
+    // roles no login holds, and was always empty.
+    if (is_faculty_portal_user()) {
+        $facultyPk = get_auth_faculty_master_pk();
+
+        if ($facultyPk) {
             
             // Fetch sessions with related data
             $sessions = CalendarEvent::where('active_inactive', 1)

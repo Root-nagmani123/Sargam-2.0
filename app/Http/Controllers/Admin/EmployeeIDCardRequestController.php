@@ -40,9 +40,12 @@ class EmployeeIDCardRequestController extends Controller
      */
     public function dashboardPendingCount(): int
     {
-        return $this->buildEmployeeIdcardIndexMergedCollection(Request::create('/', 'GET', ['list_status' => 'pending']))
-            ->filter(fn ($r) => ($r->status ?? '') === 'Pending')
-            ->count();
+        // The rows the list opens on (?list_status=pending), counted in SQL: a row's
+        // "Pending" status is its id_status alone, which that filter already selects, so
+        // the per-row DTO lookups the list needs for display (~9 queries a row) are not.
+        [$permQuery, $contQuery] = $this->employeeIdcardIndexQueries(['pk'], [], 'all', 'pending');
+
+        return $permQuery->count() + $contQuery->count();
     }
 
     public function index(Request $request)
@@ -134,28 +137,15 @@ class EmployeeIDCardRequestController extends Controller
      *
      * @return \Illuminate\Support\Collection<int, mixed>
      */
-    private function buildEmployeeIdcardIndexMergedCollection(Request $request): \Illuminate\Support\Collection
+    /**
+     * The employee ID card list's two queries (permanent, contractual): non-admins see only
+     * the requests they created, then the status / filter tabs apply. Shared by the list and
+     * the dashboard's pending count so the two never select different rows.
+     *
+     * @return array{0: \Illuminate\Database\Eloquent\Builder, 1: \Illuminate\Database\Query\Builder}
+     */
+    private function employeeIdcardIndexQueries(array $columns, array $with, string $filter, string $listStatus): array
     {
-
-        $with = [
-            'employee:pk,first_name,last_name,designation_master_pk',
-            'employee.designation:pk,designation_name',
-            'approvals:pk,security_parm_id_apply_pk,status,recommend_status,approval_emp_pk,created_date,approval_remarks',
-            'approvals.approver:pk,first_name,last_name',
-        ];
-        $columns = ['pk', 'emp_id_apply', 'employee_master_pk', 'id_status', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'joining_letter_path', 'mobile_no', 'telephone_no', 'blood_group', 'card_type', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob'];
-        // Load ALL records by default; tabs below will split into Active / Archive / Duplication / Extension.
-        // Optional ?filter=active or ?filter=archive can still be used, but default is 'all'
-        $filter = $request->get('filter', 'all');
-        if (! in_array($filter, ['active', 'archive', 'all'], true)) {
-            $filter = 'all';
-        }
-
-        $listStatus = $request->get('list_status', 'all');
-        if (! in_array($listStatus, ['all', 'pending', 'approved', 'rejected'], true)) {
-            $listStatus = 'all';
-        }
-
         // Permanent
         $permQuery = SecurityParmIdApply::select($columns)->with($with)->orderBy('created_date', 'desc');
         if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
@@ -188,7 +178,35 @@ class EmployeeIDCardRequestController extends Controller
             }
         }
 
+
         static::applyEmployeeIdcardListStatusFilters($permQuery, $contQuery, $filter, $listStatus);
+
+        return [$permQuery, $contQuery];
+    }
+
+    private function buildEmployeeIdcardIndexMergedCollection(Request $request): \Illuminate\Support\Collection
+    {
+
+        $with = [
+            'employee:pk,first_name,last_name,designation_master_pk',
+            'employee.designation:pk,designation_name',
+            'approvals:pk,security_parm_id_apply_pk,status,recommend_status,approval_emp_pk,created_date,approval_remarks',
+            'approvals.approver:pk,first_name,last_name',
+        ];
+        $columns = ['pk', 'emp_id_apply', 'employee_master_pk', 'id_status', 'created_date', 'card_valid_from', 'card_valid_to', 'id_card_no', 'id_photo_path', 'joining_letter_path', 'mobile_no', 'telephone_no', 'blood_group', 'card_type', 'permanent_type', 'perm_sub_type', 'remarks', 'created_by', 'employee_dob'];
+        // Load ALL records by default; tabs below will split into Active / Archive / Duplication / Extension.
+        // Optional ?filter=active or ?filter=archive can still be used, but default is 'all'
+        $filter = $request->get('filter', 'all');
+        if (! in_array($filter, ['active', 'archive', 'all'], true)) {
+            $filter = 'all';
+        }
+
+        $listStatus = $request->get('list_status', 'all');
+        if (! in_array($listStatus, ['all', 'pending', 'approved', 'rejected'], true)) {
+            $listStatus = 'all';
+        }
+
+        [$permQuery, $contQuery] = $this->employeeIdcardIndexQueries($columns, $with, $filter, $listStatus);
 
         $permRows = $permQuery->get();
         $contRows = $contQuery->get();
@@ -227,7 +245,20 @@ class EmployeeIDCardRequestController extends Controller
             }
         }
 
-        $merged = $merged->map(function ($row) use ($approvalAuthorityNames) {
+        // Contractual requests a security member has approved (status=1, recommend_status=1),
+        // looked up once for every pending contractual row instead of one query per row.
+        $contractualPendingIds = $merged
+            ->filter(fn ($r) => ($r->status ?? '') === 'Pending' && ($r->employee_type ?? '') === 'Contractual Employee')
+            ->pluck('emp_id_apply')->filter(fn ($v) => $v !== null && $v !== '')->unique()->values();
+        $contractualSecurityApproved = $contractualPendingIds->isEmpty() ? [] : DB::table('security_con_oth_id_apply_approval')
+            ->whereIn('security_parm_id_apply_pk', $contractualPendingIds->all())
+            ->where('status', 1)
+            ->where('recommend_status', 1)
+            ->pluck('security_parm_id_apply_pk')
+            ->mapWithKeys(fn ($pk) => [(string) $pk => true])
+            ->all();
+
+        $merged = $merged->map(function ($row) use ($approvalAuthorityNames, $contractualSecurityApproved) {
             $status = (string) ($row->status ?? '');
             $row->pending_status_tooltip = null;
             if ($status !== 'Pending') {
@@ -247,11 +278,8 @@ class EmployeeIDCardRequestController extends Controller
 
             // For contractual employees: check if security member has approved (status=1, recommend_status=1)
             if ($isContractual) {
-                $contractualSecurityMemberApproved = DB::table('security_con_oth_id_apply_approval')
-                    ->where('security_parm_id_apply_pk', $row->emp_id_apply ?? null)
-                    ->where('status', 1)
-                    ->where('recommend_status', 1)
-                    ->exists();
+                $contractualSecurityMemberApproved = isset($row->emp_id_apply)
+                    && isset($contractualSecurityApproved[(string) $row->emp_id_apply]);
                 
                 if ($contractualSecurityMemberApproved) {
                     $row->pending_status_tooltip = 'Pending with Security Head';

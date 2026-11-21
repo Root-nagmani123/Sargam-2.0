@@ -515,11 +515,14 @@ class UserController extends Controller
         // a staff login holding the role has an employee / faculty pk there, which can
         // equal another trainee's pk. One identity rule (PR #334 F-074).
         $isTraineeLogin = isOfficerTraineeUser() && auth_student_master_pk() !== null;
+        // The OT's medical exemption and MDO/Escort pages list only active courses that have not
+        // ended; their cards count the same, or an OT of a finished course read "7" over an empty page.
+        $runningCourse = fn ($q) => $q->where('active_inactive', 1)->where('end_date', '>=', now()->format('Y-m-d'));
         $facultyPk = $once(fn () => is_faculty_portal_user() ? get_auth_faculty_master_pk() : null);
 
         $idCardApprovalRoute = route('admin.security.employee_idcard_approval.all');
         $todayPendingSplit = $once(fn () => $this->getTodayPendingIdCardRequestsSplit(true));
-        $todayApproval1Split = $once(fn () => $this->getTodayPendingSecurityApproval1Split());
+        $approval1Split = $once(fn () => $this->getPendingSecurityApproval1Split());
 
         // "Total Students" / "Student Details" both open the student list, so their
         // count has to be that list's own roster — see dashboardCoordinatorStudentsCount().
@@ -542,6 +545,14 @@ class UserController extends Controller
             // Super Admin / PA / Admin are not faculty-portal users: same basis as above.
             return $isStudentOT ? 0 : $this->dashboardTotalStudentsCount(get_Role_by_course());
         });
+
+        // The student list opens on today's sessions, so for Super Admin the figure (every
+        // participant of the running courses) is the OT / Participants roster: 175 on both.
+        // Faculty / CC keep the student list, whose payload the count shares; for them the
+        // roster page scopes differently. A Super Admin that page refuses (an OT login) too.
+        $studentsLink = hasRole('Super Admin') && $this->canUseOtParticipants()
+            ? route('admin.dashboard.ot-participants')
+            : route('admin.dashboard.students');
 
         // Protocol Staff counts, same scope as the cards on the /protocol dashboard
         $isProtocolStaff = Auth::user()->can('protocol.protocol_requests');
@@ -572,12 +583,12 @@ class UserController extends Controller
             'requested_vehicle_pass'  => ['count' => fn () => $this->getTodayPendingVehicleApprovalsCount(true), 'link' => route('admin.security.vehicle_pass_approval.index')],
             'total_active_courses'    => ['count' => fn () => CourseMaster::where('active_inactive', 1)->where('start_year', '<=', now()->toDateString())->where('end_date', '>=', now()->toDateString())->count(), 'link' => route('admin.dashboard.active_course')],
             'upcoming_courses'        => ['count' => fn () => CourseMaster::where('active_inactive', 1)->where('start_year', '>', now()->toDateString())->count(), 'link' => route('admin.dashboard.incoming_course')],
-            'upcoming_events'         => ['count' => fn () => Holiday::active()->where('holiday_date', '>', now())->count(), 'link' => route('admin.dashboard.upcoming_events')],
-            'medical_exception'       => ['count' => fn () => $isStudentOT ? StudentMedicalExemption::where('student_master_pk', $userId)->where('active_inactive', 1)->count() : 0, 'link' => route('medical.exception.ot.view')],
+            'upcoming_events'         => ['count' => fn () => Holiday::active()->upcoming()->count(), 'link' => route('admin.dashboard.upcoming_events')],
+            'medical_exception'       => ['count' => fn () => $isStudentOT ? StudentMedicalExemption::where('student_master_pk', $userId)->where('active_inactive', 1)->whereHas('course', $runningCourse)->count() : 0, 'link' => route('medical.exception.ot.view')],
             'total_guest_faculty'     => ['count' => fn () => FacultyMaster::where('active_inactive', 1)->where('faculty_type', 2)->count(), 'link' => route('admin.dashboard.guest_faculty')],
-            'pending_id_approval1'    => ['count' => fn () => (int) ($todayApproval1Split()['idcard'] ?? 0),    'link' => route('admin.security.employee_idcard_approval.approval1')],
-            'pending_dup_id_approval1'=> ['count' => fn () => (int) ($todayApproval1Split()['duplicate'] ?? 0), 'link' => route('admin.security.employee_idcard_approval.approval1')],
-            'ot_mdo_escort'           => ['count' => fn () => $isStudentOT ? MDOEscotDutyMap::where('selected_student_list', $userId)->with(['courseMaster', 'mdoDutyTypeMaster', 'facultyMaster'])->count() : 0, 'link' => route('ot.mdo.escrot.exemption.view')],
+            'pending_id_approval1'    => ['count' => fn () => (int) ($approval1Split()['idcard'] ?? 0),    'link' => route('admin.security.employee_idcard_approval.approval1', ['pending' => 1, 'type' => 'idcard'])],
+            'pending_dup_id_approval1'=> ['count' => fn () => (int) ($approval1Split()['duplicate'] ?? 0), 'link' => route('admin.security.employee_idcard_approval.approval1', ['pending' => 1, 'type' => 'duplicate'])],
+            'ot_mdo_escort'           => ['count' => fn () => $isStudentOT ? MDOEscotDutyMap::where('selected_student_list', $userId)->whereHas('courseMaster', $runningCourse)->count() : 0, 'link' => route('ot.mdo.escrot.exemption.view')],
             // How many Course Group Mapping groups this OT is in. Same trainee check as
             // the page it opens (F-055).
             'my_groups'               => ['count' => fn () => $isStudentOT && $this->isMyGroupsTrainee() ? $this->myGroupsQuery($userId)->distinct()->count('gmap.pk') : 0, 'link' => route('admin.dashboard.my-groups')],
@@ -610,8 +621,8 @@ class UserController extends Controller
             // No count: Who's Who opens on a course picker, so there is no single
             // number the tile could honestly show — same as the timetable cards.
             'whos_who'                => [                                                         'link' => route('admin.faculty.whos-who')],
-            'total_students'          => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students')],
-            'student_details'         => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students')],
+            'total_students'          => ['count' => $totalStudents,                               'link' => $studentsLink],
+            'student_details'         => ['count' => $totalStudents,                               'link' => $studentsLink],
             // Role-scoped course IDs ([] = all, [-1] = none, [pks] = restricted)
             'my_course_participant'   => ['count' => function () {
                 $myCourseIds = get_Role_by_course();
@@ -1915,12 +1926,12 @@ class UserController extends Controller
     }
 
     /**
-     * Today's pending Security Approval-I for the logged-in department authority,
+     * Requests pending at Security Approval-I for the logged-in department authority (any date),
      * split into contractual new ID card vs contractual duplicate ID card (matches Approval I screen).
      *
      * @return array{idcard: int, duplicate: int}
      */
-    private function getTodayPendingSecurityApproval1Split(): array
+    private function getPendingSecurityApproval1Split(): array
     {
         $user = Auth::user();
         if (! $user) {
@@ -1932,12 +1943,11 @@ class UserController extends Controller
             return ['idcard' => 0, 'duplicate' => 0];
         }
 
-        $start = Carbon::today()->startOfDay()->toDateTimeString();
-        $end = Carbon::today()->endOfDay()->toDateTimeString();
-
+        // Every request still waiting at this authority's Approval I, whatever day it came in
+        // (was today's only, so a request left overnight vanished from the card). The page the
+        // cards open lists the same rows with ?pending=1&type=… (buildApproval1ListPayload()).
         // Contractual regular ID card: pending at Approval-I for this authority
         $contQuery = DB::table('security_con_oth_id_apply')
-            ->whereBetween('created_date', [$start, $end])
             ->where('id_status', 1)
             ->where('depart_approval_status', 1)
             ->where('department_approval_emp_pk', $employeePk);
@@ -1957,7 +1967,6 @@ class UserController extends Controller
             ->pluck('security_con_id_apply_pk');
 
         $dupQuery = DB::table('security_dup_other_id_apply')
-            ->whereBetween('created_date', [$start, $end])
             ->where('id_status', 1)
             ->where('card_type', 'Contractual')
             ->where('depart_approval_status', 1)

@@ -4468,15 +4468,22 @@ class FeedbackController extends Controller
      */
     public function dashboardPendingStudentsCount(): int
     {
-        $response = $this->pendingStudentsGroupedData(Request::create('/', 'GET', [
+        $request = Request::create('/', 'GET', [
             'course_pk' => $this->resolvePendingStudentsDefaultCourseId(),
             'course_type' => 'active',
             'filter_feedback_state' => 'not_given',
-            'page' => 1,
-            'per_page' => 1,
-        ]));
+        ]);
 
-        return (int) ($response->getData(true)['total'] ?? 0);
+        // The page's own total (pendingStudentsTotal(), what pendingStudentsGroupedData() falls back
+        // to) without the page of rows and their session details, which a count never shows.
+        try {
+            return $this->pendingStudentsTotal($request, DB::query()->fromSub($this->buildPendingStudentsAggregateSubquery($request), 'agg_students'));
+        } catch (\Exception $e) {
+            // As before: the grouped-data endpoint logged a failure and the card read 0.
+            \Log::error('Pending Students dashboard count error: '.$e->getMessage());
+
+            return 0;
+        }
     }
 
     /**

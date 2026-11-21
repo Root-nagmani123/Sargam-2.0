@@ -1525,8 +1525,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/faculty/whos-who/static-info', [WhosWhoController::class, 'getStaticInfo'])->name('admin.faculty.whos-who.static-info');
     Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
 
+    // The Upcoming Events card's page: the holidays it counts (was a static template).
     Route::get('/upcoming-events', function () {
-        return view('admin.dashboard.upcoming_events');
+        return view('admin.dashboard.upcoming_events', [
+            'holidays' => \App\Models\Holiday::active()->upcoming()->orderBy('holiday_date')->orderBy('holiday_name')->get(),
+        ]);
     })->name('admin.dashboard.upcoming_events');
 
     //    Route::get('/guest-faculty', function () {

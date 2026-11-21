@@ -25,7 +25,18 @@
                     <h6 class="mb-0 fw-semibold">Filters & Search</h6>
                 </div>
                 <div class="card-body">
+                    @if(request()->boolean('pending') || in_array(request('type'), ['idcard', 'duplicate'], true))
+                    {{-- Opened from a dashboard card: say the list is narrowed, and how to see everything. --}}
+                    <p class="small text-body-secondary mb-3">
+                        Showing only {{ request('type') === 'duplicate' ? 'duplicate ID card' : (request('type') === 'idcard' ? 'ID card' : '') }} requests
+                        {{ request()->boolean('pending') ? 'waiting for your approval' : '' }}.
+                        <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}">Show all requests</a>
+                    </p>
+                    @endif
                     <form method="GET" action="{{ route('admin.security.employee_idcard_approval.approval1') }}" id="filterForm" class="mb-0">
+                        {{-- Keep the dashboard card's narrowing across a search. --}}
+                        @if(request()->boolean('pending'))<input type="hidden" name="pending" value="1">@endif
+                        @if(in_array(request('type'), ['idcard', 'duplicate'], true))<input type="hidden" name="type" value="{{ request('type') }}">@endif
                         <div class="row g-3 align-items-end">
                             <div class="col-md-4">
                                 <label for="search" class="form-label">Search</label>

@@ -66,6 +66,8 @@ class EmployeeIDCardApprovalController extends Controller
             'date_from' => $request->get('date_from'),
             'date_to' => $request->get('date_to'),
             'card_type' => $request->get('card_type'),
+            'pending' => $request->boolean('pending'),
+            'type' => $request->get('type'),
         ]));
 
         $payload = DataTableRedisCache::remember(
@@ -103,6 +105,13 @@ class EmployeeIDCardApprovalController extends Controller
      */
     private function buildApproval1ListPayload(Request $request, $currentEmployeePk): array
     {
+        // ?pending=1: only the requests still waiting for this authority's Approval I, by the
+        // same rule as the dashboard's "Pending ID Card (Approval I)" cards (pending, section
+        // approval not given, no Approval I row); ?type=idcard|duplicate: one of the two lists.
+        // Without them the page keeps its full history, as before.
+        $pendingOnly = $request->boolean('pending');
+        $type = in_array($request->get('type'), ['idcard', 'duplicate'], true) ? $request->get('type') : null;
+
         // Contractual regular ID Card requests - Approval 1
         $contA1Done = DB::table('security_con_oth_id_apply_approval')
             ->where('status', 1)
@@ -136,8 +145,14 @@ class EmployeeIDCardApprovalController extends Controller
         if ($request->filled('card_type')) {
             $contQuery->where('permanent_type', $request->card_type);
         }
+        if ($pendingOnly) {
+            $contQuery->where('id_status', 1)->where('depart_approval_status', 1);
+            if ($contA1Done->isNotEmpty()) {
+                $contQuery->whereNotIn('emp_id_apply', $contA1Done);
+            }
+        }
 
-        $contRows = $contQuery->get();
+        $contRows = $type === 'duplicate' ? collect() : $contQuery->get();
         $contA1DoneArr = $contA1Done->toArray();
         $contDtos = $contRows->map(function ($r) use ($contA1DoneArr) {
             $dto = IdCardSecurityMapper::toContractualRequestDto($r);
@@ -195,8 +210,14 @@ class EmployeeIDCardApprovalController extends Controller
             $to = \Carbon\Carbon::parse($request->date_to)->endOfDay()->toDateTimeString();
             $dupContQuery->where('created_date', '<=', $to);
         }
+        if ($pendingOnly) {
+            $dupContQuery->where('id_status', 1)->where('depart_approval_status', 1);
+            if ($dupContA1Done->isNotEmpty()) {
+                $dupContQuery->whereNotIn('emp_id_apply', $dupContA1Done);
+            }
+        }
 
-        $dupContRows = $dupContQuery->get();
+        $dupContRows = $type === 'idcard' ? collect() : $dupContQuery->get();
         $deptMap = DB::table('department_master')->pluck('department_name', 'pk')->toArray();
         $dupContA1DoneArr = $dupContA1Done->toArray();
         $dupContDtos = $dupContRows->map(function ($r) use ($deptMap, $dupContA1DoneArr) {

@@ -315,7 +315,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                         document.querySelectorAll('[data-count-for]').forEach(function (el) {
                             var n = Number((data.counts || {})[el.getAttribute('data-count-for')]);
                             if (!isFinite(n)) { return; }
-                            el.textContent = String(n);
+                            el.textContent = n.toLocaleString('en-IN');
                             el.classList.toggle('is-action', el.hasAttribute('data-actionable') && n > 0);
                             el.hidden = false;
                         });

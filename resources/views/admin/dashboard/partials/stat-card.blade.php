@@ -29,10 +29,10 @@
                     // shown 13.5 as 13.
                     $v = is_numeric($card['count']) ? (float) $card['count'] : 0;
                     $statValue = floor($v) == $v
-                        ? ($v < 10 ? sprintf('%02d', $v) : (string) (int) $v)
+                        ? ($v < 10 ? sprintf('%02d', $v) : number_format($v))
                         : rtrim(rtrim(number_format($v, 2, '.', ''), '0'), '.');
                 @endphp
-                <p class="stat-value">{{ $statValue }}@if($statState === 'stat-card--action')<span class="stat-action-badge">Needs action</span>@endif</p>
+                <p class="stat-value">{{ $statValue }}@if($statState === 'stat-card--action' && ! ($grouped ?? false))<span class="stat-action-badge">Needs action</span>@endif</p>
                 @else
                 {{-- Cards that open a page rather than count rows (the
                      timetables) carry no number — an "00" would read as

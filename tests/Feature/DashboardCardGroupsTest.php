@@ -50,7 +50,7 @@ class DashboardCardGroupsTest extends TestCase
         $isQueue = new \ReflectionMethod(UserController::class, 'isActionableCardKey');
         $isQueue->setAccessible(true);
         $cards = DB::table('dashboard_cards')->get(['id', 'key'])
-            ->filter(fn ($c) => $c->key === 'upcoming_events' || $isQueue->invoke(null, $c->key));
+            ->filter(fn ($c) => in_array($c->key, ['upcoming_events', 'total_guest_faculty', 'total_inhouse_faculty'], true) || $isQueue->invoke(null, $c->key));
         foreach ($cards as $card) {
             DB::table('role_dashboard_cards')->insert(['role_id' => $role, 'dashboard_card_id' => $card->id, 'sidebar_category_id' => $this->setupId]);
         }
@@ -78,7 +78,7 @@ class DashboardCardGroupsTest extends TestCase
         $this->assertTrue($counted->every(fn ($c) => $c['count'] === null), 'no figure on the first paint');
         $response->assertSee('stat-value-skeleton', false)
             ->assertSee('data-src="'.e(route('admin.dashboard.cards', ['category' => $this->setupId])).'"', false)
-            ->assertDontSee('>Needs your action</h2>', false);
+            ->assertDontSee('>Needs your action <span class="dashboard-card-group-count">', false);
     }
 
     public function test_queue_cards_with_work_lead_under_needs_your_action(): void
@@ -91,19 +91,65 @@ class DashboardCardGroupsTest extends TestCase
             $this->markTestSkipped('no queue card has work in it on this database');
         }
         $this->assertFalse($cards->firstWhere('key', 'upcoming_events')['actionable'], 'a plain total is not a queue');
+        $total = $cards->first(fn ($c) => ! $c['actionable'] && ($data['counts'][$c['key']] ?? 0) > 0);
+        if (! $total) {
+            $this->markTestSkipped('no plain total above 0 on this database');
+        }
 
         $html = $data['grid'];
-        $action = strpos($html, '>Needs your action</h2>');
-        $overview = strpos($html, '>Overview</h2>');
+        $action = strpos($html, '>Needs your action <span class="dashboard-card-group-count">');
+        $overview = strpos($html, '>Overview <span class="dashboard-card-group-count">');
         $this->assertNotFalse($action);
         $this->assertNotFalse($overview);
         $busyAt = strpos($html, 'title="'.e($busy['label']).'"', $action);
         $this->assertTrue($busyAt > $action && $busyAt < $overview, 'the busy queue sits under Needs your action');
-        $this->assertGreaterThan($overview, strpos($html, 'title="'.e($cards->firstWhere('key', 'upcoming_events')['label']).'"', $action));
-        $this->assertStringContainsString('stat-action-badge', $html);
+        $this->assertGreaterThan($overview, strpos($html, 'title="'.e($total['label']).'"', $action));
+        // Under the heading the amber edge marks it; the badge would only repeat the heading.
+        $this->assertStringContainsString('stat-card--action', $html);
+        $this->assertStringNotContainsString('stat-action-badge', $html);
         $this->assertStringNotContainsString('stat-value-skeleton', $html);
         $this->assertStringContainsString('need', $data['hero']);
         $this->assertSame('', trim($data['queues']), 'the strip is for Home only');
+    }
+
+    public function test_cards_at_zero_fold_under_the_live_ones(): void
+    {
+        $user = $this->viewer();
+        $cards = $this->dashboard($user, ['category' => $this->setupId])->viewData('cardsToRender');
+        $data = $this->cards($user, ['category' => $this->setupId]);
+        $zero = $cards->filter(fn ($c) => $c['show_count'] && array_key_exists($c['key'], $data['counts']) && (float) $data['counts'][$c['key']] == 0);
+        $live = $cards->first(fn ($c) => ($data['counts'][$c['key']] ?? 0) > 0);
+        if ($zero->isEmpty() || ! $live) {
+            $this->markTestSkipped('needs cards both at zero and above it on this database');
+        }
+
+        $html = $data['grid'];
+        $fold = strpos($html, '<details class="dashboard-empty-cards');
+        $this->assertNotFalse($fold);
+        $this->assertStringContainsString($zero->count().' '.\Illuminate\Support\Str::plural('card', $zero->count()).' with nothing to show', $html);
+        foreach ($zero as $card) {
+            $this->assertGreaterThan($fold, strpos($html, 'title="'.e($card['label']).'"'), $card['key'].' is folded');
+        }
+        $this->assertLessThan($fold, strpos($html, 'title="'.e($live['label']).'"'), 'a live card stays out of the fold');
+    }
+
+    public function test_nothing_folds_when_every_card_is_zero(): void
+    {
+        // Cards added through the UI with no definition count 0.
+        $user = $this->staffWithRole('Super Admin');
+        $roleIds = DB::table('model_has_roles')->where('model_type', User::class)->where('model_id', $user->pk)->pluck('role_id');
+        DB::table('role_dashboard_cards')->whereIn('role_id', $roleIds)->where('sidebar_category_id', $this->setupId)->delete();
+        foreach (['groups_zero_a', 'groups_zero_b'] as $i => $key) {
+            $id = DB::table('dashboard_cards')->insertGetId([
+                'key' => $key, 'label' => 'Zero card '.$i, 'icon' => 'star', 'color_class' => 'stat-icon-blue',
+                'sort_order' => 9100 + $i, 'created_at' => now(), 'updated_at' => now(),
+            ]);
+            DB::table('role_dashboard_cards')->insert(['role_id' => $roleIds->first(), 'dashboard_card_id' => $id, 'sidebar_category_id' => $this->setupId]);
+        }
+
+        $html = $this->cards($user->fresh(), ['category' => $this->setupId])['grid'];
+        $this->assertStringNotContainsString('dashboard-empty-cards', $html);
+        $this->assertSame(2, substr_count($html, 'class="card stat-card'));
     }
 
     public function test_home_lists_the_modules_with_work_waiting(): void
@@ -119,8 +165,8 @@ class DashboardCardGroupsTest extends TestCase
         $queues = $this->cards($user)['queues'];
         $this->assertSame(1, substr_count($queues, 'class="dashboard-module-queue"'), 'only the module holding the cards');
         $this->assertStringContainsString('href="'.e(route('admin.dashboard', ['category' => $this->setupId])).'" class="dashboard-module-queue"', $queues);
-        $total = $waiting->sum(fn ($c) => $setup['counts'][$c['key']]) + 0;
-        $this->assertStringContainsString('dashboard-module-queue__count">'.$total.'</span>', $queues);
+        $total = $waiting->sum(fn ($c) => $setup['counts'][$c['key']]);
+        $this->assertStringContainsString('dashboard-module-queue__count">'.number_format($total).'</span>', $queues);
     }
 
     public function test_home_shows_no_strip_without_waiting_work(): void

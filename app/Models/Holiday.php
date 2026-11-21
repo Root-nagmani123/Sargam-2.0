@@ -46,4 +46,10 @@ class Holiday extends Model
     {
         return $query->where('holiday_type', $type);
     }
+
+    /** Holidays still ahead: the dashboard's Upcoming Events card counts these and its page lists them. */
+    public function scopeUpcoming($query)
+    {
+        return $query->where('holiday_date', '>', now());
+    }
 }
