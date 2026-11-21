@@ -113,7 +113,8 @@
     $typeScope = $typeScope ?? ['cadre' => true, 'house' => true];
     // Both view buttons are always offered. Opening the one this viewer's role
     // does not reach shows a "not available" notice in place of the list.
-    $viewAvailable = ! empty($typeScope[$activeView]);
+    // A course coordinator with no group of either type still gets their roster (rosterOnly).
+    $viewAvailable = ! empty($typeScope[$activeView]) || ($rosterOnly ?? false);
     $activeViewLabel = $activeView === 'house' ? 'House' : 'Cadre';
 @endphp
 <div class="container-fluid ot-list-page">

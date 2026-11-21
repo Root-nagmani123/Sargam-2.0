@@ -2650,10 +2650,17 @@ class UserController extends Controller
         // who also counsels four cadres was listing another counsellor's cadre
         // students. Only applied when the request carries a
         // view: otParticipantsViewerTypeScope() reads the unscoped roster.
+        //
+        // A faculty with no Counsellor or House group at all (a course coordinator and
+        // nothing else) has no groups to be narrowed to: they keep the roster the caller
+        // built, their coordinated courses' participants, the set otParticipantRosterPks()
+        // already lets them act on. Narrowing it to "own groups" emptied their page while
+        // their Total Students card counted those same participants.
         $ownFacultyPk = $request->has('view') ? $this->otParticipantsScopedFacultyPk() : null;
-        if ($ownFacultyPk) {
+        $coursePks = $ownFacultyPk ? $this->participantCoursePks($participants) : [];
+        $ownGroups = $ownFacultyPk ? $this->otParticipantsGroupTypeScope($this->participantCourseScope($coursePks)) : null;
+        if ($ownFacultyPk && ($ownGroups['cadre'] || $ownGroups['house'])) {
             $studentPks = $participants->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all();
-            $coursePks = $this->participantCoursePks($participants);
             $own = $this->otParticipantsGroupView($request) === 'house'
                 ? $this->studentPksForHouseFaculty($ownFacultyPk, $studentPks, $coursePks)
                 : $this->studentPksForCounsellorFaculty($ownFacultyPk, $studentPks, $coursePks);
@@ -3167,12 +3174,15 @@ class UserController extends Controller
         }
 
         $groupColumns = $this->otParticipantsGroupColumns($groupView);
+        // A viewer with no Counsellor / House group but a roster (a course coordinator only)
+        // gets the list, not the "not available" notice: see otParticipantsRowsFor().
+        $rosterOnly = empty($typeScope['cadre']) && empty($typeScope['house']) && $totalParticipants > 0;
         return view('admin.dashboard.ot_participants_list', compact(
             'availableCourses', 'courseOptions', 'filters', 'cadreOptions', 'houseOptions',
             'sessionOptions', 'participantOptions', 'isCounselleeView', 'isHouseView',
             'houseGroupOptions', 'sessionOptions', 'participantOptions',
             'counsellorsByCadre', 'facultyByHouseGroup', 'groupColumns',
-            'typeScope'
+            'typeScope', 'rosterOnly'
         ));
     }
 
