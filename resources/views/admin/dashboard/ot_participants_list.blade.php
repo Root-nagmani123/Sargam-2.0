@@ -114,7 +114,8 @@
     // Both view buttons are always offered. Opening the one this viewer's role
     // does not reach shows a "not available" notice in place of the list.
     // A course coordinator with no group of either type still gets their roster (rosterOnly).
-    $viewAvailable = ! empty($typeScope[$activeView]) || ($rosterOnly ?? false);
+    // ... and so does a coordinator on the All course participants tab (scopeTabs).
+    $viewAvailable = ! empty($typeScope[$activeView]) || ($rosterOnly ?? false) || (($scopeTabs['active'] ?? '') === 'course');
     $activeViewLabel = $activeView === 'house' ? 'House' : 'Cadre';
 @endphp
 <div class="container-fluid ot-list-page">
@@ -170,6 +171,36 @@
 
          Switching is a full reload, like the Active/Archived tabs and the Course
          filter: which filters exist at all is rendered server-side. --}}
+    @if($scopeTabs ?? null)
+    {{-- A course coordinator who also owns groups: their own groups (the default) or
+         every participant of the courses they coordinate. The second is what their
+         Total Students card counts; the other counsellors' group data stays blank. --}}
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3 ot-scope-toggle" role="group" aria-label="Whose participants">
+        @foreach(['mine' => 'My groups', 'course' => 'All course participants'] as $scopeKey => $scopeLabel)
+        <button type="button" class="btn ot-view-btn {{ $scopeTabs['active'] === $scopeKey ? 'active' : '' }}"
+            data-scope="{{ $scopeKey === 'course' ? 'course' : '' }}" aria-pressed="{{ $scopeTabs['active'] === $scopeKey ? 'true' : 'false' }}">
+            <span>{{ $scopeLabel }}</span>
+            <span class="badge rounded-1 text-bg-light border">{{ number_format($scopeTabs[$scopeKey]) }}</span>
+        </button>
+        @endforeach
+    </div>
+    @push('scripts')
+    <script>
+        $(function() {
+            $('.ot-scope-toggle [data-scope]').on('click', function() {
+                if ($(this).hasClass('active')) { return; }
+                const p = new URLSearchParams(window.location.search);
+                const scope = $(this).data('scope');
+                if (scope) { p.set('scope', scope); } else { p.delete('scope'); }
+                // Group selections belong to the tab being left.
+                ['cadre', 'counsellor_faculty', 'house_group', 'house_faculty'].forEach(k => p.delete(k));
+                window.location.href = "{{ route('admin.dashboard.ot-participants') }}" + (p.toString() ? '?' + p.toString() : '');
+            });
+        });
+    </script>
+    @endpush
+    @endif
+
     <div class="d-flex flex-wrap align-items-center gap-2 mb-3 ot-view-toggle" role="group" aria-label="Group view">
         <button type="button" class="btn ot-view-btn {{ $activeView === 'cadre' ? 'active' : '' }}"
             data-view="cadre" aria-pressed="{{ $activeView === 'cadre' ? 'true' : 'false' }}">
@@ -522,6 +553,8 @@
                 // Decides which mapping pair the server resolves and returns, and
                 // keeps a dashboard card's scope.
                 view: (filters.view || '').toString(),
+                // The All course participants tab (a coordinator's whole course).
+                scope: (filters.scope || '').toString(),
                 // Only meaningful alongside a cadre — cleared with it below.
                 counsellor_faculty: $('#counsellorFacultyFilter').val() || '',
                 house_group: $('#houseGroupFilter').val() || '',
@@ -774,7 +807,10 @@
         $('#participantFilter').on('change', function() { applyFilter({ participant: this.value }); });
         $('#resetFilters').on('click', function() {
             // Reset clears the filters, not the scope the page was opened in.
-            window.location.href = baseUrl + (filters.view ? '?view=' + encodeURIComponent(filters.view) : '');
+            const keep = new URLSearchParams();
+            if (filters.view) { keep.set('view', filters.view); }
+            if (filters.scope) { keep.set('scope', filters.scope); }
+            window.location.href = baseUrl + (keep.toString() ? '?' + keep.toString() : '');
         });
 
         /* ── Time Period date-range ── */

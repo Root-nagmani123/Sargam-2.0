@@ -546,13 +546,17 @@ class UserController extends Controller
             return $isStudentOT ? 0 : $this->dashboardTotalStudentsCount(get_Role_by_course());
         });
 
-        // The student list opens on today's sessions, so for Super Admin the figure (every
-        // participant of the running courses) is the OT / Participants roster: 175 on both.
-        // Faculty / CC keep the student list, whose payload the count shares; for them the
-        // roster page scopes differently. A Super Admin that page refuses (an OT login) too.
-        $studentsLink = hasRole('Super Admin') && $this->canUseOtParticipants()
-            ? route('admin.dashboard.ot-participants')
-            : route('admin.dashboard.students');
+        // The student list opens on today's sessions, so the figure (the viewer's participants
+        // of the running courses) is shown on the OT / Participants roster instead: the whole
+        // roster for Super Admin, the All course participants tab (?scope=course) for a course
+        // coordinator. Other faculty, and a Super Admin that page refuses (an OT login), keep
+        // the student list.
+        $studentsLink = route('admin.dashboard.students');
+        if (hasRole('Super Admin') && $this->canUseOtParticipants()) {
+            $studentsLink = route('admin.dashboard.ot-participants');
+        } elseif (($coordinatorPk = $facultyPk()) && $this->getCoordinatorCourseIds($coordinatorPk)->isNotEmpty() && $this->canUseOtParticipants()) {
+            $studentsLink = route('admin.dashboard.ot-participants', ['scope' => 'course']);
+        }
 
         // Protocol Staff counts, same scope as the cards on the /protocol dashboard
         $isProtocolStaff = Auth::user()->can('protocol.protocol_requests');
@@ -2656,10 +2660,32 @@ class UserController extends Controller
         // built, their coordinated courses' participants, the set otParticipantRosterPks()
         // already lets them act on. Narrowing it to "own groups" emptied their page while
         // their Total Students card counted those same participants.
+        //
+        // ?scope=course (the "All course participants" tab, coordinators only, see
+        // otParticipantsCourseScope()): every participant of the courses they coordinate
+        // instead, with the group data of anyone outside their own groups blanked, so the
+        // other counsellors' Cadre / House mapping stays theirs.
         $ownFacultyPk = $request->has('view') ? $this->otParticipantsScopedFacultyPk() : null;
         $coursePks = $ownFacultyPk ? $this->participantCoursePks($participants) : [];
+        $courseScope = $ownFacultyPk ? $this->otParticipantsCourseScope($request) : null;
         $ownGroups = $ownFacultyPk ? $this->otParticipantsGroupTypeScope($this->participantCourseScope($coursePks)) : null;
-        if ($ownFacultyPk && ($ownGroups['cadre'] || $ownGroups['house'])) {
+        if ($courseScope !== null) {
+            $participants = $participants
+                ->filter(fn ($p) => array_intersect(array_map('strval', $p->course_pks), $courseScope) !== [])
+                ->values();
+            $studentPks = $participants->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all();
+            $counselled = $this->studentPksForCounsellorFaculty($ownFacultyPk, $studentPks, $coursePks);
+            $housed = $this->studentPksForHouseFaculty($ownFacultyPk, $studentPks, $coursePks);
+            foreach ($participants as $p) {
+                if (! isset($counselled[(int) $p->student_master_pk])) {
+                    $p->counsellor_group_name = $p->cadre_name = $p->counsellor_name = null;
+                }
+                if (! isset($housed[(int) $p->student_master_pk])) {
+                    $p->house_group_name = $p->house_group = $p->house_faculty_name = null;
+                    $p->house_groups = [];
+                }
+            }
+        } elseif ($ownFacultyPk && ($ownGroups['cadre'] || $ownGroups['house'])) {
             $studentPks = $participants->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all();
             $own = $this->otParticipantsGroupView($request) === 'house'
                 ? $this->studentPksForHouseFaculty($ownFacultyPk, $studentPks, $coursePks)
@@ -2847,6 +2873,25 @@ class UserController extends Controller
     }
 
     /**
+     * ?scope=course on the OT participants page: the courses the viewer coordinates, as
+     * strings, when they are a scoped faculty (see otParticipantsScopedFacultyPk()) who
+     * coordinates any; else null, and the param changes nothing. Their default view stays
+     * their own groups (7af832b28); this is the "All course participants" tab beside it,
+     * the set their Total Students card counts.
+     *
+     * @return array<int, string>|null
+     */
+    private function otParticipantsCourseScope(Request $request): ?array
+    {
+        if ($request->input('scope') !== 'course' || ! ($facultyPk = $this->otParticipantsScopedFacultyPk())) {
+            return null;
+        }
+        $courses = $this->getCoordinatorCourseIds($facultyPk);
+
+        return $courses->isEmpty() ? null : $courses->map(fn ($v) => (string) $v)->values()->all();
+    }
+
+    /**
      * The faculty whose OWN Course Group Mapping scopes the OT participants page,
      * or null for a viewer who oversees the whole roster (Super Admin, Admin, PA,
      * the training admins, or a login with no faculty record).
@@ -2961,6 +3006,10 @@ class UserController extends Controller
         $drop = $view === 'house'
             ? ['cadre', 'counsellor_faculty']
             : ['house_group', 'house_faculty'];
+        if ($this->otParticipantsCourseScope($request) !== null) {
+            // The whole course: no group filter applies (and none is offered).
+            $drop = ['cadre', 'counsellor_faculty', 'house_group', 'house_faculty'];
+        }
 
         $params = $request->query();
         foreach ($drop as $key) {
@@ -3039,7 +3088,11 @@ class UserController extends Controller
         // Cadre / Cadre Counsellor / House Group options, each scoped to the rows
         // reachable with that dropdown's own filter cleared — so an option can
         // never be offered that would return nothing.
-        $filterOptions = $this->otParticipantsFilterOptions($viewRequest, $payload['students'], $typeScope);
+        // The "All course participants" tab offers no group filter: the other
+        // counsellors' Cadre / House mapping is not this viewer's to filter by.
+        $courseScope = $this->otParticipantsCourseScope($viewRequest);
+        $filterOptions = $this->otParticipantsFilterOptions($viewRequest, $payload['students'],
+            $courseScope !== null ? ['cadre' => false, 'house' => false] : $typeScope);
 
         // ajax() reads a header, so that check stays on the original request; the
         // response itself is built from the scoped one.
@@ -3081,7 +3134,8 @@ class UserController extends Controller
         // Course Group Mapping page — which is where the faculty verifies this list
         // — not the students' own cadre master, where 70 of them have nothing. The
         // house view has no Cadre filter at all.
-        $cadreOptions = $isHouseView
+        // Nor does the All course participants tab, which takes no group filter.
+        $cadreOptions = $isHouseView || $courseScope !== null
             ? collect()
             : $students
                 ->map(fn ($m) => $isCounselleeView
@@ -3147,6 +3201,8 @@ class UserController extends Controller
             // (the card) — carried on every request the grid makes, or the card's
             // scope would be lost on the first filter change.
             'view' => $in('view'),
+            // Carried on every grid request, so the All course participants tab holds.
+            'scope' => $courseScope !== null ? 'course' : '',
         ];
 
         // Course filter scope: Super Admin / Admin / PA can pick ANY course for the
@@ -3177,12 +3233,28 @@ class UserController extends Controller
         // A viewer with no Counsellor / House group but a roster (a course coordinator only)
         // gets the list, not the "not available" notice: see otParticipantsRowsFor().
         $rosterOnly = empty($typeScope['cadre']) && empty($typeScope['house']) && $totalParticipants > 0;
+        // A coordinator who also owns groups gets two tabs: My groups (the default, their
+        // own groups only) and All course participants (?scope=course), each with its count.
+        $scopeTabs = null;
+        if (($typeScope['cadre'] || $typeScope['house']) && $this->otParticipantsScopedFacultyPk()) {
+            $courseRequest = Request::create($viewRequest->url(), 'GET', ['scope' => 'course'] + $viewRequest->query());
+            if ($this->otParticipantsCourseScope($courseRequest) !== null) {
+                $mineRequest = Request::create($viewRequest->url(), 'GET', array_diff_key($viewRequest->query(), ['scope' => 1]));
+                $other = $courseScope !== null ? $mineRequest : $this->otParticipantsViewScopedRequest($courseRequest, $groupView);
+                $otherCount = $this->otParticipantsRowsFor($other, $payload['students'])->count();
+                $scopeTabs = [
+                    'active' => $courseScope !== null ? 'course' : 'mine',
+                    'mine' => $courseScope !== null ? $otherCount : $totalParticipants,
+                    'course' => $courseScope !== null ? $totalParticipants : $otherCount,
+                ];
+            }
+        }
         return view('admin.dashboard.ot_participants_list', compact(
             'availableCourses', 'courseOptions', 'filters', 'cadreOptions', 'houseOptions',
             'sessionOptions', 'participantOptions', 'isCounselleeView', 'isHouseView',
             'houseGroupOptions', 'sessionOptions', 'participantOptions',
             'counsellorsByCadre', 'facultyByHouseGroup', 'groupColumns',
-            'typeScope', 'rosterOnly'
+            'typeScope', 'rosterOnly', 'scopeTabs'
         ));
     }
 
