@@ -24,7 +24,19 @@
                     <h6 class="mb-0 fw-semibold">Filters & Search</h6>
                 </div>
                 <div class="card-body">
+                    @php
+                        $cardTypeLabels = ['perm' => 'permanent ID card', 'cont' => 'contractual ID card', 'dup_perm' => 'permanent duplicate ID card', 'dup_cont' => 'contractual duplicate ID card'];
+                        $cardType = is_string(request('type')) ? ($cardTypeLabels[request('type')] ?? null) : null;
+                    @endphp
+                    @if($cardType)
+                    {{-- Opened from a dashboard card: New Request holds only this type. --}}
+                    <p class="small text-body-secondary mb-3">
+                        New Request shows only {{ $cardType }} requests.
+                        <a href="{{ route('admin.security.employee_idcard_approval.approval3') }}">Show all types</a>
+                    </p>
+                    @endif
                     <form method="GET" action="{{ route('admin.security.employee_idcard_approval.approval3') }}" id="filterForm3" class="mb-0">
+                        @if($cardType)<input type="hidden" name="type" value="{{ request('type') }}">@endif
                         <div class="row g-3 align-items-end">
                             <div class="col-md-4">
                                 <label for="search" class="form-label">Search</label>

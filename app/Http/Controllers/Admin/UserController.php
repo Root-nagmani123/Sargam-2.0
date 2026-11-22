@@ -392,6 +392,19 @@ class UserController extends Controller
     }
 
     /**
+     * A training section admin, who oversees every course on the student list and the OT /
+     * Participants page like Super Admin. The Induction admins hold the role
+     * "Training-Induction"; "Training Induction Admin", which these checks named, is no role
+     * at all, so those ten logins were treated as plain users (their Total Students read 0
+     * and the roster page refused them).
+     */
+    private function isTrainingAdmin(): bool
+    {
+        return hasRole('Training-Induction') || hasRole('Training Induction Admin')
+            || hasRole('Training MCTP Admin') || hasRole('Training IST');
+    }
+
+    /**
      * Every card (stat cards and widget panels) the logged-in user's roles have on module
      * $moduleId's dashboard, in order. With $applyLayout, in the login's own order and without
      * the cards it hid (user_dashboard_layouts); a layout only hides, it never adds a card.
@@ -447,7 +460,7 @@ class UserController extends Controller
     /** The stat cards of $cards the logged-in user may see, as the dashboard renders them. */
     private function dashboardStatCards(\Illuminate\Support\Collection $cards, ?array $cardDefinitions = null, bool $withCounts = true): \Illuminate\Support\Collection
     {
-        // Only the OT and faculty-portal cards are gated (DashboardCard::gatedCardVisibility(),
+        // Only the OT, faculty-portal and Security queue cards are gated (DashboardCard::gatedCardVisibility(),
         // shared with the header's module landing). The older cards' role mappings are
         // what admins have tuned against, so they show to whoever's role has them.
         $gatedCardVisibility = DashboardCard::gatedCardVisibility();
@@ -520,8 +533,23 @@ class UserController extends Controller
         $runningCourse = fn ($q) => $q->where('active_inactive', 1)->where('end_date', '>=', now()->format('Y-m-d'));
         $facultyPk = $once(fn () => is_faculty_portal_user() ? get_auth_faculty_master_pk() : null);
 
-        $idCardApprovalRoute = route('admin.security.employee_idcard_approval.all');
-        $todayPendingSplit = $once(fn () => $this->getTodayPendingIdCardRequestsSplit(true));
+        // Security cards: what waits at this login's approval level (Approval II for 'Security
+        // Card', III for 'Admin Security' alone), any date, counted on the New Request tab of the
+        // page each card opens, so the card and the tab agree by construction.
+        $securityLevel = (hasRole('Security Card') || hasRole('Admin Security'))
+            ? ((hasRole('Admin Security') && ! hasRole('Security Card')) ? 'approval3' : 'approval2')
+            : null;
+        $securityNewRows = $once(fn () => $securityLevel
+            ? app(\App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController::class)->dashboardNewRowCounts($securityLevel)
+            : []);
+        $idCardLink = fn (string $type) => $securityLevel
+            ? route('admin.security.employee_idcard_approval.'.$securityLevel, ['tab' => 'new', 'type' => $type])
+            : route('admin.security.employee_idcard_approval.all');
+        $newTabTotal = function (string $controller, array $query, string $key) use ($securityLevel): int {
+            return $securityLevel
+                ? (int) app($controller)->index(Request::create('/', 'GET', $query))->getData()[$key]->total()
+                : 0;
+        };
         $approval1Split = $once(fn () => $this->getPendingSecurityApproval1Split());
 
         // "Total Students" / "Student Details" both open the student list, so their
@@ -542,8 +570,9 @@ class UserController extends Controller
                     : $this->dashboardTotalStudentsCount(get_Role_by_course());
             }
 
-            // Super Admin / PA / Admin are not faculty-portal users: same basis as above.
-            return $isStudentOT ? 0 : $this->dashboardTotalStudentsCount(get_Role_by_course());
+            // Super Admin / PA / Admin are not faculty-portal users: same basis as above. A
+            // training admin oversees every course, as the student list and roster show them.
+            return $isStudentOT ? 0 : $this->dashboardTotalStudentsCount($this->isTrainingAdmin() ? [] : get_Role_by_course());
         });
 
         // The student list opens on today's sessions, so the figure (the viewer's participants
@@ -552,7 +581,7 @@ class UserController extends Controller
         // coordinator. Other faculty, and a Super Admin that page refuses (an OT login), keep
         // the student list.
         $studentsLink = route('admin.dashboard.students');
-        if (hasRole('Super Admin') && $this->canUseOtParticipants()) {
+        if ((hasRole('Super Admin') || $this->isTrainingAdmin()) && $this->canUseOtParticipants()) {
             $studentsLink = route('admin.dashboard.ot-participants');
         } elseif (($coordinatorPk = $facultyPk()) && $this->getCoordinatorCourseIds($coordinatorPk)->isNotEmpty() && $this->canUseOtParticipants()) {
             $studentsLink = route('admin.dashboard.ot-participants', ['scope' => 'course']);
@@ -579,12 +608,13 @@ class UserController extends Controller
         $canRaiseProtocol = Auth::user()->can('protocol.my_requests');
 
         return [
-            'pending_permanent_id'    => ['count' => fn () => (int) ($todayPendingSplit()['perm'] ?? 0),          'link' => $idCardApprovalRoute],
-            'pending_contractual_id'  => ['count' => fn () => (int) ($todayPendingSplit()['cont'] ?? 0),          'link' => $idCardApprovalRoute],
-            'duplicate_permanent_id'  => ['count' => fn () => $this->getTodayDuplicatePermanentIdCardRequestsCount(true),    'link' => $idCardApprovalRoute],
-            'duplicate_contractual_id'=> ['count' => fn () => $this->getTodayDuplicateContractualIdCardRequestsCount(true), 'link' => $idCardApprovalRoute],
-            'requested_family_id'     => ['count' => fn () => $this->getTodayPendingFamilyApprovalsCount(true),  'link' => route('admin.security.family_idcard_approval.index')],
-            'requested_vehicle_pass'  => ['count' => fn () => $this->getTodayPendingVehicleApprovalsCount(true), 'link' => route('admin.security.vehicle_pass_approval.index')],
+            'pending_permanent_id'    => ['count' => fn () => (int) ($securityNewRows()['perm'] ?? 0),     'link' => $idCardLink('perm')],
+            'pending_contractual_id'  => ['count' => fn () => (int) ($securityNewRows()['cont'] ?? 0),     'link' => $idCardLink('cont')],
+            'duplicate_permanent_id'  => ['count' => fn () => (int) ($securityNewRows()['dup_perm'] ?? 0), 'link' => $idCardLink('dup_perm')],
+            'duplicate_contractual_id'=> ['count' => fn () => (int) ($securityNewRows()['dup_cont'] ?? 0), 'link' => $idCardLink('dup_cont')],
+            'requested_family_id'     => ['count' => fn () => $newTabTotal(\App\Http\Controllers\Admin\Security\FamilyIDCardApprovalController::class, [], 'newFamilyGroups'), 'link' => route('admin.security.family_idcard_approval.index', ['tab' => 'new'])],
+            // wheeler=all: the page otherwise opens on two-wheelers only.
+            'requested_vehicle_pass'  => ['count' => fn () => $newTabTotal(\App\Http\Controllers\Admin\Security\VehiclePassApprovalController::class, ['wheeler' => 'all'], 'newApplications'), 'link' => route('admin.security.vehicle_pass_approval.index', ['tab' => 'new', 'wheeler' => 'all'])],
             'total_active_courses'    => ['count' => fn () => CourseMaster::where('active_inactive', 1)->where('start_year', '<=', now()->toDateString())->where('end_date', '>=', now()->toDateString())->count(), 'link' => route('admin.dashboard.active_course')],
             'upcoming_courses'        => ['count' => fn () => CourseMaster::where('active_inactive', 1)->where('start_year', '>', now()->toDateString())->count(), 'link' => route('admin.dashboard.incoming_course')],
             'upcoming_events'         => ['count' => fn () => Holiday::active()->upcoming()->count(), 'link' => route('admin.dashboard.upcoming_events')],
@@ -1679,257 +1709,6 @@ class UserController extends Controller
     }
 
     /**
-     * Split "today pending employee id requests" into:
-     * - perm: pending Permanent ID cards
-     * - cont: pending Contractual ID cards
-     *
-     * Logic matches existing getTodayPendingIdCardRequestsCount(), but returns both parts separately.
-     *
-     * @param  bool  $todayOnly  When true, only applications created today; when false, all actionable pending at this approval level (any request date).
-     */
-    private function getTodayPendingIdCardRequestsSplit(bool $todayOnly = true): array
-    {
-        $user = Auth::user();
-        if (! $user) {
-            return ['perm' => 0, 'cont' => 0];
-        }
-
-        if (! (hasRole('Security Card') || hasRole('Admin Security'))) {
-            return ['perm' => 0, 'cont' => 0];
-        }
-
-        $start = Carbon::today()->startOfDay()->toDateTimeString();
-        $end = Carbon::today()->endOfDay()->toDateTimeString();
-
-        $isApproval2 = hasRole('Security Card') && ! hasRole('Admin Security');
-        $isApproval3 = hasRole('Admin Security') && ! hasRole('Security Card');
-
-        // If user has both roles, fall back to Approval II "actionable" definition.
-        if (! $isApproval2 && ! $isApproval3) {
-            $isApproval2 = true;
-        }
-
-        if ($isApproval2) {
-            // Match Approval II list: actionable “new request” contractual rows exclude L2-done
-            // (security_con_oth_id_apply_approval status=1, recommend_status=1). Rows with status=0 for
-            // Level 3 would incorrectly match legacy “pending ids with status 0”.
-            $contHasA2Recommended = DB::table('security_con_oth_id_apply_approval')
-                ->where('status', 1)
-                ->where('recommend_status', 1)
-                ->pluck('security_parm_id_apply_pk');
-
-            $permQuery = DB::table('security_parm_id_apply as spa')
-                ->where('spa.id_status', SecurityParmIdApply::ID_STATUS_PENDING)
-                ->whereNotExists(function ($q) {
-                    $q->select(DB::raw(1))
-                        ->from('security_parm_id_apply_approval as a')
-                        ->whereColumn('a.security_parm_id_apply_pk', 'spa.emp_id_apply')
-                        ->where('a.status', 2);
-                });
-            if (Schema::hasColumn('security_parm_id_apply', 'id_card_generate_date')) {
-                $permQuery->whereNull('spa.id_card_generate_date');
-            }
-            if ($todayOnly) {
-                $permQuery->whereBetween('spa.created_date', [$start, $end]);
-            }
-            $permCount = (int) $permQuery->count();
-
-            $contQuery = DB::table('security_con_oth_id_apply as sco')
-                ->where('sco.id_status', 1)
-                ->where('sco.depart_approval_status', 2);
-            if (Schema::hasColumn('security_con_oth_id_apply', 'id_card_generate_date')) {
-                $contQuery->whereNull('sco.id_card_generate_date');
-            }
-            if ($contHasA2Recommended->isNotEmpty()) {
-                $contQuery->whereNotIn('sco.emp_id_apply', $contHasA2Recommended);
-            }
-            if ($todayOnly) {
-                $contQuery->whereBetween('sco.created_date', [$start, $end]);
-            }
-            $contCount = (int) $contQuery->count();
-
-            return ['perm' => $permCount, 'cont' => $contCount];
-        }
-
-        // Approval III final pending
-        $permFinalQuery = DB::table('security_parm_id_apply as spa')
-            ->where('spa.id_status', SecurityParmIdApply::ID_STATUS_PENDING)
-            ->whereExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('security_parm_id_apply_approval as a')
-                    ->whereColumn('a.security_parm_id_apply_pk', 'spa.emp_id_apply')
-                    ->where('a.status', 2);
-            });
-        if ($todayOnly) {
-            $permFinalQuery->whereBetween('spa.created_date', [$start, $end]);
-        }
-        $permFinalPending = (int) $permFinalQuery->count();
-
-        $contRecommendedIds = DB::table('security_con_oth_id_apply_approval')
-            ->where('status', 1)
-            ->where('recommend_status', 1)
-            ->pluck('security_parm_id_apply_pk');
-        $contFinalDoneIds = DB::table('security_con_oth_id_apply_approval')
-            ->whereIn('status', [2, 3])
-            ->pluck('security_parm_id_apply_pk');
-
-        $contFinalPending = 0;
-        if ($contRecommendedIds->isNotEmpty()) {
-            $contQuery = DB::table('security_con_oth_id_apply as sco')
-                ->where('sco.id_status', 1)
-                ->where('sco.depart_approval_status', 2)
-                ->whereIn('sco.emp_id_apply', $contRecommendedIds);
-
-            if ($contFinalDoneIds->isNotEmpty()) {
-                $contQuery->whereNotIn('sco.emp_id_apply', $contFinalDoneIds);
-            }
-            if ($todayOnly) {
-                $contQuery->whereBetween('sco.created_date', [$start, $end]);
-            }
-
-            $contFinalPending = (int) $contQuery->count();
-        }
-
-        return ['perm' => $permFinalPending, 'cont' => $contFinalPending];
-    }
-
-    /**
-     * @param  bool  $todayOnly  When false, counts all actionable pending family ID requests (any date).
-     */
-    private function getTodayPendingFamilyApprovalsCount(bool $todayOnly = true): int
-    {
-        $user = Auth::user();
-        if (! $user) {
-            return 0;
-        }
-
-        $isLevel1 = hasRole('Security Card') && ! hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') && ! hasRole('Security Card');
-        if (! $isLevel1 && ! $isLevel2) {
-            return 0;
-        }
-
-        $q = SecurityFamilyIdApply::with('approvals');
-        if ($todayOnly) {
-            $q->whereDate('created_date', Carbon::today());
-        }
-        $rows = $q->get();
-
-        if ($rows->isEmpty()) {
-            return 0;
-        }
-
-        $groupKey = function ($r) {
-            $date = $r->created_date ? Carbon::parse($r->created_date)->format('Y-m-d H:i:s') : '';
-
-            return $r->emp_id_apply.'|'.($r->created_by ?? '').'|'.$date;
-        };
-
-        $groups = $rows->groupBy($groupKey);
-
-        $count = 0;
-        foreach ($groups as $rowsInGroup) {
-            $first = $rowsInGroup->sortBy('fml_id_apply')->first();
-            $statusInt = (int) ($first->id_status ?? 1);
-            $hasLevel1 = $first->approvals && $first->approvals->where('status', 1)->isNotEmpty();
-            $hasLevel2 = $first->approvals && $first->approvals->where('status', 2)->isNotEmpty();
-
-            $canApprove = false;
-            if ($statusInt === 1) {
-                if ($isLevel1 && ! $hasLevel1) {
-                    $canApprove = true;
-                } elseif ($isLevel2 && $hasLevel1 && ! $hasLevel2) {
-                    $canApprove = true;
-                }
-            }
-
-            if ($canApprove) {
-                $count++;
-            }
-        }
-
-        return $count;
-    }
-
-    /**
-     * @param  bool  $todayOnly  When false, counts all actionable pending vehicle pass requests (any date).
-     */
-    private function getTodayPendingVehicleApprovalsCount(bool $todayOnly = true): int
-    {
-        $user = Auth::user();
-        if (! $user) {
-            return 0;
-        }
-
-        $isLevel1 = hasRole('Security Card') && ! hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') && ! hasRole('Security Card');
-        if (! $isLevel1 && ! $isLevel2) {
-            return 0;
-        }
-
-        $today = Carbon::today();
-
-        $twQ = VehiclePassTWApply::with('approvals');
-        $fwQ = VehiclePassFWApply::with('approvals');
-        if ($todayOnly) {
-            $twQ->whereDate('created_date', $today);
-            $fwQ->whereDate('created_date', $today);
-        }
-        $twRows = $twQ->get();
-        $fwRows = $fwQ->get();
-
-        $rows = $twRows->map(function ($r) {
-            $r->kind = 'tw';
-
-            return $r;
-        })->concat(
-            $fwRows->map(function ($r) {
-                $r->kind = 'fw';
-
-                return $r;
-            })
-        );
-
-        if ($rows->isEmpty()) {
-            return 0;
-        }
-
-        $count = 0;
-        foreach ($rows as $r) {
-            $statusInt = (int) ($r->vech_card_status ?? 1);
-            $approvals = $r->approvals ?? collect();
-            $hasLevel1 = $approvals->where(function ($a) {
-                return (int) ($a->veh_recommend_status ?? 0) === 1 || (int) ($a->status ?? 0) === 1;
-            })->isNotEmpty();
-            $hasLevel2 = $approvals->where(function ($a) {
-                return (int) ($a->status ?? 0) === 2;
-            })->isNotEmpty();
-
-            $canApprove = false;
-            if ($statusInt === 1) {
-                if ($isLevel1 && ! $hasLevel1) {
-                    $canApprove = true;
-                } elseif ($isLevel2 && $hasLevel1 && ! $hasLevel2) {
-                    $canApprove = true;
-                }
-            }
-
-            if ($canApprove) {
-                $count++;
-            }
-        }
-
-        return $count;
-    }
-
-    private function getTodayPendingIdCardRequestsCount(): int
-    {
-        $split = $this->getTodayPendingIdCardRequestsSplit();
-
-        return (int) ($split['perm'] ?? 0) + (int) ($split['cont'] ?? 0);
-    }
-
-    /**
      * Requests pending at Security Approval-I for the logged-in department authority (any date),
      * split into contractual new ID card vs contractual duplicate ID card (matches Approval I screen).
      *
@@ -1983,121 +1762,6 @@ class UserController extends Controller
         $duplicateCount = (int) $dupQuery->count();
 
         return ['idcard' => $idcardCount, 'duplicate' => $duplicateCount];
-    }
-
-    /**
-     * @param  bool  $todayOnly  When false, counts all actionable pending duplicate permanent requests (any date).
-     */
-    private function getTodayDuplicatePermanentIdCardRequestsCount(bool $todayOnly = true): int
-    {
-        $user = Auth::user();
-        if (! $user) {
-            return 0;
-        }
-
-        if (! (hasRole('Security Card') || hasRole('Admin Security'))) {
-            return 0;
-        }
-
-        $start = Carbon::today()->startOfDay()->toDateTimeString();
-        $end = Carbon::today()->endOfDay()->toDateTimeString();
-        $isApproval2 = hasRole('Security Card') && ! hasRole('Admin Security');
-        $isApproval3 = hasRole('Admin Security') && ! hasRole('Security Card');
-
-        // Permanent Duplicate (security_dup_perm_id_apply)
-        $base = DB::table('security_dup_perm_id_apply as dup')
-            ->where('dup.id_status', 1);
-        if (Schema::hasColumn('security_dup_perm_id_apply', 'id_card_generate_date')) {
-            $base->whereNull('dup.id_card_generate_date');
-        }
-        if ($todayOnly) {
-            $base->whereBetween('dup.created_date', [$start, $end]);
-        }
-
-        if ($isApproval2) {
-            // Actionable at Approval II = not yet recommended
-            $base->whereNotExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('security_dup_perm_id_apply_approval as a')
-                    ->whereColumn('a.security_parm_id_apply_pk', 'dup.emp_id_apply')
-                    ->where('a.status', 1)
-                    ->where('a.recommend_status', 1);
-            });
-        } elseif ($isApproval3) {
-            // Pending final at Approval III = recommended, not finally approved/rejected
-            $base->whereExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('security_dup_perm_id_apply_approval as a')
-                    ->whereColumn('a.security_parm_id_apply_pk', 'dup.emp_id_apply')
-                    ->where('a.status', 1)
-                    ->where('a.recommend_status', 1);
-            })->whereNotExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('security_dup_perm_id_apply_approval as a2')
-                    ->whereColumn('a2.security_parm_id_apply_pk', 'dup.emp_id_apply')
-                    ->whereIn('a2.status', [2, 3]);
-            });
-        }
-
-        return (int) $base->count();
-    }
-
-    /**
-     * @param  bool  $todayOnly  When false, counts all actionable pending duplicate contractual requests (any date).
-     */
-    private function getTodayDuplicateContractualIdCardRequestsCount(bool $todayOnly = true): int
-    {
-        $user = Auth::user();
-        if (! $user) {
-            return 0;
-        }
-
-        if (! (hasRole('Security Card') || hasRole('Admin Security'))) {
-            return 0;
-        }
-
-        $start = Carbon::today()->startOfDay()->toDateTimeString();
-        $end = Carbon::today()->endOfDay()->toDateTimeString();
-        $isApproval2 = hasRole('Security Card') && ! hasRole('Admin Security');
-        $isApproval3 = hasRole('Admin Security') && ! hasRole('Security Card');
-
-        // Contractual Duplicate (security_dup_other_id_apply with depart_approval_status = 2)
-        $base = DB::table('security_dup_other_id_apply as duo')
-            ->where('duo.id_status', 1)
-            ->where('depart_approval_status', 2);
-        if (Schema::hasColumn('security_dup_other_id_apply', 'id_card_generate_date')) {
-            $base->whereNull('duo.id_card_generate_date');
-        }
-        if ($todayOnly) {
-            $base->whereBetween('duo.created_date', [$start, $end]);
-        }
-
-        if ($isApproval2) {
-            // Actionable at Approval II = not yet recommended
-            $base->whereNotExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('security_dup_other_id_apply_approval as a')
-                    ->whereColumn('a.security_con_id_apply_pk', 'duo.emp_id_apply')
-                    ->where('a.status', 1)
-                    ->where('a.recommend_status', 1);
-            });
-        } elseif ($isApproval3) {
-            // Pending final at Approval III = recommended, not finally approved/rejected
-            $base->whereExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('security_dup_other_id_apply_approval as a')
-                    ->whereColumn('a.security_con_id_apply_pk', 'duo.emp_id_apply')
-                    ->where('a.status', 1)
-                    ->where('a.recommend_status', 1);
-            })->whereNotExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('security_dup_other_id_apply_approval as a2')
-                    ->whereColumn('a2.security_con_id_apply_pk', 'duo.emp_id_apply')
-                    ->whereIn('a2.status', [2, 3]);
-            });
-        }
-
-        return (int) $base->count();
     }
 
     private function getOtPendingFeedbackCount(int $studentPk): int
@@ -2232,9 +1896,7 @@ class UserController extends Controller
         // scoped to their own courses. The filter dropdowns below follow the same
         // rule so they never offer a course the viewer has no students in.
         $seesAllCourses = hasRole('Super Admin')
-            || hasRole('Training Induction Admin')
-            || hasRole('Training MCTP Admin')
-            || hasRole('Training IST');
+            || $this->isTrainingAdmin();
 
         if ($request->ajax() && $request->has('draw')) {
             return $this->dashboardStudentListDataTableResponse($request, $students);
@@ -2904,9 +2566,7 @@ class UserController extends Controller
         $facultyPk = get_auth_faculty_master_pk();
         if (! $facultyPk
             || hasRole('Super Admin') || hasRole('Admin') || hasRole('PA')
-            || hasRole('Training Induction Admin')
-            || hasRole('Training MCTP Admin')
-            || hasRole('Training IST')) {
+            || $this->isTrainingAdmin()) {
             return null;
         }
 
@@ -4056,9 +3716,7 @@ class UserController extends Controller
         $facultyPk = get_auth_faculty_master_pk();
 
         return hasRole('Super Admin')
-            || hasRole('Training Induction Admin')
-            || hasRole('Training MCTP Admin')
-            || hasRole('Training IST')
+            || $this->isTrainingAdmin()
             || is_faculty_portal_user()
             || ($facultyPk && ! hasRole('Student-OT'));
     }
@@ -4102,9 +3760,7 @@ class UserController extends Controller
         // their own — same treatment resolveDashboardStudentListPayload() gives
         // them, so their list and their endpoints agree.
         if (hasRole('Super Admin')
-            || hasRole('Training Induction Admin')
-            || hasRole('Training MCTP Admin')
-            || hasRole('Training IST')) {
+            || $this->isTrainingAdmin()) {
             return $this->otParticipantRoster = null;
         }
 
@@ -5042,9 +4698,7 @@ class UserController extends Controller
         // export 403s for users who see the on-screen table fine.
         $exportFacultyPk = get_auth_faculty_master_pk();
         if (! hasRole('Super Admin')
-            && ! hasRole('Training Induction Admin')
-            && ! hasRole('Training MCTP Admin')
-            && ! hasRole('Training IST')
+            && ! $this->isTrainingAdmin()
             && ! is_faculty_portal_user()
             && ! ($exportFacultyPk && ! hasRole('Student-OT'))) {
             abort(403, 'You are not authorized to export the student list.');
@@ -5203,9 +4857,7 @@ class UserController extends Controller
         // student-detail page already grants them Super-Admin-level access. Treat them
         // the same here so their student list isn't empty (they have no faculty pk).
         $seesAllCourses = $isSuperAdmin
-            || hasRole('Training Induction Admin')
-            || hasRole('Training MCTP Admin')
-            || hasRole('Training IST');
+            || $this->isTrainingAdmin();
 
         // Active vs Archive scope. Only the OT-participants page sends status=archive;
         // everything else (student list, export) omits it and stays on "active".
@@ -8045,9 +7697,7 @@ class UserController extends Controller
 
         if (is_faculty_portal_user()
             && ! hasRole('Super Admin')
-            && ! hasRole('Training Induction Admin')
-            && ! hasRole('Training MCTP Admin')
-            && ! hasRole('Training IST')) {
+            && ! $this->isTrainingAdmin()) {
             $facultyPk = get_auth_faculty_master_pk();
             if (! $facultyPk || ! $this->canFacultyViewStudent($facultyPk, (int) $studentPk)) {
                 return redirect()->route('admin.dashboard.students')

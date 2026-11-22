@@ -60,6 +60,13 @@ class DashboardCard extends Model
         $faculty = is_faculty_portal_user();
 
         return [
+            // A Security approver's queue (Approval II / III): nobody else has one to count.
+            'pending_permanent_id' => ! $notSecurity,
+            'pending_contractual_id' => ! $notSecurity,
+            'duplicate_permanent_id' => ! $notSecurity,
+            'duplicate_contractual_id' => ! $notSecurity,
+            'requested_family_id' => ! $notSecurity,
+            'requested_vehicle_pass' => ! $notSecurity,
             'my_groups' => $notSecurity && $isStudentOT,
             // Counted only for a Student-OT login; any other holder of the role would see 0.
             'medical_exception' => $notSecurity && $isStudentOT,

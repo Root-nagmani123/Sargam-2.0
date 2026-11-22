@@ -45,6 +45,45 @@ class EmployeeIDCardApprovalController extends Controller
      */
     public const DEFAULT_REQUEST_DATE_FROM = '2026-03-01';
 
+    /** The New Request rows of the last approval2() / approval3() build, counted by card type. */
+    private array $newRowTypeCounts = [];
+
+    /**
+     * The dashboard's four Security ID card cards for this login: how many New Request rows of
+     * each type its Approval II (or III) page lists, read from that page's own build, so a card
+     * and the tab it opens (?type=) cannot disagree.
+     *
+     * @return array{perm: int, cont: int, dup_perm: int, dup_cont: int}
+     */
+    public function dashboardNewRowCounts(string $level): array
+    {
+        $this->newRowTypeCounts = [];
+        $level === 'approval3'
+            ? $this->approval3(Request::create('/', 'GET'))
+            : $this->approval2(Request::create('/', 'GET'));
+
+        return $this->newRowTypeCounts + ['perm' => 0, 'cont' => 0, 'dup_perm' => 0, 'dup_cont' => 0];
+    }
+
+    /** perm, cont, dup_perm or dup_cont: which dashboard card a New Request row belongs to. */
+    private static function newRowCardType(object $row): string
+    {
+        $duplicate = ($row->request_type ?? null) === 'duplicate' || ($row->request_for ?? null) === 'Duplication';
+
+        return ($duplicate ? 'dup_' : '').((($row->employee_type ?? '') === 'Permanent Employee') ? 'perm' : 'cont');
+    }
+
+    /** Counts the New Request rows by card type, then keeps only ?type= (a dashboard card's link). */
+    private function newRowsForCardType(\Illuminate\Support\Collection $newRows, Request $request): \Illuminate\Support\Collection
+    {
+        $this->newRowTypeCounts = $newRows->countBy(fn ($r) => self::newRowCardType($r))->all();
+        $type = $request->get('type');
+
+        return in_array($type, ['perm', 'cont', 'dup_perm', 'dup_cont'], true)
+            ? $newRows->filter(fn ($r) => self::newRowCardType($r) === $type)->values()
+            : $newRows;
+    }
+
     /**
      * Approval I: Only contractual employee requests where current user is the Approval Authority.
      * Includes:
@@ -568,10 +607,10 @@ class EmployeeIDCardApprovalController extends Controller
         }
 
         // New Request: actionable pending rows (not view-only)
-        $newRows = $merged->filter(function ($r) {
+        $newRows = $this->newRowsForCardType($merged->filter(function ($r) {
             return (string) ($r->status ?? 'Pending') === 'Pending'
                 && !((bool) ($r->is_view_only ?? false));
-        })->values();
+        })->values(), $request);
 
         // Processed (in pipeline): view-only / non-pending — but not finally approved or rejected
         // (those belong only in Issued and Rejected tabs).
@@ -1227,10 +1266,10 @@ class EmployeeIDCardApprovalController extends Controller
             $merged = $merged->filter(fn ($d) => $this->approval2MatchesGlobalSearch($needle, $d))->values();
         }
 
-        $newRows = $merged->filter(function ($r) {
+        $newRows = $this->newRowsForCardType($merged->filter(function ($r) {
             return (string) ($r->status ?? 'Pending') === 'Pending'
                 && !((bool) ($r->is_view_only ?? false));
-        })->values();
+        })->values(), $request);
         $forApprovalRows = $merged->filter(function ($r) {
             $status = (string) ($r->status ?? 'Pending');
             if ($status === 'Rejected' || $status === 'Approved') {

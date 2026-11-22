@@ -858,6 +858,15 @@ function hasRole($role)
         return $user->hasRole('Super Admin') || $user->hasRole('SuperAdmin');
     }
 
+    // The Security ID card / family / vehicle pass code names its two approval levels
+    // 'Security Card' (Approval II) and 'Admin Security' (Approval III); the roles that
+    // exist are 'Security Approver II' / 'Security Approver III'. Read the old names as
+    // those, or every level check, menu and dashboard card there is false for everyone.
+    $securityLevels = ['Security Card' => 'Security Approver II', 'Admin Security' => 'Security Approver III'];
+    if (isset($securityLevels[$role])) {
+        return hasRole($securityLevels[$role]) || $user->hasRole($role);
+    }
+
     // Spatie already has hasRole() method
     return $user->hasRole($role);
 }

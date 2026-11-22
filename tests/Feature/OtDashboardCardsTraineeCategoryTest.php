@@ -51,8 +51,13 @@ class OtDashboardCardsTraineeCategoryTest extends TestCase
 
     public function test_a_non_trainee_login_holding_the_ot_role_sees_no_marks(): void
     {
+        // Not a Security approver: OT cards are hidden from Security logins altogether
+        // (DashboardCard::gatedCardVisibility()), which would prove nothing here.
         $pk = DB::table('user_credentials')->where('user_category', '!=', 'S')
-            ->whereNotNull('user_id')->orderBy('pk')->value('pk');
+            ->whereNotNull('user_id')
+            ->whereNotIn('pk', DB::table('model_has_roles as m')->join('roles as r', 'r.id', '=', 'm.role_id')
+                ->whereIn('r.name', ['Security Approver II', 'Security Approver III'])->select('m.model_id'))
+            ->orderBy('pk')->value('pk');
         if (! $pk) {
             $this->markTestSkipped('no non-trainee login');
         }
