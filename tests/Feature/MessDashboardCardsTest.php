@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
+use Tests\Feature\Concerns\SeedsModuleDashboardCards;
 use Tests\TestCase;
 
 /**
@@ -16,6 +17,7 @@ use Tests\TestCase;
 class MessDashboardCardsTest extends TestCase
 {
     use RollsBackAgainstAppDatabase;
+    use SeedsModuleDashboardCards;
 
     /** @return array<string, int> card key => count, as UserController::dashboard() renders them */
     private function cardsFor(User $user): array
@@ -43,6 +45,7 @@ class MessDashboardCardsTest extends TestCase
 
     public function test_mess_cards_match_the_pages_they_open(): void
     {
+        $this->seedModuleDashboardCards();
         config(['cache.default' => 'array']);
         $admin = $this->holderOf('Mess Admin');
 
@@ -68,6 +71,7 @@ class MessDashboardCardsTest extends TestCase
 
     public function test_mess_billing_does_not_get_the_approval_card(): void
     {
+        $this->seedModuleDashboardCards();
         $cards = $this->cardsFor($this->holderOf('Mess Billing'));
 
         $this->assertArrayHasKey('mess_items_sold_today', $cards);

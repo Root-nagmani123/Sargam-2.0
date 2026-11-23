@@ -9369,8 +9369,10 @@ class EstateController extends Controller
             return true;
         }
 
+        // Not 'Training Induction Admin': hasRole() now reads it as Training-Induction, who would list
+        // every bill while Print All refuses them (PR #356 L-91). Widen both together if intended.
         $hasPrivBill = isEstateAuthority()
-            || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST');
+            || hasRole('Training MCTP Admin') || hasRole('Training IST');
 
         return ! $hasPrivBill;
     }

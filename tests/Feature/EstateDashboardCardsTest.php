@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Http\Controllers\Admin\UserController;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
+use Tests\Feature\Concerns\SeedsModuleDashboardCards;
 use Tests\TestCase;
 
 /**
@@ -13,6 +15,9 @@ use Tests\TestCase;
  */
 class EstateDashboardCardsTest extends TestCase
 {
+    use RollsBackAgainstAppDatabase;
+    use SeedsModuleDashboardCards;
+
     private function estateAdmin(): User
     {
         $pk = DB::table('model_has_roles as m')->join('roles as r', 'r.id', '=', 'm.role_id')->where('r.name', 'Estate Admin')->value('m.model_id');
@@ -33,6 +38,7 @@ class EstateDashboardCardsTest extends TestCase
 
     public function test_estate_cards_match_the_pages_they_open(): void
     {
+        $this->seedModuleDashboardCards();
         $admin = $this->estateAdmin();
         $roles = $admin->roles()->pluck('name')->all();
         $this->actingAs($admin)->withSession(['user_roles' => $roles]);

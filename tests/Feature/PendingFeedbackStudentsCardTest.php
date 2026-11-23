@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Http\Controllers\Admin\UserController;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
+use Tests\Feature\Concerns\SeedsModuleDashboardCards;
 use Tests\TestCase;
 
 /**
@@ -14,8 +16,12 @@ use Tests\TestCase;
  */
 class PendingFeedbackStudentsCardTest extends TestCase
 {
+    use RollsBackAgainstAppDatabase;
+    use SeedsModuleDashboardCards;
+
     public function test_card_matches_the_page_landing_total(): void
     {
+        $this->seedModuleDashboardCards();
         $pk = DB::table('model_has_roles as m')->join('roles as r', 'r.id', '=', 'm.role_id')->where('r.name', 'PA')->value('m.model_id');
         if (! $pk) {
             $this->markTestSkipped('no PA login');

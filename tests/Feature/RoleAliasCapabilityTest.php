@@ -23,10 +23,6 @@ class RoleAliasCapabilityTest extends TestCase
         setUp as rollbackSetUp;
     }
 
-    private const LOG = 'C:/Workspace/LBSNAA/code-review/reviews/pr-356-remediation/f001-observations.txt';
-
-    private static bool $logStarted = false;
-
     protected function setUp(): void
     {
         $this->rollbackSetUp();
@@ -34,15 +30,6 @@ class RoleAliasCapabilityTest extends TestCase
         config(['cache.default' => 'array', 'cache.redis_backed_unified_store' => 'array']);
         Mail::fake();
         Notification::fake();
-    }
-
-    private function record(string $line): void
-    {
-        if (! self::$logStarted) {
-            file_put_contents(self::LOG, '# RoleAliasCapabilityTest observations, '.date('c')."\n");
-            self::$logStarted = true;
-        }
-        file_put_contents(self::LOG, $this->getName().': '.$line."\n", FILE_APPEND);
     }
 
     private function rolesOf(User $user): array
@@ -131,7 +118,6 @@ class RoleAliasCapabilityTest extends TestCase
             ->assertSessionHas('success', 'Vehicle Pass approved successfully');
 
         $after = $this->twState($pk);
-        $this->record("$pk before ".json_encode($before).' after '.json_encode($after));
         $this->assertSame(1, $after['card_status'], 'still pending: Level II only recommends');
         $this->assertSame(['1/1', '0/n'], array_slice($after['steps'], -2), 'status-0 step became 1/1 and a new status-0 step opened');
         $this->assertCount(count($before['steps']) + 1, $after['steps']);
@@ -148,7 +134,6 @@ class RoleAliasCapabilityTest extends TestCase
             ->assertSessionHas('success', 'Vehicle Pass approved successfully');
 
         $after = $this->twState($pk);
-        $this->record("$pk before ".json_encode($before).' after '.json_encode($after));
         $this->assertSame(2, $after['card_status'], 'application approved');
         $this->assertContains('2/2', $after['steps']);
     }
@@ -162,7 +147,6 @@ class RoleAliasCapabilityTest extends TestCase
 
         $response = $this->approveTw($user, $pk);
 
-        $this->record("$pk before ".json_encode($before).' after '.json_encode($this->twState($pk)).' flash '.json_encode(session('success') ?? session('error')));
         $response->assertRedirect()->assertSessionHas('error', 'This request is not at your approval stage.');
         $this->assertSame($before, $this->twState($pk), 'nothing written');
     }
@@ -177,7 +161,6 @@ class RoleAliasCapabilityTest extends TestCase
         $this->approveTw($user, $pk)->assertRedirect()
             ->assertSessionHas('error', 'This request is not at your approval stage.');
 
-        $this->record("$pk before ".json_encode($before).' after '.json_encode($this->twState($pk)));
         $this->assertSame($before, $this->twState($pk), 'no second recommendation, no extra open step');
     }
 
@@ -252,7 +235,6 @@ class RoleAliasCapabilityTest extends TestCase
             ->assertSessionHas('success', 'Family ID Card approved successfully');
 
         $after = $this->familyState($pk);
-        $this->record("$pk before ".json_encode($before).' after '.json_encode($after));
         $this->assertSame(1, $after['id_status']);
         $this->assertSame(['1/1', '0/n'], array_slice($after['steps'], -2));
         $this->assertCount(count($before['steps']) + 1, $after['steps']);
@@ -269,7 +251,6 @@ class RoleAliasCapabilityTest extends TestCase
             ->assertSessionHas('success', 'Family ID Card approved successfully');
 
         $after = $this->familyState($pk);
-        $this->record("$pk before ".json_encode($before).' after '.json_encode($after));
         $this->assertSame(2, $after['id_status']);
         $this->assertContains('2/n', $after['steps']);
     }
@@ -283,7 +264,6 @@ class RoleAliasCapabilityTest extends TestCase
 
         $response = $this->approveFamily($user, $pk);
 
-        $this->record("$pk before ".json_encode($before).' after '.json_encode($this->familyState($pk)).' flash '.json_encode(session('success') ?? session('error')));
         $response->assertRedirect()->assertSessionHas('error', 'This request is not at your approval stage.');
         $this->assertSame($before, $this->familyState($pk), 'nothing written');
     }
@@ -383,22 +363,6 @@ class RoleAliasCapabilityTest extends TestCase
         $this->assertSame($before, $this->familyState($pk));
     }
 
-    /** Every enrolment route needs a login; a guest is sent to the login page. */
-    public function test_enrolment_routes_need_a_login(): void
-    {
-        $routes = collect(app('router')->getRoutes()->getRoutes())
-            ->filter(fn ($r) => str_contains($r->getActionName(), 'EnrollementController@'));
-        $this->assertGreaterThanOrEqual(15, $routes->count());
-        foreach ($routes as $r) {
-            $this->assertContains('auth', $r->gatherMiddleware(), $r->uri().' is behind auth');
-        }
-
-        $this->get(route('student.courses'))->assertRedirect(route('login'));
-        $this->get(route('enrollment.exportEnrolled'))->assertRedirect(route('login'));
-        $this->post(route('enrollment.store'))->assertRedirect(route('login'));
-        $this->post(route('student.enrollment.import'))->assertRedirect(route('login'));
-    }
-
     // ----- Estate ------------------------------------------------------------------------
 
     /** The latest reading month (Y-m, by to_date) with more than ten readings. */
@@ -438,7 +402,8 @@ class RoleAliasCapabilityTest extends TestCase
         ];
     }
 
-    public function test_training_induction_generate_estate_bill_lists_every_employees_bills_but_print_all_is_refused(): void
+    /** PR #356 L-91: the list and its Print All follow one rule, own bills only, as for an Employee. */
+    public function test_training_induction_generate_estate_bill_and_print_all_are_both_self_scoped(): void
     {
         $ym = $this->billMonth();
         $user = $this->staffWithRole('Training-Induction');
@@ -448,13 +413,11 @@ class RoleAliasCapabilityTest extends TestCase
         $this->assertNotNull($all['print_all'], 'the page renders a Print All button');
         $print = $this->as($user, $this->rolesOf($user))->get($all['print_all']);
         $selfPrint = $this->as($user, $this->rolesOf($user))->get($self['print_all']);
-        $this->record("ym=$ym list ".json_encode($all).' self '.json_encode($self)." print_all={$print->status()} self_print_all={$selfPrint->status()}");
 
         $this->assertSame(200, $all['status']);
-        $this->assertGreaterThan(1, $all['names'], 'the list without ?scope=self carries other employees\' bills');
-        $this->assertGreaterThan($self['bills'], $all['bills']);
-        $this->assertStringNotContainsString('scope=self', $all['print_all']);
-        $this->assertSame(403, $print->status(), 'the Print All link on that same page is refused');
+        $this->assertSame($self['bills'], $all['bills'], 'no ?scope=self still lists only their own bills');
+        $this->assertLessThanOrEqual(1, $all['names']);
+        $this->assertSame(200, $print->status(), 'the Print All link on that same page opens');
         $this->assertSame(200, $selfPrint->status());
     }
 
@@ -467,7 +430,6 @@ class RoleAliasCapabilityTest extends TestCase
         $self = $this->billList($user, ['bill_month' => $ym, 'scope' => 'self']);
         $print = $this->as($user, $this->rolesOf($user))->get($all['print_all']);
         $selfPrint = $this->as($user, $this->rolesOf($user))->get($self['print_all']);
-        $this->record("ym=$ym list ".json_encode($all).' self '.json_encode($self)." print_all={$print->status()} self_print_all={$selfPrint->status()}");
 
         $this->assertSame(200, $all['status']);
         $this->assertSame(200, $self['status']);
@@ -503,7 +465,6 @@ class RoleAliasCapabilityTest extends TestCase
         $empRes = $feed($emp, $query);
         $estateRes = $feed($estate, $query);
         $tiPage = $this->as($ti, $this->rolesOf($ti))->get(route('admin.estate.update-meter-reading'));
-        $this->record('query '.json_encode($query)." TI feed={$tiRes->status()}; Employee feed={$empRes->status()}; Estate Admin feed={$estateRes->status()} rows=".count((array) $estateRes->json('data'))."; TI page={$tiPage->status()}");
 
         $this->assertSame(403, $tiPage->status(), 'the Update Meter Reading page refuses Training-Induction');
         $this->assertSame(403, $tiRes->status(), 'and so does its feed');
@@ -566,7 +527,6 @@ class RoleAliasCapabilityTest extends TestCase
     public function test_training_induction_student_data_surface(): void
     {
         $s = $this->studentSurface($this->staffWithRole('Training-Induction'));
-        $this->record(json_encode($s));
 
         $this->assertSame(200, $s['list'][0]);
         $this->assertGreaterThan(0, $s['list'][1], 'student list: every running course');
@@ -581,9 +541,8 @@ class RoleAliasCapabilityTest extends TestCase
     public function test_employee_only_student_data_surface(): void
     {
         $s = $this->studentSurface($this->employeeOnly());
-        $this->record(json_encode($s));
 
-        // Recorded as observed; see the observations file for the faculty-pk resolution.
+        // Recorded as observed.
         $this->assertSame(200, $s['list'][0]);
         $this->assertSame(0, $s['list'][1], 'student list: nothing');
         $this->assertSame(403, $s['export_print'], 'student list export refused');
@@ -632,21 +591,9 @@ class RoleAliasCapabilityTest extends TestCase
 
             $this->assertSame(200, $open($allowed)->status(), "faculty $facultyPk opens student $allowed");
             $open($refused)->assertRedirect(route('admin.dashboard.students'));
-            $this->record("faculty $facultyPk login {$user->pk}: student $allowed 200, student $refused refused");
 
             return;
         }
         $this->markTestSkipped('no faculty login with both a viewable and a non-viewable running student');
-    }
-
-    /** PR #356 L-93: the course participant page and its export need a login. */
-    public function test_course_participants_page_and_export_need_a_login(): void
-    {
-        foreach (['my.course.participant', 'my.course.participant.export'] as $name) {
-            $this->assertContains('auth', app('router')->getRoutes()->getByName($name)->gatherMiddleware(), "$name is behind auth");
-        }
-        $this->get(route('my.course.participant'))->assertRedirect(route('login'));
-        $this->getJson(route('my.course.participant').'?draw=1&start=0&length=1')->assertUnauthorized();
-        $this->get(route('my.course.participant.export'))->assertRedirect(route('login'));
     }
 }

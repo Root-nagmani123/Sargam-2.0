@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Http\Controllers\Admin\UserController;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
+use Tests\Feature\Concerns\SeedsModuleDashboardCards;
 use Tests\TestCase;
 
 /**
@@ -14,6 +16,9 @@ use Tests\TestCase;
  */
 class EmployeeSelfServiceCardsTest extends TestCase
 {
+    use RollsBackAgainstAppDatabase;
+    use SeedsModuleDashboardCards;
+
     /** An Employee login whose user_id appears in $table.$column on a row matching $where. */
     private function employeeWith(string $table, string $column, array $where): ?User
     {
@@ -49,6 +54,7 @@ class EmployeeSelfServiceCardsTest extends TestCase
 
     public function test_my_open_issues_matches_raised_by_you_open(): void
     {
+        $this->seedModuleDashboardCards();
         $user = $this->employeeWith('issue_log_management', 'created_by', ['issue_status' => [0, 1, 3, 6]]) ?? $this->markTestSkipped('no employee with open issues');
         $cards = $this->homeCardsAs($user);
         $page = $this->pageJson(route('admin.issue-management.data', ['draw' => 1, 'start' => 0, 'length' => 10, 'raised_by' => 'self', 'status' => 'open']));
@@ -59,6 +65,7 @@ class EmployeeSelfServiceCardsTest extends TestCase
 
     public function test_my_estate_requests_matches_request_for_estate_self_pending(): void
     {
+        $this->seedModuleDashboardCards();
         $user = $this->employeeWith('estate_home_request_details', 'employee_pk', ['status' => 0]) ?? $this->markTestSkipped('no employee with a pending estate request');
         $cards = $this->homeCardsAs($user);
         $page = $this->pageJson(route('admin.estate.request-for-estate', ['draw' => 1, 'start' => 0, 'length' => 10, 'scope' => 'self', 'status_filter' => '0']));
@@ -68,6 +75,7 @@ class EmployeeSelfServiceCardsTest extends TestCase
 
     public function test_my_idcard_requests_matches_the_pending_list(): void
     {
+        $this->seedModuleDashboardCards();
         $user = $this->employeeWith('security_con_oth_id_apply', 'created_by', ['id_status' => 1]) ?? $this->markTestSkipped('no employee with a pending ID card request');
         $cards = $this->homeCardsAs($user);
         $listed = $this->get(route('admin.employee_idcard.index', ['list_status' => 'pending']))->assertOk()->viewData('allRequests')->total();

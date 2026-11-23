@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
+use Tests\Feature\Concerns\SeedsModuleDashboardCards;
 use Tests\TestCase;
 
 /**
@@ -18,6 +19,7 @@ class DashboardCardGroupsTest extends TestCase
     use RollsBackAgainstAppDatabase {
         setUp as rollbackSetUp;
     }
+    use SeedsModuleDashboardCards;
 
     private int $homeId;
 
@@ -26,6 +28,7 @@ class DashboardCardGroupsTest extends TestCase
     protected function setUp(): void
     {
         $this->rollbackSetUp();
+        $this->seedModuleDashboardCards();
         config(['cache.default' => 'array']);
 
         $this->homeId = (int) DB::table('sidebar_categories')->where('slug', 'home')->value('id');

@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Http\Controllers\Admin\UserController;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
+use Tests\Feature\Concerns\SeedsModuleDashboardCards;
 use Tests\TestCase;
 
 /**
@@ -13,8 +15,12 @@ use Tests\TestCase;
  */
 class CentcomDashboardCardsTest extends TestCase
 {
+    use RollsBackAgainstAppDatabase;
+    use SeedsModuleDashboardCards;
+
     public function test_centcom_cards_match_the_grid_they_open(): void
     {
+        $this->seedModuleDashboardCards();
         $pk = DB::table('model_has_roles as m')->join('roles as r', 'r.id', '=', 'm.role_id')->where('r.name', 'Centcom Admin')->value('m.model_id');
         if (! $pk) {
             $this->markTestSkipped('no Centcom Admin login');

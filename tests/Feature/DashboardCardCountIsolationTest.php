@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
+use Tests\Feature\Concerns\SeedsModuleDashboardCards;
 use Tests\TestCase;
 
 /**
@@ -22,6 +23,7 @@ class DashboardCardCountIsolationTest extends TestCase
     use RollsBackAgainstAppDatabase {
         setUp as rollbackSetUp;
     }
+    use SeedsModuleDashboardCards;
 
     private User $user;
 
@@ -30,6 +32,7 @@ class DashboardCardCountIsolationTest extends TestCase
     protected function setUp(): void
     {
         $this->rollbackSetUp();
+        $this->seedModuleDashboardCards();
         config(['cache.default' => 'array']);
         $this->homeId = (int) DB::table('sidebar_categories')->where('slug', 'home')->value('id');
         $user = $this->staffWithRole('Super Admin');

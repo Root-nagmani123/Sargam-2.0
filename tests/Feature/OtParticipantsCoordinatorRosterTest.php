@@ -50,6 +50,9 @@ class OtParticipantsCoordinatorRosterTest extends TestCase
         // The card opens the coordinator's whole-course tab.
         $link = $this->as($user->fresh(), $roles)->get(route('admin.dashboard'))->viewData('cardsToRender')->firstWhere('key', 'total_students')['link'];
         $this->assertSame(route('admin.dashboard.ot-participants', ['scope' => 'course']), $link);
+        if ($count === 0) {
+            $this->markTestSkipped('no participants on the coordinator\'s running courses');
+        }
         $this->assertSame($count, $this->as($user->fresh(), $roles)
             ->getJson($link.'&draw=1&start=0&length=1', ['X-Requested-With' => 'XMLHttpRequest'])->assertOk()->json('recordsTotal'));
 
@@ -126,7 +129,7 @@ class OtParticipantsCoordinatorRosterTest extends TestCase
             ->select('g.facility_id')->distinct()->pluck('g.facility_id');
         $user = null;
         foreach ($pair as $pk) {
-            $emp = DB::table('faculty_master')->where('pk', $pk)->value('employee_master_pk');
+            $emp = DB::table('faculty_master')->where('pk', $pk)->where('active_inactive', 1)->value('employee_master_pk');
             $u = $emp ? User::where('user_id', $emp)->first() : null;
             if ($u && $u->roles->pluck('name')->contains('Faculty')) {
                 [$user, $facultyPk] = [$u, (int) $pk];

@@ -414,9 +414,16 @@ class VehiclePassApprovalController extends Controller
             $pk = substr($decryptedId, 3);
         }
 
+        // The application row lock is the transaction's first read, so a second approve/reject of
+        // the same request waits here and then sees this one's rows (PR #356 F-009).
+        return DB::transaction(fn () => $this->approveAtStage($kind, $pk, $validated, $employeePk));
+    }
+
+    private function approveAtStage(string $kind, $pk, array $validated, $employeePk)
+    {
         $application = $kind === 'fw'
-            ? VehiclePassFWApply::findOrFail($pk)
-            : VehiclePassTWApply::findOrFail($pk);
+            ? VehiclePassFWApply::lockForUpdate()->findOrFail($pk)
+            : VehiclePassTWApply::lockForUpdate()->findOrFail($pk);
 
         if ((int) $application->vech_card_status !== 1) {
             return redirect()->back()->with('error', 'Application already processed');
@@ -494,7 +501,7 @@ class VehiclePassApprovalController extends Controller
         }
 
         if ($kind === 'tw') {
-            VehiclePassController::bumpIndexListCacheEpoch();
+            DB::afterCommit(fn () => VehiclePassController::bumpIndexListCacheEpoch());
         }
 
         return redirect()->route('admin.security.vehicle_pass_approval.index')
@@ -557,9 +564,15 @@ class VehiclePassApprovalController extends Controller
             $pk = substr($decryptedId, 3);
         }
 
+        // Locked like approve() (PR #356 F-009).
+        return DB::transaction(fn () => $this->rejectAtStage($kind, $pk, $validated, $employeePk));
+    }
+
+    private function rejectAtStage(string $kind, $pk, array $validated, $employeePk)
+    {
         $application = $kind === 'fw'
-            ? VehiclePassFWApply::findOrFail($pk)
-            : VehiclePassTWApply::findOrFail($pk);
+            ? VehiclePassFWApply::lockForUpdate()->findOrFail($pk)
+            : VehiclePassTWApply::lockForUpdate()->findOrFail($pk);
 
         if ((int) $application->vech_card_status !== 1) {
             return redirect()->back()->with('error', 'Application already processed');
@@ -586,7 +599,7 @@ class VehiclePassApprovalController extends Controller
         ]);
 
         if ($kind === 'tw') {
-            VehiclePassController::bumpIndexListCacheEpoch();
+            DB::afterCommit(fn () => VehiclePassController::bumpIndexListCacheEpoch());
         }
 
         return redirect()->route('admin.security.vehicle_pass_approval.index')
