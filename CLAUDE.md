@@ -88,6 +88,11 @@ Each COE change gets a line here; the details live in its section below.
   list (and the course-first component list) skips drives pending / rejected at CC; the
   server refuses them too (`VenueAllocationController::mappableDrives`, `resolveValidated`).
   Tests: `CoeVenueAllocationFlowTest::test_a_drive_pending_at_cc_is_not_offered_or_accepted`.
+- **2026-11-23: Signature Master names mapped to UDC / AAO / COE.** For marksheet
+  verify / publish, `UPPER DIVISION CLERK` signs as UDC, `ASSISTANT ADMINISTRATIVE OFFICER`
+  as AAO and `COE-Incharge` (the name used on the server) as COE, next to the short names
+  (`MarksheetService::SIGNATORY_ALIASES`, `signatoryOf()`, `designationNamesOf()`).
+  Details: Marksheets → "Designation mismatch". Tests: `CoeMarksheetSigningFlowTest`.
 - **2026-11-19: Marksheet shows Remarks, not the number.** On the printed marksheet
   (`marksheet/show.blade.php`) the "Marksheet No." line is replaced by a blank
   "Remarks: ____" line, filled by hand. View only: nothing stored; the number is still
@@ -472,16 +477,21 @@ Built step by step: step 1 (COE creates it), step 2 (faculty dates, CC approval)
   Examination)**; signer = user's highest of the Spatie roles COE > AAO > UDC (Super Admin
   signs as COE). JSON `signed` column holds each signature.
 - Agreed rule: UDC, AAO and COE must each have **exactly one Active** Signature Master row
-  (designation name literally `UDC` / `AAO` / `COE`, image file present) or the marksheet
+  (designation `UDC` / `AAO` / `COE` or a name mapped to it, see below; image file present) or the marksheet
   can't be verified and published. Today the server enforces it on verify
   (`signatureProblem`); the Verify button still shows.
 - COE's signature publishes the marksheet (status 2) and stores a `snapshot`; published
   sheets are read from the snapshot only.
-- **Designation mismatch:** `MarksheetService::activeSignatures()` matches
-  `coe_signature_master.designation_name` exactly against `UDC` / `AAO` / `COE`, but
-  Signature Master now picks the designation from `designation_master` full names
-  (e.g. `UPPER DIVISION CLERK`). Rows saved that way are never found, so verify fails
-  with "Upload the UDC signature…". The two must be reconciled (mapping or codes).
+- **Designation names → signatory:** Signature Master picks the designation from
+  `designation_master` (full names, e.g. `UPPER DIVISION CLERK`), while signing works on
+  `UDC` / `AAO` / `COE`. `MarksheetService::SIGNATORY_ALIASES` maps the accepted names
+  (`UPPER DIVISION CLERK` → UDC, `ASSISTANT ADMINISTRATIVE OFFICER` → AAO, `COE-INCHARGE`
+  → COE; the short names also work), matched case-insensitively by `signatoryOf()`.
+  Group `activeSignatures()` rows with `signatoryOf()`, never by raw `designation_name`;
+  query by `designationNamesOf()`. A designation not in the map still fails verify with
+  "Upload the … signature…": add it to the map.
+  `COE-Incharge` is a `designation_master` row (on the server; added by hand on the dev
+  DB, pk 1998777339) held by the COE in-charge employee.
 - No server PDF: `marksheet/show.blade.php` prints A4 via `window.print()`. The sheet
   itself doesn't print the marksheet number; under the table it has a blank
   "Remarks: ____" line (handwritten) next to Result. The LBSNAA logo
@@ -516,7 +526,7 @@ dashboard; `coe_seat_allocation` opens My Exam Seat.
 ## Known gaps (don't "fix" unasked)
 
 - Route-level permission missing on many COE screens (see Access control).
-- Signature Master designation names vs `UDC`/`AAO`/`COE` (see Marksheets).
+- Signature Master designations outside `SIGNATORY_ALIASES` can't sign (see Marksheets).
 - Service Passing Marks shown as % but used as raw marks; Grade Master unused.
 - `weightage` stored but unused in results.
 - Compilation totals (raw) differ from merit/marksheet totals (moderated).

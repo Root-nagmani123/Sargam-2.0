@@ -137,7 +137,7 @@ class CoeMarksheetSigningFlowTest extends TestCase
     public function test_a_signer_needs_their_signature_in_signature_master(): void
     {
         $row = $this->unsigned();
-        \App\Models\COE\SignatureMaster::where('designation_name', 'UDC')->update(['active_inactive' => 0]);
+        \App\Models\COE\SignatureMaster::whereIn('designation_name', MarksheetService::designationNamesOf('UDC'))->update(['active_inactive' => 0]);
 
         $this->verify($this->signer('UDC'), $row)->assertUnprocessable()->assertJsonPath('message', fn ($m) => str_contains($m, 'UDC'));
         $this->assertNull($this->record($row)->signed);
