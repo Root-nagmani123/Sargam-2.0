@@ -6,7 +6,7 @@
 
 {{-- Labelled launcher: visible text (never icon-only), large type, 56px+ target — readable at any age. --}}
 <button type="button" class="dash-report-fab" data-bs-toggle="modal" data-bs-target="#reportIssueModal"
-    title="Report a problem with this Sargam 2.0">
+    title="Report a problem with Sargam 2.0">
     <span class="dash-report-fab__icon" aria-hidden="true"><i class="bi bi-exclamation-triangle-fill"></i></span>
     <span class="dash-report-fab__text">
         <span class="dash-report-fab__label">Report a Problem</span>
