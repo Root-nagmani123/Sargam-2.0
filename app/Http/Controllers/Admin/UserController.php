@@ -7718,10 +7718,12 @@ class UserController extends Controller
                 ->with('error', 'Student not found.');
         }
 
-        if (is_faculty_portal_user()
-            && ! hasRole('Super Admin')
-            && ! $this->isTrainingAdmin()) {
-            $facultyPk = get_auth_faculty_master_pk();
+        // Everyone but Super Admin and the training admins sees only the students the student
+        // list and OT / Participants show them (PR #356 L-93). This used to apply to faculty-portal
+        // logins alone, so an Employee-only login, with no students on either list, could open
+        // any student's record. A trainee is refused, as OT / Participants refuses one.
+        if (! hasRole('Super Admin') && ! $this->isTrainingAdmin()) {
+            $facultyPk = (isOfficerTraineeUser() || hasRole('Student-OT')) ? null : get_auth_faculty_master_pk();
             if (! $facultyPk || ! $this->canFacultyViewStudent($facultyPk, (int) $studentPk)) {
                 return redirect()->route('admin.dashboard.students')
                     ->with('error', 'You do not have access to view this student.');
