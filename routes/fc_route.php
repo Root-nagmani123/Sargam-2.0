@@ -268,35 +268,36 @@ Route::middleware(['auth', EnsureMenuPermission::class.':data_migration_students
 
 // course enrollment route
 // routes/web.php
-// Every enrolment route is behind auth (PR #356): each one reads or writes student
-// enrolments, and their only callers are logged-in admin pages.
+Route::get('/enrollment/create', [EnrollementController::class, 'create'])->name('enrollment.create');
+Route::post('/enrollment/store', [EnrollementController::class, 'store'])->name('enrollment.store');
+Route::post('/enrollment/filter-students', [EnrollementController::class, 'filterStudents'])->name('enrollment.filterStudents');
+// Server-side DataTables feed + full pk list for the enrolment student picker.
+// Behind auth — they return the full student roster / all matching pks, so they must
+// never be reachable without a session (callers are the admin enrolment page only).
 Route::middleware('auth')->group(function () {
-    Route::get('/enrollment/create', [EnrollementController::class, 'create'])->name('enrollment.create');
-    Route::post('/enrollment/store', [EnrollementController::class, 'store'])->name('enrollment.store');
-    Route::post('/enrollment/filter-students', [EnrollementController::class, 'filterStudents'])->name('enrollment.filterStudents');
-    // Server-side DataTables feed + full pk list for the enrolment student picker.
     Route::get('/enrollment/students-data', [EnrollementController::class, 'studentsData'])->name('enrollment.studentsData');
     Route::get('/enrollment/students-all-pks', [EnrollementController::class, 'studentsAllPks'])->name('enrollment.studentsAllPks');
-
-    // student master course map route
-    Route::get('/student-courses', [EnrollementController::class, 'studentCourses'])->name('student.courses');
-
-    // my course participant (replica of student-courses, used by dashboard card)
-    Route::get('/my-course-participant', [EnrollementController::class, 'myCourseParticipant'])->name('my.course.participant');
-    Route::get('/my-course-participant/export', [EnrollementController::class, 'myCourseParticipantExport'])->name('my.course.participant.export');
-
-    // export student enrollment
-    Route::get('admin/student-report', [EnrollementController::class, 'StudenEnroll_index'])->name('studentEnroll.report');
-    Route::get('admin/student-report/export', [EnrollementController::class, 'StudenEnroll_export'])->name('studentEnroll.report.export');
-
-    // Get enrolled students with filtering
-    Route::get('/enrollment/enrolled-students', [EnrollementController::class, 'getEnrolledStudents'])
-        ->name('enrollment.getEnrolled');
-
-    // Export enrolled students
-    Route::get('/enrollment/export-enrolled', [EnrollementController::class, 'exportEnrolledStudents'])
-        ->name('enrollment.exportEnrolled');
 });
+
+// student master course map route
+Route::get('/student-courses', [EnrollementController::class, 'studentCourses'])->name('student.courses');
+
+// my course participant (replica of student-courses, used by dashboard card)
+Route::get('/my-course-participant', [EnrollementController::class, 'myCourseParticipant'])->name('my.course.participant');
+Route::get('/my-course-participant/export', [EnrollementController::class, 'myCourseParticipantExport'])->name('my.course.participant.export');
+
+// export student enrollment
+Route::get('admin/student-report', [EnrollementController::class, 'StudenEnroll_index'])->name('studentEnroll.report');
+Route::get('admin/student-report/export', [EnrollementController::class, 'StudenEnroll_export'])->name('studentEnroll.report.export');
+
+//ajax list enrolled students
+// Get enrolled students with filtering
+Route::get('/enrollment/enrolled-students', [EnrollementController::class, 'getEnrolledStudents'])
+    ->name('enrollment.getEnrolled');
+
+// Export enrolled students
+Route::get('/enrollment/export-enrolled', [EnrollementController::class, 'exportEnrolledStudents'])
+    ->name('enrollment.exportEnrolled');
 
 // Inactive forms list
 Route::get('/forms/inactive', [FormController::class, 'inactive'])->name('forms.inactive');
@@ -449,12 +450,10 @@ Route::post('/admin/peer/reflection/delete/{id}', [PeerEvaluationController::cla
 // Keep your existing routes for backward compatibility if needed
 Route::get('/admin/peer/courses/{eventId}', [PeerEvaluationController::class, 'getCoursesByEvent']); // Keep if used elsewhere
 
-// Enrollment edit routes and Import to OT List: behind auth, as above. Kept at the end of
-// the file so /enrollment/{student} stays registered after the literal /enrollment/* routes.
-Route::middleware('auth')->group(function () {
-    Route::get('/enrollment/{student}/edit', [EnrollementController::class, 'edit'])->name('enrollment.edit');
-    Route::post('/enrollment/{student}', [EnrollementController::class, 'update'])->name('enrollment.update');
+// Enrollment edit routes
+Route::get('/enrollment/{student}/edit', [EnrollementController::class, 'edit'])->name('enrollment.edit');
+Route::post('/enrollment/{student}', [EnrollementController::class, 'update'])->name('enrollment.update');
 
-    Route::post('/student-enrollment/import-to-ot-list', [EnrollementController::class, 'import'])
-        ->name('student.enrollment.import');
-});
+// Import to OT List
+Route::post('/student-enrollment/import-to-ot-list', [EnrollementController::class, 'import'])
+    ->name('student.enrollment.import');
