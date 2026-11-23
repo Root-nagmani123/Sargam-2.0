@@ -442,9 +442,10 @@ dashboard; `coe_seat_allocation` opens My Exam Seat.
 - Frozen / approved / published records can't be undone in the UI (roll numbers, UPC,
   seat plans, approved and moderated marks). Only question papers have Unfreeze.
 - Some features check for columns at runtime (`Schema::hasColumn`) and quietly switch off
-  when the column is missing: `coe_evaluation_marks.remarks` and
-  `building_floor_room_mapping.faulty_laptop_count` (DBA DDL, no migration),
-  `moderated_marks`, `coe_marksheets.signed`.
+  when the column is missing: `coe_evaluation_marks.remarks` (DBA DDL, now also the idempotent
+  migration `2026_11_23_000001_add_remarks_to_coe_evaluation_marks_table`; Director Assessment
+  can't save without it), `building_floor_room_mapping.faulty_laptop_count` (DBA DDL, no
+  migration), `moderated_marks`, `coe_marksheets.signed`.
 - Multi-row writes run in a transaction with `lockForUpdate` and re-check state;
   MySQL 1062 is turned into a "someone else saved" message.
 - Active / Archived course scope: `CourseMaster::activeRunning()` /

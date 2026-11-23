@@ -110,9 +110,11 @@ A row appears for every OT × Director component when **all** of these hold:
 
 ### Required on every server: `coe_evaluation_marks.remarks`
 
-The Director's remarks need the `remarks` column. It came from **DBA DDL, not a migration**, so a
-server where that DDL was never run (staging, 23 Nov 2026) fails with
-`Unknown column 'remarks'`. Run it once (same as the dev DB):
+The Director's remarks need the `remarks` column. It first came from DBA DDL with no
+migration, so a server where that DDL was never run (staging, 23 Nov 2026) failed with
+`Unknown column 'remarks'`. The migration
+`2026_11_23_000001_add_remarks_to_coe_evaluation_marks_table` now adds it. It is idempotent,
+so it leaves an existing column alone, and its `down()` drops nothing. It runs the same as:
 
 ```sql
 ALTER TABLE coe_evaluation_marks
