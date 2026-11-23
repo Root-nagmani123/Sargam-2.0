@@ -8,10 +8,17 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
-- **2026-11-23: Re-exam opens only after the marksheets are published.** The Re-exam button
-  and Create Re-exam need every participant's marksheet on the course signed by UDC, AAO
-  and COE (published), on top of final marks. Details: Re-exam → "Who is listed". Tests:
-  `CoeReexamFlowTest::test_no_reexam_until_the_marksheets_are_published`.
+- **2026-11-23: Create Re-exam popup styled to the Figma design.** Reason tabs are the grey
+  segmented pills (active = brand blue), Failed / Absent show as red / amber badges, grey
+  table header, rule under the intro. The modal sits outside `.coe-page`, so it has its own
+  `edc-rx-*` styles in `examination_drive/index` (the shared `.coe-tab` / `.coe-state` rules
+  don't reach it). Design only, no behaviour change.
+
+- **2026-11-23: Re-exam opens once Merit & Ranking shows Pass / Fail** (replaces "only after
+  the marksheets are published", same day). The Re-exam button and Create Re-exam need every
+  participant of the drive ranked with Pass / Fail on Merit & Ranking; no marksheet signing
+  needed. Details: Re-exam → "Who is listed". Tests:
+  `CoeReexamFlowTest::test_no_reexam_until_merit_shows_pass_or_fail`.
 - **2026-11-23: Re-exam, steps 2–3 (faculty, CC, question paper).** On a re-exam the
   faculty setup page ("Map Faculty to Examination Drive Re-exam") lets the faculty set only
   the Tentative Exam Range (date + time); everything else is copied and locked, also on the
@@ -423,10 +430,11 @@ Built step by step: step 1 (COE creates it), step 2 (faculty dates, CC approval)
   Deleting a re-exam drive cascades its link + candidates; a main drive with re-exams
   can't be deleted. Everything checks `ReexamService::enabled()` (tables exist).
 - **Who is listed** (`ReexamService::sheet`): main drive Active/Closed, CC-approved, not
-  Director Assessment, every exam over, **every participant's marksheet on the course
-  published** (UDC → AAO → COE signed, `coe_marksheets.status = 2`; `marksheetRefusal`, agreed
-  2026-11-23: no re-exam before the marksheets are out; a marksheet covers every drive of the
-  course, so a pending drive elsewhere on the course holds the re-exam too), and **every
+  Director Assessment, every exam over, **every participant shown with Pass / Fail on Merit
+  & Ranking** (`resultRefusal` / `meritResults`, `ResultMarksService::merit()` of the drive's
+  tab, Active or Archived; agreed 2026-11-23, no marksheet signing needed. Merit ranks an OT
+  only when all their marks on the course are final, so a pending drive elsewhere on the
+  course holds the re-exam too), and **every
   participant's mark in every subject final** (`ResultMarksService::isFinal`: approved, and moderated when moderation is on),
   else "Results are not final yet" and no list. Per OT + subject: **Absent** if AB in any
   component, else **Failed** if any component is below `passingMarks()` for the OT's

@@ -21,8 +21,8 @@ use Illuminate\Support\Facades\Schema;
  * COE Re-exam (see the create_coe_reexams_tables migration).
  *
  * A main drive can get a re-exam once its results are in: the CC approved it, every
- * exam is over, **every participant's marksheet on the course is published** (UDC → AAO →
- * COE signed; marksheetRefusal) and every participant's mark in every subject is final
+ * exam is over, **Merit & Ranking shows every participant with Pass / Fail** (resultRefusal;
+ * no marksheet signing needed) and every participant's mark in every subject is final
  * (ResultMarksService::isFinal, the rule Merit & Ranking counts). The OTs who then
  * failed or were absent in a subject are the candidates, one row per OT + subject:
  *
@@ -138,8 +138,7 @@ class ReexamService
         }
 
         $participants = $this->results->participants($main);
-        $published = self::publishedMarksheets([(int) $main->course_master_pk]);
-        if ($refusal = self::marksheetRefusal($main, $participants, $published)) {
+        if ($refusal = self::resultRefusal($main, $participants, $this->meritResults(collect([$main])))) {
             return ['ready' => false, 'message' => $refusal, 'next_no' => 0, 'rows' => []];
         }
 
@@ -167,9 +166,9 @@ class ReexamService
         if ($mains->isEmpty()) {
             return $out;
         }
-        // Only once the course's marksheets are published (one query for the page).
-        $published = self::publishedMarksheets($mains->pluck('course_master_pk')->map(fn ($pk) => (int) $pk)->unique()->all());
-        $mains = $mains->filter(fn (ExaminationDrive $d) => self::marksheetRefusal($d, $this->results->participants($d), $published) === null);
+        // Only once Merit & Ranking shows the drive's OTs with Pass / Fail (once per course on the page).
+        $results = $this->meritResults($mains);
+        $mains = $mains->filter(fn (ExaminationDrive $d) => self::resultRefusal($d, $this->results->participants($d), $results) === null);
         if ($mains->isEmpty()) {
             return $out;
         }
@@ -194,41 +193,54 @@ class ReexamService
     }
 
     /**
-     * Agreed flow: a re-exam opens only after the marksheets are published (UDC → AAO →
-     * COE signed, coe_marksheets.status = Published). Every participant of the drive needs
-     * a published marksheet on the drive's course; else why not, or null.
+     * Agreed flow (2026-11-23): a re-exam opens once **Merit & Ranking shows Pass / Fail**
+     * for every participant of the drive (an OT is ranked there only when all their marks
+     * on the course are approved and moderated). No marksheet signing needed. Else why
+     * not, or null.
      *
-     * @param  array<int, array<int, true>>  $published  course pk => student pk => true
+     * @param  array<int, array<int, true>>  $results  course pk => student pk => true (has Pass / Fail)
      */
-    private static function marksheetRefusal(ExaminationDrive $main, array $participants, array $published): ?string
+    private static function resultRefusal(ExaminationDrive $main, array $participants, array $results): ?string
     {
-        if (! MarksheetService::enabled()) {
-            return 'Marksheets are not set up yet, so a re-exam cannot open.';
-        }
         if ($participants === []) {
             return 'The drive has no participants.';
         }
-        $have = $published[(int) $main->course_master_pk] ?? [];
+        $have = $results[(int) $main->course_master_pk] ?? [];
         $missing = count(array_diff_key($participants, $have));
 
         return $missing === 0 ? null
-            : 'The marksheets are not published yet ('.(count($participants) - $missing).' of '.count($participants)
-                .' OTs). A re-exam opens once UDC, AAO and COE have signed the marksheets.';
+            : 'Merit & Ranking does not show Pass / Fail yet for '.$missing.' of '.count($participants)
+                .' OTs (their marks on this course are not all approved and moderated). The re-exam opens once it does.';
     }
 
-    /** @return array<int, array<int, true>> course pk => student pk => true, for published marksheets */
-    private static function publishedMarksheets(array $coursePks): array
+    /**
+     * Who has a Pass / Fail on Merit & Ranking, per course of $drives (the tab the drive
+     * is on: Active, or Archived for a Closed drive). One merit sheet per course.
+     *
+     * @param  Collection<int, ExaminationDrive>  $drives
+     * @return array<int, array<int, true>> course pk => student pk => true
+     */
+    private function meritResults(Collection $drives): array
     {
-        if ($coursePks === [] || ! MarksheetService::enabled()) {
-            return [];
-        }
         $out = [];
-        DB::table('coe_marksheets')->whereIn('course_master_pk', $coursePks)
-            ->where('status', \App\Models\COE\Marksheet::STATUS_PUBLISHED)
-            ->get(['course_master_pk', 'student_master_pk'])
-            ->each(function ($r) use (&$out) {
-                $out[(int) $r->course_master_pk][(int) $r->student_master_pk] = true;
-            });
+        $seen = [];
+        foreach ($drives as $drive) {
+            $scope = $drive->status === ExaminationDrive::STATUS_CLOSED ? 'archived' : 'active';
+            $coursePk = (int) $drive->course_master_pk;
+            if (isset($seen[$scope.':'.$coursePk])) {
+                continue;
+            }
+            $seen[$scope.':'.$coursePk] = true;
+            $merit = $this->results->merit($scope, $coursePk);
+            if ((int) ($merit['coursePk'] ?? 0) !== $coursePk) {
+                continue;   // the course is not on that Merit tab (nothing held yet)
+            }
+            foreach ($merit['rows'] as $row) {
+                if (in_array($row['result'] ?? null, ['Pass', 'Fail'], true)) {
+                    $out[$coursePk][(int) $row['student']] = true;
+                }
+            }
+        }
 
         return $out;
     }

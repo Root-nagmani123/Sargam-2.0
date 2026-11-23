@@ -121,19 +121,11 @@ class CoeReexamFlowTest extends TestCase
             $this->mark($this->drive->id, $this->subjectA, $this->compX, $pk, $i === 0 ? 10 : 40);
             $this->mark($this->drive->id, $this->subjectB, $this->compY, $pk, $i === 1 ? null : 18);
         }
-        // Agreed flow: a re-exam opens only after the marksheets are published.
-        $this->publishMarksheets($this->ots);
-    }
-
-    /** Published (COE signed) marksheets for these OTs on the drive's course. */
-    private function publishMarksheets(array $students, int $status = 2): void
-    {
-        foreach ($students as $i => $pk) {
-            DB::table('coe_marksheets')->updateOrInsert(
-                ['course_master_pk' => $this->drive->course_master_pk, 'student_master_pk' => $pk],
-                ['serial' => 9000 + $i, 'marksheet_number' => 'ZZ-RX/'.$pk.'/'.uniqid(), 'status' => $status]
-            );
-        }
+        // Agreed flow: a re-exam opens once Merit & Ranking shows Pass / Fail, which counts
+        // every Active drive of the course. The dev database's other drives on this course
+        // are put aside (rolled back with the test) so only the fixture decides.
+        ExaminationDrive::where('course_master_pk', $this->drive->course_master_pk)
+            ->where('id', '!=', $this->drive->id)->update(['status' => ExaminationDrive::STATUS_DRAFT]);
     }
 
     /** An approved (and, unless $moderate is false, moderated) mark; null = absent. */
@@ -195,21 +187,35 @@ class CoeReexamFlowTest extends TestCase
 
         $this->assertFalse($sheet['ready']);
         $this->assertSame([], $sheet['rows']);
-        $this->assertStringContainsString('not final', $sheet['message']);
+        // A draft mark keeps the OT off Merit & Ranking, so no Pass / Fail yet.
+        $this->assertStringContainsString('Merit & Ranking does not show Pass / Fail yet for 1 of', $sheet['message']);
         $this->actingAs($this->admin)->getJson(route('admin.coe.examination-drive.reexam.ready', ['ids' => [$this->drive->id]]))
             ->assertOk()->assertJson(['ready' => []]);
     }
 
-    public function test_no_reexam_until_the_marksheets_are_published(): void
+    public function test_no_reexam_until_merit_shows_pass_or_fail(): void
     {
-        // One OT's marksheet only Generated (not signed by COE yet).
-        $this->publishMarksheets([$this->ots[2]], 1);
+        // Another Active drive on the course whose exam is over but has no marks yet:
+        // Merit & Ranking cannot rank (Pass / Fail) anyone, so no re-exam.
+        $other = ExaminationDrive::create([
+            'drive_name' => 'ZZ Reexam Test Other', 'examination_type_master_pk' => $this->drive->examination_type_master_pk,
+            'term_master_pk' => $this->drive->term_master_pk, 'course_master_pk' => $this->drive->course_master_pk,
+            'phase' => $this->drive->phase, 'academic_session' => $this->drive->academic_session,
+            'start_date' => now()->subDays(5)->toDateString(), 'end_date' => now()->subDay()->toDateString(),
+            'status' => ExaminationDrive::STATUS_ACTIVE, 'cc_status' => ExaminationDrive::CC_APPROVED,
+        ]);
+        $compZ = DB::table('component_master')->insertGetId(['component_name' => 'ZZ RX Test Z '.uniqid(), 'active_inactive' => 1], 'pk');
+        DB::table('examination_drive_component_maps')->insert([
+            'examination_drive_id' => $other->id, 'subject_master_pk' => $this->subjectB, 'component_master_pk' => $compZ,
+            'faculty_master_pk' => $this->facultyPk, 'max_marks' => 10, 'passing_marks' => 5, 'source' => 'Faculty',
+            'weightage' => 100, 'exam_date' => now()->subDays(2)->toDateString(), 'exam_end_date' => now()->subDays(2)->toDateString(),
+        ]);
 
         $sheet = $this->sheet();
 
         $this->assertFalse($sheet['ready']);
         $this->assertSame([], $sheet['rows']);
-        $this->assertStringContainsString('marksheets are not published yet', $sheet['message']);
+        $this->assertStringContainsString('Merit & Ranking does not show Pass / Fail yet', $sheet['message']);
         $this->actingAs($this->admin)->getJson(route('admin.coe.examination-drive.reexam.ready', ['ids' => [$this->drive->id]]))
             ->assertOk()->assertJson(['ready' => []]);
         $this->create([$this->subjectA.':'.$this->ots[0]])->assertStatus(422);

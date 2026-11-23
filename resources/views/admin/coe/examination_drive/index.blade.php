@@ -24,16 +24,30 @@
 /* Re-exam (ReexamController) */
 .coe-page .coe-act--reexam   { color:#dc8a00; }
 .edc-reexam-tag              { margin-left:4px;font-size:11px;white-space:nowrap; }
-.edc-rx-intro                { color:var(--ds-ink-muted);font-size:14px;margin-bottom:12px; }
-.edc-rx-bar                  { display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:10px; }
+/* The modal sits outside .coe-page, so the shared .coe-tabs / .coe-state rules don't reach it:
+   its own styles below (Figma "Create Re-exam"). */
+#edcReexamModal .modal-title { font-size:1.375rem;font-weight:500;color:var(--ds-ink); }
+.edc-rx-intro                { color:#475467;font-size:15px;line-height:1.6;margin:0 0 16px;padding-bottom:16px;border-bottom:1px solid var(--ds-line); }
+.edc-rx-bar                  { display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin-bottom:14px; }
+.edc-rx-tabs                 { display:inline-flex;gap:8px;padding:6px;border-radius:var(--ds-radius-2);background:#e4e7ec; }
+.edc-rx-tab                  { min-width:96px;padding:.55rem 1.25rem;border:0;border-radius:var(--ds-radius-2);background:#fff;
+                               color:var(--ds-ink);font-size:.9375rem;font-weight:500;white-space:nowrap;cursor:pointer; }
+.edc-rx-tab:hover            { color:var(--coe-brand); }
+.edc-rx-tab.is-active        { background:var(--coe-brand);color:#fff;font-weight:600; }
+.edc-rx-tab:focus-visible    { outline:2px solid var(--coe-brand);outline-offset:2px; }
 .edc-rx-note                 { color:var(--ds-ink-muted);font-size:13px; }
-.edc-rx-wrap                 { max-height:340px;overflow:auto;border:1px solid var(--ds-line);border-radius:10px; }
-.edc-rx-table                { width:100%;border-collapse:collapse;font-size:14px; }
-.edc-rx-table th             { position:sticky;top:0;z-index:1;padding:10px;background:var(--ds-surface-2);font-size:12px;
-                               font-weight:600;color:var(--ds-ink-muted);text-transform:uppercase;border-bottom:1px solid var(--ds-line); }
-.edc-rx-table td             { padding:8px 10px;border-bottom:1px solid var(--ds-line);vertical-align:middle; }
-.edc-rx-table td small       { display:block;color:var(--ds-ink-muted); }
-.edc-rx-table .edc-rx-check  { width:40px;text-align:center; }
+.edc-rx-wrap                 { max-height:340px;overflow:auto;border:1px solid var(--ds-line);border-radius:var(--ds-radius-2); }
+.edc-rx-table                { width:100%;border-collapse:collapse;font-size:15px;color:var(--ds-ink); }
+.edc-rx-table th             { position:sticky;top:0;z-index:1;padding:12px 14px;background:#eef0f3;font-size:13px;
+                               font-weight:500;color:#344054;text-transform:uppercase;letter-spacing:.02em;
+                               text-align:left;border-bottom:1px solid var(--ds-line); }
+.edc-rx-table td             { padding:10px 14px;border-bottom:1px solid var(--ds-line);vertical-align:middle; }
+.edc-rx-table tbody tr:last-child td { border-bottom:0; }
+.edc-rx-table td small       { display:block;margin-top:2px;color:var(--ds-ink-muted);font-size:13px; }
+.edc-rx-table .edc-rx-check  { width:48px;text-align:center; }
+.edc-rx-reason               { display:inline-block;padding:3px 10px;border-radius:var(--ds-radius-1);font-size:13px;font-weight:500;line-height:1.4; }
+.edc-rx-reason--failed       { background:#fde2e4;color:#d92d20; }
+.edc-rx-reason--absent       { background:#fef0c7;color:#b54708; }
 .edc-rx-empty                { padding:24px;text-align:center;color:var(--ds-ink-muted); }
 </style>
 @endpush
@@ -284,10 +298,10 @@
                 <div class="modal-body coe-modal-body">
                     <p class="edc-rx-intro" id="edcReexamIntro"></p>
                     <div class="edc-rx-bar">
-                        <nav class="coe-tabs" aria-label="Reason">
-                            <button type="button" class="coe-tab is-active" data-rx-filter="all">All (<span data-rx-count="all">0</span>)</button>
-                            <button type="button" class="coe-tab" data-rx-filter="1">Failed · <span data-rx-ots="1">0</span> OTs (<span data-rx-count="1">0</span>)</button>
-                            <button type="button" class="coe-tab" data-rx-filter="2">Absent · <span data-rx-ots="2">0</span> OTs (<span data-rx-count="2">0</span>)</button>
+                        <nav class="edc-rx-tabs" aria-label="Reason">
+                            <button type="button" class="edc-rx-tab is-active" data-rx-filter="all">All (<span data-rx-count="all">0</span>)</button>
+                            <button type="button" class="edc-rx-tab" data-rx-filter="1">Failed · <span data-rx-ots="1">0</span> OTs (<span data-rx-count="1">0</span>)</button>
+                            <button type="button" class="edc-rx-tab" data-rx-filter="2">Absent · <span data-rx-ots="2">0</span> OTs (<span data-rx-count="2">0</span>)</button>
                         </nav>
                         <span class="edc-rx-note">Counts are OT-subjects; <span id="edcReexamTicked">0</span> ticked in total.</span>
                     </div>
@@ -745,7 +759,7 @@ $(function () {
                 '<td>' + rxEsc(r.name) + (r.ot_code ? '<small>' + rxEsc(r.ot_code) + '</small>' : '') + '</td>' +
                 '<td>' + (r.roll ? rxEsc(r.roll) : '-') + '</td>' +
                 '<td>' + rxEsc(r.subject) + '</td>' +
-                '<td><span class="coe-state ' + (String(r.reason) === '2' ? 'edc-status-pending' : 'edc-status-closed') + '">' + rxEsc(r.reason_label) + '</span></td>' +
+                '<td><span class="edc-rx-reason ' + (String(r.reason) === '2' ? 'edc-rx-reason--absent' : 'edc-rx-reason--failed') + '">' + rxEsc(r.reason_label) + '</span></td>' +
                 '<td>' + Number(r.score).toFixed(1) + '%</td>' +
                 '</tr>';
         }).join('') : '<tr><td colspan="6" class="edc-rx-empty">No OTs here.</td></tr>');
