@@ -44,11 +44,6 @@ class CourseRepositoryController extends Controller
         })->only(['store', 'update', 'destroy', 'uploadDocument', 'updateDocument', 'deleteDocument']);
     }
 
-    /**
-     * Display listing of all course repositories
-     * GET /course-repository
-     * Optional parent_pk query parameter to show children of a specific parent
-     */
     /** The folders this page lists at its root: not deleted, no parent. */
     private function rootRepositoriesQuery()
     {
@@ -65,6 +60,11 @@ class CourseRepositoryController extends Controller
         return $this->rootRepositoriesQuery()->count();
     }
 
+    /**
+     * Display listing of all course repositories
+     * GET /course-repository
+     * Optional parent_pk query parameter to show children of a specific parent
+     */
     public function index(Request $request)
     {
         try {

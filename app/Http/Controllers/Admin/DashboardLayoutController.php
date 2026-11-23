@@ -29,15 +29,16 @@ class DashboardLayoutController extends Controller
         $assigned = DashboardCard::assignedTo($this->roleIds(), $module->id)->pluck('key')->all();
         $keep = fn (array $keys) => array_values(array_intersect($keys, $assigned));
 
-        $where = ['user_id' => (int) Auth::id(), 'sidebar_category_id' => $module->id];
-        $values = [
+        // One atomic INSERT ... ON DUPLICATE KEY UPDATE on the (user_id, sidebar_category_id) unique
+        // key: two saves racing on a login's first layout no longer collide into a 500 (PR #356 F-005).
+        DB::table('user_dashboard_layouts')->upsert([
+            'user_id' => (int) Auth::id(),
+            'sidebar_category_id' => $module->id,
             'card_order' => json_encode($keep($data['order'])),
             'hidden_cards' => json_encode($keep($data['hidden'])),
+            'created_at' => now(),
             'updated_at' => now(),
-        ];
-        DB::table('user_dashboard_layouts')->where($where)->exists()
-            ? DB::table('user_dashboard_layouts')->where($where)->update($values)
-            : DB::table('user_dashboard_layouts')->insert($where + $values + ['created_at' => now()]);
+        ], ['user_id', 'sidebar_category_id'], ['card_order', 'hidden_cards', 'updated_at']);
 
         return response()->json(['message' => 'Dashboard layout saved.']);
     }

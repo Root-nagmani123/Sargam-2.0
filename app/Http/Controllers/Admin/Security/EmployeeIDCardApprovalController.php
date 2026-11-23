@@ -406,8 +406,9 @@ class EmployeeIDCardApprovalController extends Controller
 
 
         // Map Permanent rows to DTOs and mark those which already have Approval II as view-only (pending final approval).
-        $permDtos = $permRows->map(function ($r) {
-            $dto = IdCardSecurityMapper::toEmployeeRequestDto($r);
+        $permLookups = IdCardSecurityMapper::prefetchCardLookupsForPermApplies($permRows);
+        $permDtos = $permRows->map(function ($r) use ($permLookups) {
+            $dto = IdCardSecurityMapper::toEmployeeRequestDto($r, $permLookups);
             $hasA2 = $r->approvals
                 ? $r->approvals->where('status', SecurityParmIdApplyApproval::STATUS_APPROVAL_2)->isNotEmpty()
                 : false;
@@ -650,9 +651,11 @@ class EmployeeIDCardApprovalController extends Controller
         if ($request->filled('date_to')) {
             $issuedPermQuery->where('created_date', '<=', \Carbon\Carbon::parse($request->date_to)->endOfDay()->toDateTimeString());
         }
-        $issuedPermDtos = $issuedPermQuery->get()->map(function ($r) {
-            $dto = IdCardSecurityMapper::toEmployeeRequestDto($r);
-            $dto->id_card_physical_print_done = Schema::hasColumn('security_parm_id_apply', 'id_card_generate_date')
+        $issuedPermRows = $issuedPermQuery->get();
+        $issuedPermLookups = IdCardSecurityMapper::prefetchCardLookupsForPermApplies($issuedPermRows);
+        $issuedPermDtos = $issuedPermRows->map(function ($r) use ($issuedPermLookups) {
+            $dto = IdCardSecurityMapper::toEmployeeRequestDto($r, $issuedPermLookups);
+            $dto->id_card_physical_print_done = fc_schema_has_column('security_parm_id_apply', 'id_card_generate_date')
                 && ! empty($r->id_card_generate_date);
 
             return $dto;
@@ -700,7 +703,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'requested_section' => $r->department_name ?? null,
                 'request_type'      => 'duplicate',
                 'status'            => match ($idStatus) { 1 => 'Pending', 2 => 'Approved', 3 => 'Rejected', default => 'Unknown' },
-                'id_card_physical_print_done' => Schema::hasColumn('security_dup_perm_id_apply', 'id_card_generate_date')
+                'id_card_physical_print_done' => fc_schema_has_column('security_dup_perm_id_apply', 'id_card_generate_date')
                     && ! empty($r->id_card_generate_date ?? null),
             ];
         });
@@ -717,7 +720,7 @@ class EmployeeIDCardApprovalController extends Controller
         }
         $issuedContDtos = $issuedContQuery->get()->map(function ($r) {
             $dto = IdCardSecurityMapper::toContractualRequestDto($r);
-            $dto->id_card_physical_print_done = Schema::hasColumn('security_con_oth_id_apply', 'id_card_generate_date')
+            $dto->id_card_physical_print_done = fc_schema_has_column('security_con_oth_id_apply', 'id_card_generate_date')
                 && ! empty($r->id_card_generate_date ?? null);
 
             return $dto;
@@ -759,7 +762,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'requested_section' => $requestedSection,
                 'request_type'      => 'duplicate',
                 'status'            => match ($idStatus) { 1 => 'Pending', 2 => 'Approved', 3 => 'Rejected', default => 'Unknown' },
-                'id_card_physical_print_done' => Schema::hasColumn('security_dup_other_id_apply', 'id_card_generate_date')
+                'id_card_physical_print_done' => fc_schema_has_column('security_dup_other_id_apply', 'id_card_generate_date')
                     && ! empty($r->id_card_generate_date ?? null),
             ];
         });
@@ -793,7 +796,9 @@ class EmployeeIDCardApprovalController extends Controller
         if ($request->filled('date_to')) {
             $rejectPermQuery->where('created_date', '<=', \Carbon\Carbon::parse($request->date_to)->endOfDay()->toDateTimeString());
         }
-        $rejectPermDtos = $rejectPermQuery->get()->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
+        $rejectPermRows = $rejectPermQuery->get();
+        $rejectPermLookups = IdCardSecurityMapper::prefetchCardLookupsForPermApplies($rejectPermRows);
+        $rejectPermDtos = $rejectPermRows->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r, $rejectPermLookups));
 
         $rejectDupPermQuery = DB::table('security_dup_perm_id_apply as dup')
             ->leftJoin('employee_master as emp', 'dup.employee_master_pk', '=', 'emp.pk')
@@ -1121,7 +1126,8 @@ class EmployeeIDCardApprovalController extends Controller
             $permQuery->where('created_date', '<=', $dateToDt);
         }
         $permRows = $permQuery->get();
-        $permDtos = $permRows->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
+        $permLookups = IdCardSecurityMapper::prefetchCardLookupsForPermApplies($permRows);
+        $permDtos = $permRows->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r, $permLookups));
 
         $dupPermRows = collect();
         if ($dupPermRecommended->isNotEmpty()) {

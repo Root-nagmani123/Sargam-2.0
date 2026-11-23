@@ -52,7 +52,10 @@ class DashboardCard extends Model
      */
     public static function gatedCardVisibility(): array
     {
-        $notSecurity = ! (hasRole('Security Card') || hasRole('Admin Security'));
+        // Only the Security queue cards follow the Security approver roles. The OT and faculty
+        // cards follow the login's own OT / faculty identity alone: an approver who is also
+        // faculty keeps their faculty cards (PR #356 F-004).
+        $isSecurity = hasRole('Security Card') || hasRole('Admin Security');
         $isStudentOT = hasRole('Student-OT');
         // Student-OT is a session pseudo-role; an OT holding only the Spatie
         // "Officer Trainee" role does not have it.
@@ -61,30 +64,30 @@ class DashboardCard extends Model
 
         return [
             // A Security approver's queue (Approval II / III): nobody else has one to count.
-            'pending_permanent_id' => ! $notSecurity,
-            'pending_contractual_id' => ! $notSecurity,
-            'duplicate_permanent_id' => ! $notSecurity,
-            'duplicate_contractual_id' => ! $notSecurity,
-            'requested_family_id' => ! $notSecurity,
-            'requested_vehicle_pass' => ! $notSecurity,
-            'my_groups' => $notSecurity && $isStudentOT,
+            'pending_permanent_id' => $isSecurity,
+            'pending_contractual_id' => $isSecurity,
+            'duplicate_permanent_id' => $isSecurity,
+            'duplicate_contractual_id' => $isSecurity,
+            'requested_family_id' => $isSecurity,
+            'requested_vehicle_pass' => $isSecurity,
+            'my_groups' => $isStudentOT,
             // Counted only for a Student-OT login; any other holder of the role would see 0.
-            'medical_exception' => $notSecurity && $isStudentOT,
-            'ot_mdo_escort' => $notSecurity && $isStudentOT,
+            'medical_exception' => $isStudentOT,
+            'ot_mdo_escort' => $isStudentOT,
             // The ID card page lists every request to an admin, so "My ..." would show everyone's.
             'my_idcard_requests_pending' => ! (hasRole('Admin') || hasRole('SuperAdmin')),
             // Mess roles already have "Unpaid Mess Bills" (everyone's); "My ..." beside it confused.
             'my_mess_bills_unpaid' => ! (hasRole('Mess Admin') || hasRole('Mess Billing')),
-            'discipline_marks_deducted' => $notSecurity && $isOtUser,
-            'pending_feedback' => $notSecurity && $isOtUser,
-            'total_sessions' => $notSecurity && $faculty,
-            'total_feedback' => $notSecurity && $faculty,
-            'my_counsellees' => $notSecurity && $faculty,
-            'house_wise_details' => $notSecurity && $faculty,
-            'whos_who' => $notSecurity && $faculty,
+            'discipline_marks_deducted' => $isOtUser,
+            'pending_feedback' => $isOtUser,
+            'total_sessions' => $faculty,
+            'total_feedback' => $faculty,
+            'my_counsellees' => $faculty,
+            'house_wise_details' => $faculty,
+            'whos_who' => $faculty,
             // The academy scope refuses trainees (PR #334 F-047).
-            'academic_timetable' => $notSecurity && $faculty && ! $isOtUser,
-            'my_timetable' => $notSecurity && ($faculty || $isOtUser),
+            'academic_timetable' => $faculty && ! $isOtUser,
+            'my_timetable' => $faculty || $isOtUser,
         ];
     }
 
@@ -102,7 +105,6 @@ class DashboardCard extends Model
             ->distinct()->pluck('role_dashboard_cards.sidebar_category_id')->map(fn ($id) => (int) $id)->all();
     }
 
-    /** Cards any of $roleIds has on module $moduleId's dashboard. */
     /** Login $userId's own layout of module $moduleId's dashboard (user_dashboard_layouts): ['order' => keys, 'hidden' => keys]. */
     public static function userLayout(int $userId, int $moduleId): array
     {
@@ -120,6 +122,7 @@ class DashboardCard extends Model
         return $cards->values()->sortBy(fn ($card, $i) => $position[$card->key] ?? count($position) + $i)->values();
     }
 
+    /** Cards any of $roleIds has on module $moduleId's dashboard. */
     public function scopeAssignedTo($query, array $roleIds, int $moduleId)
     {
         return $query->whereIn('id', fn ($q) => $q->select('dashboard_card_id')

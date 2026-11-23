@@ -19,7 +19,9 @@
                 <div class="stat-title-box">
                     <p class="stat-title" title="{{ $card['label'] }}">{{ $card['label'] }}</p>
                 </div>
-                @if(($card['show_count'] ?? true) && $card['count'] === null)
+                @if(($card['show_count'] ?? true) && ($card['count_failed'] ?? false))
+                <p class="stat-value" title="This figure could not be loaded">–</p>
+                @elseif(($card['show_count'] ?? true) && $card['count'] === null)
                 {{-- First paint: the figure is on its way from admin.dashboard.cards. --}}
                 <p class="stat-value"><span class="stat-value-skeleton" aria-hidden="true"></span><span class="visually-hidden">Loading</span></p>
                 @elseif($card['show_count'] ?? true)

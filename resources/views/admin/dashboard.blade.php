@@ -313,7 +313,9 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                         if (queues) { queues.innerHTML = data.queues; }
                         // The Dashboard Preview tabs carry the same figures.
                         document.querySelectorAll('[data-count-for]').forEach(function (el) {
-                            var n = Number((data.counts || {})[el.getAttribute('data-count-for')]);
+                            var raw = (data.counts || {})[el.getAttribute('data-count-for')];
+                            // null = that card's count failed: leave the tab without a figure, not "0".
+                            var n = raw === null || raw === undefined ? NaN : Number(raw);
                             if (!isFinite(n)) { return; }
                             el.textContent = n.toLocaleString('en-IN');
                             el.classList.toggle('is-action', el.hasAttribute('data-actionable') && n > 0);

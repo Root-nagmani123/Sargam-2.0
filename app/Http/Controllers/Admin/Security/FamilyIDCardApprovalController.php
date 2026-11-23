@@ -11,7 +11,6 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Family ID Card Approval - List pending family ID card requests and approve/reject.
@@ -211,7 +210,7 @@ class FamilyIDCardApprovalController extends Controller
             return ((int) ($g->status_int ?? 1) === 2) && ((bool) ($g->has_level2 ?? false));
         })->values()->map(function ($g) {
             $memberFirst = isset($g->members) ? $g->members->sortBy('fml_id_apply')->first() : null;
-            $g->id_card_physical_print_done = Schema::hasColumn('security_family_id_apply', 'id_card_generate_date')
+            $g->id_card_physical_print_done = fc_schema_has_column('security_family_id_apply', 'id_card_generate_date')
                 && $memberFirst
                 && ! empty($memberFirst->id_card_generate_date);
 

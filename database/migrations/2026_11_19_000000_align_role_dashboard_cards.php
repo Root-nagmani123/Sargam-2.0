@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -17,9 +18,16 @@ use Illuminate\Support\Facades\Schema;
  *    (their definitions are on main, not this branch).
  *
  * A role, tab or card missing from an environment is skipped, not created.
+ *
+ * Recoverable (PR #356 F-003): every row up() actually inserts or deletes is first written to
+ * role_dashboard_card_snapshots (migration, action, role_id, dashboard_card_id,
+ * sidebar_category_id), in the same transaction, and down() replays it in reverse: deleted rows
+ * come back, rows up() added go. Rows that were already there are left alone either way.
  */
 return new class extends Migration
 {
+    private const SNAPSHOTS = 'role_dashboard_card_snapshots';
+
     private const WIDGETS = ['widget_notices', 'widget_admin_summary', 'widget_todays_birthdays', 'widget_calendar', 'widget_campus_tweets'];
 
     private const ACADEMY_STATS = ['total_active_courses', 'upcoming_courses', 'upcoming_events', 'total_inhouse_faculty', 'total_guest_faculty', 'widget_admin_summary'];
@@ -103,23 +111,81 @@ return new class extends Migration
             return $out;
         };
 
-        DB::transaction(function () use ($rows) {
-            // insertOrIgnore: the primary key is (role, card, tab), so a row an admin
-            // already switched on stays as it is.
-            DB::table('role_dashboard_cards')->insertOrIgnore($rows($this->additions()));
+        // DDL commits implicitly in MySQL, so the snapshot table is made before the transaction.
+        $this->ensureSnapshotTable();
+        $migration = $this->name();
 
+        DB::transaction(function () use ($rows, $migration) {
+            $exists = fn (array $row) => DB::table('role_dashboard_cards')->where($row)->lockForUpdate()->exists();
+            $snapshot = fn (array $row, string $action) => DB::table(self::SNAPSHOTS)->insert($row + [
+                'migration' => $migration, 'action' => $action, 'created_at' => now(),
+            ]);
+
+            // Only rows not already there are added (an admin's own row stays as it is), and
+            // each is recorded so down() removes exactly what up() added.
+            foreach ($rows($this->additions()) as $row) {
+                if (! $exists($row)) {
+                    $snapshot($row, 'inserted');
+                    DB::table('role_dashboard_cards')->insert($row);
+                }
+            }
+
+            // Each row is recorded before it is deleted, so an assignment an admin made is
+            // never lost: down() puts it back.
             foreach ($rows($this->removals()) as $row) {
-                DB::table('role_dashboard_cards')->where($row)->delete();
+                if ($exists($row)) {
+                    $snapshot($row, 'deleted');
+                    DB::table('role_dashboard_cards')->where($row)->delete();
+                }
             }
         });
     }
 
     /**
-     * Forward-fix only, like the other dashboard-card migrations (PR #334 F-027 / F-036):
-     * up() cannot tell which of these rows an admin set by hand, so rollback changes nothing.
+     * Undo exactly what up() recorded: re-insert the rows it deleted, remove the rows it added.
+     * Without a snapshot (up() ran before PR #356 F-003 made it record one, as on dev) there is
+     * nothing to replay and nothing is changed: restore from the role_dashboard_cards export.
      */
     public function down(): void
     {
-        //
+        if (! Schema::hasTable(self::SNAPSHOTS)) {
+            return;
+        }
+        $migration = $this->name();
+
+        DB::transaction(function () use ($migration) {
+            $recorded = DB::table(self::SNAPSHOTS)->where('migration', $migration)->orderByDesc('id')->get();
+            foreach ($recorded as $snap) {
+                $row = ['role_id' => $snap->role_id, 'dashboard_card_id' => $snap->dashboard_card_id, 'sidebar_category_id' => $snap->sidebar_category_id];
+                $snap->action === 'deleted'
+                    ? DB::table('role_dashboard_cards')->insertOrIgnore($row)
+                    : DB::table('role_dashboard_cards')->where($row)->delete();
+            }
+            DB::table(self::SNAPSHOTS)->where('migration', $migration)->delete();
+        });
+    }
+
+    /** Migration name as the migrations table records it. */
+    private function name(): string
+    {
+        return '2026_11_19_000000_align_role_dashboard_cards';
+    }
+
+    /** The audit table up() records into; kept by down() so other migrations can share it. */
+    public function ensureSnapshotTable(): void
+    {
+        if (Schema::hasTable(self::SNAPSHOTS)) {
+            return;
+        }
+        Schema::create(self::SNAPSHOTS, function (Blueprint $table) {
+            $table->id();
+            $table->string('migration');
+            $table->string('action', 16); // inserted | deleted
+            $table->unsignedBigInteger('role_id');
+            $table->unsignedBigInteger('dashboard_card_id');
+            $table->unsignedBigInteger('sidebar_category_id');
+            $table->timestamp('created_at')->nullable();
+            $table->index(['migration', 'action']);
+        });
     }
 };

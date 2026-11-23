@@ -474,6 +474,25 @@ class UserController extends Controller
 
         return $cards->map(function ($card) use ($cardDefinitions, $withCounts) {
             $def = $cardDefinitions[$card->key] ?? null;
+            // A closure count runs only here, for a card this user actually sees, and only when
+            // asked: the page itself renders a placeholder (null).
+            $count = null;
+            $countFailed = false;
+            if ($withCounts) {
+                try {
+                    $count = value($def['count'] ?? 0);
+                } catch (\Illuminate\Auth\Access\AuthorizationException|\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $e) {
+                    throw $e; // a refusal is never hidden as a missing figure
+                } catch (\Throwable $e) {
+                    // One broken counter blanks its own card, not every figure (PR #356 F-007).
+                    \Illuminate\Support\Facades\Log::error('Dashboard card count failed', [
+                        'card' => $card->key,
+                        'user_id' => Auth::id(),
+                        'exception' => $e,
+                    ]);
+                    $countFailed = true;
+                }
+            }
 
             return [
                 'key' => $card->key,
@@ -481,9 +500,9 @@ class UserController extends Controller
                 'icon' => $card->icon,
                 'color_class' => $card->color_class,
                 'link'        => $def['link'] ?? null,
-                // A closure count runs only here, for a card this user actually sees, and
-                // only when asked: the page itself renders a placeholder (null).
-                'count'       => $withCounts ? value($def['count'] ?? 0) : null,
+                'count'       => $count,
+                // The count threw: the card shows "–", not a loading placeholder or a zero.
+                'count_failed' => $countFailed,
                 // A definition that omits 'count' is a card that opens something
                 // rather than counting it (the timetables) — it renders as a tile
                 // with no number, not as a zero.

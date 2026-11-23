@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\SecurityParmIdApply;
 use App\Models\User;
+use App\Support\IdCardSecurityMapper;
 use Illuminate\Support\Facades\DB;
 use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
 use Tests\TestCase;
@@ -94,6 +96,101 @@ class SecurityAndTrainingCardsTest extends TestCase
     public function test_approval_three_cards_count_their_queue(): void
     {
         $this->assertSecurityCardsMatch('Security Approver III', 'approval3');
+    }
+
+    /**
+     * PR #356 F-002: a Security Approver III's Home card fetch stays under 200 queries (it ran
+     * 2,682: a schema lookup per family group and five lookups per permanent ID row), with the
+     * same counts the New Request tabs list (asserted above).
+     */
+    public function test_approval_three_home_fetch_stays_under_200_queries(): void
+    {
+        config(['cache.default' => 'array']);
+        $user = $this->loginWithRole('Security Approver III');
+        $this->giveCards($user, self::SECURITY_CARDS);
+        $user = $user->fresh();
+        $roles = $user->roles->pluck('name')->all();
+        $home = DB::table('sidebar_categories')->where('slug', 'home')->value('id');
+        $this->as($user, $roles)->getJson(route('admin.dashboard.cards', ['category' => $home]))->assertOk(); // warm the schema cache
+
+        $queries = 0;
+        DB::listen(function () use (&$queries) {
+            $queries++;
+        });
+        $counts = $this->as($user, $roles)->getJson(route('admin.dashboard.cards', ['category' => $home]))->assertOk()->json('counts');
+
+        $this->assertLessThan(200, $queries, "Security Approver III Home /dashboard/cards ran $queries queries");
+        foreach (self::SECURITY_CARDS as $key) {
+            $this->assertIsInt($counts[$key] ?? null, "$key has a figure");
+        }
+    }
+
+    /** The prefetched creator / card labels give the same DTO the per-row lookups did. */
+    public function test_prefetched_permanent_id_rows_map_like_the_per_row_lookups(): void
+    {
+        $rows = SecurityParmIdApply::with(['employee.designation', 'employee.department', 'creator.department', 'approvals.approver'])
+            ->orderByDesc('created_date')->limit(300)->get();
+        if ($rows->isEmpty()) {
+            $this->markTestSkipped('no permanent ID card requests');
+        }
+        $lookups = IdCardSecurityMapper::prefetchCardLookupsForPermApplies($rows);
+        $fields = ['card_type', 'sub_type', 'requested_by', 'requested_section', 'created_by_name', 'name', 'status'];
+        foreach ($rows as $row) {
+            $plain = IdCardSecurityMapper::toEmployeeRequestDto($row);
+            $fast = IdCardSecurityMapper::toEmployeeRequestDto($row, $lookups);
+            foreach ($fields as $field) {
+                $this->assertSame($plain->$field, $fast->$field, "row {$row->emp_id_apply}: $field");
+            }
+        }
+    }
+
+    /**
+     * PR #356 F-004: being a Security approver gates only the Security cards. A faculty login
+     * given Security Approver II or III keeps its faculty cards and gains the Security ones.
+     */
+    public static function securityApproverRoles(): array
+    {
+        return ['Approval II' => ['Security Approver II'], 'Approval III' => ['Security Approver III']];
+    }
+
+    /** @dataProvider securityApproverRoles */
+    public function test_a_faculty_member_who_is_also_a_security_approver_keeps_faculty_cards(string $securityRole): void
+    {
+        $faculty = $this->staffWithRole('Faculty');
+        $roleId = DB::table('roles')->where('name', $securityRole)->value('id');
+        if (! $roleId) {
+            $this->markTestSkipped("no $securityRole role");
+        }
+        DB::table('model_has_roles')->insertOrIgnore(['role_id' => $roleId, 'model_type' => User::class, 'model_id' => $faculty->pk]);
+        $this->giveCards($faculty, ['total_sessions', 'my_timetable', 'whos_who', 'pending_contractual_id', 'requested_vehicle_pass']);
+        $faculty = $faculty->fresh();
+        $roles = $faculty->roles->pluck('name')->all();
+
+        $keys = $this->as($faculty, $roles)->get(route('admin.dashboard'))->assertOk()->viewData('cardsToRender')->pluck('key')->all();
+
+        foreach (['total_sessions', 'my_timetable', 'whos_who'] as $facultyCard) {
+            $this->assertContains($facultyCard, $keys, "$facultyCard stays for a Faculty + $securityRole login");
+        }
+        foreach (['pending_contractual_id', 'requested_vehicle_pass'] as $securityCard) {
+            $this->assertContains($securityCard, $keys, "$securityCard shows for a Faculty + $securityRole login");
+        }
+    }
+
+    /** ... and a faculty login without a Security role still sees no Security card. */
+    public function test_a_faculty_member_without_a_security_role_sees_no_security_cards(): void
+    {
+        $faculty = $this->staffWithRole('Faculty');
+        $roles = $faculty->roles->pluck('name')->all();
+        if (array_intersect($roles, ['Security Approver II', 'Security Approver III'])) {
+            $this->markTestSkipped('this Faculty login is also a Security approver');
+        }
+        $this->giveCards($faculty, ['total_sessions', 'pending_contractual_id', 'requested_vehicle_pass']);
+        $faculty = $faculty->fresh();
+
+        $keys = $this->as($faculty, $faculty->roles->pluck('name')->all())->get(route('admin.dashboard'))->assertOk()->viewData('cardsToRender')->pluck('key');
+
+        $this->assertContains('total_sessions', $keys->all());
+        $this->assertSame([], $keys->intersect(['pending_contractual_id', 'requested_vehicle_pass'])->values()->all());
     }
 
     public function test_security_approver_ii_is_read_as_the_level_ii_role(): void

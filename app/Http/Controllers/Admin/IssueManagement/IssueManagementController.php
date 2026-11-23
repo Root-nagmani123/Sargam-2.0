@@ -1065,12 +1065,6 @@ class IssueManagementController extends Controller
     }
 
     /**
-     * Centcom ("Assign to you") grid — chrome only.
-     *
-     * Rows arrive over ajax from {@see centcomData()}, so this renders no issues
-     * and runs no listing query; the filters below only need their options.
-     */
-    /**
      * Centcom dashboard cards: how many complaints the Centcom Assigned grid lists for the
      * signed-in user with ?status=$status, on the grid's own query.
      */
@@ -1081,10 +1075,6 @@ class IssueManagementController extends Controller
     }
 
     /**
-     * "My Open Issues" dashboard card: what the All Requests grid lists on its "Raised By You"
-     * tab with ?status=open, on the grid's own query.
-     */
-    /**
      * "All Open Complaints" dashboard card (Super Admin): what the All Requests grid lists on
      * ?status=open - every complaint for an admin, the user's own for anyone else.
      */
@@ -1094,12 +1084,22 @@ class IssueManagementController extends Controller
             ->toBase()->getCountForPagination();
     }
 
+    /**
+     * "My Open Issues" dashboard card: what the All Requests grid lists on its "Raised By You"
+     * tab with ?status=open, on the grid's own query.
+     */
     public function dashboardMyOpenIssuesCount(): int
     {
         return (int) $this->issueManagementIndexFilteredQuery(Request::create('/', 'GET', ['raised_by' => 'self', 'status' => 'open']))
             ->toBase()->getCountForPagination();
     }
 
+    /**
+     * Centcom ("Assign to you") grid — chrome only.
+     *
+     * Rows arrive over ajax from {@see centcomData()}, so this renders no issues
+     * and runs no listing query; the filters below only need their options.
+     */
     public function centcom(Request $request)
     {
         $categories = IssueCategoryMaster::active()->get();
