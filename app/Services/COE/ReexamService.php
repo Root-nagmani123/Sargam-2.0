@@ -21,7 +21,8 @@ use Illuminate\Support\Facades\Schema;
  * COE Re-exam (see the create_coe_reexams_tables migration).
  *
  * A main drive can get a re-exam once its results are in: the CC approved it, every
- * exam is over and every participant's mark in every subject is final
+ * exam is over, **every participant's marksheet on the course is published** (UDC → AAO →
+ * COE signed; marksheetRefusal) and every participant's mark in every subject is final
  * (ResultMarksService::isFinal, the rule Merit & Ranking counts). The OTs who then
  * failed or were absent in a subject are the candidates, one row per OT + subject:
  *
@@ -136,9 +137,14 @@ class ReexamService
             return ['ready' => false, 'message' => $refusal, 'next_no' => 0, 'rows' => []];
         }
 
+        $participants = $this->results->participants($main);
+        $published = self::publishedMarksheets([(int) $main->course_master_pk]);
+        if ($refusal = self::marksheetRefusal($main, $participants, $published)) {
+            return ['ready' => false, 'message' => $refusal, 'next_no' => 0, 'rows' => []];
+        }
+
         $reexams = Reexam::with('candidates')->where('main_drive_id', $main->id)->orderBy('reexam_no')->get();
         $marks = $this->results->marks(array_merge([(int) $main->id], $reexams->pluck('reexam_drive_id')->all()));
-        $participants = $this->results->participants($main);
 
         return $this->evaluate($main, $reexams, $marks, $participants, $this->students(array_keys($participants)));
     }
@@ -161,6 +167,12 @@ class ReexamService
         if ($mains->isEmpty()) {
             return $out;
         }
+        // Only once the course's marksheets are published (one query for the page).
+        $published = self::publishedMarksheets($mains->pluck('course_master_pk')->map(fn ($pk) => (int) $pk)->unique()->all());
+        $mains = $mains->filter(fn (ExaminationDrive $d) => self::marksheetRefusal($d, $this->results->participants($d), $published) === null);
+        if ($mains->isEmpty()) {
+            return $out;
+        }
 
         $reexams = Reexam::with('candidates')->whereIn('main_drive_id', $mains->pluck('id'))->orderBy('reexam_no')->get()->groupBy('main_drive_id');
         $marks = $this->results->marks(array_merge(
@@ -177,6 +189,46 @@ class ReexamService
             $sheet = $this->evaluate($main, $reexams[$main->id] ?? collect(), $marks, $participants[$main->id], $students);
             $out[(int) $main->id] = $sheet['ready'] && $sheet['rows'] !== [];
         }
+
+        return $out;
+    }
+
+    /**
+     * Agreed flow: a re-exam opens only after the marksheets are published (UDC → AAO →
+     * COE signed, coe_marksheets.status = Published). Every participant of the drive needs
+     * a published marksheet on the drive's course; else why not, or null.
+     *
+     * @param  array<int, array<int, true>>  $published  course pk => student pk => true
+     */
+    private static function marksheetRefusal(ExaminationDrive $main, array $participants, array $published): ?string
+    {
+        if (! MarksheetService::enabled()) {
+            return 'Marksheets are not set up yet, so a re-exam cannot open.';
+        }
+        if ($participants === []) {
+            return 'The drive has no participants.';
+        }
+        $have = $published[(int) $main->course_master_pk] ?? [];
+        $missing = count(array_diff_key($participants, $have));
+
+        return $missing === 0 ? null
+            : 'The marksheets are not published yet ('.(count($participants) - $missing).' of '.count($participants)
+                .' OTs). A re-exam opens once UDC, AAO and COE have signed the marksheets.';
+    }
+
+    /** @return array<int, array<int, true>> course pk => student pk => true, for published marksheets */
+    private static function publishedMarksheets(array $coursePks): array
+    {
+        if ($coursePks === [] || ! MarksheetService::enabled()) {
+            return [];
+        }
+        $out = [];
+        DB::table('coe_marksheets')->whereIn('course_master_pk', $coursePks)
+            ->where('status', \App\Models\COE\Marksheet::STATUS_PUBLISHED)
+            ->get(['course_master_pk', 'student_master_pk'])
+            ->each(function ($r) use (&$out) {
+                $out[(int) $r->course_master_pk][(int) $r->student_master_pk] = true;
+            });
 
         return $out;
     }

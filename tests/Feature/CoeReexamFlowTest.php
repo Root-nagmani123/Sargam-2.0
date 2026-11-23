@@ -121,6 +121,19 @@ class CoeReexamFlowTest extends TestCase
             $this->mark($this->drive->id, $this->subjectA, $this->compX, $pk, $i === 0 ? 10 : 40);
             $this->mark($this->drive->id, $this->subjectB, $this->compY, $pk, $i === 1 ? null : 18);
         }
+        // Agreed flow: a re-exam opens only after the marksheets are published.
+        $this->publishMarksheets($this->ots);
+    }
+
+    /** Published (COE signed) marksheets for these OTs on the drive's course. */
+    private function publishMarksheets(array $students, int $status = 2): void
+    {
+        foreach ($students as $i => $pk) {
+            DB::table('coe_marksheets')->updateOrInsert(
+                ['course_master_pk' => $this->drive->course_master_pk, 'student_master_pk' => $pk],
+                ['serial' => 9000 + $i, 'marksheet_number' => 'ZZ-RX/'.$pk.'/'.uniqid(), 'status' => $status]
+            );
+        }
     }
 
     /** An approved (and, unless $moderate is false, moderated) mark; null = absent. */
@@ -185,6 +198,21 @@ class CoeReexamFlowTest extends TestCase
         $this->assertStringContainsString('not final', $sheet['message']);
         $this->actingAs($this->admin)->getJson(route('admin.coe.examination-drive.reexam.ready', ['ids' => [$this->drive->id]]))
             ->assertOk()->assertJson(['ready' => []]);
+    }
+
+    public function test_no_reexam_until_the_marksheets_are_published(): void
+    {
+        // One OT's marksheet only Generated (not signed by COE yet).
+        $this->publishMarksheets([$this->ots[2]], 1);
+
+        $sheet = $this->sheet();
+
+        $this->assertFalse($sheet['ready']);
+        $this->assertSame([], $sheet['rows']);
+        $this->assertStringContainsString('marksheets are not published yet', $sheet['message']);
+        $this->actingAs($this->admin)->getJson(route('admin.coe.examination-drive.reexam.ready', ['ids' => [$this->drive->id]]))
+            ->assertOk()->assertJson(['ready' => []]);
+        $this->create([$this->subjectA.':'.$this->ots[0]])->assertStatus(422);
     }
 
     public function test_the_drive_list_shows_the_button_only_when_ready(): void
