@@ -108,6 +108,21 @@ A row appears for every OT × Director component when **all** of these hold:
 | Photo | `student_master.photo_path` → `storage/form-uploads/photo/…`; initials if missing |
 | OT list | `ResultMarksService::participants()` (roll numbers / UPC of the course + batch) |
 
+### Required on every server: `coe_evaluation_marks.remarks`
+
+The Director's remarks need the `remarks` column. It came from **DBA DDL, not a migration**, so a
+server where that DDL was never run (staging, 23 Nov 2026) fails with
+`Unknown column 'remarks'`. Run it once (same as the dev DB):
+
+```sql
+ALTER TABLE coe_evaluation_marks
+  ADD COLUMN remarks varchar(500) NULL DEFAULT NULL AFTER is_absent;
+```
+
+Without it, the screens show "Saving is off on this server", and Save draft and Send to COE are
+refused with that message instead of an SQL error. Faculty Result Entry also turns its Remarks
+column on once the column exists (`ResultMarksService::remarksEnabled()`).
+
 ## Rules
 
 - **Marks:** 0..max with up to 2 decimals. No `AB`. A blank value clears the mark.

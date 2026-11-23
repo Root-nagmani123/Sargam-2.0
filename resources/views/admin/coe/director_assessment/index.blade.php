@@ -131,6 +131,12 @@
                 </div>
             </div>
 
+            @unless ($canSave)
+                <div class="alert alert-danger py-2 mb-3" role="alert">
+                    Saving is off on this server: the database has no <code>coe_evaluation_marks.remarks</code>
+                    column yet, which holds the Director's remarks. Ask the DBA to add it.
+                </div>
+            @endunless
             <div class="da-head">
                 <div>
                     <h2 class="da-head__title">Director assessment · Reviewer</h2>

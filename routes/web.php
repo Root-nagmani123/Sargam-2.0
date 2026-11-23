@@ -2195,8 +2195,7 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('unique-participant-code.freeze');
     Route::post('unique-participant-code/bulk-delete', [\App\Http\Controllers\Admin\COE\UniqueParticipantCodeController::class, 'bulkDestroy'])
         ->name('unique-participant-code.bulk-destroy');
-    Route::put('unique-participant-code/{code}', [\App\Http\Controllers\Admin\COE\UniqueParticipantCodeController::class, 'update'])
-        ->whereNumber('code')->name('unique-participant-code.update');
+    // No hand edit of a code (it broke the course's sequence): delete a pending one and generate again.
     Route::get('laptop-scriber-seats', [\App\Http\Controllers\Admin\COE\LaptopScriberSeatsController::class, 'index'])
         ->name('laptop-scriber-seats.index');
     Route::post('laptop-scriber-seats', [\App\Http\Controllers\Admin\COE\LaptopScriberSeatsController::class, 'store'])

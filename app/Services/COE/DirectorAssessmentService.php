@@ -377,6 +377,11 @@ class DirectorAssessmentService
      */
     public function save(User $user, array $marks, array $remarks, array $send = []): array
     {
+        // The Director's remarks need coe_evaluation_marks.remarks (DBA DDL, no migration).
+        if (! ResultMarksService::remarksEnabled()) {
+            return $this->refuse("Director's remarks can't be saved yet: the database is missing coe_evaluation_marks.remarks. Ask the DBA to add it.");
+        }
+
         $all = $this->columns();
         $cells = [];
         foreach ([$marks, $remarks] as $input) {

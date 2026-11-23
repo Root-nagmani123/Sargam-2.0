@@ -17,12 +17,15 @@ use Illuminate\Support\Facades\Validator;
  * COE → Master Data → Unique Participant Code.
  *
  * One coe_participant_codes row per participant. The grid shows the codes that exist:
- * Course Name (course_master), OT Name (student_master.display_name), DT Name (the OT's
- * login, user_credentials.user_name), Unique Code and Status (Pending / Frozen).
+ * Course Name (course_master), Batch, OT Name (student_master first + middle + last name),
+ * Display Name (student_master.display_name), Unique Code and Status (Pending / Frozen).
  *
  * Codes are generated per course + batch, in name order, as prefix + a running number
  * whose width is the width of "Count Start from" as typed (UC- + 0324 → UC-0324, UC-0325…).
- * A frozen code cannot be edited, deleted or regenerated.
+ * Generating again never changes a code already given: only OTs without one get a code,
+ * numbered on from the course's highest code of that prefix. To renumber, delete the
+ * pending codes first. Codes are never edited by hand (that broke the sequence): delete a
+ * pending code and generate again. A frozen code cannot be deleted.
  *
  * Scopes: `active` — courses that are active and not past their end date; `archived` — the rest.
  */
@@ -48,11 +51,15 @@ class UniqueParticipantCodeController extends Controller
             'scope' => $scope,
             'rows' => $rows,
             'courses' => $rows->pluck('course_name')->unique()->sort(SORT_NATURAL | SORT_FLAG_CASE)->values(),
+            // Batch filter: each course's batches, newest first (the options follow the Course filter).
+            'batches' => $rows->groupBy('course_name')
+                ->map(fn ($r) => $r->pluck('batch')->unique()->sortDesc()->values())
+                ->all(),
             'cohorts' => $this->cohorts($scope),
         ]);
     }
 
-    /** Generate (or regenerate) the codes of one course + batch. */
+    /** Give codes to the OTs of one course + batch that have none yet. */
     public function generate(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
@@ -101,16 +108,27 @@ class UniqueParticipantCodeController extends Controller
             return $this->fail(CourseParticipants::elsewhereMessage($elsewhere, 'Unique Participant Code'));
         }
 
-        $frozen = ParticipantCode::whereIn('student_master_pk', $participants)
-            ->where('status', ParticipantCode::STATUS_FROZEN)
-            ->count();
-        if ($frozen > 0) {
-            return $this->fail("{$frozen} code(s) in that course and batch are already frozen, so the codes cannot be regenerated.");
+        // An OT keeps the code it has (pending or frozen): generating again only gives codes
+        // to the OTs still without one, e.g. added to the course later.
+        $existing = ParticipantCode::whereIn('student_master_pk', $participants)
+            ->pluck('unique_code', 'student_master_pk')
+            ->mapWithKeys(fn ($code, $pk) => [(int) $pk => trim((string) $code)]);
+        $missing = $participants->reject(fn ($pk) => $existing->has($pk))->values();
+        if ($missing->isEmpty()) {
+            return $this->fail("All {$participants->count()} OT(s) of that course and batch already have a Unique Participant Code. Nothing was changed.");
+        }
+
+        // New codes carry on after this course's own codes of the same prefix (UC-0324…0333 → UC-0334).
+        $next = $start;
+        foreach ($existing as $code) {
+            if (str_starts_with($code, $prefix) && ctype_digit($rest = substr($code, strlen($prefix)))) {
+                $next = max($next, (int) $rest + 1);
+            }
         }
 
         $codes = [];
-        foreach ($participants->values() as $i => $studentPk) {
-            $codes[$studentPk] = $prefix . str_pad((string) ($start + $i), $padding, '0', STR_PAD_LEFT);
+        foreach ($missing as $i => $studentPk) {
+            $codes[$studentPk] = $prefix . str_pad((string) ($next + $i), $padding, '0', STR_PAD_LEFT);
         }
 
         if (($longest = max(array_map('mb_strlen', $codes))) > 50) {
@@ -118,18 +136,16 @@ class UniqueParticipantCodeController extends Controller
         }
 
         // coe_pc_code_unique is the real guard; this names the clash instead of a failed insert.
-        $taken = ParticipantCode::whereIn('unique_code', array_values($codes))
-            ->whereNotIn('student_master_pk', $participants)
-            ->value('unique_code');
-        if ($taken !== null) {
-            return $this->fail("Code {$taken} already belongs to a participant of another course. Choose a different prefix or start number.");
+        $clash = ParticipantCode::whereIn('unique_code', array_values($codes))->first(['unique_code', 'student_master_pk']);
+        if ($clash !== null) {
+            $owner = $participants->contains((int) $clash->student_master_pk) ? 'another participant of this course' : 'a participant of another course';
+
+            return $this->fail("Code {$clash->unique_code} already belongs to {$owner}. Choose a different prefix or start number.");
         }
 
         try {
             DB::transaction(function () use ($codes, $courseId, $batch) {
-                // Replace, never merge: regeneration renumbers everyone.
-                ParticipantCode::whereIn('student_master_pk', array_keys($codes))->delete();
-
+                // Add, never replace: codes already given stay as they are.
                 $now = now();
                 $rows = [];
                 foreach ($codes as $studentPk => $code) {
@@ -165,47 +181,15 @@ class UniqueParticipantCodeController extends Controller
             ->where(fn ($q) => $this->whereCourseInScope($q, 'active', 'cm'))
             ->exists() ? 'active' : 'archived';
 
+        $kept = $existing->count();
+
         return response()->json([
-            'message' => count($codes) . " code(s) generated, {$first} to {$last}.",
+            'message' => count($codes) . " code(s) generated, {$first} to {$last}."
+                . ($kept ? " {$kept} OT(s) already had a code and kept it." : ''),
             'written' => count($codes),
             'scope' => $scope,
             'redirect' => route('admin.coe.unique-participant-code.index', ['scope' => $scope]),
         ]);
-    }
-
-    /** Correct one code by hand. Course, OT and DT name come from the masters and are not editable here. */
-    public function update(Request $request, int $code): JsonResponse
-    {
-        $record = ParticipantCode::find($code);
-        if ($record === null) {
-            return $this->fail('That code no longer exists.', 404);
-        }
-        if ($record->isFrozen()) {
-            return $this->fail('This code is frozen and can no longer be edited.');
-        }
-
-        $validator = Validator::make($request->all(), [
-            'unique_code' => ['required', 'string', 'max:50', self::PREFIX_REGEX],
-        ], [
-            'unique_code.required' => 'Enter the unique code.',
-            'unique_code.regex' => 'The code may contain letters, digits, - and / only.',
-        ]);
-        if ($validator->fails()) {
-            return $this->fail($validator->errors()->first());
-        }
-
-        $value = trim($validator->validated()['unique_code']);
-        if (ParticipantCode::where('unique_code', $value)->where('pk', '!=', $record->pk)->exists()) {
-            return $this->fail("Code {$value} already belongs to another participant.");
-        }
-
-        $record->fill([
-            'unique_code' => $value,
-            'modified_by' => Auth::id(),
-            'modified_date' => now(),
-        ])->save();
-
-        return response()->json(['message' => "Code updated to {$value}.", 'unique_code' => $value]);
     }
 
     /** Freeze one or more codes. Idempotent: an already-frozen code keeps its frozen_at. */
@@ -278,24 +262,18 @@ class UniqueParticipantCodeController extends Controller
         return DB::table('coe_participant_codes as pc')
             ->join('student_master as sm', 'sm.pk', '=', 'pc.student_master_pk')
             ->join('course_master as cm', 'cm.pk', '=', 'pc.course_master_pk')
-            // An OT may have no login (or, in old data, two); take one user_name per OT.
-            ->leftJoinSub(
-                DB::table('user_credentials')->where('user_category', 'S')
-                    ->groupBy('user_id')->select('user_id', DB::raw('min(user_name) as user_name')),
-                'uc', 'uc.user_id', '=', 'sm.pk'
-            )
             ->where(fn ($q) => $this->whereCourseInScope($q, $scope, 'cm'))
             ->orderBy('cm.course_name')
-            ->orderBy('pc.batch')
+            ->orderByDesc('pc.batch')
             ->orderBy('pc.unique_code')
             ->get(['pc.pk', 'pc.unique_code', 'pc.status', 'pc.batch', 'cm.course_name',
-                'sm.display_name', 'sm.first_name', 'sm.middle_name', 'sm.last_name', 'uc.user_name'])
+                'sm.display_name', 'sm.first_name', 'sm.middle_name', 'sm.last_name'])
             ->map(fn ($r) => [
                 'id' => (int) $r->pk,
                 'course_name' => (string) $r->course_name,
                 'batch' => (int) $r->batch,
-                'ot_name' => $this->studentName($r),
-                'dt_name' => (string) ($r->user_name ?: '—'),
+                'ot_name' => $this->fullName($r),
+                'display_name' => $this->clean($r->display_name) ?: '—',
                 'unique_code' => (string) $r->unique_code,
                 'status' => ParticipantCode::statusLabel((int) $r->status),
             ]);
@@ -338,14 +316,18 @@ class UniqueParticipantCodeController extends Controller
         }
     }
 
-    private function studentName(object $s): string
+    /** OT Name: first, middle and last name (student_master), else the display name. */
+    private function fullName(object $s): string
     {
-        $name = trim((string) ($s->display_name ?? ''));
-        if ($name === '') {
-            $name = trim(implode(' ', array_filter([$s->first_name ?? null, $s->middle_name ?? null, $s->last_name ?? null])));
-        }
+        $name = trim(implode(' ', array_filter(array_map(fn ($p) => $this->clean($p), [$s->first_name ?? null, $s->middle_name ?? null, $s->last_name ?? null]))));
 
-        return $name !== '' ? $name : '—';
+        return $name !== '' ? $name : ($this->clean($s->display_name ?? null) ?: '—');
+    }
+
+    /** Trimmed, single-spaced, with HTML entities in old imports (&amp;) decoded. */
+    private function clean(?string $value): string
+    {
+        return trim(preg_replace('/\s+/u', ' ', html_entity_decode((string) $value, ENT_QUOTES | ENT_HTML5)));
     }
 
     /**

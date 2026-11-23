@@ -90,14 +90,33 @@ class CoeParticipantCodeFlowTest extends TestCase
         $this->assertCount(0, $this->codes());
     }
 
-    public function test_regenerate_replaces_pending_codes(): void
+    public function test_generating_again_keeps_every_code_and_codes_only_new_ots(): void
     {
         $this->generate()->assertOk();
-        $this->generate(['prefix' => 'ZZN-', 'count_start' => '1'])->assertOk();
+        $before = $this->codes()->pluck('unique_code', 'student_master_pk')->all();
 
+        // Everyone has a code: nothing to do, nothing changes.
+        $this->generate(['prefix' => 'ZZN-', 'count_start' => '1'])->assertStatus(422)
+            ->assertJsonPath('message', fn ($m) => str_contains($m, 'already have a Unique Participant Code'));
+        $this->assertSame($before, $this->codes()->pluck('unique_code', 'student_master_pk')->all());
+
+        // One code frozen, two OTs without a code (one deleted, as if added to the course later).
         $codes = $this->codes();
-        $this->assertCount($this->participants, $codes);
-        $this->assertTrue($codes->every(fn ($c) => str_starts_with($c->unique_code, 'ZZN-')));
+        $codes[0]->update(['status' => ParticipantCode::STATUS_FROZEN]);
+        $gone = $codes->slice(1, 2)->pluck('student_master_pk')->all();
+        ParticipantCode::whereIn('student_master_pk', $gone)->delete();
+
+        $this->generate()->assertOk()->assertJsonPath('written', 2)
+            ->assertJsonPath('message', fn ($m) => str_contains($m, ($this->participants - 2).' OT(s) already had a code and kept it'));
+        $after = $this->codes()->pluck('unique_code', 'student_master_pk')->all();
+        $this->assertCount($this->participants, $after);
+        // Everyone else's code is untouched; the two new ones carry on after the highest.
+        $this->assertSame(array_diff_key($before, array_flip($gone)), array_diff_key($after, array_flip($gone)));
+        $last = 324 + $this->participants - 1;
+        $this->assertEqualsCanonicalizing(
+            ['ZZT-'.str_pad((string) ($last + 1), 4, '0', STR_PAD_LEFT), 'ZZT-'.str_pad((string) ($last + 2), 4, '0', STR_PAD_LEFT)],
+            array_values(array_intersect_key($after, array_flip($gone)))
+        );
     }
 
     public function test_a_code_owned_by_another_course_is_refused(): void
@@ -122,16 +141,15 @@ class CoeParticipantCodeFlowTest extends TestCase
         $this->assertCount(0, $this->codes());
     }
 
-    public function test_edit_freeze_and_delete(): void
+    public function test_freeze_and_delete_and_no_hand_edit(): void
     {
         $this->generate()->assertOk();
         [$a, $b, $c] = $this->codes()->take(3)->all();
 
-        // Edit: a free code is taken, a duplicate is refused.
-        $this->actingAs($this->admin)->putJson(route('admin.coe.unique-participant-code.update', $a->pk), ['unique_code' => 'ZZE-1'])
-            ->assertOk()->assertJsonPath('unique_code', 'ZZE-1');
-        $this->actingAs($this->admin)->putJson(route('admin.coe.unique-participant-code.update', $b->pk), ['unique_code' => 'ZZE-1'])
-            ->assertStatus(422);
+        // No hand edit: it broke the course's sequence. The route is gone.
+        $this->actingAs($this->admin)->putJson('/admin/coe/unique-participant-code/'.$a->pk, ['unique_code' => 'ZZE-1'])
+            ->assertNotFound();
+        $this->assertSame($a->unique_code, $a->fresh()->unique_code);
 
         // Freeze, idempotently.
         $this->actingAs($this->admin)->postJson(route('admin.coe.unique-participant-code.freeze'), ['ids' => [$a->pk, $b->pk]])
@@ -139,34 +157,33 @@ class CoeParticipantCodeFlowTest extends TestCase
         $this->actingAs($this->admin)->postJson(route('admin.coe.unique-participant-code.freeze'), ['ids' => [$a->pk]])
             ->assertOk()->assertJsonPath('frozen', 0);
 
-        // Frozen: no edit, no delete, no regenerate.
-        $this->actingAs($this->admin)->putJson(route('admin.coe.unique-participant-code.update', $a->pk), ['unique_code' => 'ZZE-2'])
-            ->assertStatus(422);
+        // Frozen: no delete.
         $this->actingAs($this->admin)->postJson(route('admin.coe.unique-participant-code.bulk-destroy'), ['ids' => [$a->pk]])
             ->assertStatus(422);
-        $this->generate()->assertStatus(422);
 
         // Mixed delete: the pending one goes, the frozen one stays.
         $this->actingAs($this->admin)->postJson(route('admin.coe.unique-participant-code.bulk-destroy'), ['ids' => [$b->pk, $c->pk]])
             ->assertOk()->assertJsonPath('deleted_ids', [$c->pk]);
         $this->assertNotNull(ParticipantCode::find($b->pk));
         $this->assertNull(ParticipantCode::find($c->pk));
-        $this->assertSame('ZZE-1', ParticipantCode::find($a->pk)->unique_code);
+
+        // The deleted OT gets the next number in the sequence back by Generate.
+        $this->generate()->assertOk()->assertJsonPath('written', 1);
     }
 
-    public function test_grid_maps_course_ot_and_dt_name_from_the_masters(): void
+    public function test_grid_shows_course_batch_ot_name_and_display_name(): void
     {
         $this->generate()->assertOk();
 
-        // A participant with a login, to check DT Name against user_credentials.
         $code = DB::table('coe_participant_codes as pc')
-            ->join('user_credentials as uc', fn ($j) => $j->on('uc.user_id', '=', 'pc.student_master_pk')->where('uc.user_category', 'S'))
             ->join('student_master as sm', 'sm.pk', '=', 'pc.student_master_pk')
             ->join('course_master as cm', 'cm.pk', '=', 'pc.course_master_pk')
             ->where('pc.course_master_pk', $this->course)->where('pc.batch', $this->batch)
-            ->first(['pc.unique_code', 'uc.user_name', 'sm.display_name', 'cm.course_name', 'cm.active_inactive', 'cm.end_date']);
+            ->whereNotNull('sm.first_name')->where('sm.first_name', '!=', '')
+            ->first(['pc.unique_code', 'sm.display_name', 'sm.first_name', 'sm.middle_name', 'sm.last_name',
+                'cm.course_name', 'cm.active_inactive', 'cm.end_date']);
         if ($code === null) {
-            $this->markTestSkipped('No participant in the cohort has an OT login.');
+            $this->markTestSkipped('No participant in the cohort has a first name.');
         }
 
         $active = (int) $code->active_inactive === 1 && ($code->end_date === null || $code->end_date >= now()->toDateString());
@@ -174,10 +191,17 @@ class CoeParticipantCodeFlowTest extends TestCase
             ->get(route('admin.coe.unique-participant-code.index', $active ? [] : ['scope' => 'archived']))
             ->assertOk();
 
-        $page->assertSee('data-upc-code="' . e($code->unique_code) . '"', false)
-             ->assertSee('data-upc-dt="' . e($code->user_name) . '"', false)
-             ->assertSee(e($code->display_name), false)
-             ->assertSee(e($code->course_name), false)
-             ->assertDontSee('Dana Arnold');
+        $row = collect($page->viewData('rows'))->firstWhere('unique_code', $code->unique_code);
+        $clean = fn ($v) => trim(preg_replace('/\s+/u', ' ', html_entity_decode((string) $v, ENT_QUOTES | ENT_HTML5)));
+        $this->assertSame($this->batch, $row['batch']);
+        $this->assertSame($clean(implode(' ', array_filter([$clean($code->first_name), $clean($code->middle_name), $clean($code->last_name)]))), $row['ot_name']);
+        $this->assertSame($clean($code->display_name) ?: '—', $row['display_name']);
+        $this->assertContains($this->batch, $page->viewData('batches')[$code->course_name]->all());
+
+        $page->assertSee('<th scope="col">Batch</th>', false)
+             ->assertSee('<th scope="col">Display Name</th>', false)
+             ->assertDontSee('DT Name')
+             ->assertDontSee('coe-act--edit', false)
+             ->assertSee('id="upcFilterBatch"', false);
     }
 }

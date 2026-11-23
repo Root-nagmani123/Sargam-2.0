@@ -8,6 +8,13 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-23: Unique Participant Code: Generate keeps existing codes.** Tester bug: generating
+  again gave OTs that already had a code a new one (it replaced the course's pending codes), and
+  one frozen code blocked new OTs entirely. Now only OTs without a code get one, numbered after
+  the course's highest; nobody's code changes. Also (tester): Batch filter + column, DT Name
+  (login) replaced by Display Name, OT Name = full name, and no hand Edit of a code. Details:
+  Roll numbers, UPC, mapping. Tests: `CoeParticipantCodeFlowTest`.
+
 - **2026-11-22: Director Assessment (Evaluation & Marks, Training Section).** The old mock at
   `admin/coe/evaluation-marks` (menu "Evaluation & Marks", `coe_evaluation_marks`, now enforced)
   is real: TI quick-enters the Director's overall marks per OT, reviews the OT profile
@@ -315,7 +322,13 @@ Table `question_papers` (one per drive + subject, soft deletes), `question_paper
   the whole allocation, notifies OTs, **no unfreeze**.
 - **Unique Participant Code** (`UniqueParticipantCodeController`, `coe_participant_codes`):
   anonymous code used instead of the roll number for evaluation (`UC-0324`, no
-  separator, ordered by name). Freeze is per row; no unfreeze.
+  separator, ordered by name). Freeze is per row; no unfreeze. **Generating again never
+  changes a code already given** (pending or frozen): only OTs without one get a code,
+  numbered on from the course's highest code of that prefix; "All … already have" when none
+  is missing. To renumber, delete the pending codes first. **No hand edit** (route removed; it
+  broke the sequence): delete a pending code and Generate gives the next number. Grid: Course,
+  Batch (filter follows the Course filter), OT Name (first + middle + last), Display Name
+  (`student_master.display_name`), Unique Code, Status.
 - **Roll No ↔ Unique Code Mapping** (`RollCodeMapping`): read-only, confidential (undoes
   the anonymity), COE only.
 

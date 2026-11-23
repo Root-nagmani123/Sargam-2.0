@@ -304,6 +304,10 @@
                     <div class="dar-info">
                         <div class="dar-info__title">Before sending to COE</div>
                         Review the evidence, then enter director marks and remarks. Faculty marks remain unchanged.
+                        @unless ($canSave)
+                            <div class="mt-1 text-danger"><strong>Saving is off on this server: the database has no
+                                <code>coe_evaluation_marks.remarks</code> column yet. Ask the DBA to add it.</strong></div>
+                        @endunless
                         @unless ($r['eligible'])
                             <div class="mt-1"><strong>Every faculty mark of {{ $r['subject'] }} must be received first.</strong></div>
                         @endunless
@@ -333,9 +337,9 @@
             </div>
             @unless ($sent)
                 <div class="d-flex flex-wrap gap-3">
-                    <button type="button" class="btn dar-draft" id="darDraftBtn">Save draft</button>
+                    <button type="button" class="btn dar-draft" id="darDraftBtn" @disabled(! $canSave)>Save draft</button>
                     <button type="button" class="btn dar-send" id="darSendBtn" disabled
-                            data-eligible="{{ $r['eligible'] ? 1 : 0 }}">Send to COE</button>
+                            data-eligible="{{ $r['eligible'] && $canSave ? 1 : 0 }}">Send to COE</button>
                 </div>
             @endunless
         </div>

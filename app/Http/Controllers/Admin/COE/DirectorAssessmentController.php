@@ -28,6 +28,7 @@ class DirectorAssessmentController extends Controller
         ) + [
             'tab' => $this->tab($request),
             'remarksMax' => DirectorAssessmentService::REMARKS_MAX,
+            'canSave' => \App\Services\COE\ResultMarksService::remarksEnabled(),
         ]);
     }
 
@@ -54,6 +55,8 @@ class DirectorAssessmentController extends Controller
                 'tab' => $this->tab($request) === 'completed' ? 'completed' : null,
             ]),
             'remarksMax' => DirectorAssessmentService::REMARKS_MAX,
+            // Without the DBA's coe_evaluation_marks.remarks nothing can be saved here.
+            'canSave' => \App\Services\COE\ResultMarksService::remarksEnabled(),
         ]);
     }
 
