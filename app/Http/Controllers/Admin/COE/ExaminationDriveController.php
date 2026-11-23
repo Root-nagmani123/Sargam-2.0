@@ -23,6 +23,7 @@ use App\Models\SubjectMaxMarksMaster;
 use App\Models\SubjectMaster;
 use App\Models\TermMaster;
 use App\Services\COE\CourseCoordinatorService;
+use App\Services\COE\OmrMarks;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -44,7 +45,8 @@ class ExaminationDriveController extends Controller
     use ExportsMasterGrid;
 
     public const SCOPES       = ['active', 'archived'];
-    public const SOURCES      = ['Faculty', 'Sargam', 'Sargam 2.0'];
+    // OMR: marks come from the scanned OMR sheets (coe_exam_omr), see OmrMarks.
+    public const SOURCES      = ['Faculty', 'Sargam', 'Sargam 2.0', OmrMarks::SOURCE];
     public const EXAM_MODES   = ['Online', 'Offline', 'Offline & Online'];
     public const COMPONENT_EXAM_TYPES = ['Online Objective', 'Offline Objective', 'Online Descriptive', 'Offline Descriptive'];
 
@@ -597,6 +599,11 @@ class ExaminationDriveController extends Controller
             return response()->json(['message' => $error], 422);
         }
 
+        $twice = $rows->pluck('component')->duplicates()->unique();
+        if ($twice->isNotEmpty()) {
+            return response()->json(['message' => 'Each component can be added only once: ' . $twice->implode(', ') . '.'], 422);
+        }
+
         $rollNumbers = array_column($this->courseRollNumbers($drive), 'code');
         $uniqueCodes = $this->courseUniqueCodes($drive);
 
@@ -605,25 +612,24 @@ class ExaminationDriveController extends Controller
             $subjectRows = fn () => ExaminationDriveComponentMap::where('examination_drive_id', $drive->id)
                 ->where('subject_master_pk', $subjectPk);
 
-            // Sub-coordinators, exam end date and exam type by component, so a page
-            // that does not send them (admin Map Faculty) does not wipe what faculty
-            // set on Complete Setup.
-            $previous = $subjectRows()
-                ->get(['component_master_pk', 'sub_faculty_names', 'faculty_codes', 'faculty_unique_codes', 'exam_end_date', 'exam_type'])
-                ->keyBy('component_master_pk');
-
-            $subjectRows()->delete();
+            // The saved rows by component. A component saved again is updated in place, so
+            // its id (the OMR exam_id of an OMR component) never changes. Sub-coordinators,
+            // exam end date and exam type also come from here, so a page that does not send
+            // them (admin Map Faculty) does not wipe what faculty set on Complete Setup.
+            $previous = $subjectRows()->lockForUpdate()->get()->keyBy('component_master_pk');
+            $keptComponents = [];
 
             foreach ($rows as $row) {
                 $componentPk = ComponentMaster::where('component_name', $row['component'])->value('pk');
                 if (! $componentPk) {
                     continue;
                 }
+                $keptComponents[] = $componentPk;
                 $facultyPk = filled($row['faculty'] ?? null)
                     ? FacultyMaster::whereRaw('TRIM(full_name) = ?', [trim($row['faculty'])])->value('pk')
                     : null;
 
-                ExaminationDriveComponentMap::create([
+                $values = [
                     'examination_drive_id' => $drive->id,
                     'subject_master_pk'    => $subjectPk,
                     'component_master_pk'  => $componentPk,
@@ -653,9 +659,17 @@ class ExaminationDriveController extends Controller
                         $people,
                         $uniqueCodes
                     ),
-                    'created_date'         => now(),
-                ]);
+                ];
+
+                if ($existing = $previous[$componentPk] ?? null) {
+                    $existing->fill($values)->save();
+                } else {
+                    ExaminationDriveComponentMap::create($values + ['created_date' => now()]);
+                }
             }
+
+            // Components taken off the subject are removed.
+            $subjectRows()->whereNotIn('component_master_pk', $keptComponents)->delete();
         });
 
         // A mapped faculty's save sends the drive to the course's CC only once every
@@ -1571,6 +1585,8 @@ class ExaminationDriveController extends Controller
             'status'     => $drive->progress()[0],
             'archived'   => $drive->status === ExaminationDrive::STATUS_CLOSED,
             'component_rows' => $maps->map(fn ($map) => [
+                // Stays the same on every save; an OMR component's sheets carry it as exam_id.
+                'id'             => (int) $map->id,
                 'component'      => $map->component->component_name ?? '-',
                 'subject'        => trim((string) ($map->subject->subject_name ?? '')) ?: '-',
                 'max_marks'      => $map->max_marks,

@@ -8,6 +8,15 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-23: Evaluation Through = OMR.** New option on Map Faculty / faculty setup. An
+  OMR component's Result Entry marks are pre-filled from `coe_exam_omr.score`
+  (`exam_id` = the component row's `examination_drive_component_maps.id`, shown on the
+  setup row as "OMR Exam ID"; OT matched on roll number; `verified` sheets only). Saving
+  components now updates rows in place, so a row id no longer changes on Save. Details:
+  Results → "OMR sheets", Examination Drive → Save rules. Tests: `CoeOmrMarksFlowTest`.
+- **2026-11-20: OMR sheets table `coe_exam_omr`.** Copy of the OMR app's `sheets` table
+  (`lbsnaa_omr` database): same 32 columns, no extras, no foreign keys. Dummy rows via
+  `CoeExamOmrDummySeeder` (dev only). Details: Results → "OMR sheets".
 - **2026-11-19: Marksheet shows Remarks, not the number.** On the printed marksheet
   (`marksheet/show.blade.php`) the "Marksheet No." line is replaced by a blank
   "Remarks: ____" line, filled by hand. View only: nothing stored; the number is still
@@ -140,6 +149,12 @@ Masters (type, term, component, building/floor/room, subject max marks,
   - Course codes come from the batch equal to `academic_session`, else the latest batch.
   - When every mapped subject has components, the drive goes to the CC
     (`sendToCoordinator`, `cc_status=pending`). An admin save never sends it.
+  - A component saved again is **updated in place** (keyed on component), so its
+    `examination_drive_component_maps.id` stays the same; components left out are
+    deleted; the same component twice in one save is refused. The id is the OMR
+    `exam_id` (shown as "OMR Exam ID" on an OMR row).
+  - Evaluation Through (`source`, `SOURCES`): `Faculty`, `Sargam`, `Sargam 2.0` (no
+    faculty), `OMR` (`OmrMarks::SOURCE`; faculty optional, marks from OMR sheets).
 - **CC** (`ccIndex`, `ccApprove`, `ccReject`): approve sets proposed start/end dates
   (inside course dates) as the drive dates; reject needs remarks, faculty can re-save.
   A mapped faculty is locked after approval; admins are not.
@@ -294,6 +309,21 @@ All rules in `ResultMarksService` (RMS) and `MarksModeration`.
   Faculty see OTs per their assigned codes; COE staff (no faculty row) see everything.
   Excel import saves as draft only. `EvaluationMarksController` is an old mock (sample
   data, no table).
+- **OMR sheets** (`coe_exam_omr`, migration `2026_11_20_000001_create_coe_exam_omr_table`):
+  one row per scanned OMR answer sheet, columns copied exactly from `lbsnaa_omr.sheets`
+  (`id`, `exam_id`, `roll_number`, `ot_code`, `status`, `correct`/`wrong`/`blank`,
+  `score`, `percentage`, …). `exam_id` = `examination_drive_component_maps.id` of the
+  paper (drive + subject + component). `status`: pending → processing → processed /
+  review / failed → verified (only `verified` has been checked by a person).
+  `OmrMarks::scores()` (read-only) feeds Result Entry for components whose Evaluation
+  Through is `OMR`: sheet `roll_number = coe_roll_numbers.roll_number` (`ot_code` alone is
+  not unique across courses), `verified` only, latest sheet (highest `id`) wins, negative
+  score → 0. `ResultMarksService::entries()` gives it as `omr` only to a cell with **no
+  saved mark** and only when ≤ max marks; the page pre-fills the Marks box (`data-omr`,
+  Reset goes back to it) and it is stored like typed marks on Save as Draft / Approve.
+  A saved mark always wins. `CoeExamOmrDummySeeder` adds 5 verified sheets (exam_id 159 =
+  drive 415 "test1", Climate / Written on the dev DB, `t2-001`…`t2-005`); dev only, set that
+  row's Evaluation Through to OMR to see them. The Excel template does not include OMR scores.
 - **Marks Moderation** (`MarksModerationController`, Training section): SOP COE/11
   `Mi = (UMi − Xj) × σG/σj + μG` per column, across evaluators; absents excluded;
   clamp 0..max. Only when every assigned mark in the component is approved.

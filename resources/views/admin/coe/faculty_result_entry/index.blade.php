@@ -138,6 +138,8 @@
                                     $marks = $absent ? '' : $two($mark?->marks);
                                     $remark = (string) ($mark?->remarks ?? '');
                                     $label = $e['subject'].' — '.$e['component'];
+                                    // OMR component, no mark saved yet: pre-filled from the OMR sheet, saved on Save / Approve.
+                                    $omr = $two($e['omr'] ?? null);
                                 @endphp
                                 <tr>
                                     <td>{{ $e['code'] }}</td>
@@ -163,9 +165,10 @@
                                         </td>
                                         <td>
                                             <input type="number" inputmode="decimal" min="0" max="{{ $e['max'] }}" step="0.01"
-                                                   class="form-control rre-mark" value="{{ $marks }}"
+                                                   class="form-control rre-mark" value="{{ $omr !== '' ? $omr : $marks }}"
                                                    data-key="{{ $e['key'] }}" data-student="{{ $e['student'] }}" data-max="{{ $e['max'] }}"
                                                    data-initial="{{ $marks }}"
+                                                   @if ($omr !== '') data-omr="{{ $omr }}" title="From the OMR sheet" @endif
                                                    placeholder="{{ $absent ? 'Not applicable' : '0 - '.$num($e['max']) }}"
                                                    @disabled($absent)
                                                    aria-label="Marks of {{ $e['code'] }}, {{ $label }}, out of {{ $num($e['max']) }}">
@@ -370,7 +373,8 @@ $(function () {
                 var $tr = $(this), p = parts($tr);
                 p.att.val(p.att.attr('data-initial'));
                 setAbsent($tr, p.att.val() === 'Absent');
-                p.mark.val(p.mark.attr('data-initial')).removeClass('is-invalid').attr('title', null);
+                // An OMR cell goes back to its OMR score, not to empty.
+                p.mark.val(p.mark.attr('data-omr') || p.mark.attr('data-initial')).removeClass('is-invalid').attr('title', null);
                 p.remark.val(p.remark.attr('data-initial'));
             });
         });

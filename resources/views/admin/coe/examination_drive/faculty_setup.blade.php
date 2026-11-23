@@ -255,6 +255,10 @@
                                     <option value="{{ $s }}" @if($s === $row['source']) selected @endif>{{ $s }}</option>
                                     @endforeach
                                 </select>
+                                {{-- The OMR sheets of this component carry this id as exam_id (coe_exam_omr). --}}
+                                @if (! empty($row['id']))
+                                <small class="text-muted d-block mt-1 fedc-omr-id" @if($row['source'] !== \App\Services\COE\OmrMarks::SOURCE) hidden @endif>OMR Exam ID: {{ $row['id'] }}</small>
+                                @endif
                             </td>
                             <td>
                                 @php($systemSource = in_array($row['source'], ['Sargam', 'Sargam 2.0'], true))
@@ -538,6 +542,8 @@ $(function () {
     $body.on('change', '.fedc-source', function () {
         var source = $(this).val();
         var $btn = $(this).closest('.fedc-map-row').find('.fedc-fac-open-btn');
+        // A saved row shows its OMR Exam ID while it is evaluated through OMR.
+        $(this).closest('.fedc-map-row').find('.fedc-omr-id').prop('hidden', source !== 'OMR');
         if (SYSTEM_SOURCES.indexOf(source) !== -1) {
             $btn.data('faculty', '').data('sub', []).data('codes', {}).data('uniq', {}).prop('disabled', true)
                 .empty().append($('<span class="fedc-fac-text"></span>').text(source));

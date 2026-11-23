@@ -305,7 +305,7 @@ class ResultMarksService
         uasort($rows, fn ($a, $b) => self::compareOtCodes($a['code'], $b['code']));
 
         $marks = $this->marks(array_values(array_unique(array_column($columns, 'drive_id'))));
-        $entries = $this->entries($columns, $subjects, $rows, $marks);
+        $entries = $this->entries($columns, $subjects, $rows, $marks, (new OmrMarks)->scores($columns, $rows));
 
         return [
             'courses' => $courses,
@@ -328,9 +328,14 @@ class ResultMarksService
      * The sheet as Evaluation & Marks Entry lists it: one entry per participant ×
      * column, in OT-code order and, within one OT, in column order.
      *
-     * @return list<array{key:string, student:int, code:string, course:string, subject:string, component:string, max:float, mark:?EvaluationMark}>
+     * `omr` is the OT's score from the OMR sheets, given only to an OMR column's cell that has
+     * no saved mark yet and only when it fits the max marks; the sheet shows it pre-filled and
+     * it is stored once the faculty saves or approves.
+     *
+     * @param  array<string, array<int, float>>  $omr  OmrMarks::scores()
+     * @return list<array{key:string, student:int, code:string, course:string, subject:string, component:string, max:float, mark:?EvaluationMark, omr:?float}>
      */
-    private function entries(array $columns, array $subjects, array $rows, array $marks): array
+    private function entries(array $columns, array $subjects, array $rows, array $marks, array $omr = []): array
     {
         $assigned = array_map(fn ($col) => array_flip($col['students']), $columns);
         $entries = [];
@@ -347,7 +352,10 @@ class ResultMarksService
                     'subject' => $col['subject'],
                     'component' => $subjects[$col['subject_pk']]['columns'][$col['key']]['label'] ?? $col['component'],
                     'max' => $col['max'],
-                    'mark' => $marks[$col['key']][$pk] ?? null,
+                    'mark' => $mark = $marks[$col['key']][$pk] ?? null,
+                    'omr' => $mark === null && isset($omr[$col['key']][$pk]) && $omr[$col['key']][$pk] <= $col['max']
+                        ? $omr[$col['key']][$pk]
+                        : null,
                 ];
             }
         }
@@ -381,6 +389,9 @@ class ResultMarksService
             'subject_code' => trim((string) ($map->subject->sub_short_name ?? '')),
             'component_pk' => (int) $map->component_master_pk,
             'component' => trim((string) ($map->component->component_name ?? '')),
+            // Evaluation Through; an OMR column's marks come from coe_exam_omr (exam_id = map_id).
+            'map_id' => (int) $map->id,
+            'source' => (string) $map->source,
             'max' => (float) $map->max_marks,
             'passing' => $map->passing_marks === null ? null : (float) $map->passing_marks,
             // Why nobody may be entering it yet (Result Compilation's Action column).
