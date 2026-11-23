@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Schema;
  *  - the six security cards for Security Approver II / III, and requested_family_id /
  *    requested_vehicle_pass for Super Admin: their counts only recognise roles named
  *    "Security Card" / "Admin Security", which no role holds, so they would always read 0.
+ *    Since fixed; 2026_11_23_000000_assign_security_approver_dashboard_cards assigns them.
  *  - cards that need new count code ([NEW] in the document) and the protocol cards
  *    (their definitions are on main, not this branch).
  *

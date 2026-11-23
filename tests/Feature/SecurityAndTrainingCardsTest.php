@@ -104,6 +104,27 @@ class SecurityAndTrainingCardsTest extends TestCase
         $this->assertFalse(hasRole('Admin Security'));
     }
 
+    public function test_training_induction_is_read_as_the_induction_admin_role(): void
+    {
+        // Estate, Memo, Attendance and Calendar check 'Training Induction Admin', which no
+        // role carries; the Induction admins hold 'Training-Induction'.
+        $user = $this->loginWithRole('Training-Induction');
+        $this->as($user, $user->roles->pluck('name')->all())->get(route('admin.dashboard'))->assertOk();
+        $this->assertTrue(hasRole('Training Induction Admin'));
+
+        // An Employee login holding no other role.
+        $plainPk = DB::table('model_has_roles as m')->join('roles as r', 'r.id', '=', 'm.role_id')
+            ->where('m.model_type', User::class)->groupBy('m.model_id')
+            ->havingRaw("SUM(r.name = 'Employee') = 1 AND COUNT(*) = 1")
+            ->orderBy('m.model_id')->value('m.model_id');
+        if (! $plainPk) {
+            $this->markTestSkipped('no login holding only the Employee role');
+        }
+        $plain = User::find($plainPk);
+        $this->as($plain, $plain->roles->pluck('name')->all())->get(route('admin.dashboard'))->assertOk();
+        $this->assertFalse(hasRole('Training Induction Admin'));
+    }
+
     public function test_security_cards_are_hidden_from_everyone_else(): void
     {
         $user = $this->staffWithRole('Super Admin');
