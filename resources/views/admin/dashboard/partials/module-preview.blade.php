@@ -3,8 +3,8 @@
      (House wise Performance, ...). It is that page itself (?embed=1 hides the layout chrome and
      breadcrumb, see admin.layouts.master), so the rows, filters, permission checks and record
      scope are the page's own, not a copy. It starts on the first card that opens a page; with
-     two or more such cards a tab row switches between them (the choice is remembered per module
-     in this browser). With no such card the first card's tile shows. No stat card, nothing. --}}
+     two or more such cards a tab row switches between them. Every visit to the tab
+     starts on the first card again. With no such card the first card's tile shows. No stat card, nothing. --}}
 @php
     $isModuleDashboard = ($dashboardModule ?? null) && $dashboardModule->slug !== 'home';
     $embedUrl = fn ($link) => $link.(str_contains($link, '?') ? '&' : '?').'embed=1';
@@ -57,7 +57,6 @@
         var frame = section && section.querySelector('.module-dashboard-preview-frame');
         if (!frame) { return; }
         var wrap = section.querySelector('.module-dashboard-preview-frame-wrap');
-        var storeKey = 'sargamDashPreview:' + section.getAttribute('data-module');
         var observer = null;
 
         frame.addEventListener('load', function () {
@@ -98,16 +97,8 @@
         };
 
         tabs.forEach(function (tab) {
-            tab.addEventListener('click', function () {
-                show(tab);
-                try { localStorage.setItem(storeKey, tab.getAttribute('data-key')); } catch (e) { /* private mode */ }
-            });
+            tab.addEventListener('click', function () { show(tab); });
         });
-
-        // Reopen on the page this browser last chose for this module, if the login still has it.
-        var saved = null;
-        try { saved = localStorage.getItem(storeKey); } catch (e) { /* private mode */ }
-        tabs.forEach(function (tab) { if (saved && tab.getAttribute('data-key') === saved) { show(tab); } });
     })();
 </script>
 @endif

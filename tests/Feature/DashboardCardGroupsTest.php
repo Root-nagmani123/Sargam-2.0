@@ -9,7 +9,7 @@ use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
 use Tests\TestCase;
 
 /**
- * Queue cards with work in them lead a dashboard under "Needs your action", and Home lists the
+ * Queue cards with work in them lead a dashboard's single card row, and Home lists the
  * other modules where such work waits. Counts are live, so each test seeds every queue card
  * onto Setup and skips when none of them has anything in it on this database.
  */
@@ -78,10 +78,10 @@ class DashboardCardGroupsTest extends TestCase
         $this->assertTrue($counted->every(fn ($c) => $c['count'] === null), 'no figure on the first paint');
         $response->assertSee('stat-value-skeleton', false)
             ->assertSee('data-src="'.e(route('admin.dashboard.cards', ['category' => $this->setupId])).'"', false)
-            ->assertDontSee('>Needs your action <span class="dashboard-card-group-count">', false);
+            ->assertDontSee('stat-action-badge', false);
     }
 
-    public function test_queue_cards_with_work_lead_under_needs_your_action(): void
+    public function test_queue_cards_with_work_lead_the_single_card_row(): void
     {
         $user = $this->viewer();
         $cards = $this->dashboard($user, ['category' => $this->setupId])->viewData('cardsToRender');
@@ -97,16 +97,15 @@ class DashboardCardGroupsTest extends TestCase
         }
 
         $html = $data['grid'];
-        $action = strpos($html, '>Needs your action <span class="dashboard-card-group-count">');
-        $overview = strpos($html, '>Overview <span class="dashboard-card-group-count">');
-        $this->assertNotFalse($action);
-        $this->assertNotFalse($overview);
-        $busyAt = strpos($html, 'title="'.e($busy['label']).'"', $action);
-        $this->assertTrue($busyAt > $action && $busyAt < $overview, 'the busy queue sits under Needs your action');
-        $this->assertGreaterThan($overview, strpos($html, 'title="'.e($total['label']).'"', $action));
-        // Under the heading the amber edge marks it; the badge would only repeat the heading.
+        // Action and overview cards share one row: no group headings, one grid before the fold.
+        $this->assertStringNotContainsString('dashboard-card-group-title', $html);
+        $fold = strpos($html, '<details') ?: strlen($html);
+        $this->assertSame(1, substr_count(substr($html, 0, $fold), 'dashboard-stats-grid'), 'one row of live cards');
+        $busyAt = strpos($html, 'title="'.e($busy['label']).'"');
+        $this->assertLessThan(strpos($html, 'title="'.e($total['label']).'"'), $busyAt, 'the busy queue comes first');
+        // With no heading, the badge marks the queue.
         $this->assertStringContainsString('stat-card--action', $html);
-        $this->assertStringNotContainsString('stat-action-badge', $html);
+        $this->assertStringContainsString('stat-action-badge', $html);
         $this->assertStringNotContainsString('stat-value-skeleton', $html);
         $this->assertStringContainsString('need', $data['hero']);
         $this->assertSame('', trim($data['queues']), 'the strip is for Home only');

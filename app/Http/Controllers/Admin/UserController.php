@@ -371,7 +371,7 @@ class UserController extends Controller
 
     /**
      * The dashboard's count-bearing parts for ?category=, as the page fetches them: each
-     * card's figure, plus the card grid (grouped Needs your action / Overview), the hero's
+     * card's figure, plus the card grid (busy queues first, one row), the hero's
      * action line and, on Home, the Pending across modules strip, rendered here so the
      * grouping rules live in one place.
      */
