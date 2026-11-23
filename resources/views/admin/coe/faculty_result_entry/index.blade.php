@@ -261,6 +261,14 @@ $(function () {
         empty: @json($emptyState)
     });
 
+    // A component belongs to one course / subject: changing either starts from All Components.
+    // Bound before the early return below, so the filters also work on an empty sheet
+    // (the first course may have nothing to enter while another course does).
+    $('.rre-filter').on('change', function () {
+        if (this.name !== 'component') { $('#rreFilterForm select[name="component"]').val(''); }
+        $('#rreFilterForm').submit();
+    });
+
     if (!$('#rreApproveBtn').length) { return; }
 
     // After a save, back to this sheet with its Course / Subject / Component kept
@@ -374,12 +382,6 @@ $(function () {
                 p.remark.val(p.remark.attr('data-initial'));
             });
         });
-    });
-
-    // A component belongs to one course / subject: changing either starts from All Components.
-    $('.rre-filter').on('change', function () {
-        if (this.name !== 'component') { $('#rreFilterForm select[name="component"]').val(''); }
-        $('#rreFilterForm').submit();
     });
 
     /* ── Import ──────────────────────────────────────────────────────────── */

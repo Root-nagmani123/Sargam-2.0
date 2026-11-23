@@ -380,7 +380,9 @@ All rules in `ResultMarksService` (RMS) and `MarksModeration`.
   Approve needs every cell on the filtered sheet filled and **locks permanently**.
   Faculty see OTs per their assigned codes; COE staff (no faculty row) see everything.
   Excel import saves as draft only. `EvaluationMarksController` is an old mock (sample
-  data, no table).
+  data, no table). The page opens on the first course; the Course / Subject / Component
+  filters reload it, also when the sheet on screen is empty (fixed 2026-11-23: the handler
+  used to sit after the script's "no Approve button" early return).
 - **Marks Moderation** (`MarksModerationController`, Training section): SOP COE/11
   `Mi = (UMi − Xj) × σG/σj + μG` per column, across evaluators; absents excluded;
   clamp 0..max. Only when every assigned mark in the component is approved.
