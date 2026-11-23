@@ -2286,6 +2286,15 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->whereNumber('id')->name('examination-drive.show');
     Route::get('examination-drive/{id}/coordinates', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'coordinates'])
         ->whereNumber('id')->name('examination-drive.coordinates');
+    // Re-exam: Create Re-exam popup on the drive list (ReexamService).
+    Route::middleware('menu.permission:coe_examination_drive,coe_coe_examination_drive')->group(function () {
+        Route::get('examination-drive/reexam-ready', [\App\Http\Controllers\Admin\COE\ReexamController::class, 'ready'])
+            ->name('examination-drive.reexam.ready');
+        Route::get('examination-drive/{id}/reexam', [\App\Http\Controllers\Admin\COE\ReexamController::class, 'show'])
+            ->whereNumber('id')->name('examination-drive.reexam.show');
+        Route::post('examination-drive/{id}/reexam', [\App\Http\Controllers\Admin\COE\ReexamController::class, 'store'])
+            ->whereNumber('id')->middleware('throttle:10,1')->name('examination-drive.reexam.store');
+    });
     Route::get('examination-drive/{id}/coordinates/export/{format}', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'coordinatesExport'])
         ->whereNumber('id')->whereIn('format', ['csv', 'excel', 'pdf', 'print'])->name('examination-drive.coordinates.export');
     Route::get('faculty-examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'facultyIndex'])

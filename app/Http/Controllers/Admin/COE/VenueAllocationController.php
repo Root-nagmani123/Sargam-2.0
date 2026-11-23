@@ -12,6 +12,7 @@ use App\Models\ExaminationDrive;
 use App\Services\COE\CourseParticipants;
 use App\Services\COE\ExamRooms;
 use App\Services\COE\LaptopDeclarationService;
+use App\Services\COE\ReexamService;
 use App\Services\COE\SeatAllocator;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
@@ -106,12 +107,13 @@ class VenueAllocationController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Generate roll numbers for this course first.'], 422);
         }
 
-        $components = DB::table('examination_drive_component_maps as dcm')
+        // Re-exam drives are left out until seating handles re-exams (ReexamService).
+        $components = ReexamService::excludeFrom(DB::table('examination_drive_component_maps as dcm')
             ->join('examination_drives as ed', 'ed.id', '=', 'dcm.examination_drive_id')
             ->join('component_master as comp', 'comp.pk', '=', 'dcm.component_master_pk')
             ->leftJoin('subject_master as sub', 'sub.pk', '=', 'dcm.subject_master_pk')
             ->where('ed.course_master_pk', $courseId)
-            ->where('ed.cc_status', ExaminationDrive::CC_APPROVED)
+            ->where('ed.cc_status', ExaminationDrive::CC_APPROVED), 'ed.id')
             ->orderBy('sub.subject_name')
             ->orderBy('comp.component_name')
             // Exam day: the CC's confirmed slot, else the Tentative Exam Range (its time, else its date).
@@ -407,10 +409,11 @@ class VenueAllocationController extends Controller
             ->get(['course_master_pk', 'batch'])
             ->groupBy('course_master_pk');
 
-        return DB::table('examination_drives as ed')
+        // Re-exam drives are left out until seating handles re-exams (ReexamService).
+        return ReexamService::excludeFrom(DB::table('examination_drives as ed')
             ->join('course_master as cm', 'cm.pk', '=', 'ed.course_master_pk')
             ->where('ed.status', '!=', ExaminationDrive::STATUS_CLOSED)
-            ->where('ed.cc_status', ExaminationDrive::CC_APPROVED)
+            ->where('ed.cc_status', ExaminationDrive::CC_APPROVED), 'ed.id')
             ->whereIn('ed.course_master_pk', $batches->keys()->all())
             ->orderByDesc('ed.start_date')
             ->orderByDesc('ed.id')
@@ -497,13 +500,13 @@ class VenueAllocationController extends Controller
             throw ValidationException::withMessages(['course_batch' => 'This course has no roll numbers yet. Generate roll numbers first.']);
         }
 
-        $component = DB::table('examination_drive_component_maps as dcm')
+        $component = ReexamService::excludeFrom(DB::table('examination_drive_component_maps as dcm')
             ->join('examination_drives as ed', 'ed.id', '=', 'dcm.examination_drive_id')
             ->join('component_master as comp', 'comp.pk', '=', 'dcm.component_master_pk')
             ->leftJoin('subject_master as sub', 'sub.pk', '=', 'dcm.subject_master_pk')
             ->where('dcm.id', $validated['component_map_id'])
             ->where('ed.course_master_pk', $courseId)
-            ->where('ed.cc_status', ExaminationDrive::CC_APPROVED)
+            ->where('ed.cc_status', ExaminationDrive::CC_APPROVED), 'ed.id')
             ->first(['dcm.id', DB::raw('COALESCE(DATE(dcm.proposed_start_at), DATE(dcm.exam_start_at), dcm.exam_date) as exam_date'), 'sub.subject_name', 'comp.component_name']);
         if ($component === null) {
             throw ValidationException::withMessages(['component_map_id' => 'That component is not scheduled for this course, or its examination drive is not approved by the Course Coordinator yet.']);

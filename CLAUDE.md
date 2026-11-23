@@ -8,6 +8,22 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-23: Re-exam, steps 2–3 (faculty, CC, question paper).** On a re-exam the
+  faculty setup page ("Map Faculty to Examination Drive Re-exam") lets the faculty set only
+  the Tentative Exam Range (date + time); everything else is copied and locked, also on the
+  server. All subjects dated = sent to the CC, whose slots must sit inside the re-exam dates
+  (not the course dates). Faculty / CC lists show "Re-exam N" under the name. Question
+  paper and Rajbhasha work unchanged (a new paper per re-exam drive). **Re-exams have no
+  moderation** (marks count once approved); the re-exam marksheet will show only
+  Pass / Fail, no marks. Tests: `CoeReexamFlowTest`.
+- **2026-11-23: Re-exam, step 1 (COE side).** On Examination Drive Configuration a main
+  drive whose results are final shows **Re-exam** when an OT failed or was absent in a
+  subject; the Create Re-exam popup lists them, COE ticks OTs, sets dates and creates a
+  re-exam drive (a copy of the main drive, exam dates empty). New tables `coe_reexams`,
+  `coe_reexam_candidates`; old tables unchanged. Re-exam drives are kept out of Result
+  Entry, Compilation, Merit, Moderation, Marksheet and Venue Allocation for now. Details:
+  Re-exam. Tests: `CoeReexamFlowTest`.
+
 - **2026-11-20: OTs see their exam seat.** The freeze bell (`coe_seat_allocation`, already sent)
   now opens **My Exam Seat** (`GET admin/coe/my-exam-seat`, `VenueAllocationController::mySeats`,
   OT from the session like Laptop Declaration; frozen plans only): a card per exam with date,
@@ -99,7 +115,8 @@ Each COE change gets a line here; the details live in its section below.
 - `QUEUE_CONNECTION=sync`, files on the private `local` disk (`storage/app`).
 - Tests: `php artisan test --filter=Coe` (Feature `tests/Feature/Coe*FlowTest.php`,
   Unit `CoeMarksModerationTest`, `CoeSeatAllocatorTest`, plus `AdminQuestionPaperTest`,
-  `FacultyQuestionPaperUploadTest`, `QuestionPaperLogTest`, `RajbhashaQuestionPaperTest`).
+  `FacultyQuestionPaperUploadTest`, `QuestionPaperLogTest`, `RajbhashaQuestionPaperTest`;
+  `CoeReexamFlowTest` is matched by the filter too).
 - **Tests run against the real database `.env` points at** (see the comment in
   `phpunit.xml`). Never use `RefreshDatabase` / `DatabaseMigrations`: they would drop
   the dev schema. Use `DatabaseTransactions` and skip when fixture data is missing.
@@ -376,6 +393,67 @@ All rules in `ResultMarksService` (RMS) and `MarksModeration`.
   `/director/i`. Pass if Grand Total ≥ the student's service passing marks; fail if a
   qualifying paper is absent or below passing; undecided if the service has no passing
   marks. Ties share a rank (1, 2, 2, 4).
+
+## Re-exam (`ReexamService`, `ReexamController`)
+
+OTs who failed or were absent in a subject sit that subject again on a **re-exam drive**.
+Built step by step: step 1 (COE creates it), step 2 (faculty dates, CC approval) and step 3
+(question paper / Rajbhasha) are done.
+
+- **Agreed rules:** a re-exam has **no moderation** (its marks count once approved, raw:
+  `ReexamService::markIsFinal` / `markValue`; Marks Moderation never lists re-exam drives).
+  The **re-exam marksheet shows only Pass / Fail, no marks**.
+
+- **Tables (old ones untouched):** a re-exam drive is a normal `examination_drives` row
+  (with its own faculty maps, component maps, question papers). `coe_reexams` links it:
+  `main_drive_id` → `reexam_drive_id`, `reexam_no` 1, 2, 3. `main_drive_id` is always the
+  **main** drive, also for Re-exam 2 (flat, no chain). `coe_reexam_candidates`: one row per
+  re-exam + subject + OT, `reason` 1 Failed / 2 Absent, `score_percent` saved at creation.
+  Deleting a re-exam drive cascades its link + candidates; a main drive with re-exams
+  can't be deleted. Everything checks `ReexamService::enabled()` (tables exist).
+- **Who is listed** (`ReexamService::sheet`): main drive Active/Closed, CC-approved, not
+  Director Assessment, every exam over, and **every participant's mark in every subject
+  final** (`ResultMarksService::isFinal`: approved, and moderated when moderation is on),
+  else "Results are not final yet" and no list. Per OT + subject: **Absent** if AB in any
+  component, else **Failed** if any component is below `passingMarks()` for the OT's
+  service (Merit rule). Score % = subject marks / max × 100.
+- **Latest result:** an OT who sat the subject on an earlier re-exam is judged on that
+  re-exam's marks (they replace the old ones). So Re-exam 2 lists who still failed, and
+  waits until Re-exam 1's marks are final.
+- **Drive list** (`ExaminationDriveDataTable`): the Re-exam button is rendered hidden on
+  main drives that pass the cheap checks; after each draw the page calls
+  `GET examination-drive/reexam-ready?ids[]=` once and shows the ready ones (the list
+  itself reads no marks). Re-exam rows get a "Re-exam N" tag and Edit is disabled
+  (server refuses `update` too).
+- **Create** (`POST examination-drive/{id}/reexam`, JSON `keys` = "subject:student",
+  `start_date`, `end_date`, optional `name`, default "{main} — Re-exam N"): under a lock the
+  list is worked out again, unknown keys refused. Copies the drive (Active, `cc_status`
+  null, CC fields cleared), the faculty maps and component maps of the ticked subjects
+  (max marks, mode, type, sub-coordinators, assigned codes kept; exam dates and CC slots
+  emptied). Bell "Re-exam Created" to the subjects' faculty (opens their setup page).
+  Re-exam dates may be after the course end.
+- Routes: `examination-drive/reexam-ready`, `examination-drive/{id}/reexam` (GET/POST),
+  behind `menu.permission:coe_examination_drive,coe_coe_examination_drive`.
+- **Kept out for now** (`ReexamService::excludeFrom`): `ResultMarksService::entryDrives` /
+  `scopeDrives` (Result Entry, Compilation, Merit, Moderation, Marksheet),
+  `MarksheetService::scopeOf`, Venue Allocation (`components`, mapping, `mappableDrives`).
+  Question papers / Rajbhasha work on the re-exam drive unchanged (new paper per drive).
+- **Faculty setup** (`facultySetup`, `saveComponents`): the view gets `$reexam`
+  (no, main name); title "Map Faculty to Examination Drive Re-exam", every input disabled
+  except the Tentative Exam Range, no add / remove / Add Component, an undated range starts
+  empty. The server ignores everything but the range: `ReexamService::setupRows()` rebuilds
+  the rows from the stored ones (refuses a component without a range), then the normal
+  checks run (inside the drive dates = the re-exam dates, slot clash, ...). `assignFaculty`
+  is refused. A subject counts as set up when all its components are dated
+  (`ReexamService::datedSubjects`, `subjectsSetUp`, faculty list `setupCompleted`), so the
+  drive goes to the CC once every subject is dated.
+- **CC approve:** a re-exam's slots must be inside the re-exam drive dates (may be after
+  the course end) instead of the course dates; the CC list sends those dates as
+  `data-cc-course-start/end` with `data-cc-range-what="re-exam dates"`.
+- **Question paper / Rajbhasha:** no code change; the re-exam drive's own faculty maps give
+  a new paper (`question_papers` drive + subject) once the CC approves it.
+- **Not built yet:** seating / result entry for candidates only, re-exam result and the
+  re-exam marksheet (Pass / Fail only; planned as a new table, `coe_marksheets` untouched).
 
 ## Marksheets and signatures (`MarksheetService`)
 

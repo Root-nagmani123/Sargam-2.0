@@ -191,13 +191,14 @@ class ResultMarksService
     /**
      * Drives open for marks entry: released (Active, not Draft or Closed) and
      * approved by the Course Coordinator — the same gate as question-paper upload.
+     * Re-exam drives are left out until Result Entry handles re-exams (ReexamService).
      */
     private function entryDrives(?int $coursePk = null): Collection
     {
-        return ExaminationDrive::with(['course', 'facultyMaps', 'componentMaps.component', 'componentMaps.subject', 'componentMaps.faculty'])
+        return ReexamService::excludeFrom(ExaminationDrive::with(['course', 'facultyMaps', 'componentMaps.component', 'componentMaps.subject', 'componentMaps.faculty'])
             ->where('status', ExaminationDrive::STATUS_ACTIVE)
             ->where('cc_status', ExaminationDrive::CC_APPROVED)
-            ->when($coursePk, fn ($q) => $q->where('course_master_pk', $coursePk))
+            ->when($coursePk, fn ($q) => $q->where('course_master_pk', $coursePk)))
             ->orderBy('id')
             ->get();
     }
@@ -206,7 +207,7 @@ class ResultMarksService
      * Marks exist only after the exam: a component counts from its exam end date
      * (else its exam date, else the drive's end date), that day included.
      */
-    private function examOver(ExaminationDrive $drive, ExaminationDriveComponentMap $map): bool
+    public function examOver(ExaminationDrive $drive, ExaminationDriveComponentMap $map): bool
     {
         // The slot that counts, to the minute — the CC's confirmed one, else the Tentative Exam
         // Range's times (ExaminationDriveComponentMap::slotEnd); else the end date (then the
@@ -643,13 +644,17 @@ class ResultMarksService
             ->all();
     }
 
-    /** active = Active drives, archived = Closed drives (Draft drives are not released yet). */
+    /**
+     * active = Active drives, archived = Closed drives (Draft drives are not released yet).
+     * Re-exam drives are left out (ReexamService): Compilation, Merit, Moderation and the
+     * marksheets count the main drives only until they handle re-exams.
+     */
     private function scopeDrives(string $scope, ?int $coursePk = null): Collection
     {
-        return ExaminationDrive::with(['course', 'examinationType', 'facultyMaps.faculty', 'componentMaps.component', 'componentMaps.subject', 'componentMaps.faculty'])
+        return ReexamService::excludeFrom(ExaminationDrive::with(['course', 'examinationType', 'facultyMaps.faculty', 'componentMaps.component', 'componentMaps.subject', 'componentMaps.faculty'])
             ->where('status', $scope === 'archived' ? ExaminationDrive::STATUS_CLOSED : ExaminationDrive::STATUS_ACTIVE)
             ->when($coursePk, fn ($q) => $q->where('course_master_pk', $coursePk))
-            ->whereHas('componentMaps')
+            ->whereHas('componentMaps'))
             ->orderBy('id')
             ->get();
     }

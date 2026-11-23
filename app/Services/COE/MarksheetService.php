@@ -288,9 +288,10 @@ class MarksheetService
     /** Active while the course has an Active drive, else Archived. */
     private function scopeOf(int $coursePk): string
     {
-        return $this->scopeCache[$coursePk] ??= ExaminationDrive::where('course_master_pk', $coursePk)
+        // Main drives only, as ResultMarksService::scopeDrives() (re-exams left out).
+        return $this->scopeCache[$coursePk] ??= ReexamService::excludeFrom(ExaminationDrive::where('course_master_pk', $coursePk)
             ->where('status', ExaminationDrive::STATUS_ACTIVE)
-            ->whereHas('componentMaps')
+            ->whereHas('componentMaps'))
             ->exists() ? 'active' : 'archived';
     }
 

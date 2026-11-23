@@ -46,9 +46,15 @@ class ExaminationDriveCcDataTable extends ExaminationDriveFacultyDataTable
             'data-cc-proposed-end' => fn ($row) => $row->proposed_end_date
                 ? $row->proposed_end_date->format('Y-m-d\TH:i')
                 : (optional($row->end_date)->format('Y-m-d') ? $row->end_date->format('Y-m-d') . 'T23:59' : ''),
-            // Course dates bound the dates the CC can confirm (ExaminationDriveController::ccApprove).
-            'data-cc-course-start' => fn ($row) => $row->course?->start_year ? \Carbon\Carbon::parse($row->course->start_year)->format('Y-m-d') : '',
-            'data-cc-course-end' => fn ($row) => $row->course?->end_date ? \Carbon\Carbon::parse($row->course->end_date)->format('Y-m-d') : '',
+            // Course dates bound the dates the CC can confirm (ExaminationDriveController::ccApprove);
+            // a re-exam's own dates instead (it may run after the course ends).
+            'data-cc-course-start' => fn ($row) => $this->isReexamRow($row)
+                ? optional($row->start_date)->format('Y-m-d')
+                : ($row->course?->start_year ? \Carbon\Carbon::parse($row->course->start_year)->format('Y-m-d') : ''),
+            'data-cc-course-end' => fn ($row) => $this->isReexamRow($row)
+                ? optional($row->end_date)->format('Y-m-d')
+                : ($row->course?->end_date ? \Carbon\Carbon::parse($row->course->end_date)->format('Y-m-d') : ''),
+            'data-cc-range-what' => fn ($row) => $this->isReexamRow($row) ? 're-exam dates' : 'course dates',
         ]);
     }
 
