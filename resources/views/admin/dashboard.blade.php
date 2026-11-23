@@ -722,7 +722,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                     <button type="button" class="btn btn-sm dashboard-birthday-wish-btn btn-custom-wish"
                                         data-name="{{ $fullName }}" data-email="{{ $email }}"
                                         data-mobile="{{ $employee->mobile ?? '' }}" data-pk="{{ $employee->pk }}"
-                                        title="Send birthday wish to {{ $fullName }}">Wish them</button>
+                                        title="Send birthday wish to {{ $fullName }}">Wish {{ $emp_dob_data->count() > 1 ? 'them' : (['Male' => 'him', 'Female' => 'her'][$employee->gender ?? ''] ?? 'them') }}</button>
                                 </div>
                                 @if($hasContact)
                                 <div class="dashboard-birthday-detail">

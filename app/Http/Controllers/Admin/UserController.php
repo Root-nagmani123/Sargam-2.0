@@ -224,6 +224,7 @@ class UserController extends Controller
                 'employee_master.profile_picture',
                 'employee_master.last_name',
                 'designation_master.designation_name',
+                'employee_master.gender',
                 'employee_master.dob'
             )
             ->get();
@@ -269,6 +270,7 @@ class UserController extends Controller
                     'employee_master.first_name',
                     'employee_master.last_name',
                     'employee_master.profile_picture',
+                    'employee_master.gender',
                     'employee_master.dob',
                     'designation_master.designation_name'
                 )
@@ -1604,6 +1606,7 @@ class UserController extends Controller
                 'employee_master.profile_picture',
                 'employee_master.last_name',
                 'designation_master.designation_name',
+                'employee_master.gender',
                 'employee_master.dob'
             )
             ->get();
@@ -1634,6 +1637,7 @@ class UserController extends Controller
                     'employee_master.mobile',
                     'employee_master.office_extension_no',
                     'employee_master.profile_picture',
+                    'employee_master.gender',
                     'employee_master.dob',
                     'designation_master.designation_name'
                 )

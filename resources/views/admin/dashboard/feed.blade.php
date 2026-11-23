@@ -313,6 +313,7 @@
                             'birthdayWishCounts' => $birthdayWishCounts,
                             'showWishButton' => true,
                             'variant' => 'today',
+                            'sameDayCount' => $emp_dob_data->count(),
                         ])
                         @empty
                         <p class="dashboard-feed-empty mb-0 py-3">No birthdays today.</p>
@@ -332,6 +333,7 @@
                             'birthdayWishCounts' => $birthdayWishCounts,
                             'showWishButton' => true,
                             'variant' => 'upcoming',
+                            'sameDayCount' => $upcomingBirthdays->where('birthday_date', $employee->birthday_date)->count(),
                         ])
                         @empty
                         <p class="dashboard-feed-empty mb-0 py-3">No upcoming birthdays in the next 7 days.</p>
