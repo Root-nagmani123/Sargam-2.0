@@ -218,6 +218,10 @@ class VenueAllocationController extends Controller
             ->get(['seat_plan_pk', 'student_master_pk'])
             ->groupBy('seat_plan_pk');
 
+        // Re-exam: subject pk => its re-exam OTs; null for a normal drive (whole cohort, as before).
+        $reexam = ReexamService::seatingBySubject($id);
+        $only = $reexam === null ? null : array_values(array_unique(array_merge([], ...array_values($reexam))));
+
         $subjects = DB::table('examination_drive_component_maps as dcm')
             ->join('component_master as comp', 'comp.pk', '=', 'dcm.component_master_pk')
             ->leftJoin('subject_master as sub', 'sub.pk', '=', 'dcm.subject_master_pk')
@@ -225,8 +229,8 @@ class VenueAllocationController extends Controller
             ->orderBy('sub.subject_name')
             ->orderBy('dcm.exam_date')
             ->orderBy('comp.component_name')
-            ->get(['dcm.id', 'dcm.exam_date', 'sub.subject_name', 'comp.component_name'])
-            ->map(function ($c) use ($plans, $taken) {
+            ->get(['dcm.id', 'dcm.exam_date', 'dcm.subject_master_pk', 'sub.subject_name', 'comp.component_name'])
+            ->map(function ($c) use ($plans, $taken, $reexam) {
                 $own = $plans->where('map_id', $c->id);
 
                 return [
@@ -237,13 +241,16 @@ class VenueAllocationController extends Controller
                     'frozen' => $own->contains(fn ($p) => (int) $p->status === SeatPlan::STATUS_PUBLISHED),
                     'taken' => $own->flatMap(fn ($p) => ($taken[$p->pk] ?? collect())->pluck('student_master_pk'))
                         ->map(fn ($pk) => (int) $pk)->values(),
-                ];
+                ] + ($reexam === null ? [] : [
+                    // Re-exam: this paper's OTs (the subject's candidates); the dialog lists only these.
+                    'only' => array_values(array_map('intval', $reexam[(int) $c->subject_master_pk] ?? [])),
+                ]);
             })
             ->groupBy('subject')
             ->map(fn ($components, $subject) => ['subject' => $subject, 'components' => $components->values()])
             ->values();
 
-        $ots = $this->participantQuery($courseId, $batch, SeatPlan::CATEGORY_ALL)
+        $ots = $this->participantQuery($courseId, $batch, SeatPlan::CATEGORY_ALL, $only)
             ->orderBy('rn.serial_number')
             ->orderBy('sm.pk')
             ->get(['sm.pk', 'rn.roll_number', 'rn.serial_number', 'lr.laptop_required', 'sm.display_name', 'sm.first_name', 'sm.middle_name', 'sm.last_name'])
@@ -256,7 +263,7 @@ class VenueAllocationController extends Controller
                 'laptop' => $this->requiresLaptop(SeatPlan::LAPTOP_REQ_DECLARED_YES, $o->laptop_required),
             ]);
 
-        $laptops = (int) $this->participantQuery($courseId, $batch, SeatPlan::CATEGORY_ALL)
+        $laptops = (int) $this->participantQuery($courseId, $batch, SeatPlan::CATEGORY_ALL, $only)
             ->where('lr.laptop_required', 1)
             ->count();
 
@@ -409,11 +416,11 @@ class VenueAllocationController extends Controller
             ->get(['course_master_pk', 'batch'])
             ->groupBy('course_master_pk');
 
-        // Re-exam drives are left out until seating handles re-exams (ReexamService).
-        return ReexamService::excludeFrom(DB::table('examination_drives as ed')
+        // Re-exam drives too: their papers seat only the re-exam OTs (drive(), allocationInput()).
+        return DB::table('examination_drives as ed')
             ->join('course_master as cm', 'cm.pk', '=', 'ed.course_master_pk')
             ->where('ed.status', '!=', ExaminationDrive::STATUS_CLOSED)
-            ->where('ed.cc_status', ExaminationDrive::CC_APPROVED), 'ed.id')
+            ->where('ed.cc_status', ExaminationDrive::CC_APPROVED)
             ->whereIn('ed.course_master_pk', $batches->keys()->all())
             ->orderByDesc('ed.start_date')
             ->orderByDesc('ed.id')
@@ -500,13 +507,14 @@ class VenueAllocationController extends Controller
             throw ValidationException::withMessages(['course_batch' => 'This course has no roll numbers yet. Generate roll numbers first.']);
         }
 
-        $component = ReexamService::excludeFrom(DB::table('examination_drive_component_maps as dcm')
+        // A re-exam component too (Map Seating by drive); it seats only its re-exam OTs ($only).
+        $component = DB::table('examination_drive_component_maps as dcm')
             ->join('examination_drives as ed', 'ed.id', '=', 'dcm.examination_drive_id')
             ->join('component_master as comp', 'comp.pk', '=', 'dcm.component_master_pk')
             ->leftJoin('subject_master as sub', 'sub.pk', '=', 'dcm.subject_master_pk')
             ->where('dcm.id', $validated['component_map_id'])
             ->where('ed.course_master_pk', $courseId)
-            ->where('ed.cc_status', ExaminationDrive::CC_APPROVED), 'ed.id')
+            ->where('ed.cc_status', ExaminationDrive::CC_APPROVED)
             ->first(['dcm.id', DB::raw('COALESCE(DATE(dcm.proposed_start_at), DATE(dcm.exam_start_at), dcm.exam_date) as exam_date'), 'sub.subject_name', 'comp.component_name']);
         if ($component === null) {
             throw ValidationException::withMessages(['component_map_id' => 'That component is not scheduled for this course, or its examination drive is not approved by the Course Coordinator yet.']);
@@ -557,7 +565,7 @@ class VenueAllocationController extends Controller
         }
 
         if ($manual) {
-            $this->checkManualRooms($rooms, $validated, $courseId, $batch, $category, $plan);
+            $this->checkManualRooms($rooms, $validated, $courseId, $batch, $category, $plan, ReexamService::seatingStudents((int) $component->id));
         }
 
         return compact('validated', 'courseId', 'batch', 'component', 'rooms', 'category', 'plan', 'manual');
@@ -609,9 +617,9 @@ class VenueAllocationController extends Controller
      *
      * @throws ValidationException
      */
-    private function checkManualRooms(array $rooms, array $validated, int $courseId, int $batch, int $category, ?SeatPlan $plan): void
+    private function checkManualRooms(array $rooms, array $validated, int $courseId, int $batch, int $category, ?SeatPlan $plan, ?array $only = null): void
     {
-        $eligible = $this->participantQuery($courseId, $batch, $category)
+        $eligible = $this->participantQuery($courseId, $batch, $category, $only)
             ->get(['sm.pk', 'rn.roll_number', 'lr.laptop_required'])
             ->keyBy(fn ($o) => (int) $o->pk);
         $listedBefore = $plan === null ? collect() : DB::table('coe_seat_plan_venue_ots as o')
@@ -630,8 +638,9 @@ class VenueAllocationController extends Controller
             $name = $r['room']->venue_name;
 
             if ($unknown = array_values(array_diff($r['ots'], $eligible->keys()->all()))) {
-                throw ValidationException::withMessages([$field => count($unknown)
-                    . ' selected OT(s) are not in this course and candidate category, or have no roll number.']);
+                throw ValidationException::withMessages([$field => count($unknown) . ($only !== null
+                    ? ' selected OT(s) do not sit this re-exam paper, or have no roll number.'
+                    : ' selected OT(s) are not in this course and candidate category, or have no roll number.')]);
             }
             if ($twice = array_values(array_intersect($r['ots'], array_keys($seen)))) {
                 throw ValidationException::withMessages([$field => 'Roll No. ' . $rolls($twice) . ' is also selected in another room.']);
@@ -1681,7 +1690,10 @@ class VenueAllocationController extends Controller
      */
     private function allocationInput(SeatPlan $plan): Collection
     {
-        return $this->participantQuery((int) $plan->course_master_pk, (int) $plan->batch, (int) $plan->candidate_category)
+        // A re-exam paper seats only its subject's re-exam OTs; any other paper its whole cohort.
+        $only = ReexamService::seatingStudents($plan->examination_drive_component_map_id === null ? null : (int) $plan->examination_drive_component_map_id);
+
+        return $this->participantQuery((int) $plan->course_master_pk, (int) $plan->batch, (int) $plan->candidate_category, $only)
             ->select(['sm.pk', 'sm.ph', 'sm.service_master_pk', 'sm.cadre_master_pk', 'sm.gender',
                 'rn.pk as roll_number_pk', 'rn.roll_number', 'rn.serial_number', 'lr.laptop_required', 'lr.scriber_required'])
             ->orderBy('rn.serial_number')
@@ -1701,10 +1713,15 @@ class VenueAllocationController extends Controller
             ]);
     }
 
-    /** OTs of a course + batch that have a roll number, narrowed to a candidate category. */
-    private function participantQuery(int $courseId, int $batch, int $category)
+    /**
+     * OTs of a course + batch that have a roll number, narrowed to a candidate category.
+     * $only (re-exam): further narrowed to these OTs (ReexamService::seatingStudents); null =
+     * the whole cohort, as for every normal drive.
+     */
+    private function participantQuery(int $courseId, int $batch, int $category, ?array $only = null)
     {
         return DB::table('student_master as sm')
+            ->when($only !== null, fn ($q) => $q->whereIn('sm.pk', $only ?: [0]))
             ->join('coe_roll_numbers as rn', 'rn.student_master_pk', '=', 'sm.pk')
             ->leftJoin('coe_laptop_responses as lr', 'lr.student_master_pk', '=', 'sm.pk')
             // On the course by student_master or by student_master_course__map — see CourseParticipants.

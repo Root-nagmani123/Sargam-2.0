@@ -48,6 +48,16 @@ class ReexamController extends Controller
         ]);
     }
 
+    /** Re-exam Result (step 6): Pass / Fail per OT and subject, on the re-exam's own marks. */
+    public function result(int $id): JsonResponse
+    {
+        $drive = ExaminationDrive::with('componentMaps.subject')->findOrFail($id);
+        $result = $this->reexams->result($drive);
+        $result['ots'] = array_values($result['ots']);
+
+        return response()->json($result);
+    }
+
     public function store(Request $request, int $id): JsonResponse
     {
         $drive = ExaminationDrive::findOrFail($id);

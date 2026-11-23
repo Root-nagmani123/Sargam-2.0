@@ -191,16 +191,44 @@ class ResultMarksService
     /**
      * Drives open for marks entry: released (Active, not Draft or Closed) and
      * approved by the Course Coordinator — the same gate as question-paper upload.
-     * Re-exam drives are left out until Result Entry handles re-exams (ReexamService).
+     * Re-exam drives only when $withReexams (Result Entry and its "entry ready" bell; their
+     * OTs narrowed by entryParticipants). Compilation, Merit, Moderation and the "Marks
+     * Pending" reminder keep them out (ReexamService::excludeFrom).
      */
-    private function entryDrives(?int $coursePk = null): Collection
+    private function entryDrives(?int $coursePk = null, bool $withReexams = false): Collection
     {
-        return ReexamService::excludeFrom(ExaminationDrive::with(['course', 'facultyMaps', 'componentMaps.component', 'componentMaps.subject', 'componentMaps.faculty'])
+        $query = ExaminationDrive::with(['course', 'facultyMaps', 'componentMaps.component', 'componentMaps.subject', 'componentMaps.faculty'])
             ->where('status', ExaminationDrive::STATUS_ACTIVE)
             ->where('cc_status', ExaminationDrive::CC_APPROVED)
-            ->when($coursePk, fn ($q) => $q->where('course_master_pk', $coursePk)))
+            ->when($coursePk, fn ($q) => $q->where('course_master_pk', $coursePk));
+
+        return ($withReexams ? $query : ReexamService::excludeFrom($query))
             ->orderBy('id')
             ->get();
+    }
+
+    /** @var array<int, array<int, list<int>>|null> drive id => its re-exam candidates per subject (null: not a re-exam) */
+    private array $reexamCandidates = [];
+
+    /**
+     * The OTs marks are entered for on one subject of $drive: every participant on a
+     * normal drive (unchanged); on a re-exam drive only that subject's re-exam OTs
+     * (ReexamService::seatingBySubject, coe_reexam_candidates).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function entryParticipants(ExaminationDrive $drive, int $subjectPk): array
+    {
+        $participants = $this->participants($drive);
+        $id = (int) $drive->id;
+        if (! array_key_exists($id, $this->reexamCandidates)) {
+            $this->reexamCandidates[$id] = ReexamService::seatingBySubject($id);
+        }
+        if ($this->reexamCandidates[$id] === null) {
+            return $participants;
+        }
+
+        return array_intersect_key($participants, array_flip($this->reexamCandidates[$id][$subjectPk] ?? []));
     }
 
     /**
@@ -232,12 +260,13 @@ class ResultMarksService
         $mine = $this->facultyOf($user);
         $columns = [];
 
-        foreach ($this->entryDrives($coursePk) as $drive) {
-            $participants = $this->participants($drive);
+        // Re-exam drives too: only their re-exam OTs, per subject (entryParticipants).
+        foreach ($this->entryDrives($coursePk, true) as $drive) {
             foreach ($drive->componentMaps->sortBy('id') as $map) {
                 if (! $this->examOver($drive, $map)) {
                     continue;
                 }
+                $participants = $this->entryParticipants($drive, (int) $map->subject_master_pk);
                 $owners = $this->subjectFacultyPks($drive, (int) $map->subject_master_pk);
                 // The subject's faculty see every OT of the component, unless they are given
                 // OT codes on it themselves: then, like any evaluator, only those OTs.
@@ -1350,7 +1379,7 @@ class ResultMarksService
      */
     public function notifyEntryReady(?int $driveId = null, bool $dryRun = false): array
     {
-        $drives = $this->entryDrives()->when($driveId, fn ($c) => $c->where('id', $driveId));
+        $drives = $this->entryDrives(null, true)->when($driveId, fn ($c) => $c->where('id', $driveId));
         $marks = $this->marks($drives->pluck('id')->all());
 
         // map id => [drive, map, faculty pks]
@@ -1364,7 +1393,7 @@ class ResultMarksService
                 $key = $drive->id.':'.$map->subject_master_pk.':'.$map->component_master_pk;
                 $names = [];
                 $pending = false;
-                foreach ($this->participants($drive) as $pk => $p) {
+                foreach ($this->entryParticipants($drive, (int) $map->subject_master_pk) as $pk => $p) {
                     if (($marks[$key][$pk] ?? null)?->isApproved()) {
                         continue;
                     }

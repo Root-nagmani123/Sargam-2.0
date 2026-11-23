@@ -22,6 +22,9 @@
                class="coe-tab {{ $isArchived ? '' : 'is-active' }}" @unless ($isArchived) aria-current="page" @endunless>Active</a>
             <a href="{{ route('admin.coe.verified-marksheet.index', ['scope' => 'archived']) }}"
                class="coe-tab {{ $isArchived ? 'is-active' : '' }}" @if ($isArchived) aria-current="page" @endif>Archived</a>
+            @if (\App\Services\COE\ReexamService::enabled())
+                <a href="{{ route('admin.coe.reexam-marksheet.verified') }}" class="coe-tab">Re-exam</a>
+            @endif
         </nav>
         <div class="d-flex flex-wrap gap-2 coe-secondary-actions">
             <button type="button" id="vmDownloadBtn" class="btn programme-dt-btn-columns" title="Download as Excel">

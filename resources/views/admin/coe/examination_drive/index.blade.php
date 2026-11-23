@@ -49,6 +49,13 @@
 .edc-rx-reason--failed       { background:#fde2e4;color:#d92d20; }
 .edc-rx-reason--absent       { background:#fef0c7;color:#b54708; }
 .edc-rx-empty                { padding:24px;text-align:center;color:var(--ds-ink-muted); }
+/* Re-exam Result (ReexamController::result) */
+.coe-page .coe-act--rxresult { color:#067647; }
+#edcRxResultModal .modal-title { font-size:1.375rem;font-weight:500;color:var(--ds-ink); }
+.edc-rx-result               { display:inline-block;padding:3px 10px;border-radius:var(--ds-radius-1);font-size:13px;font-weight:500;line-height:1.4; }
+.edc-rx-result--pass         { background:#dcfae6;color:#067647; }
+.edc-rx-result--fail         { background:#fde2e4;color:#d92d20; }
+.edc-rx-result--pending      { background:#eef0f3;color:#475467; }
 </style>
 @endpush
 
@@ -341,6 +348,49 @@
                     <button type="submit" class="btn coe-btn coe-btn-primary" id="edcReexamSubmit">Create Re-exam (0)</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+{{-- ── Re-exam Result modal (ReexamController::result) ─────────────────────── --}}
+<div class="modal fade" id="edcRxResultModal" tabindex="-1" aria-labelledby="edcRxResultTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content coe-modal border-0 shadow">
+            <div class="modal-header coe-modal-header coe-modal-header--rule">
+                <h5 class="modal-title" id="edcRxResultTitle">Re-exam Result</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body coe-modal-body">
+                <p class="edc-rx-intro" id="edcRxResultIntro"></p>
+                <div class="edc-rx-bar">
+                    <nav class="edc-rx-tabs" aria-label="Result">
+                        <button type="button" class="edc-rx-tab is-active" data-rxr-filter="all">All (<span data-rxr-count="all">0</span>)</button>
+                        <button type="button" class="edc-rx-tab" data-rxr-filter="Pass">Pass (<span data-rxr-count="Pass">0</span>)</button>
+                        <button type="button" class="edc-rx-tab" data-rxr-filter="Fail">Fail (<span data-rxr-count="Fail">0</span>)</button>
+                        <button type="button" class="edc-rx-tab" data-rxr-filter="Pending">Pending (<span data-rxr-count="Pending">0</span>)</button>
+                    </nav>
+                    <span class="edc-rx-note">Counts are OTs. An OT passes when every re-exam subject is passed.</span>
+                </div>
+                <div class="edc-rx-wrap">
+                    <table class="edc-rx-table">
+                        <thead>
+                            <tr>
+                                <th>Officer Trainee</th>
+                                <th>Roll No.</th>
+                                <th>Subject</th>
+                                <th>Before</th>
+                                <th>Re-exam Score</th>
+                                <th>Subject Result</th>
+                                <th>OT Result</th>
+                            </tr>
+                        </thead>
+                        <tbody id="edcRxResultBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer coe-modal-footer">
+                <button type="button" class="btn coe-btn coe-btn-cancel" data-bs-dismiss="modal">Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -837,6 +887,60 @@ $(function () {
         }).fail(function (xhr) {
             Swal.fire({ icon: 'error', title: 'Error', text: (xhr.responseJSON && xhr.responseJSON.message) || 'Could not create the re-exam.' });
         }).always(function () { $submit.prop('disabled', false); });
+    });
+
+    /* ── Re-exam Result (ReexamController::result): Pass / Fail on the re-exam's own marks ── */
+    var $rxr = $('#edcRxResultModal'), rxrOts = [], rxrFilter = 'all';
+
+    function rxrBadge(result) {
+        return '<span class="edc-rx-result edc-rx-result--' + String(result).toLowerCase() + '">' + rxEsc(result) + '</span>';
+    }
+
+    function rxrRender() {
+        var shown = rxrOts.filter(function (o) { return rxrFilter === 'all' || o.result === rxrFilter; });
+        var html = '';
+        shown.forEach(function (o) {
+            o.rows.forEach(function (r, i) {
+                html += '<tr>' +
+                    (i === 0 ? '<td rowspan="' + o.rows.length + '">' + rxEsc(o.name) + (o.ot_code ? '<small>' + rxEsc(o.ot_code) + '</small>' : '') + '</td>' +
+                        '<td rowspan="' + o.rows.length + '">' + (o.roll ? rxEsc(o.roll) : '-') + '</td>' : '') +
+                    '<td>' + rxEsc(r.subject) + '</td>' +
+                    '<td><span class="edc-rx-reason ' + (r.previous === 'Absent' ? 'edc-rx-reason--absent' : 'edc-rx-reason--failed') + '">' + rxEsc(r.previous) + '</span>' +
+                        '<small>' + Number(r.previous_score).toFixed(1) + '%</small></td>' +
+                    '<td>' + (r.score === null ? '-' : Number(r.score).toFixed(1) + '%') + (r.absent ? '<small>Absent</small>' : '') + '</td>' +
+                    '<td>' + rxrBadge(r.result) + '</td>' +
+                    (i === 0 ? '<td rowspan="' + o.rows.length + '">' + rxrBadge(o.result) + '</td>' : '') +
+                    '</tr>';
+            });
+        });
+        $('#edcRxResultBody').html(html || '<tr><td colspan="7" class="edc-rx-empty">No OTs here.</td></tr>');
+    }
+
+    $table.on('click', '.coe-act--rxresult', function () {
+        var $btn = $(this).addClass('is-busy');
+        $.get(RX_BASE_URL + '/' + $btn.closest('tr').attr('data-coe-id') + '/reexam-result').done(function (res) {
+            var bySt = {};
+            (res.rows || []).forEach(function (r) { (bySt[r.student_pk] = bySt[r.student_pk] || []).push(r); });
+            rxrOts = (res.ots || []).map(function (o) { return $.extend({}, o, { rows: bySt[o.student_pk] || [] }); });
+            rxrFilter = 'all';
+            $rxr.find('[data-rxr-filter]').removeClass('is-active').filter('[data-rxr-filter="all"]').addClass('is-active');
+            $rxr.find('[data-rxr-count="all"]').text(rxrOts.length);
+            ['Pass', 'Fail', 'Pending'].forEach(function (k) { $rxr.find('[data-rxr-count="' + k + '"]').text((res.counts && res.counts[k]) || 0); });
+            $('#edcRxResultTitle').text('Re-exam ' + (res.reexam_no || '') + ' Result');
+            $('#edcRxResultIntro').text(res.drive + (res.main ? ' (re-exam of ' + res.main + ')' : '') + '. The re-exam marks replace the old ones for these subjects; '
+                + 'no moderation. The re-exam marksheet shows only Pass / Fail.' + (res.message ? ' ' + res.message : ''));
+            rxrRender();
+            bootstrap.Modal.getOrCreateInstance($rxr[0]).show();
+        }).fail(function (xhr) {
+            Swal.fire({ icon: 'error', title: 'Error', text: (xhr.responseJSON && xhr.responseJSON.message) || 'Could not load the re-exam result.' });
+        }).always(function () { $btn.removeClass('is-busy'); });
+    });
+
+    $rxr.on('click', '[data-rxr-filter]', function () {
+        rxrFilter = $(this).attr('data-rxr-filter');
+        $rxr.find('[data-rxr-filter]').removeClass('is-active');
+        $(this).addClass('is-active');
+        rxrRender();
     });
 });
 </script>

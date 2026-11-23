@@ -480,6 +480,9 @@ class CoeReexamFlowTest extends TestCase
         $this->assertContains($this->drive->id, $ids);
         $this->assertNotContains($reexamId, $ids);
 
+        // Result Entry lists a re-exam drive (its OTs only) once its exam is over; here its
+        // exam dates are still empty and the drive runs into the future, so not yet
+        // (CoeReexamResultFlowTest covers entry). The main drive is listed as before.
         $columns = collect(app(ResultMarksService::class)->entryColumns($this->admin, (int) $this->drive->course_master_pk));
         $this->assertTrue($columns->contains('drive_id', $this->drive->id));
         $this->assertFalse($columns->contains('drive_id', $reexamId));

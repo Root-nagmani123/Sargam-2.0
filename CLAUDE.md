@@ -8,6 +8,19 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-24: Re-exam, steps 5–7 (result entry, result, marksheet).** Result Entry now
+  lists re-exam drives with **only their subject's re-exam OTs** (main drives unchanged);
+  re-exam marks count once approved (no moderation). Re-exam rows on Examination Drive
+  get **Result** (Pass / Fail per OT + subject on the re-exam marks; Merit rank untouched).
+  Marksheet Generation / Verified Marksheet get a **Re-exam** tab: a Pass / Fail-only
+  marksheet per re-exam + OT, new table `coe_reexam_marksheets`, signed UDC → AAO → COE.
+  Main marksheet, Compilation, Merit, Moderation unchanged. Details: Re-exam → "Result
+  Entry", "Result", "Marksheet". Tests: `CoeReexamResultFlowTest`.
+- **2026-11-23: Re-exam, step 4 (seating).** Venue Allocation's Map Seating by drive now
+  offers re-exam drives; a re-exam paper lists and seats **only its subject's re-exam OTs**
+  (dialog picker, "every OT needs a seat" check, server check and the seat allocator).
+  Normal drives are unchanged (whole cohort). Details: Re-exam → "Seating". Tests:
+  `CoeReexamSeatingFlowTest`.
 - **2026-11-23: Create Re-exam popup styled to the Figma design.** Reason tabs are the grey
   segmented pills (active = brand blue), Failed / Absent show as red / amber badges, grey
   table header, rule under the intro. The modal sits outside `.coe-page`, so it has its own
@@ -415,8 +428,9 @@ All rules in `ResultMarksService` (RMS) and `MarksModeration`.
 ## Re-exam (`ReexamService`, `ReexamController`)
 
 OTs who failed or were absent in a subject sit that subject again on a **re-exam drive**.
-Built step by step: step 1 (COE creates it), step 2 (faculty dates, CC approval) and step 3
-(question paper / Rajbhasha) are done.
+Built step by step: step 1 (COE creates it), step 2 (faculty dates, CC approval), step 3
+(question paper / Rajbhasha), step 4 (seating), step 5 (result entry), step 6 (result) and
+step 7 (Pass / Fail marksheet) are done.
 
 - **Agreed rules:** a re-exam has **no moderation** (its marks count once approved, raw:
   `ReexamService::markIsFinal` / `markValue`; Marks Moderation never lists re-exam drives).
@@ -455,11 +469,23 @@ Built step by step: step 1 (COE creates it), step 2 (faculty dates, CC approval)
   emptied). Bell "Re-exam Created" to the subjects' faculty (opens their setup page).
   Re-exam dates may be after the course end.
 - Routes: `examination-drive/reexam-ready`, `examination-drive/{id}/reexam` (GET/POST),
-  behind `menu.permission:coe_examination_drive,coe_coe_examination_drive`.
-- **Kept out for now** (`ReexamService::excludeFrom`): `ResultMarksService::entryDrives` /
-  `scopeDrives` (Result Entry, Compilation, Merit, Moderation, Marksheet),
-  `MarksheetService::scopeOf`, Venue Allocation (`components`, mapping, `mappableDrives`).
-  Question papers / Rajbhasha work on the re-exam drive unchanged (new paper per drive).
+  `examination-drive/{id}/reexam-result` (GET), behind
+  `menu.permission:coe_examination_drive,coe_coe_examination_drive`.
+- **Kept out** (`ReexamService::excludeFrom`): `ResultMarksService::scopeDrives`
+  (Compilation, Merit, Moderation, main Marksheet), the "Marks Pending" reminder
+  (`notifyPending`, `entryDrives` without `$withReexams`), `MarksheetService::scopeOf`, and
+  Venue Allocation's course-first dialog (`VenueAllocationController::components`). Question papers / Rajbhasha work on the
+  re-exam drive unchanged (new paper per drive).
+- **Seating** (Venue Allocation, Map Seating **by drive**): `mappableDrives` lists re-exam
+  drives too. Every narrowing goes through `participantQuery(..., $only)`; `$only` is null
+  for a normal drive, so nothing changes there. On a re-exam: `drive()` sends only the
+  re-exam OTs (`ReexamService::seatingBySubject`) and each component an `only` list (its
+  subject's candidates; the key is absent on normal drives), the dialog's picker and
+  coverage check use it (`compOts()` in `venue_allocation/index.blade.php`), and the server
+  narrows the manual-room check (`checkManualRooms`, "do not sit this re-exam paper") and
+  the seat allocator input (`allocationInput` via `ReexamService::seatingStudents(map id)`),
+  so "every OT needs a seat" counts only the re-exam OTs. Roll numbers are the cohort's
+  (same batch rule); a course needs roll numbers for its re-exam to be seated.
 - **Faculty setup** (`facultySetup`, `saveComponents`): the view gets `$reexam`
   (no, main name); title "Map Faculty to Examination Drive Re-exam", every input disabled
   except the Tentative Exam Range, no add / remove / Add Component, an undated range starts
@@ -474,8 +500,34 @@ Built step by step: step 1 (COE creates it), step 2 (faculty dates, CC approval)
   `data-cc-course-start/end` with `data-cc-range-what="re-exam dates"`.
 - **Question paper / Rajbhasha:** no code change; the re-exam drive's own faculty maps give
   a new paper (`question_papers` drive + subject) once the CC approves it.
-- **Not built yet:** seating / result entry for candidates only, re-exam result and the
-  re-exam marksheet (Pass / Fail only; planned as a new table, `coe_marksheets` untouched).
+- **Result Entry** (step 5): `entryDrives($course, true)` takes re-exam drives too (Active,
+  CC-approved, exam over, as any drive); `ResultMarksService::entryParticipants($drive, $subject)`
+  gives every participant on a normal drive (unchanged) and only that subject's
+  `coe_reexam_candidates` on a re-exam, so the sheet, save, approve and the "entry ready"
+  bell (`notifyEntryReady`) cover only the re-exam OTs. A re-exam column has its own key
+  (re-exam drive id), so the main drive's approved marks are untouched; on one course both
+  show, labelled "component · drive" (`groupBySubject`).
+- **Result** (step 6, `ReexamService::result`, `GET examination-drive/{id}/reexam-result`,
+  **Result** button on CC-approved re-exam rows, popup `#edcRxResultModal`): per candidate +
+  subject on the re-exam's own approved marks (no moderation): Fail if AB in any component or
+  any component below `passingMarks()` for the OT's service, else Pass; Pending while a
+  mark is not approved. Per OT: Pending if any subject is, else Fail if any failed, else
+  Pass. Shows the reason / score before and the re-exam score %. Merit & Ranking (and its
+  rank) is not changed by a re-exam.
+- **Marksheet** (step 7, `ReexamMarksheetService`, `ReexamMarksheetController`, table
+  `coe_reexam_marksheets`, migration `2026_11_24_100000`): one per re-exam + OT, Generated
+  (on GET) once the OT's re-exam result is Pass / Fail, number `RMS/{COURSE}/{year}/{0001}`
+  (serial per course). **Pass / Fail per re-exam subject + overall, no marks**
+  (`marksheet/reexam_show`). Signed like the main marksheet, UDC → AAO → COE, same
+  Signature Master rules (uses `MarksheetService::signerRole` / `signsBefore` /
+  `signatureProblem` / `activeSignatures` / `signaturesFor`); COE publishes and freezes
+  `snapshot`. Pages: the **Re-exam** tab of Marksheet Generation
+  (`GET marksheet-generation/reexam`, Verify / Verify Selected of one re-exam / View &
+  Verify) and Verified Marksheet (`GET verified-marksheet/reexam`, published only), view
+  `GET marksheet-generation/reexam/view/{reexam}/{ot}`, verify
+  `POST marksheet-generation/reexam/publish` (JSON `reexam`, `ots`). Same permissions as
+  the main pages. `coe_marksheets` and the main pages' lists are untouched (only the tab
+  link was added). Deleting a re-exam drive cascades its marksheets.
 
 ## Marksheets and signatures (`MarksheetService`)
 

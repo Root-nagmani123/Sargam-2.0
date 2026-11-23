@@ -264,6 +264,10 @@ class ExaminationDriveDataTable extends DataTable
         if ($this->mayHaveReexam($row)) {
             $html .= '<button type="button" class="coe-act coe-act--reexam d-none"><span class="coe-act__icon"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i></span><span class="coe-act__label">Re-exam</span></button>';
         }
+        if ($isReexam && $approved) {
+            // Re-exam Result (ReexamController::result): Pass / Fail on the re-exam's own marks.
+            $html .= '<button type="button" class="coe-act coe-act--rxresult"><span class="coe-act__icon"><i class="bi bi-clipboard-check" aria-hidden="true"></i></span><span class="coe-act__label">Result</span></button>';
+        }
         $html .= '<a href="' . $coordUrl . '" class="coe-act"><span class="coe-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span><span class="coe-act__label">View</span></a>';
 
         if ($canEdit) {
