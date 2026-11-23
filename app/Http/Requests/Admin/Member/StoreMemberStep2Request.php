@@ -42,8 +42,13 @@ class StoreMemberStep2Request extends FormRequest
             // (<, >, ", ', &) — zero false positives against current data. Combined with main's
             // employeeIdUniqueness() (below), which handles the separate, pre-existing-duplicate
             // problem the format rule doesn't touch.
+            //
+            // Optional: a member may be created (or saved) without an Employee ID.
+            // `nullable` skips the format and uniqueness rules for a blank value, so
+            // the 21+ members already stored without one never collide with each
+            // other. employee_master.emp_id is a nullable varchar(191).
             'id' => array_merge(
-                ['required', 'string', 'max:50', 'regex:/^[^<>"\'&]+$/'],
+                ['nullable', 'string', 'max:50', 'regex:/^[^<>"\'&]+$/'],
                 $this->employeeIdUniqueness($empID)
             ),
             'group' => 'required', // |exists:employee_groups,id
@@ -129,7 +134,6 @@ class StoreMemberStep2Request extends FormRequest
             'type.required' => 'Please select employee type',
             'type.exists' => 'Selected employee type is invalid',
 
-            'id.required' => 'Employee ID is required',
             'id.max' => 'Employee ID must not exceed 50 characters',
             'id.regex' => 'Employee ID must not contain <, >, ", \', or & characters',
             'id.unique' => 'This employee ID already exists',

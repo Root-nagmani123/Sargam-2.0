@@ -17,7 +17,7 @@
     <div class="col-md-6">
         <div class="mb-3">
 
-            <x-input name="id" label="Employee ID" placeholder="eg. EMP8242" type="text" value="{{ old('id') }}" formLabelClass="form-label" formInputClass="form-control" labelRequired="true" />
+            <x-input name="id" label="Employee ID" placeholder="eg. EMP8242" type="text" value="{{ old('id') }}" formLabelClass="form-label" formInputClass="form-control" />
 
         </div>
     </div>

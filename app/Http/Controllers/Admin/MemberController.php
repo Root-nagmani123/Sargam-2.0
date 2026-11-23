@@ -1119,7 +1119,10 @@ class MemberController extends Controller
 
         try {
             DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload, &$saveWarnings, &$duplicate) {
-                if (EmployeeMaster::where('emp_id', $request->id)->lockForUpdate()->exists()) {
+                // Only a supplied Employee ID can collide. A blank one would become
+                // `emp_id IS NULL`, match every member stored without an ID, and
+                // refuse the save as a "duplicate".
+                if ($request->filled('id') && EmployeeMaster::where('emp_id', $request->id)->lockForUpdate()->exists()) {
                     $duplicate = ['id' => ['This employee ID already exists']];
 
                     return;
@@ -1300,7 +1303,8 @@ class MemberController extends Controller
             DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload, &$saveWarnings, &$duplicate) {
             // Excludes the row being edited itself, so an unchanged emp_id never
             // collides with its own current value.
-            if (EmployeeMaster::where('emp_id', $request->id)->where('pk', '!=', $request->emp_id)->lockForUpdate()->exists()) {
+            // A blank Employee ID is optional and never a collision (see store()).
+            if ($request->filled('id') && EmployeeMaster::where('emp_id', $request->id)->where('pk', '!=', $request->emp_id)->lockForUpdate()->exists()) {
                 $duplicate = ['id' => ['This employee ID already exists']];
 
                 return;

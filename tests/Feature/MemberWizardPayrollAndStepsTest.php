@@ -135,6 +135,57 @@ class MemberWizardPayrollAndStepsTest extends TestCase
     }
 
     /**
+     * Employee ID is optional on Add Member. A blank one must pass step 2, and must
+     * not be read as a duplicate of the members already stored without an ID — the
+     * store() re-check would otherwise turn it into `emp_id IS NULL` and refuse it.
+     * Two blank creates in a row prove blanks never collide with each other either.
+     */
+    public function test_a_member_can_be_created_without_an_employee_id(): void
+    {
+        $actor = $this->makeActor('blank_emp_id');
+        $actor->assignRole('Super Admin');
+
+        $step2 = $this->actingAs($actor)->post('/member/validate-step/2', [
+            'type' => DB::table('employee_type_master')->value('pk'),
+            'id' => '',
+            'group' => DB::table('employee_group_master')->value('pk'),
+            'designation' => DB::table('designation_master')->value('pk'),
+            'userid' => 'blank_emp_id_' . uniqid(),
+            'section' => DB::table('department_master')->value('pk'),
+        ]);
+        $this->assertNotSame(422, $step2->status(), 'Step 2 must accept a blank Employee ID: ' . $step2->getContent());
+        $this->assertArrayNotHasKey('id', (array) ($step2->json('errors') ?? []));
+
+        foreach (['BlankIdOne', 'BlankIdTwo'] as $suffix) {
+            $payload = ['id' => ''] + $this->basicMemberPayload($suffix);
+
+            $this->actingAs($actor)->post(route('member.store'), $payload)->assertOk();
+
+            $row = DB::table('employee_master')->where('last_name', $suffix)->orderByDesc('pk')->first();
+            $this->assertNotNull($row, "store() must create the {$suffix} member without an Employee ID.");
+            $this->assertNull($row->emp_id);
+        }
+    }
+
+    /**
+     * Still validated when supplied: a filled Employee ID keeps its uniqueness rule.
+     */
+    public function test_a_supplied_employee_id_is_still_checked_for_duplicates(): void
+    {
+        $actor = $this->makeActor('dup_emp_id');
+        $actor->assignRole('Super Admin');
+
+        $payload = $this->basicMemberPayload('DupIdOne');
+        $this->actingAs($actor)->post(route('member.store'), $payload)->assertOk();
+
+        $again = ['id' => $payload['id']] + $this->basicMemberPayload('DupIdTwo');
+        $response = $this->actingAs($actor)->postJson(route('member.store'), $again);
+
+        $response->assertStatus(422);
+        $this->assertSame(1, DB::table('employee_master')->where('emp_id', $payload['id'])->count());
+    }
+
+    /**
      * F-010: a step-6 field the admin deliberately blanks must actually clear in the database,
      * while a sibling field left filled in on the same submit is left untouched.
      */
