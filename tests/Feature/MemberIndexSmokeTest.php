@@ -54,13 +54,13 @@ class MemberIndexSmokeTest extends TestCase
 
         $this->assertStringNotContainsString('float-end gap-2', $html, 'legacy header block still present');
 
-        // The All / Active / Inactive tabs were removed from this grid: no markup
-        // and no leftover JS hooks. (The server still honours a ?status_filter=
-        // on the exports — see MemberExportFormatsTest — it is just not a tab.)
-        $this->assertStringNotContainsString('programme-status-pill', $html);
-        $this->assertStringNotContainsString('programme-status-tabs', $html);
-        $this->assertStringNotContainsString('data-member-status', $html);
-        $this->assertStringNotContainsString('memberStatusFilter', $html);
+        // All / Active / Inactive tabs above the grid. They drive ?status_filter=,
+        // which MemberDataTable::resolveStatusFilter() whitelists for the grid,
+        // the cache key and the exports (see MemberExportFormatsTest).
+        $this->assertStringContainsString('programme-status-tabs', $html);
+        foreach (['data-member-status=""', 'data-member-status="active"', 'data-member-status="inactive"'] as $tab) {
+            $this->assertStringContainsString($tab, $html, "missing tab: {$tab}");
+        }
         fwrite(STDERR, "\npage OK (".strlen($html)." bytes)\n");
     }
 

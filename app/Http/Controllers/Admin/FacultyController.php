@@ -1019,6 +1019,9 @@ class FacultyController extends Controller
     {
         $query = FacultyMaster::with('createdByUser')->orderBy('pk', 'desc');
 
+        // Same whitelist and predicate as the grid's status tab.
+        FacultyDataTable::applyStatusFilter($query, FacultyDataTable::resolveStatusFilter());
+
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('full_name', 'like', '%' . $search . '%')
@@ -1037,6 +1040,11 @@ class FacultyController extends Controller
         abort_unless(in_array($format, self::$exportFormats, true), 404);
 
         $search = trim((string) $request->query('q', ''));
+        $status = FacultyDataTable::resolveStatusFilter();
+        $scope = implode(' · ', array_filter([
+            $status !== '' ? 'Status: ' . ucfirst($status) : null,
+            $search !== '' ? 'Search: ' . $search : null,
+        ]));
 
         return $this->renderMasterExport(
             $format,
@@ -1044,7 +1052,7 @@ class FacultyController extends Controller
             $this->resolveExportColumns($request, $this->exportColumnDefs()),
             'Faculty',
             'Faculty',
-            $search !== '' ? 'Search: ' . $search : null,
+            $scope !== '' ? $scope : null,
             'No faculty to export',
             // Eight columns do not fit A4 portrait without crushing the email.
             'landscape'

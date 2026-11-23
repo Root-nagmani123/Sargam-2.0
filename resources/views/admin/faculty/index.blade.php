@@ -25,8 +25,28 @@
          format carries the same search term and columns the grid is showing.
          Print is the branded server-rendered list; Blank Form is the separate
          fill-in sheet and keeps its own button rather than being buried in the
-         Download menu. --}}
-    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3 mst-secondary-actions">
+         Download menu.
+
+         Status tabs on the left (All / Active / Inactive). JS filters, not links:
+         they set ?status_filter= on the grid's ajax and on every export href, and
+         FacultyDataTable::resolveStatusFilter() whitelists it for the query, the
+         cache key and the export alike. A deep-linked ?status_filter= picks the
+         initial tab through that same method. --}}
+    @php($facultyStatusTab = \App\DataTables\FacultyDataTable::resolveStatusFilter())
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0"
+            role="group" aria-label="Filter faculty by status">
+            @foreach (['' => 'All', 'active' => 'Active', 'inactive' => 'Inactive'] as $tabValue => $tabLabel)
+                <li class="nav-item" role="presentation">
+                    <button type="button"
+                        class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill faculty-status-tab {{ $facultyStatusTab === $tabValue ? 'active' : '' }}"
+                        data-faculty-status="{{ $tabValue }}"
+                        aria-pressed="{{ $facultyStatusTab === $tabValue ? 'true' : 'false' }}">{{ $tabLabel }}</button>
+                </li>
+            @endforeach
+        </ul>
+
+    <div class="d-flex flex-wrap justify-content-end gap-2 mst-secondary-actions">
         <div class="dropdown">
             <button type="button" id="facultyDownloadToggle"
                     class="btn programme-dt-btn-columns border-0 text-primary dropdown-toggle"
@@ -74,6 +94,7 @@
            title="Blank Form" aria-label="Blank Form">
             <i class="bi bi-file-earmark-text" aria-hidden="true"></i><span>Blank Form</span>
         </a>
+    </div>
     </div>
 
     <div class="card overflow-hidden rounded-3">
@@ -185,6 +206,9 @@ $(function () {
             params.delete('q');
             if (term !== '') { params.set('q', term); }
 
+            params.delete('status_filter');
+            if (facultyStatusTab() !== '') { params.set('status_filter', facultyStatusTab()); }
+
             params.delete('cols');
             // Omit ?cols= entirely while nothing is hidden — the server reads
             // "no cols" as "every column".
@@ -194,6 +218,34 @@ $(function () {
             link.href = base + (qs ? '?' + qs : '');
         });
     }
+
+    /* ---------- All / Active / Inactive tabs ----------
+     * The active tab is the single source of truth; '' means All. Yajra owns the
+     * ajax URL, so the value rides along on each request rather than being baked
+     * into it, and FacultyDataTable keys its Redis cache on it. */
+    function facultyStatusTab() {
+        return String($('.faculty-status-tab.active').data('faculty-status') || '');
+    }
+
+    $(document).on('preXhr.dt', function (e, settings, data) {
+        if (settings.nTable && settings.nTable.id === 'faculty-table') {
+            data.status_filter = facultyStatusTab();
+        }
+    });
+
+    $(document).on('click', '.faculty-status-tab', function () {
+        var $tab = $(this);
+        if ($tab.hasClass('active')) {
+            return;
+        }
+        $('.faculty-status-tab').removeClass('active').attr('aria-pressed', 'false');
+        $tab.addClass('active').attr('aria-pressed', 'true');
+        facultyUpdateExportLinks();
+        if ($.fn.DataTable.isDataTable(TABLE_ID)) {
+            // resetPaging=true: page 7 of All is usually past the end of Active.
+            $(TABLE_ID).DataTable().ajax.reload(null, true);
+        }
+    });
 
     function facultyGetHiddenCols() {
         try {

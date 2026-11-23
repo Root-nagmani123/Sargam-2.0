@@ -24,6 +24,38 @@ class FacultyDataTable extends DataTable
     }
 
     /**
+     * Status tab above the grid (All / Active / Inactive). Whitelisted here so an
+     * arbitrary ?status_filter= can neither reach the query nor fragment the cache.
+     */
+    public static function resolveStatusFilter(): string
+    {
+        $value = strtolower(trim((string) request('status_filter', '')));
+
+        return in_array($value, ['active', 'inactive'], true) ? $value : '';
+    }
+
+    /**
+     * Shared with FacultyController::exportQuery() so a download can never show a
+     * different set of rows than the tab it was started from.
+     *
+     * @param  QueryBuilder  $query
+     */
+    public static function applyStatusFilter($query, string $status)
+    {
+        if ($status === 'active') {
+            $query->where('active_inactive', 1);
+        } elseif ($status === 'inactive') {
+            // "Inactive" is everything that is not explicitly active, NULL included —
+            // the same rule the Status badge renders by.
+            $query->where(function ($sub) {
+                $sub->where('active_inactive', '!=', 1)->orWhereNull('active_inactive');
+            });
+        }
+
+        return $query;
+    }
+
+    /**
      * Server-side JSON for /faculty listing. .env: FACULTY_DATATABLE_CACHE_*.
      */
     public function ajax(): JsonResponse
@@ -37,7 +69,10 @@ class FacultyDataTable extends DataTable
                 'seconds' => 'FACULTY_DATATABLE_CACHE_SECONDS',
             ],
             'FacultyDataTable',
-            fn () => parent::ajax()
+            fn () => parent::ajax(),
+            // Not part of the standard DataTables fingerprint — without it the
+            // three tabs would share one cached payload.
+            ['status_filter' => self::resolveStatusFilter()]
         );
     }
 
@@ -180,9 +215,11 @@ class FacultyDataTable extends DataTable
         // base query builder and then returns $this anyway, so the ordering
         // survived and a whole base builder was created and thrown away. Written
         // the way it was meant to be read.
-        return $model->newQuery()
+        $query = $model->newQuery()
             ->with('createdByUser')
             ->orderBy('pk', 'desc');
+
+        return self::applyStatusFilter($query, self::resolveStatusFilter());
     }
 
     /**

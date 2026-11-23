@@ -148,8 +148,12 @@
 
     <div id="status-msg"></div>
 
-    {{-- No status tabs on this grid, so the export row keeps its place above the
-         card and the buttons sit alone on the right (docs/new-design-index-page.md §1).
+    {{-- Status tabs left, export row right, both above the card
+         (docs/new-design-index-page.md §1). The tabs are JS filters, not links:
+         they set ?status_filter= on the grid's ajax and on every export href, and
+         MemberDataTable::resolveStatusFilter() whitelists it (all / active /
+         inactive) for the query, the cache key and the export alike. The initial
+         tab honours a deep-linked ?status_filter= through that same method.
 
          Print sits beside Download, not inside it — it opens a page rather than
          saving a file. Both are server-side exports off the same query, and the
@@ -161,9 +165,23 @@
          every non-entitled user a Download menu and a Print button whose only
          outcome was a 403 error page - a dead button that reports a permission
          failure, which is the thing the gate was built to avoid.
-         See App\Http\Middleware\EnsureMemberPiiAccess::grantsAccess(). --}}
-    @if (\App\Http\Middleware\EnsureMemberPiiAccess::grantsAccess())
-    <div class="d-flex flex-wrap align-items-center justify-content-end gap-3 mb-3">
+         See App\Http\Middleware\EnsureMemberPiiAccess::grantsAccess().
+         The tabs are outside that check: filtering the list is not an export. --}}
+    @php($memberStatusTab = \App\DataTables\MemberDataTable::resolveStatusFilter())
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0"
+            role="group" aria-label="Filter members by status">
+            @foreach (['' => 'All', 'active' => 'Active', 'inactive' => 'Inactive'] as $tabValue => $tabLabel)
+                <li class="nav-item" role="presentation">
+                    <button type="button"
+                        class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill member-status-tab {{ $memberStatusTab === $tabValue ? 'active' : '' }}"
+                        data-member-status="{{ $tabValue }}"
+                        aria-pressed="{{ $memberStatusTab === $tabValue ? 'true' : 'false' }}">{{ $tabLabel }}</button>
+                </li>
+            @endforeach
+        </ul>
+
+        @if (\App\Http\Middleware\EnsureMemberPiiAccess::grantsAccess())
         <div class="d-flex flex-wrap align-items-center gap-2">
         <div class="dropdown">
             <button type="button"
@@ -216,8 +234,8 @@
             <span>Print</span>
         </a>
         </div>
+        @endif
     </div>
-    @endif
 
     <div class="card border-0 shadow-sm rounded-1 overflow-hidden">
         <div class="card-body p-3 p-md-4">
@@ -392,6 +410,23 @@ $(function () {
         ['type_filter', 'group_filter', 'department_filter'].forEach(function (key) {
             data[key] = filters[key] || '';
         });
+        data.status_filter = memberStatusTab();
+    });
+
+    /* ---- All / Active / Inactive tabs -------------------------------------- */
+    // The active tab is the single source of truth; '' means All.
+    function memberStatusTab() {
+        return String($('.member-status-tab.active').data('member-status') || '');
+    }
+
+    $(document).on('click', '.member-status-tab', function () {
+        var $tab = $(this);
+        if ($tab.hasClass('active')) {
+            return;
+        }
+        $('.member-status-tab').removeClass('active').attr('aria-pressed', 'false');
+        $tab.addClass('active').attr('aria-pressed', 'true');
+        memberApplyFilters();
     });
 
     // Everything that has to happen once, after any filter changes.
@@ -461,6 +496,7 @@ $(function () {
 
         var search = $.trim($('#memberDtSearch input[type="search"]').val() || '');
         var filters = memberActiveFilters();
+        var status = memberStatusTab();
 
         $('.member-export-link').each(function () {
             var url = new URL(this.href, window.location.origin);
@@ -473,6 +509,9 @@ $(function () {
             Object.keys(filters).forEach(function (key) {
                 url.searchParams.set(key, filters[key]);
             });
+            if (status) {
+                url.searchParams.set('status_filter', status);
+            }
             // Omit ?cols= entirely while nothing is hidden — the server reads
             // "no cols" as "every column".
             if (keys.length && keys.length !== MEMBER_EXPORT_KEY_COUNT) {
