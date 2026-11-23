@@ -8,6 +8,13 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-22: Director Assessment (Evaluation & Marks, Training Section).** The old mock at
+  `admin/coe/evaluation-marks` (menu "Evaluation & Marks", `coe_evaluation_marks`, now enforced)
+  is real: TI quick-enters the Director's overall marks per OT, reviews the OT profile
+  (faculty marks, notices & memos, photo, Previous / Next), adds remarks and **Sends to COE**
+  (locks). Stored on the drive's "Director…" component in `coe_evaluation_marks`; feeds
+  Compilation / Moderation / Merit part B. Details: `docs/coe-director-assessment.md`. Tests:
+  `CoeDirectorAssessmentFlowTest`.
 - **2026-11-20: OTs see their exam seat.** The freeze bell (`coe_seat_allocation`, already sent)
   now opens **My Exam Seat** (`GET admin/coe/my-exam-seat`, `VenueAllocationController::mySeats`,
   OT from the session like Laptop Declaration; frozen plans only): a card per exam with date,
@@ -150,11 +157,12 @@ Masters (type, term, component, building/floor/room, subject max marks,
   `coe_my_question_paper_faculty`, `coe_my_question_paper_rajbhasha`,
   `coe_question_paper_logs`), `coe_roll_code_mapping`, `coe_result_compilation`,
   `coe_faculty_result_entry`, `coe_merit_ranking`, `coe_marks_moderation`,
+  `coe_evaluation_marks` (Evaluation & Marks / Director Assessment),
   `coe_signature_master`, `coe_marksheet_generation`, `coe_verified_marksheet`.
 - **Not enforced (`auth` only):** all Master Data routes, Examination Drive (admin,
   faculty, CC, COE), Roll Numbers, UPC, Laptop & Scriber Seats, OT Laptop Status,
   Venue Allocation, My Invigilation Duty / My Exam Seat (each shows only the user's own data), Scriber Master,
-  the Evaluation & Marks mock screens. The menu keys
+  the faculty Evaluation & Marks mock screen. The menu keys
   exist but no route checks them. Some controllers check access themselves (`coeIndex`
   needs role COE/Super Admin, CC approve/reject checks coordinator, Laptop Declaration
   checks the user is an OT).
@@ -362,8 +370,13 @@ All rules in `ResultMarksService` (RMS) and `MarksModeration`.
   `max_marks` (2 decimals), `AB` = absent, blank clears. Status 1 Draft / 2 Approved;
   Approve needs every cell on the filtered sheet filled and **locks permanently**.
   Faculty see OTs per their assigned codes; COE staff (no faculty row) see everything.
-  Excel import saves as draft only. `EvaluationMarksController` is an old mock (sample
-  data, no table).
+  Excel import saves as draft only. The Director component (below) is never on it.
+  `EvaluationMarksController` is now only the faculty-side mock (`faculty-evaluation-marks`,
+  sample data, no table).
+- **Director Assessment** (Evaluation & Marks, Training Section): the Director component
+  (name contains "director" on a Director Assessment drive, `RMS::isDirectorComponent()`) is
+  entered by TI, not faculty, and sent to COE. Setup, flow, data mapping and rules:
+  **`docs/coe-director-assessment.md`**.
 - **Marks Moderation** (`MarksModerationController`, Training section): SOP COE/11
   `Mi = (UMi − Xj) × σG/σj + μG` per column, across evaluators; absents excluded;
   clamp 0..max. Only when every assigned mark in the component is approved.

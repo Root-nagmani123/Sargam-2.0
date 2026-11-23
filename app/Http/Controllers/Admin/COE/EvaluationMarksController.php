@@ -7,9 +7,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
 /**
- * COE → Examination Management → Evaluation & Marks.
- *
- * Design-first. Approval workflow: Pending → Approved / Returned for Recheck.
+ * COE → Examination Management → Evaluation & Marks (Faculty): design-first mock
+ * with sample data. The Training Section's Evaluation & Marks is the real Director
+ * Assessment (DirectorAssessmentController).
  */
 class EvaluationMarksController extends Controller
 {
@@ -34,21 +34,6 @@ class EvaluationMarksController extends Controller
         return view('admin.coe.evaluation_marks.faculty_index', compact(
             'tab', 'pending', 'completed', 'recheck'
         ));
-    }
-
-    public function index(Request $request)
-    {
-        $rows = $this->sampleRows();
-
-        return view('admin.coe.evaluation_marks.index', [
-            'rows'        => $rows,
-            'courses'     => self::COURSES,
-            'examinations'=> self::EXAMINATIONS,
-            'statuses'    => self::STATUSES,
-            'pendingCount'  => $rows->where('approval_stage', 'Pending Review')->count(),
-            'approvedCount' => $rows->where('approval_stage', 'Approved')->count(),
-            'recheckCount'  => $rows->where('approval_stage', 'Returned for Recheck')->count(),
-        ]);
     }
 
     /** @return Collection<int, array> */

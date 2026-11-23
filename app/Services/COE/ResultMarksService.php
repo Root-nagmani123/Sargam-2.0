@@ -192,9 +192,9 @@ class ResultMarksService
      * Drives open for marks entry: released (Active, not Draft or Closed) and
      * approved by the Course Coordinator — the same gate as question-paper upload.
      */
-    private function entryDrives(?int $coursePk = null): Collection
+    public function entryDrives(?int $coursePk = null): Collection
     {
-        return ExaminationDrive::with(['course', 'facultyMaps', 'componentMaps.component', 'componentMaps.subject', 'componentMaps.faculty'])
+        return ExaminationDrive::with(['course', 'examinationType', 'facultyMaps.faculty', 'componentMaps.component', 'componentMaps.subject', 'componentMaps.faculty'])
             ->where('status', ExaminationDrive::STATUS_ACTIVE)
             ->where('cc_status', ExaminationDrive::CC_APPROVED)
             ->when($coursePk, fn ($q) => $q->where('course_master_pk', $coursePk))
@@ -206,7 +206,7 @@ class ResultMarksService
      * Marks exist only after the exam: a component counts from its exam end date
      * (else its exam date, else the drive's end date), that day included.
      */
-    private function examOver(ExaminationDrive $drive, ExaminationDriveComponentMap $map): bool
+    public function examOver(ExaminationDrive $drive, ExaminationDriveComponentMap $map): bool
     {
         // The slot that counts, to the minute — the CC's confirmed one, else the Tentative Exam
         // Range's times (ExaminationDriveComponentMap::slotEnd); else the end date (then the
@@ -217,6 +217,17 @@ class ResultMarksService
         $end = $map->exam_end_date ?? $map->exam_date ?? $drive->end_date;
 
         return $end === null || $end->lte(today());
+    }
+
+    /**
+     * The Director's overall assessment: a component named "Director…" (Component
+     * Master) on a Director Assessment drive. The Training Section enters it on
+     * Evaluation & Marks (DirectorAssessmentService), never faculty on Result Entry.
+     */
+    public static function isDirectorComponent(ExaminationDrive $drive, ExaminationDriveComponentMap $map): bool
+    {
+        return self::isDirectorAssessment($drive)
+            && (bool) preg_match('/director/i', (string) ($map->component->component_name ?? ''));
     }
 
     /**
@@ -234,7 +245,8 @@ class ResultMarksService
         foreach ($this->entryDrives($coursePk) as $drive) {
             $participants = $this->participants($drive);
             foreach ($drive->componentMaps->sortBy('id') as $map) {
-                if (! $this->examOver($drive, $map)) {
+                // The Director's overall assessment is the Training Section's, not faculty's.
+                if (! $this->examOver($drive, $map) || self::isDirectorComponent($drive, $map)) {
                     continue;
                 }
                 $owners = $this->subjectFacultyPks($drive, (int) $map->subject_master_pk);
@@ -373,7 +385,7 @@ class ResultMarksService
     }
 
     /** @return array<string, mixed> */
-    private function column(ExaminationDrive $drive, ExaminationDriveComponentMap $map): array
+    public function column(ExaminationDrive $drive, ExaminationDriveComponentMap $map): array
     {
         return [
             'key' => $drive->id.':'.$map->subject_master_pk.':'.$map->component_master_pk,
@@ -391,7 +403,10 @@ class ResultMarksService
             'passing' => $map->passing_marks === null ? null : (float) $map->passing_marks,
             // Why nobody may be entering it yet (Result Compilation's Action column).
             'open' => $drive->status === ExaminationDrive::STATUS_ACTIVE && $drive->cc_status === ExaminationDrive::CC_APPROVED,
-            'has_faculty' => $this->subjectFacultyPks($drive, (int) $map->subject_master_pk) !== [] || $map->subCoordinatorNames() !== [],
+            // The Training Section enters the Director's overall assessment: never short of a faculty.
+            'has_faculty' => self::isDirectorComponent($drive, $map)
+                || $this->subjectFacultyPks($drive, (int) $map->subject_master_pk) !== [] || $map->subCoordinatorNames() !== [],
+            'director' => self::isDirectorComponent($drive, $map),
         ];
     }
 
@@ -1203,7 +1218,9 @@ class ResultMarksService
                 foreach ($this->participants($drive) as $pk => $p) {
                     $m = $marks[$col['key']][$pk] ?? null;
                     $approved = (bool) $m?->isApproved();
-                    $names = $this->evaluatorNames($map, $p) ?: ($ownersTakeAll ? $subjectFaculty : []);
+                    $names = $col['director']
+                        ? [DirectorAssessmentService::EVALUATOR]
+                        : ($this->evaluatorNames($map, $p) ?: ($ownersTakeAll ? $subjectFaculty : []));
                     // An OT no faculty can enter marks for is left out of the component's
                     // moderation instead of holding it back; once marked it counts like any other.
                     $unassigned = $names === [] && ! $approved;
@@ -1353,7 +1370,7 @@ class ResultMarksService
         $allNames = [];
         foreach ($drives as $drive) {
             foreach ($drive->componentMaps as $map) {
-                if (! $this->examOver($drive, $map)) {
+                if (! $this->examOver($drive, $map) || self::isDirectorComponent($drive, $map)) {
                     continue;
                 }
                 $key = $drive->id.':'.$map->subject_master_pk.':'.$map->component_master_pk;
@@ -1472,7 +1489,9 @@ class ResultMarksService
 
         foreach ($drives as $drive) {
             foreach ($drive->componentMaps as $map) {
-                if (($subjectPk && (int) $map->subject_master_pk !== $subjectPk) || ! $this->examOver($drive, $map)) {
+                // Faculty owe every component but the Director's overall assessment (Training Section's).
+                if (($subjectPk && (int) $map->subject_master_pk !== $subjectPk) || ! $this->examOver($drive, $map)
+                    || self::isDirectorComponent($drive, $map)) {
                     continue;
                 }
                 $key = $drive->id.':'.$map->subject_master_pk.':'.$map->component_master_pk;

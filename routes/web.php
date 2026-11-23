@@ -2248,8 +2248,15 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->whereNumber('id')->name('venue-allocation.swap');
     Route::post('venue-allocation/{id}/move', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'move'])
         ->whereNumber('id')->name('venue-allocation.move');
-    Route::get('evaluation-marks', [\App\Http\Controllers\Admin\COE\EvaluationMarksController::class, 'index'])
-        ->name('evaluation-marks.index');
+    // Evaluation & Marks (Training Section): Director Assessment → Send to COE.
+    Route::middleware('menu.permission:coe_evaluation_marks')->group(function () {
+        Route::get('evaluation-marks', [\App\Http\Controllers\Admin\COE\DirectorAssessmentController::class, 'index'])
+            ->name('evaluation-marks.index');
+        Route::get('evaluation-marks/review', [\App\Http\Controllers\Admin\COE\DirectorAssessmentController::class, 'review'])
+            ->name('evaluation-marks.review');
+        Route::post('evaluation-marks', [\App\Http\Controllers\Admin\COE\DirectorAssessmentController::class, 'save'])
+            ->middleware('throttle:60,1')->name('evaluation-marks.save');
+    });
     Route::get('faculty-evaluation-marks', [\App\Http\Controllers\Admin\COE\EvaluationMarksController::class, 'facultyIndex'])
         ->name('faculty-evaluation-marks.index');
     // OT: their own seats on frozen seating plans (bell: coe_seat_allocation).
