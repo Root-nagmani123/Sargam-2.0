@@ -13,11 +13,20 @@
 .coe-btn-freeze { background:#198754;color:#fff;border:none; }
 .coe-btn-freeze:hover { background:#146c43;color:#fff; }
 .coe-state--pending { background:#fff3cd;color:#856404; }
+/* A course's code count opens that OT's codes for the course. */
+.upc-count-link { color: var(--coe-brand, #004a93); text-decoration: underline; font-weight: 600; }
+.upc-count-link:hover { color: var(--coe-brand-hover, #003b75); }
 </style>
 @endpush
 
 @section('setup_content')
-@php $isArchived = $scope === 'archived'; @endphp
+@php
+    $isArchived = $scope === 'archived';
+    $menu = request('menu');
+    $otUrl = fn (int $student, ?int $course = null) => route('admin.coe.unique-participant-code.ot', array_filter([
+        'student' => $student, 'course' => $course, 'scope' => $isArchived ? 'archived' : null, 'menu' => $menu,
+    ]));
+@endphp
 <div class="container-fluid coe-page">
     <x-breadcrum title="Unique Participant Code" :showBack="false"
                  :items="['Setup', 'COE', 'Master Data', 'Unique Participant Code']">
@@ -31,19 +40,22 @@
     {{-- Scope tabs · bulk buttons · Download / Print --}}
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
         <nav class="coe-tabs" aria-label="Course scope">
-            <a href="{{ route('admin.coe.unique-participant-code.index') }}"
+            <a href="{{ route('admin.coe.unique-participant-code.index', array_filter(['menu' => $menu])) }}"
                class="coe-tab {{ $isArchived ? '' : 'is-active' }}"
                @unless ($isArchived) aria-current="page" @endunless>Active</a>
-            <a href="{{ route('admin.coe.unique-participant-code.index', ['scope' => 'archived']) }}"
+            <a href="{{ route('admin.coe.unique-participant-code.index', array_filter(['scope' => 'archived', 'menu' => $menu])) }}"
                class="coe-tab {{ $isArchived ? 'is-active' : '' }}"
                @if ($isArchived) aria-current="page" @endif>Archived</a>
         </nav>
 
         <div class="d-flex flex-wrap gap-2 align-items-center coe-secondary-actions">
-            <button type="button" id="upcDeleteAllBtn" class="btn coe-btn coe-btn-danger d-none">Delete All</button>
-            <button type="button" id="upcFreezeAllBtn" class="btn coe-btn coe-btn-freeze d-none">Freeze All</button>
-            @include('admin.coe.partials.download_menu', ['prefix' => 'upc', 'csv' => true])
+            {{-- Act on every code of the ticked OTs; frozen codes are kept (no unfreeze, no delete). --}}
+            <button type="button" id="upcDeleteAllBtn" class="btn coe-btn coe-btn-danger">Delete Selected</button>
+            <button type="button" id="upcFreezeAllBtn" class="btn coe-btn coe-btn-freeze">Freeze Selected</button>
             @include('admin.coe.partials.print_brand')
+            <button type="button" id="upcDownloadBtn" class="btn programme-dt-btn-columns" title="Download">
+                <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
+            </button>
             <button type="button" id="upcPrintBtn" class="btn programme-dt-btn-columns" title="Print">
                 <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
             </button>
@@ -53,26 +65,16 @@
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
 
-            {{-- Toolbar --}}
             <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar coe-toolbar">
                 <div class="d-flex flex-wrap align-items-center gap-3">
                     <span class="programme-dt-filters-label">Filter</span>
 
+                    {{-- An OT matches a course when they hold codes on it. --}}
                     <div class="programme-dt-filter-select">
                         <select id="upcFilterCourse" class="form-select" data-placeholder="Course Name" aria-label="Course Name">
                             <option value="">Course Name</option>
-                            @foreach ($courses as $course)
-                                <option value="{{ $course }}">{{ $course }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    {{-- Batches of the course picked (all courses' batches until one is). --}}
-                    <div class="programme-dt-filter-select coe-filter-narrow">
-                        <select id="upcFilterBatch" class="form-select" data-placeholder="Batch" aria-label="Batch">
-                            <option value="">Batch</option>
-                            @foreach (collect($batches)->flatten()->unique()->sortDesc() as $batch)
-                                <option value="{{ $batch }}">{{ $batch }}</option>
+                            @foreach ($otCourses as $course)
+                                <option value="{{ $course['key'] }}">{{ $course['label'] }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -111,59 +113,50 @@
                             <tr>
                                 <th scope="col" class="coe-col-check">
                                     <input type="checkbox" class="form-check-input m-0" id="upcCheckAll"
-                                           aria-label="Select all rows">
+                                           aria-label="Select all OTs">
                                 </th>
                                 <th scope="col">S. No.</th>
-                                <th scope="col">Course Name</th>
-                                <th scope="col">Batch</th>
                                 <th scope="col">OT Name</th>
-                                <th scope="col">Display Name</th>
-                                <th scope="col">Unique Code</th>
+                                <th scope="col">User Name</th>
+                                @foreach ($otCourses as $course)
+                                    <th scope="col" class="coe-col-center">{{ $course['label'] }}</th>
+                                @endforeach
                                 <th scope="col" class="coe-col-center">STATUS</th>
                                 <th scope="col">ACTION</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($rows as $row)
-                                <tr data-coe-id="{{ $row['id'] }}"
-                                    data-upc-course="{{ $row['course_name'] }}"
-                                    data-upc-batch="{{ $row['batch'] }}"
-                                    data-upc-code="{{ $row['unique_code'] }}"
-                                    data-upc-status="{{ $row['status'] }}">
+                            @foreach ($otRows as $ot)
+                                <tr data-upc-courses="|{{ implode('|', array_keys($ot['courses'])) }}|"
+                                    data-upc-ids="{{ implode(',', $ot['ids']) }}">
                                     <td class="coe-col-check">
                                         <input type="checkbox" class="form-check-input m-0 upc-row-check"
-                                               aria-label="Select {{ $row['ot_name'] }}">
+                                               aria-label="Select {{ $ot['ot_name'] }}">
                                     </td>
                                     <td></td>
-                                    <td class="coe-strong upc-cell-course">{{ $row['course_name'] }}</td>
-                                    <td class="upc-cell-batch">{{ $row['batch'] }}</td>
-                                    <td class="upc-cell-ot">{{ $row['ot_name'] }}</td>
-                                    <td class="upc-cell-display">{{ $row['display_name'] }}</td>
-                                    <td class="upc-cell-code">{{ $row['unique_code'] }}</td>
-                                    <td class="coe-col-center upc-cell-status"
-                                        data-order="{{ $row['status'] === 'Frozen' ? 1 : 0 }}"
-                                        data-search="{{ $row['status'] }}">
-                                        <span class="coe-state coe-state--{{ $row['status'] === 'Frozen' ? 'active' : 'pending' }}">
-                                            {{ $row['status'] }}
-                                        </span>
+                                    <td class="coe-strong">{{ $ot['ot_name'] }}</td>
+                                    <td>{{ $ot['user_name'] }}</td>
+                                    @foreach ($otCourses as $course)
+                                        @php $held = count($ot['courses'][$course['key']] ?? []); @endphp
+                                        <td class="coe-col-center" data-order="{{ $held }}">
+                                            @if ($held)
+                                                <a href="{{ $otUrl($ot['student_pk'], (int) $course['key']) }}" class="upc-count-link"
+                                                   title="View the codes for {{ $course['label'] }}">{{ str_pad((string) $held, 2, '0', STR_PAD_LEFT) }}</a>
+                                            @else
+                                                <span class="text-body-secondary">—</span>
+                                            @endif
+                                        </td>
+                                    @endforeach
+                                    <td class="coe-col-center" data-search="{{ $ot['status'] }}">
+                                        <span class="coe-state coe-state--{{ $ot['status'] === 'Frozen' ? 'active' : 'pending' }}">{{ $ot['status'] }}</span>
                                     </td>
-                                    <td class="upc-cell-actions">
-                                        {{-- A frozen code has nothing left to do: the server refuses delete.
-                                             No Edit: a hand-typed code broke the course's sequence. --}}
-                                        @if ($row['status'] === 'Frozen')
-                                            <span class="text-body-secondary">—</span>
-                                        @else
-                                            <div class="coe-act-group" role="group" aria-label="Row actions">
-                                                <button type="button" class="coe-act coe-act--freeze">
-                                                    <span class="coe-act__icon"><i class="bi bi-lock" aria-hidden="true"></i></span>
-                                                    <span class="coe-act__label">Freeze</span>
-                                                </button>
-                                                <button type="button" class="coe-act coe-act--del">
-                                                    <span class="coe-act__icon"><i class="bi bi-trash3" aria-hidden="true"></i></span>
-                                                    <span class="coe-act__label">Delete</span>
-                                                </button>
-                                            </div>
-                                        @endif
+                                    <td>
+                                        <div class="coe-act-group" role="group" aria-label="Row actions">
+                                            <a href="{{ $otUrl($ot['student_pk']) }}" class="coe-act text-decoration-none">
+                                                <span class="coe-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span>
+                                                <span class="coe-act__label">View</span>
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach
@@ -179,56 +172,7 @@
     </div>
 </div>
 
-{{-- ── Generate Unique Code modal ─────────────────────────────────────────── --}}
-<div class="modal fade" id="upcGenerateModal" tabindex="-1" aria-labelledby="upcGenerateModalLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content coe-modal border-0 shadow">
-            <form id="upcGenerateForm" novalidate>
-                <div class="modal-header coe-modal-header coe-modal-header--rule">
-                    <h5 class="modal-title" id="upcGenerateModalLabel">Generate Unique Code</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body coe-modal-body">
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label class="coe-form-label" for="upcGenCourse">Course<span class="coe-req">*</span></label>
-                            <select id="upcGenCourse" name="course_batch" class="form-select coe-control" required>
-                                <option value="">Select Course</option>
-                                @foreach ($cohorts as $cohort)
-                                    <option value="{{ $cohort['key'] }}" data-count="{{ $cohort['count'] }}">{{ $cohort['label'] }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <label class="coe-form-label" for="upcGenOtCount">Number of OTs</label>
-                            <input type="text" id="upcGenOtCount" class="form-control coe-control" value="" readonly>
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="coe-form-label" for="upcGenPrefix">Unique Code Prefix<span class="coe-req">*</span></label>
-                            <input type="text" id="upcGenPrefix" name="prefix" class="form-control coe-control"
-                                   placeholder="eg. UC-" maxlength="20" required autocomplete="off">
-                        </div>
-                        <div class="col-sm-6">
-                            {{-- Text, not number: leading zeros set the width (0324 → UC-0324). --}}
-                            <label class="coe-form-label" for="upcGenStart">Count Start from<span class="coe-req">*</span></label>
-                            <input type="text" id="upcGenStart" name="count_start" class="form-control coe-control"
-                                   placeholder="eg. 324" maxlength="9" inputmode="numeric" pattern="\d*" required autocomplete="off">
-                        </div>
-                        <div class="col-12">
-                            <div class="form-text" id="upcGenPreview">
-                                Codes are given in name order. An OT that already has a code keeps it: generating again gives codes only to OTs without one, numbered on from the course's last code.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer coe-modal-footer">
-                    <button type="button" class="btn coe-btn coe-btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn coe-btn coe-btn-primary coe-btn--narrow" id="upcGenSubmit">Generate</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+@include('admin.coe.unique_participant_code._generate')
 
 @include('admin.coe.partials.confirm_delete_modal', ['id' => 'upcDeleteModal', 'confirmId' => 'upcDeleteConfirm'])
 
@@ -258,217 +202,108 @@
 $(function () {
     'use strict';
 
-    var ROUTES = {
-        generate: @json(route('admin.coe.unique-participant-code.generate')),
-        freeze: @json(route('admin.coe.unique-participant-code.freeze')),
-        destroy: @json(route('admin.coe.unique-participant-code.bulk-destroy'))
-    };
-
-    /* Column indexes — keep in step with the <thead>. */
-    var COL = { check: 0, sno: 1, course: 2, batch: 3, ot: 4, display: 5, code: 6, status: 7, action: 8 };
-
     var $table = $('#upcTable');
+    var lastCol = $('#upcTable thead th').length - 1;
+    var statusCol = lastCol - 1;
 
     var dt = CoeGrid.init({
         table: '#upcTable',
         title: @json($isArchived ? 'Unique Participant Code - Archived' : 'Unique Participant Code'),
-        snoCol: COL.sno,
-        order: [[COL.sno, 'asc']],
-        noSort: [COL.check, COL.sno, COL.action],
-        exclude: [COL.check, COL.action],
-        filters: { '#upcFilterCourse': COL.course, '#upcFilterBatch': COL.batch, '#upcFilterStatus': COL.status },
+        snoCol: 1,
+        order: [[2, 'asc']],
+        noSort: [0, 1, lastCol],
+        exclude: [0, lastCol],
+        rowCheck: '.upc-row-check',
+        filters: { '#upcFilterStatus': statusCol },
         reset: '#upcResetFilters',
-        download: '#upcDownloadExcel', pdf: '#upcDownloadPdf', csv: '#upcDownloadCsv',
+        download: '#upcDownloadBtn',
         print: '#upcPrintBtn',
         searchToggle: '#upcSearchToggle',
         searchSlot: '#upcDtSearch',
         colvisGrid: '#upcColumnToggleGrid',
-        colvisKey: 'coeUniqueParticipantCode:hiddenColumns:v2',
+        colvisKey: 'coeUniqueParticipantCode:otColumns:v1',
         empty: { title: 'No Participant Codes', zeroTitle: 'No Records Found',
-                 text: 'Generate unique codes to get started.' }
+                 text: 'Generate unique codes for a course and subject to get started.' }
     });
 
-    /* Batch filter: only the batches of the course picked. */
-    var BATCHES = @json($batches);
-    var $batch = $('#upcFilterBatch');
-    var allBatches = $batch.find('option').not(':first').map(function () { return this.value; }).get();
-    $('#upcFilterCourse').on('change', function () {
-        var list = this.value ? (BATCHES[this.value] || []).map(String) : allBatches;
-        var keep = $batch.val();
-        $batch.find('option').not(':first').remove();
-        list.forEach(function (b) { $batch.append($('<option>').val(b).text(b)); });
-        $batch.val(list.indexOf(keep) !== -1 ? keep : '').trigger('change');
+    /* Course Name: an OT matches when they hold codes on the course picked. */
+    var $course = $('#upcFilterCourse');
+    if (window.DropdownSearch) {
+        window.DropdownSearch.init($course[0], { placeholder: $course.data('placeholder'), allowClear: false });
+    }
+    $.fn.dataTable.ext.search.push(function (settings, data, index) {
+        if (settings.nTable.id !== 'upcTable' || !$course.val()) { return true; }
+        var node = dt.row(index).node();
+        return !!node && (node.getAttribute('data-upc-courses') || '').indexOf('|' + $course.val() + '|') !== -1;
     });
+    $course.on('change', function () { dt.draw(); });
+    $('#upcResetFilters').on('click', function () { $course.val('').trigger('change.select2'); dt.draw(); });
 
-    /* ── AJAX helpers ─────────────────────────────────────────────────── */
-    function csrf() { return $('meta[name="csrf-token"]').attr('content') || ''; }
-
-    function send(url, data, type) {
-        return $.ajax({
-            url: url,
-            type: type || 'POST',
-            data: data,
-            dataType: 'json',
-            headers: { 'X-CSRF-TOKEN': csrf(), 'Accept': 'application/json' }
-        });
-    }
-
-    function errorText(xhr) {
-        if (xhr.status === 419) { return 'Your session has expired. Reload the page and try again.'; }
-        var j = xhr.responseJSON || {};
-        if (j.errors) {
-            var first = Object.keys(j.errors)[0];
-            if (first && j.errors[first][0]) { return j.errors[first][0]; }
-        }
-        return j.message || 'The request failed. Please try again.';
-    }
-
-    function showError(xhr) {
-        Swal.fire({ icon: 'error', title: 'Could not complete', text: errorText(xhr) });
-    }
-
-    function idOf($row) { return parseInt($row.attr('data-coe-id'), 10); }
-
-    /* ── Row selection ──────────────────────────────────────────────────── */
+    /* ── Row selection: the ticked OTs among the rows the filters leave ───── */
     function selectedRows() {
         return dt.rows({ search: 'applied' }).nodes().to$().filter(function () {
             return $(this).find('.upc-row-check').prop('checked');
         });
     }
-
-    function syncBulkButtons() {
+    function selectedCodeIds() {
+        var ids = [];
+        selectedRows().each(function () {
+            (this.getAttribute('data-upc-ids') || '').split(',').forEach(function (id) { if (id) { ids.push(parseInt(id, 10)); } });
+        });
+        return ids;
+    }
+    function syncCheckAll() {
         var n = selectedRows().length;
         var all = dt.rows({ search: 'applied' }).nodes().to$().length;
-        $('#upcDeleteAllBtn, #upcFreezeAllBtn').toggleClass('d-none', n === 0);
-        $('#upcCheckAll')
-            .prop('checked', n > 0 && n === all)
-            .prop('indeterminate', n > 0 && n < all);
+        $('#upcCheckAll').prop('checked', n > 0 && n === all).prop('indeterminate', n > 0 && n < all);
     }
-
-    function clearSelection() {
-        $table.find('.upc-row-check').prop('checked', false);
-        syncBulkButtons();
-    }
-
     $('#upcCheckAll').on('change', function () {
         dt.rows({ search: 'applied' }).nodes().to$().find('.upc-row-check').prop('checked', this.checked);
-        syncBulkButtons();
+        syncCheckAll();
     });
-    $table.on('change', '.upc-row-check', syncBulkButtons);
-    dt.on('search.dt', function () { setTimeout(syncBulkButtons, 0); });
+    $table.on('change', '.upc-row-check', syncCheckAll);
+    dt.on('search.dt', function () { setTimeout(syncCheckAll, 0); });
 
-    /* ── Frozen: badge, and the row loses its actions ──────────────────── */
-    function paintFrozen($row) {
-        $row.find('.upc-cell-status')
-            .attr('data-order', 1)
-            .attr('data-search', 'Frozen')
-            .html('<span class="coe-state coe-state--active">Frozen</span>');
-        $row.find('.upc-cell-actions').html('<span class="text-body-secondary">—</span>');
-        $row.attr('data-upc-status', 'Frozen');
-        dt.row($row).invalidate('dom');
+    function send(url, data) {
+        return $.ajax({
+            url: url, type: 'POST', data: data, dataType: 'json',
+            headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') || '', 'Accept': 'application/json' }
+        });
+    }
+    function showError(xhr) {
+        var j = xhr.responseJSON || {};
+        Swal.fire({ icon: 'error', title: 'Could not complete',
+            text: xhr.status === 419 ? 'Your session has expired. Reload the page and try again.' : (j.message || 'The request failed. Please try again.') });
+    }
+    // Counts and statuses change: reload onto the same tab.
+    function doneThenReload(title) {
+        return function (res) { Swal.fire({ icon: 'success', title: title, text: res.message }).then(function () { window.location.reload(); }); };
     }
 
-    function freeze($rows) {
-        var ids = $rows.map(function () { return idOf($(this)); }).get();
-        return send(ROUTES.freeze, { ids: ids }).done(function (res) {
-            $rows.filter(function () { return res.frozen_ids.indexOf(idOf($(this))) !== -1; })
-                 .each(function () { paintFrozen($(this)); });
-            dt.draw(false);
-            clearSelection();
-            Swal.fire({ icon: 'success', title: 'Frozen', text: res.message });
-        }).fail(showError);
+    // The bulk buttons are always shown; with nothing ticked they say so instead of acting.
+    // Bound before CoeGrid.confirmDelete so this runs first and can stop its handler.
+    function requireSelection(e) {
+        if (selectedRows().length) { return true; }
+        e.stopImmediatePropagation();
+        Swal.fire({ icon: 'info', title: 'Nothing selected', text: 'Select at least one OT first.' });
+        return false;
     }
+    $('#upcDeleteAllBtn').on('click', requireSelection);
+    $('#upcFreezeAllBtn').on('click', function (e) {
+        if (!requireSelection(e)) { return; }
+        send(@json(route('admin.coe.unique-participant-code.freeze')), { ids: selectedCodeIds() })
+            .done(doneThenReload('Frozen')).fail(showError);
+    });
 
-    $table.on('click', '.coe-act--freeze', function () { freeze($(this).closest('tr')); });
-    $('#upcFreezeAllBtn').on('click', function () { freeze(selectedRows()); });
-
-    /* ── Delete ─────────────────────────────────────────────────────────── */
     CoeGrid.confirmDelete({
         table: '#upcTable',
         modal: '#upcDeleteModal',
         confirm: '#upcDeleteConfirm',
         bulkTrigger: '#upcDeleteAllBtn',
-        onConfirm: function ($row) {
-            var $targets = $row ? $row : selectedRows();
-            var ids = $targets.map(function () { return idOf($(this)); }).get();
-
-            return send(ROUTES.destroy, { ids: ids }).done(function (res) {
-                dt.rows($targets.filter(function () {
-                    return res.deleted_ids.indexOf(idOf($(this))) !== -1;
-                })).remove().draw(false);
-                clearSelection();
-                Swal.fire({ icon: 'success', title: 'Deleted', text: res.message });
-            }).fail(showError);
+        onConfirm: function () {
+            return send(@json(route('admin.coe.unique-participant-code.bulk-destroy')), { ids: selectedCodeIds() })
+                .done(doneThenReload('Deleted')).fail(showError);
         }
-    });
-
-    /* ── Field errors (Generate) ─────────────────────────────────────── */
-    function fieldError($el, msg) {
-        var $wrap = $el.closest('[class*="col-"]');
-        $wrap.find('.coe-field-error').remove();
-        $el.toggleClass('is-invalid', !!msg);
-        $wrap.find('.select2-selection').toggleClass('is-invalid', !!msg);
-        if (msg) { $('<div class="coe-field-error"></div>').text(msg).appendTo($wrap); }
-        return !msg;
-    }
-
-    /* ── Generate ───────────────────────────────────────────────────────── */
-    var $genModal  = $('#upcGenerateModal');
-    var $genCourse = $('#upcGenCourse');
-    var $genPrefix = $('#upcGenPrefix');
-    var $genStart  = $('#upcGenStart');
-
-    $genCourse.select2({ width: '100%', dropdownParent: $genModal });
-
-    $('#upcGenerateBtn').on('click', function () {
-        bootstrap.Modal.getOrCreateInstance($genModal[0]).show();
-    });
-
-    $genModal.on('hidden.bs.modal', function () {
-        document.getElementById('upcGenerateForm').reset();
-        $genCourse.val('').trigger('change.select2');
-        $('#upcGenOtCount').val('');
-        $genModal.find('.coe-field-error').remove();
-        $genModal.find('.is-invalid').removeClass('is-invalid');
-    });
-
-    $genCourse.on('change', function () {
-        $('#upcGenOtCount').val($genCourse.find(':selected').data('count') || '');
-        if (this.value) { fieldError($genCourse, ''); }
-    });
-    $genPrefix.on('input', function () { if ($.trim(this.value)) { fieldError($genPrefix, ''); } });
-    $genStart.on('input', function () { if ($.trim(this.value)) { fieldError($genStart, ''); } });
-
-    $('#upcGenerateForm').on('submit', function (e) {
-        e.preventDefault();
-        var prefix = $.trim($genPrefix.val());
-        var start  = $.trim($genStart.val());
-        var ok = true;
-        ok = fieldError($genCourse, $genCourse.val() ? '' : 'Select a course.') && ok;
-        ok = fieldError($genPrefix, prefix ? '' : 'Enter a prefix.') && ok;
-        ok = fieldError($genStart, /^\d{1,9}$/.test(start) ? '' : 'Enter the start number in digits.') && ok;
-        if (!ok) { return; }
-
-        var $btn = $('#upcGenSubmit').prop('disabled', true);
-
-        send(ROUTES.generate, { course_batch: $genCourse.val(), prefix: prefix, count_start: start })
-            .done(function (res) {
-                bootstrap.Modal.getOrCreateInstance($genModal[0]).hide();
-                var text = res.message + (res.scope === 'archived' ? ' The course is archived, so the codes are listed under the Archived tab.' : '');
-                Swal.fire({ icon: 'success', title: 'Generated', text: text })
-                    .then(function () {
-                        if (res.redirect) {
-                            var url = new URL(res.redirect, window.location.origin);
-                            var menu = new URLSearchParams(window.location.search).get('menu');
-                            if (menu) { url.searchParams.set('menu', menu); }
-                            window.location.assign(url.toString());
-                        } else {
-                            window.location.reload();
-                        }
-                    });
-            })
-            .fail(showError)
-            .always(function () { $btn.prop('disabled', false); });
     });
 });
 </script>

@@ -90,7 +90,7 @@ tr.rcm-row--gap td { background:#fffbeb; }
     {{-- Summary of the rows the filters show; a chip filters by its mapping state. --}}
     <div class="rcm-summary" id="rcmSummary">
         <button type="button" class="rcm-chip" data-state="">
-            <strong id="rcmCountTotal">{{ $summary['total'] }}</strong><span>Total OTs</span>
+            <strong id="rcmCountTotal">{{ $summary['total'] }}</strong><span>Total Rows</span>
         </button>
         <button type="button" class="rcm-chip rcm-chip--mapped" data-state="{{ \App\Services\COE\RollCodeMapping::MAPPED }}">
             <strong id="rcmCountMapped">{{ $summary['mapped'] }}</strong><span>Mapped</span>
@@ -99,7 +99,7 @@ tr.rcm-row--gap td { background:#fffbeb; }
                 title="Roll number and unique code both exist, but at least one is not frozen yet">
             <strong id="rcmCountNotFrozen">{{ $summary['not_frozen'] }}</strong><span>Not frozen</span>
         </button>
-        <button type="button" class="rcm-chip rcm-chip--code" data-state="{{ \App\Services\COE\RollCodeMapping::CODE_MISSING }}">
+        <button type="button" class="rcm-chip rcm-chip--code" data-state="{{ \App\Services\COE\RollCodeMapping::CODE_MISSING }}" title="Roll number, but no unique code for any subject yet">
             <strong id="rcmCountCode">{{ $summary['code_missing'] }}</strong><span>Unique code missing</span>
         </button>
         <button type="button" class="rcm-chip rcm-chip--roll" data-state="{{ \App\Services\COE\RollCodeMapping::ROLL_MISSING }}">
@@ -119,6 +119,15 @@ tr.rcm-row--gap td { background:#fffbeb; }
                             <option value="">Course Name</option>
                             @foreach ($courses as $course)
                                 <option value="{{ $course }}">{{ $course }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="programme-dt-filter-select">
+                        <select id="rcmFilterSubject" class="form-select" data-placeholder="Subject Name" aria-label="Subject Name">
+                            <option value="">Subject Name</option>
+                            @foreach ($subjects as $subject)
+                                <option value="{{ $subject }}">{{ $subject }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -159,6 +168,7 @@ tr.rcm-row--gap td { background:#fffbeb; }
                                 <th scope="col">S. No.</th>
                                 <th scope="col">Course Name</th>
                                 <th scope="col" class="coe-col-center">Batch</th>
+                                <th scope="col">Subject Name</th>
                                 <th scope="col">Roll Number</th>
                                 <th scope="col">Unique Code</th>
                                 <th scope="col">OT Name</th>
@@ -174,6 +184,7 @@ tr.rcm-row--gap td { background:#fffbeb; }
                                     <td></td>
                                     <td class="coe-strong">{{ $row['course_name'] }}</td>
                                     <td class="coe-col-center">{{ $row['batch'] }}</td>
+                                    <td>{{ $row['subject_name'] }}</td>
                                     <td data-order="{{ $row['serial'] }}">
                                         @if ($row['roll_number'] !== '') {{ $row['roll_number'] }} @else <span class="rcm-missing">Not generated</span> @endif
                                     </td>
@@ -228,9 +239,9 @@ $(function () {
     'use strict';
 
     /* Column indexes — keep in step with the <thead>. */
-    var COL = { sno: 0, course: 1, batch: 2, roll: 3, code: 4, ot: 5, service: 6, rollStatus: 7, codeStatus: 8, mapping: 9 };
+    var COL = { sno: 0, course: 1, batch: 2, subject: 3, roll: 4, code: 5, ot: 6, service: 7, rollStatus: 8, codeStatus: 9, mapping: 10 };
     /* Export column keys (RollCodeMappingController::export), by column index. */
-    var EXPORT_KEYS = ['sno', 'course', 'batch', 'roll', 'code', 'ot', 'service', 'roll_status', 'code_status', 'mapping'];
+    var EXPORT_KEYS = ['sno', 'course', 'batch', 'subject', 'roll', 'code', 'ot', 'service', 'roll_status', 'code_status', 'mapping'];
 
     var dt = CoeGrid.init({
         table: '#rcmTable',
@@ -238,12 +249,12 @@ $(function () {
         snoCol: COL.sno,
         order: [],
         noSort: [COL.sno],
-        filters: { '#rcmFilterCourse': COL.course, '#rcmFilterMapping': COL.mapping },
+        filters: { '#rcmFilterCourse': COL.course, '#rcmFilterSubject': COL.subject, '#rcmFilterMapping': COL.mapping },
         reset: '#rcmResetFilters',
         searchToggle: '#rcmSearchToggle',
         searchSlot: '#rcmDtSearch',
         colvisGrid: '#rcmColumnToggleGrid',
-        colvisKey: 'coeRollCodeMapping:hiddenColumns:v1',
+        colvisKey: 'coeRollCodeMapping:hiddenColumns:v2',
         empty: {
             title: 'No Roll Numbers or Unique Codes',
             zeroTitle: 'No OTs Found',
@@ -251,12 +262,13 @@ $(function () {
         }
     });
 
-    /* Summary chips count the rows the course filter and search leave (not the mapping filter). */
+    /* Summary chips count the rows the course and subject filters leave (not the mapping filter). */
     function updateSummary() {
         var counts = { total: 0 };
         dt.rows(function (idx, data, node) {
             var courseOk = !$('#rcmFilterCourse').val() || $.trim($(node).children().eq(COL.course).text()) === $('#rcmFilterCourse').val();
-            return courseOk;
+            var subjectOk = !$('#rcmFilterSubject').val() || $.trim($(node).children().eq(COL.subject).text()) === $('#rcmFilterSubject').val();
+            return courseOk && subjectOk;
         }, { search: 'none' }).every(function () {
             var state = $.trim($(this.node()).children().eq(COL.mapping).text());
             counts.total++;
@@ -276,14 +288,15 @@ $(function () {
         $('#rcmFilterMapping').val($(this).data('state') || '').trigger('change');
     });
 
-    /* Download / Print links carry the current course, mapping, search and visible columns. */
+    /* Download / Print links carry the current course, subject, mapping, search and visible columns. */
     function syncExportLinks() {
         var cols = [];
         dt.columns().every(function () { if (this.visible()) { cols.push(EXPORT_KEYS[this.index()]); } });
         $('.rcm-export-link').each(function () {
             var parts = this.href.split('?'), params = new URLSearchParams(parts[1] || '');
-            ['course', 'mapping', 'q', 'cols'].forEach(function (k) { params.delete(k); });
+            ['course', 'subject', 'mapping', 'q', 'cols'].forEach(function (k) { params.delete(k); });
             if ($('#rcmFilterCourse').val()) { params.set('course', $('#rcmFilterCourse').val()); }
+            if ($('#rcmFilterSubject').val()) { params.set('subject', $('#rcmFilterSubject').val()); }
             if ($('#rcmFilterMapping').val()) { params.set('mapping', $('#rcmFilterMapping').val()); }
             if (dt.search()) { params.set('q', dt.search()); }
             if (cols.length && cols.length < EXPORT_KEYS.length) { params.set('cols', cols.join(',')); }

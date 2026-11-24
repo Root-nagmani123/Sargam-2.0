@@ -8,6 +8,34 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-24: Roll Numbers Freeze Selected freezes only the selected rows** (it froze the whole
+  course + batch). Regenerate stays blocked once any number is frozen. Tests:
+  `CoeRollNumberFlowTest::test_freezing_freezes_only_the_selected_roll_numbers`.
+
+- **2026-11-24: Roll number per course; Unique Participant Code per subject.** (1) One roll
+  number per OT per **course** (`coe_roll_numbers` unique allocation + student, migration
+  `2026_11_24_000002_make_coe_roll_numbers_per_course`; the value stays unique academy-wide):
+  the same for every subject of the course, a different one on another course. Generate no
+  longer refuses OTs numbered on another course. Generate / Add Single Record offer exactly the
+  UPC / Examination Drive active courses (`CourseMaster::activeRunning`, OTs or not; a course
+  without OTs offers its course year as batch).
+  (2) Codes are per OT per **subject** (`coe_participant_codes.subject_master_pk`,
+  migration `2026_11_24_000001_make_coe_participant_codes_per_subject`, which **deleted every
+  existing code and cleared `faculty_unique_codes`**). Generate: Course (the same active courses
+  as Examination Drive creation, `CourseMaster::activeRunning`) → Batch (as on Roll Numbers) +
+  Subject (every active subject, not tied to the course) + Number of OTs + prefix + start. The page is now the **OT list** (OT, user name, code count per course,
+  Status, View); a count or View opens **one OT's codes** (`GET unique-participant-code/ot/{student}`,
+  `?course=` presets the filter) with Freeze / Delete. Mapping = one row per OT per
+  subject code. **Changed on Roll Numbers / UPC / Mapping only** (other screens deliberately
+  untouched) — see Known gaps. Tests: `CoeParticipantCodeFlowTest`,
+  `CoeCourseMappingFlowTest`.
+
+- **2026-11-24: Roll Numbers / UPC bulk buttons match and always show.** UPC's "Delete All" /
+  "Freeze All" are now **Delete Selected** / **Freeze Selected**; Roll Numbers' Delete / Freeze /
+  Notify Selected moved from the page header into the tabs row before Download / Print, styled
+  as on UPC. On both pages they are always visible (were shown only once a row was ticked);
+  with nothing ticked they show "Nothing selected". Selection logic unchanged. Views only.
+
 - **2026-11-23: Unique Participant Code: Generate keeps existing codes.** Tester bug: generating
   again gave OTs that already had a code a new one (it replaced the course's pending codes), and
   one frozen code blocked new OTs entirely. Now only OTs without a code get one, numbered after
@@ -311,26 +339,42 @@ Table `question_papers` (one per drive + subject, soft deletes), `question_paper
 
 - Participants of a course: `CourseParticipants` (`student_master.course_master_pk` UNION
   active `student_master_course__map`; batch = `COALESCE(NULLIF(batch,0), course_year)`).
-- **One roll number and one UPC per OT across the whole system**; generation is refused
-  if an OT already holds one on another course.
+- **One roll number per OT per course** (same for every subject of it; another course gives
+  another number; values unique academy-wide). Look a number up by OT + course
+  (`RollNumberWriter::existingOn`, `CourseParticipants::rollNumbersOn`), never by OT alone.
+  **UPC: one per OT per subject** of a course.
 - **Roll numbers** (`RollNumberController`, `RollNumberAllocator`, `RollNumberWriter`):
-  one allocation per course + batch (`coe_roll_number_allocations`, `coe_roll_numbers`).
+  one allocation per course + batch (`coe_roll_number_allocations`, `coe_roll_numbers`; a number
+  belongs to the allocation that issued it).
   Format `prefix-serial` (padding = digits typed in Start Number). Strategies:
   allocation rules / random with rules / sequential by service, name, OT code. Rules:
   avoid same service consecutively, alternate gender (theatre rule stored, not applied).
-  Regenerate rewrites the whole run. Excel import matches on Participant ID. Freeze locks
-  the whole allocation, notifies OTs, **no unfreeze**.
+  Regenerate rewrites the whole run. Excel import matches on Participant ID. **Freeze works on
+  exactly the roll numbers selected** (2026-11-24; was the whole run), notifies those OTs, **no
+  unfreeze**. A run with any frozen number cannot be regenerated; it is marked frozen once every
+  number is, and only then refuses Add Single Record / import.
 - **Unique Participant Code** (`UniqueParticipantCodeController`, `coe_participant_codes`):
-  anonymous code used instead of the roll number for evaluation (`UC-0324`, no
-  separator, ordered by name). Freeze is per row; no unfreeze. **Generating again never
-  changes a code already given** (pending or frozen): only OTs without one get a code,
-  numbered on from the course's highest code of that prefix; "All … already have" when none
-  is missing. To renumber, delete the pending codes first. **No hand edit** (route removed; it
-  broke the sequence): delete a pending code and Generate gives the next number. Grid: Course,
-  Batch (filter follows the Course filter), OT Name (first + middle + last), Display Name
-  (`student_master.display_name`), Unique Code, Status.
+  anonymous code used instead of the roll number when a **subject** is evaluated (`UC-0324`, no
+  separator, ordered by name). One per OT per course + batch + subject, the same unit as a
+  roll-number run; unique within that course + batch + subject (another subject may reuse the
+  code). Generate: Course (`CourseMaster::activeRunning`, exactly Examination Drive's list) →
+  Batch (the batches the course has OTs in; a course without OTs offers its course year), Subject
+  (all active `subject_master` rows, independent of the course), Number of OTs (read-only, that
+  batch), prefix, start. **Batch = `student_master.batch`, the officer's service batch**: an
+  in-service course's OTs spread over many batches, so each batch is generated separately, on
+  both Roll Numbers and UPC. Freeze is per row; no unfreeze. **Generating again never
+  changes a code already given**: only OTs without a code for the subject get one, numbered on
+  from the course + batch + subject's highest code of that prefix. **No hand edit**: delete a pending code and
+  Generate again. Two screens: the OT list (`index`: OT Name, User Name from `user_credentials`,
+  one column per course with the OT's code count, Status = Frozen once all their codes are,
+  View; filters Course, Status; a checkbox per OT, and Delete / Freeze Selected act on every code
+  of the ticked OTs, frozen ones kept) and one OT's codes (`ot`, opened by a count with `?course=` or by
+  View: Course, Subject, Unique Code, Status, Freeze / Delete, Delete / Freeze Selected). The
+  Generate modal is the shared partial `unique_participant_code/_generate`.
 - **Roll No ↔ Unique Code Mapping** (`RollCodeMapping`): read-only, confidential (undoes
-  the anonymity), COE only.
+  the anonymity), COE only. One row per OT per subject code (+ one "Unique code missing" row
+  for an OT with a roll number and no code at all). Filters: Course, Subject, Mapping; the
+  summary chips and the export (`?subject=`) follow Course and Subject.
 
 ## Laptop and scriber
 
@@ -441,6 +485,8 @@ dashboard; `coe_seat_allocation` opens My Exam Seat.
 - Statuses are small ints with model constants (question papers use strings).
 - Frozen / approved / published records can't be undone in the UI (roll numbers, UPC,
   seat plans, approved and moderated marks). Only question papers have Unfreeze.
+- Course / subject names: some were HTML-encoded twice on import (`&amp;quot;`); the three
+  roll/code pages show them through `CourseParticipants::plainName()`.
 - Some features check for columns at runtime (`Schema::hasColumn`) and quietly switch off
   when the column is missing: `coe_evaluation_marks.remarks` (DBA DDL, now also the idempotent
   migration `2026_11_23_000001_add_remarks_to_coe_evaluation_marks_table`; Director Assessment
@@ -455,6 +501,15 @@ dashboard; `coe_seat_allocation` opens My Exam Seat.
 
 ## Known gaps (don't "fix" unasked)
 
+- **Roll number per course / UPC per subject are implemented on Roll Numbers, UPC and Mapping
+  only** (scoped that way on 2026-11-24). Other screens still assume one of each per OT:
+  `ResultMarksService::loadParticipants()` reads a course's codes without the subject (an OT
+  with several gets whichever row comes last); `ExaminationDriveController::courseUniqueCodes()`
+  offers every subject's codes (duplicates when subjects share a code). These join
+  `coe_roll_numbers` by student alone and so list an OT twice / pick an arbitrary number once
+  an OT holds numbers on two courses: Venue Allocation `participantQuery()` and `mySeats()`,
+  `LaptopDeclarationController::resolveTrainee()`, `OtLaptopStatusController::listQuery()`,
+  `LaptopStatusImport`.
 - Route-level permission missing on many COE screens (see Access control).
 - Signature Master designation names vs `UDC`/`AAO`/`COE` (see Marksheets).
 - Service Passing Marks shown as % but used as raw marks; Grade Master unused.

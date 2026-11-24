@@ -8,18 +8,18 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Which Unique Participant Code belongs to which roll number.
+ * Which Unique Participant Codes belong to which roll number.
  *
- * Nothing is stored for this: both lists already carry the student, and each
- * student has at most one roll number (coe_roll_numbers.student_master_pk is
- * unique) and one code (coe_participant_codes.student_master_pk is unique).
- * The two are matched on the same student, course and batch — the roll number's
- * course and batch come from its allocation (coe_roll_number_allocations).
+ * Nothing is stored for this: both lists already carry the student. An OT has one roll
+ * number per course (CourseParticipants::rollNumbersOn) and one code per subject of a
+ * course (coe_participant_codes).
  *
- * Every OT that has either a roll number or a code is listed, so the gaps show:
+ * One row per OT per subject code, matched on student, course and batch, plus one row
+ * for an OT holding a roll number but no code at all, so the gaps show:
  * MAPPED (both, and BOTH frozen), NOT_FROZEN (both, but either one not frozen yet),
- * CODE_MISSING (roll number only), ROLL_MISSING (code only). A pair only counts as
- * mapped once it is final — an unfrozen roll number or code can still change.
+ * CODE_MISSING (roll number, no code for any subject), ROLL_MISSING (code, no roll number).
+ * A pair only counts as mapped once it is final — an unfrozen roll number or code can
+ * still change.
  *
  * Confidential: the mapping undoes the anonymity of the codes, so only the
  * COE screen (menu permission coe_roll_code_mapping) reads it.
@@ -39,8 +39,8 @@ class RollCodeMapping
     public const STATES = [self::MAPPED, self::NOT_FROZEN, self::CODE_MISSING, self::ROLL_MISSING];
 
     /**
-     * One row per OT of the scope's courses, ordered by course, batch, then roll
-     * number (OTs with only a code last, by code).
+     * Rows of the scope's courses, ordered by course, batch, roll number (OTs with only
+     * codes last), then subject.
      *
      * @return Collection<int, array<string, mixed>>
      */
@@ -53,29 +53,31 @@ class RollCodeMapping
             return collect();
         }
 
-        $rolls = DB::table('coe_roll_numbers as r')
-            ->join('coe_roll_number_allocations as a', 'a.pk', '=', 'r.roll_number_allocation_pk')
-            ->whereIn('a.course_master_pk', $coursePks)
-            ->get(['a.course_master_pk', 'a.batch', 'a.status as allocation_status', 'r.student_master_pk',
-                'r.roll_number', 'r.serial_number', 'r.frozen_at']);
-
-        $codes = DB::table('coe_participant_codes')
-            ->whereIn('course_master_pk', $coursePks)
-            ->get(['course_master_pk', 'batch', 'student_master_pk', 'unique_code', 'status']);
-
-        $key = fn ($r) => $r->course_master_pk . ':' . $r->batch . ':' . $r->student_master_pk;
-        $byKey = [];
-        foreach ($rolls as $r) {
-            $byKey[$key($r)]['roll'] = $r;
+        // Each course + batch with a roll-number run: the numbers issued on it.
+        $rolls = []; // "course:batch:student" => roll row
+        $runs = DB::table('coe_roll_number_allocations')->whereIn('course_master_pk', $coursePks)->get(['course_master_pk', 'batch']);
+        foreach ($runs as $run) {
+            CourseParticipants::rollNumbersOn((int) $run->course_master_pk, (int) $run->batch)
+                ->get(['rn.student_master_pk', 'rn.roll_number', 'rn.serial_number', 'rn.frozen_at', 'own.status as allocation_status'])
+                ->each(function ($r) use (&$rolls, $run) {
+                    $r->course_master_pk = (int) $run->course_master_pk;
+                    $r->batch = (int) $run->batch;
+                    $rolls[$run->course_master_pk . ':' . $run->batch . ':' . $r->student_master_pk] = $r;
+                });
         }
-        foreach ($codes as $c) {
-            $byKey[$key($c)]['code'] = $c;
-        }
-        if ($byKey === []) {
+
+        $codes = DB::table('coe_participant_codes as p')
+            ->join('subject_master as sub', 'sub.pk', '=', 'p.subject_master_pk')
+            ->whereIn('p.course_master_pk', $coursePks)
+            ->get(['p.course_master_pk', 'p.batch', 'p.student_master_pk', 'p.unique_code', 'p.status', 'sub.subject_name'])
+            ->groupBy(fn ($c) => $c->course_master_pk . ':' . $c->batch . ':' . $c->student_master_pk);
+
+        $keys = array_unique(array_merge(array_keys($rolls), $codes->keys()->all()));
+        if ($keys === []) {
             return collect();
         }
 
-        $studentPks = collect($byKey)->map(fn ($p) => ($p['roll'] ?? $p['code'])->student_master_pk)->unique()->values();
+        $studentPks = array_values(array_unique(array_map(fn ($k) => (int) explode(':', $k)[2], $keys)));
         $students = DB::table('student_master as s')
             ->leftJoin('service_master as sv', 'sv.pk', '=', 's.service_master_pk')
             ->whereIn('s.pk', $studentPks)
@@ -83,38 +85,47 @@ class RollCodeMapping
             ->keyBy('pk');
         $courses = DB::table('course_master')->whereIn('pk', $coursePks)->pluck('course_name', 'pk');
 
-        return collect($byKey)->map(function (array $pair) use ($students, $courses) {
-            $roll = $pair['roll'] ?? null;
-            $code = $pair['code'] ?? null;
-            $any = $roll ?? $code;
-            $student = $students[$any->student_master_pk] ?? null;
-
-            // Only a pair where BOTH sides are frozen is mapped; unfrozen values can still change.
+        $out = [];
+        foreach ($keys as $key) {
+            [$coursePk, $batch, $studentPk] = array_map('intval', explode(':', $key));
+            $roll = $rolls[$key] ?? null;
+            $student = $students[$studentPk] ?? null;
             $rollFrozen = $roll && ($roll->frozen_at || (int) $roll->allocation_status === RollNumberAllocation::STATUS_FROZEN);
-            $codeFrozen = $code && (int) $code->status === ParticipantCode::STATUS_FROZEN;
-            $mapping = match (true) {
-                $roll && $code => $rollFrozen && $codeFrozen ? self::MAPPED : self::NOT_FROZEN,
-                (bool) $roll   => self::CODE_MISSING,
-                default        => self::ROLL_MISSING,
-            };
 
-            return [
-                'course_pk'    => (int) $any->course_master_pk,
-                'course_name'  => trim((string) ($courses[$any->course_master_pk] ?? '—')),
-                'batch'        => (int) $any->batch,
-                'student_pk'   => (int) $any->student_master_pk,
-                'ot_name'      => $this->studentName($student),
-                'service'      => trim((string) ($student->service_short_name ?? '')) ?: '—',
-                'roll_number'  => $roll ? trim((string) $roll->roll_number) : '',
-                'serial'       => $roll ? (int) $roll->serial_number : PHP_INT_MAX,
-                'roll_status'  => $roll ? ($rollFrozen ? 'Frozen' : 'Generated') : '—',
-                'unique_code'  => $code ? trim((string) $code->unique_code) : '',
-                'code_status'  => $code ? ParticipantCode::statusLabel((int) $code->status) : '—',
-                'mapping'      => $mapping,
+            $base = [
+                'course_pk'   => $coursePk,
+                'course_name' => CourseParticipants::plainName($courses[$coursePk] ?? '—'),
+                'batch'       => $batch,
+                'student_pk'  => $studentPk,
+                'ot_name'     => $this->studentName($student),
+                'service'     => trim((string) ($student->service_short_name ?? '')) ?: '—',
+                'roll_number' => $roll ? trim((string) $roll->roll_number) : '',
+                'serial'      => $roll ? (int) $roll->serial_number : PHP_INT_MAX,
+                'roll_status' => $roll ? ($rollFrozen ? 'Frozen' : 'Generated') : '—',
             ];
-        })
-            ->sort(fn ($a, $b) => [strtolower($a['course_name']), $a['batch'], $a['serial'], $a['unique_code']]
-                <=> [strtolower($b['course_name']), $b['batch'], $b['serial'], $b['unique_code']])
+
+            $held = $codes[$key] ?? collect();
+            if ($held->isEmpty()) {
+                $out[] = $base + ['subject_name' => '—', 'unique_code' => '', 'code_status' => '—', 'mapping' => self::CODE_MISSING];
+
+                continue;
+            }
+
+            foreach ($held as $code) {
+                // Only a pair where BOTH sides are frozen is mapped; unfrozen values can still change.
+                $codeFrozen = (int) $code->status === ParticipantCode::STATUS_FROZEN;
+                $out[] = $base + [
+                    'subject_name' => CourseParticipants::plainName($code->subject_name),
+                    'unique_code'  => trim((string) $code->unique_code),
+                    'code_status'  => ParticipantCode::statusLabel((int) $code->status),
+                    'mapping'      => ! $roll ? self::ROLL_MISSING : ($rollFrozen && $codeFrozen ? self::MAPPED : self::NOT_FROZEN),
+                ];
+            }
+        }
+
+        return collect($out)
+            ->sort(fn ($a, $b) => [strtolower($a['course_name']), $a['batch'], $a['serial'], $a['ot_name'], strtolower($a['subject_name'])]
+                <=> [strtolower($b['course_name']), $b['batch'], $b['serial'], $b['ot_name'], strtolower($b['subject_name'])])
             ->values();
     }
 

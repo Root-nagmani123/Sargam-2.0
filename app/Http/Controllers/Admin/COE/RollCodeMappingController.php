@@ -33,6 +33,8 @@ class RollCodeMappingController extends Controller
             'scope'   => $scope,
             'rows'    => $rows,
             'courses' => $rows->pluck('course_name')->unique()->sort(SORT_NATURAL | SORT_FLAG_CASE)->values(),
+            // Subjects that have codes here ('—' = a roll number with no code yet, not a subject).
+            'subjects' => $rows->pluck('subject_name')->reject(fn ($s) => $s === '—')->unique()->sort(SORT_NATURAL | SORT_FLAG_CASE)->values(),
             'states'  => RollCodeMapping::STATES,
             'summary' => $this->summary($rows),
         ]);
@@ -45,25 +47,28 @@ class RollCodeMappingController extends Controller
         $scope = $this->scope($request);
 
         $course = trim((string) $request->query('course', ''));
+        $subject = trim((string) $request->query('subject', ''));
         $state = trim((string) $request->query('mapping', ''));
         $term = mb_strtolower(trim((string) $request->query('q', '')));
 
         $rows = $this->mapping->rows($scope)
             ->when($course !== '', fn ($c) => $c->where('course_name', $course))
+            ->when($subject !== '', fn ($c) => $c->where('subject_name', $subject))
             ->when(in_array($state, RollCodeMapping::STATES, true), fn ($c) => $c->where('mapping', $state))
             ->when($term !== '', fn ($c) => $c->filter(fn ($r) => str_contains(mb_strtolower(
-                implode(' ', [$r['course_name'], $r['batch'], $r['roll_number'], $r['unique_code'], $r['ot_name'], $r['service']])
+                implode(' ', [$r['course_name'], $r['batch'], $r['subject_name'], $r['roll_number'], $r['unique_code'], $r['ot_name'], $r['service']])
             ), $term)))
             ->values();
 
         $dash = fn ($v) => $v === '' ? '—' : $v;
         $columns = [
             'sno'         => ['heading' => 'S. No.', 'width' => '5%', 'align' => 'center', 'value' => fn ($r, int $i) => $i + 1],
-            'course'      => ['heading' => 'Course Name', 'width' => '19%', 'value' => fn ($r) => $r['course_name']],
-            'batch'       => ['heading' => 'Batch', 'width' => '6%', 'align' => 'center', 'value' => fn ($r) => $r['batch']],
+            'course'      => ['heading' => 'Course Name', 'width' => '15%', 'value' => fn ($r) => $r['course_name']],
+            'batch'       => ['heading' => 'Batch', 'width' => '5%', 'align' => 'center', 'value' => fn ($r) => $r['batch']],
+            'subject'     => ['heading' => 'Subject Name', 'width' => '12%', 'value' => fn ($r) => $r['subject_name']],
             'roll'        => ['heading' => 'Roll Number', 'width' => '10%', 'value' => fn ($r) => $dash($r['roll_number'])],
             'code'        => ['heading' => 'Unique Code', 'width' => '10%', 'value' => fn ($r) => $dash($r['unique_code'])],
-            'ot'          => ['heading' => 'OT Name', 'width' => '17%', 'value' => fn ($r) => $r['ot_name']],
+            'ot'          => ['heading' => 'OT Name', 'width' => '13%', 'value' => fn ($r) => $r['ot_name']],
             'service'     => ['heading' => 'Service', 'width' => '7%', 'value' => fn ($r) => $r['service']],
             'roll_status' => ['heading' => 'Roll No. Status', 'width' => '8%', 'align' => 'center', 'value' => fn ($r) => $r['roll_status']],
             'code_status' => ['heading' => 'Code Status', 'width' => '8%', 'align' => 'center', 'value' => fn ($r) => $r['code_status']],
@@ -75,9 +80,10 @@ class RollCodeMappingController extends Controller
             'CONFIDENTIAL — COE use only',
             $scope === 'archived' ? 'Archived courses' : 'Active courses',
             $course !== '' ? 'Course: ' . $course : null,
+            $subject !== '' ? 'Subject: ' . $subject : null,
             in_array($state, RollCodeMapping::STATES, true) ? 'Mapping: ' . $state : null,
             $term !== '' ? 'Search: ' . $request->query('q') : null,
-            "OTs: {$s['total']}  ·  Mapped: {$s['mapped']}  ·  Not frozen: {$s['not_frozen']}  ·  Unique code missing: {$s['code_missing']}  ·  Roll number missing: {$s['roll_missing']}",
+            "Rows: {$s['total']}  ·  Mapped: {$s['mapped']}  ·  Not frozen: {$s['not_frozen']}  ·  Unique code missing: {$s['code_missing']}  ·  Roll number missing: {$s['roll_missing']}",
         ]));
 
         // renderMasterExport writes the audit line (actor, format, rows, filter) for every export.

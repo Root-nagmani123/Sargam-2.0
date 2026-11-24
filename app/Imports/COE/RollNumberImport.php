@@ -121,19 +121,15 @@ class RollNumberImport implements ToCollection, WithHeadingRow, WithStartRow
                 continue;
             }
 
-            $existing = RollNumber::where('student_master_pk', $participantId)->first();
-            $elsewhere = $existing === null ? [] : CourseParticipants::rollNumbersElsewhere([$participantId], $course['course_master_pk'], $course['batch']);
-            if ($elsewhere !== []) {
-                $this->failures[] = "Row {$rowNumber}: {$participant->display_name} already holds roll number {$elsewhere[$participantId]} on another course. An OT can hold only one roll number.";
-                continue;
-            }
+            // One roll number per OT per course: a number on another course is left alone.
+            $existing = RollNumberWriter::existingOn($participantId, $course['course_master_pk'], $course['batch']);
             if ($existing !== null && $existing->isFrozen()) {
                 $this->failures[] = "Row {$rowNumber}: {$participant->display_name} is frozen at {$existing->roll_number} and cannot be changed.";
                 continue;
             }
             $groupKey = $course['course_master_pk'] . ':' . $course['batch'];
             if ($frozenGroups[$groupKey] ??= $this->writer->groupFrozen($course['course_master_pk'], $course['batch'])) {
-                $this->failures[] = "Row {$rowNumber}: roll numbers for {$participant->display_name}'s course and batch are frozen, so none can be added or changed.";
+                $this->failures[] = "Row {$rowNumber}: every roll number of {$participant->display_name}'s course and batch is frozen, so none can be added.";
                 continue;
             }
 

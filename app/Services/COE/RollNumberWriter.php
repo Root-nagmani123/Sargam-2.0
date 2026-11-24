@@ -55,7 +55,11 @@ class RollNumberWriter
         $parsed = $this->parse($rollNumber);
         $allocation = $this->resolveAllocation((int) $participant->course_master_pk, (int) $participant->batch, $parsed);
 
-        $record = $existing ?? RollNumber::firstOrNew(['student_master_pk' => (int) $participant->pk]);
+        // One roll number per OT per course run: an OT may hold others on other courses.
+        $record = $existing ?? RollNumber::firstOrNew([
+            'student_master_pk' => (int) $participant->pk,
+            'roll_number_allocation_pk' => (int) $allocation->pk,
+        ]);
         $now = now();
         $actor = Auth::id();
 
@@ -137,14 +141,27 @@ class RollNumberWriter
     }
 
     /**
-     * Whether any roll number of the course + batch is frozen. Freeze works a whole
-     * course + batch at a time, so such a group is closed: nothing is added or renumbered.
+     * The OT's roll number on one course + batch, if any. An OT holds one per course, so
+     * the OT alone does not identify a roll number.
+     */
+    public static function existingOn(int $studentPk, int $courseId, int $batch): ?RollNumber
+    {
+        return RollNumber::where('student_master_pk', $studentPk)
+            ->whereIn('roll_number_allocation_pk', RollNumberAllocation::where('course_master_pk', $courseId)
+                ->where('batch', $batch)->select('pk'))
+            ->first();
+    }
+
+    /**
+     * Whether the course + batch run is completely frozen (every number frozen, so the run
+     * is marked frozen). Freeze works per roll number; a run with some numbers still
+     * pending stays open for adding or correcting the others.
      */
     public function groupFrozen(int $courseId, int $batch): bool
     {
-        return RollNumber::whereIn('roll_number_allocation_pk', RollNumberAllocation::where('course_master_pk', $courseId)
-            ->where('batch', $batch)->select('pk'))
-            ->where('status', RollNumber::STATUS_FROZEN)
+        return RollNumberAllocation::where('course_master_pk', $courseId)
+            ->where('batch', $batch)
+            ->where('status', RollNumberAllocation::STATUS_FROZEN)
             ->exists();
     }
 

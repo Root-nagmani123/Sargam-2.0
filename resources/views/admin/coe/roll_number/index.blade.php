@@ -23,13 +23,6 @@
 .rn-act:hover i    { opacity:.75; }
 .rn-act:disabled   { opacity:.5;cursor:wait; }
 .rn-act-group      { display:flex;align-items:center;gap:2px; }
-/* Bulk header buttons */
-.rn-bulk-btn-del   { background:#dc3545;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:13px;font-weight:600; }
-.rn-bulk-btn-del:hover{ background:#b02a37; }
-.rn-bulk-btn-freeze{ background:#198754;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:13px;font-weight:600; }
-.rn-bulk-btn-freeze:hover{ background:#146c43; }
-.rn-bulk-btn-notify{ background:#6c757d;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:13px;font-weight:600; }
-.rn-bulk-btn-notify:hover{ background:#565e64; }
 /* Generate modal allocation-rules checkbox area */
 .rn-alloc-rules    { border:1px solid var(--ds-line);border-radius:8px;padding:12px 14px;margin-top:8px; }
 /* Import modal tabs */
@@ -46,11 +39,6 @@
 <div class="container-fluid coe-page">
     <x-breadcrum title="Roll Numbers" :showBack="false"
                  :items="['Setup', 'COE', 'Examination Management', 'Roll Numbers']">
-        <div id="rnBulkActions" class="d-none d-flex gap-2">
-            <button type="button" class="rn-bulk-btn-del" id="rnDeleteAll">Delete Selected</button>
-            <button type="button" class="rn-bulk-btn-freeze" id="rnFreezeAll">Freeze Selected</button>
-            <button type="button" class="rn-bulk-btn-notify" id="rnNotifyAll">Notify Selected</button>
-        </div>
         <button type="button" class="btn btn-outline-primary rounded-3 px-3 py-2" id="rnImportBtn"
                 style="font-size:13px;font-weight:600;border-width:1.5px">
             <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add or Import Roll Number
@@ -62,7 +50,7 @@
 
     <x-session_message />
 
-    {{-- Scope tabs + Download/Print --}}
+    {{-- Scope tabs · bulk buttons · Download / Print (same layout as Unique Participant Code) --}}
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
         <nav class="coe-tabs" aria-label="Scope">
             <a href="{{ route('admin.coe.roll-number.index') }}"
@@ -75,7 +63,10 @@
                class="coe-tab {{ $scope === 'frozen' ? 'is-active' : '' }}"
                @if($scope==='frozen') aria-current="page" @endif>Frozen</a>
         </nav>
-        <div class="d-flex flex-wrap gap-2 coe-secondary-actions">
+        <div class="d-flex flex-wrap gap-2 align-items-center coe-secondary-actions">
+            <button type="button" id="rnDeleteAll" class="btn coe-btn coe-btn-danger">Delete Selected</button>
+            <button type="button" id="rnFreezeAll" class="btn coe-btn">Freeze Selected</button>
+            <button type="button" id="rnNotifyAll" class="btn coe-btn">Notify Selected</button>
             <button type="button" id="rnDownloadBtn" class="btn programme-dt-btn-columns" title="Download">
                 <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
             </button>
@@ -562,7 +553,6 @@ $(function () {
     function syncBulk() {
         var $boxes = allRows().find('.rn-row-check:enabled');
         var checked = $boxes.filter(':checked').length;
-        $('#rnBulkActions').toggleClass('d-none', checked === 0).toggleClass('d-flex', checked > 0);
         $checkAll.prop('indeterminate', checked > 0 && checked < $boxes.length);
         $checkAll.prop('checked', checked > 0 && checked === $boxes.length);
     }
@@ -579,9 +569,14 @@ $(function () {
         }, opts)).then(function (r) { if (r.isConfirmed) { fn(); } });
     }
 
+    // The bulk buttons are always shown; with nothing ticked they say so instead of acting.
+    function nothingSelected() {
+        Swal.fire({ icon: 'info', title: 'Nothing selected', text: 'Select at least one roll number first.' });
+    }
+
     $('#rnDeleteAll').on('click', function () {
         var ids = selectedIds();
-        if (!ids.length) { return; }
+        if (!ids.length) { nothingSelected(); return; }
         confirmThen({
             icon: 'warning', title: 'Confirm Delete?',
             text: 'Delete ' + ids.length + " selected roll number(s)? Frozen ones are kept. This action can't be undone.",
@@ -594,23 +589,11 @@ $(function () {
         });
     });
 
-    // Freeze works a whole course + batch at a time: every roll number of each group touched.
-    function freezeGroupCount(ids) {
-        var groups = {};
-        rowsById(ids).each(function () {
-            groups[this.getAttribute('data-rn-course') + ':' + this.getAttribute('data-rn-batch')] = true;
-        });
-        return allRows().filter(function () {
-            return this.getAttribute('data-rn-id') && this.getAttribute('data-rn-state') === 'generated'
-                && groups[this.getAttribute('data-rn-course') + ':' + this.getAttribute('data-rn-batch')];
-        }).length;
-    }
-
+    // Freeze works on exactly the roll numbers selected.
     function freezeIds(ids) {
-        var count = Math.max(freezeGroupCount(ids), ids.length);
         confirmThen({
             icon: 'info', title: 'Confirm Freeze?',
-            text: 'Freeze applies to the whole course and batch: ' + count + " roll number(s) will be frozen and each OT will be notified of their roll number. Frozen roll numbers can no longer be edited, deleted or regenerated. This action can't be undone.",
+            text: ids.length + " roll number(s) will be frozen and each OT will be notified of their roll number. Frozen roll numbers can no longer be edited or deleted, and their course and batch can no longer be regenerated. This action can't be undone.",
             iconColor: '#17a2b8', confirmButtonText: 'Yes, Freeze', confirmButtonColor: '#198754'
         }, function () {
             send(ROUTES.freeze, { ids: ids }).done(function (res) {
@@ -633,8 +616,8 @@ $(function () {
         });
     }
 
-    $('#rnFreezeAll').on('click', function () { var ids = selectedIds(); if (ids.length) { freezeIds(ids); } });
-    $('#rnNotifyAll').on('click', function () { var ids = selectedIds(); if (ids.length) { notifyIds(ids); } });
+    $('#rnFreezeAll').on('click', function () { var ids = selectedIds(); if (ids.length) { freezeIds(ids); } else { nothingSelected(); } });
+    $('#rnNotifyAll').on('click', function () { var ids = selectedIds(); if (ids.length) { notifyIds(ids); } else { nothingSelected(); } });
 
     /* ── Row-level delete ─────────────────────────────────────────────── */
     CoeGrid.confirmDelete({
