@@ -2,7 +2,8 @@
 
 @php
     $isPending = $status === 'pending';
-    $title = $isPending ? 'Pending Participants List' : 'Evaluated Participants List';
+    // A "(Re-exam)" row's list: only its re-exam OTs, on the re-exam marks.
+    $title = ($isPending ? 'Pending Participants List' : 'Evaluated Participants List') . ($reexam ? ' (Re-exam)' : '');
     $num = fn ($v) => $v === 'AB' ? 'AB' : \App\Services\COE\ResultMarksService::number($v);
     $grouped = $subjectPk === null;
     // Column index of Action, for the grid script: S.No, Name, Code, components…, [subject total], Action.
@@ -47,6 +48,7 @@
                       class="d-flex flex-wrap align-items-center gap-3">
                     <input type="hidden" name="status" value="{{ $status }}">
                     <input type="hidden" name="scope" value="{{ $scope }}">
+                    @if ($reexam)<input type="hidden" name="reexam" value="{{ $reexam }}">@endif
                     <span class="programme-dt-filters-label">Filter</span>
                     <div class="programme-dt-filter-select">
                         <select name="course" class="form-select rpp-filter" aria-label="Course">
@@ -63,7 +65,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <a href="{{ route('admin.coe.result-compilation.participants', ['course' => $coursePk, 'status' => $status, 'scope' => $scope]) }}"
+                    <a href="{{ route('admin.coe.result-compilation.participants', ['course' => $coursePk, 'status' => $status, 'scope' => $scope] + ($reexam ? ['reexam' => $reexam] : [])) }}"
                        class="btn programme-dt-btn-reset d-inline-flex align-items-center">Remove Filter</a>
                 </form>
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
@@ -184,7 +186,7 @@ $(function () {
         $.ajax({
             url: @json(route('admin.coe.result-compilation.notify')),
             method: 'POST',
-            data: { course: @json($coursePk), subject: @json($subjectPk), student: $btn.data('student') },
+            data: { course: @json($coursePk), subject: @json($subjectPk), student: $btn.data('student'), reexam: @json($reexam) },
             headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
         }).done(function (res) {
             Swal.fire({ icon: 'success', title: 'Notify for Pending', text: res.message });

@@ -8,6 +8,13 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-24: Result Compilation shows re-exam rows.** One row per re-exam + subject,
+  "… Maximum 100 **(Re-exam)**", right after the subject's main row, shown from creation (Action
+  says why marks wait: CC approval / "Re-exam not held yet"). Counts only the re-exam OTs on the
+  re-exam's approved raw marks; its Marks Entry / Pending lists (`&reexam=`) and Notify for
+  Pending cover only them. Main rows, Merit, Moderation unchanged. Details: Re-exam →
+  "Compilation". Tests: `CoeReexamResultFlowTest`.
+
 - **2026-11-24: Re-exam View shows both exams; Edit Re-exam (name + dates).** View on a
   re-exam row (Faculty Coordinates & Components) adds a "Re-exam N of {main}" banner, the
   re-exam dates, the **Main Exam** components of the re-exam subjects (dates, marks) and a
@@ -492,8 +499,8 @@ step 7 (Pass / Fail marksheet) are done.
   `examination-drive/{id}/reexam-result` (GET), behind
   `menu.permission:coe_examination_drive,coe_coe_examination_drive`.
 - **Kept out** (`ReexamService::excludeFrom`): `ResultMarksService::scopeDrives`
-  (Compilation, Merit, Moderation, main Marksheet), the "Marks Pending" reminder
-  (`notifyPending`, `entryDrives` without `$withReexams`), `MarksheetService::scopeOf`, and
+  (Compilation's main rows, Merit, Moderation, main Marksheet), the main rows' "Marks Pending"
+  reminder (`notifyPending` without `$reexamDriveId`, `entryDrives` without `$withReexams`), `MarksheetService::scopeOf`, and
   Venue Allocation's course-first dialog (`VenueAllocationController::components`). Question papers / Rajbhasha work on the
   re-exam drive unchanged (new paper per drive).
 - **Seating** (Venue Allocation, Map Seating **by drive**): `mappableDrives` lists re-exam
@@ -527,6 +534,17 @@ step 7 (Pass / Fail marksheet) are done.
   bell (`notifyEntryReady`) cover only the re-exam OTs. A re-exam column has its own key
   (re-exam drive id), so the main drive's approved marks are untouched; on one course both
   show, labelled "component · drive" (`groupBySubject`).
+- **Compilation** (`ResultMarksService::reexamCompilationRows`, merged in `compilation()`): re-exam
+  drives in scope (Active, Closed = Archived; `reexamScopeDrives`), one row per re-exam +
+  subject with `reexam` = its drive id (main rows: null), tagged "(Re-exam)" (agreed: Figma
+  text, no number), placed after the subject's main row (or an earlier re-exam row of it).
+  Shown **from creation** (agreed 2026-11-24): every component counts held or not; blocker
+  "Waiting for Course Coordinator approval" / "Re-exam not held yet" / "No faculty mapped".
+  `reexamSheet()` = only each subject's `coe_reexam_candidates`, approved raw marks, `sits`
+  per OT. Marks Entry / Pending open `result-compilation/participants?reexam={id}` (that
+  re-exam's subjects + OTs only, title "… (Re-exam)"); Notify sends `reexam` →
+  `notifyPending(..., $reexamDriveId)` (that drive, `entryParticipants`, subject "(Re-exam)" in
+  the bell).
 - **Result** (step 6, `ReexamService::result`, `GET examination-drive/{id}/reexam-result`,
   **Result** button on CC-approved re-exam rows, popup `#edcRxResultModal`): per candidate +
   subject on the re-exam's own approved marks (no moderation): Fail if AB in any component or

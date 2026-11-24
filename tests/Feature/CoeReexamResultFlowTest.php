@@ -177,6 +177,88 @@ class CoeReexamResultFlowTest extends TestCase
             ->where('student_master_pk', $this->ots[2])->exists());
     }
 
+    /* ───────────── Result Compilation: "(Re-exam)" rows ───────────── */
+
+    /** This course's Result Compilation rows, in page order. */
+    private function compilationRows(): array
+    {
+        $rows = $this->actingAs($this->admin)->get(route('admin.coe.result-compilation.index'))->assertOk()->viewData('rows');
+
+        return array_values(array_filter($rows, fn ($r) => $r['course_pk'] === (int) $this->drive->course_master_pk));
+    }
+
+    /** @return list<int> student pks of a participants list */
+    private function listed(array $query): array
+    {
+        $rows = $this->actingAs($this->admin)->get(route('admin.coe.result-compilation.participants', $query + ['course' => (int) $this->drive->course_master_pk]))
+            ->assertOk()->viewData('rows');
+
+        return array_column($rows, 'student');
+    }
+
+    public function test_compilation_adds_a_reexam_row_after_each_main_subject_row(): void
+    {
+        $rows = $this->compilationRows();
+        $at = fn (int $subject, ?int $reexam) => collect($rows)->search(fn ($r) => $r['subject_pk'] === $subject && $r['reexam'] === $reexam);
+
+        foreach ([$this->subjectA, $this->subjectB] as $subject) {
+            $this->assertNotFalse($at($subject, null));
+            $this->assertSame($at($subject, null) + 1, $at($subject, $this->reexam->id));
+        }
+        $rxA = $rows[$at($this->subjectA, $this->reexam->id)];
+        $this->assertSame([0, 1, 1, null, null], [$rxA['approved'], $rxA['pending'], $rxA['total'], $rxA['average'], $rxA['blocker']]);
+
+        // Re-exam marks in: counted on the re-exam row only (raw, no moderation); the main row is unchanged.
+        $mainA = $rows[$at($this->subjectA, null)];
+        $this->reexamMarksIn();
+        $rows = $this->compilationRows();
+        $rxA = $rows[$at($this->subjectA, $this->reexam->id)];
+        $this->assertSame([1, 0, 1], [$rxA['approved'], $rxA['pending'], $rxA['total']]);
+        $this->assertEquals(60.0, $rxA['average']);   // 30 / 50
+        $this->assertSame($mainA, $rows[$at($this->subjectA, null)]);
+        $this->assertEquals(0.0, $rows[$at($this->subjectB, $this->reexam->id)]['average']);   // absent again
+    }
+
+    public function test_a_reexam_row_shows_from_creation_with_why_marks_wait(): void
+    {
+        $this->reexam->update(['cc_status' => null]);
+        $rx = collect($this->compilationRows())->firstWhere('reexam', $this->reexam->id);
+        $this->assertSame('Waiting for Course Coordinator approval', $rx['blocker']);
+
+        $this->reexam->update(['cc_status' => ExaminationDrive::CC_APPROVED]);
+        DB::table('examination_drive_component_maps')->where('examination_drive_id', $this->reexam->id)
+            ->update(['exam_date' => now()->addDays(3)->toDateString(), 'exam_end_date' => now()->addDays(3)->toDateString()]);
+        $rx = collect($this->compilationRows())->firstWhere('reexam', $this->reexam->id);
+        $this->assertSame('Re-exam not held yet', $rx['blocker']);
+    }
+
+    public function test_the_reexam_participants_lists_show_only_its_ots(): void
+    {
+        $q = ['reexam' => $this->reexam->id];
+        $this->assertSame([$this->ots[0]], $this->listed($q + ['subject' => $this->subjectA, 'status' => 'pending']));
+        $this->assertSame([], $this->listed($q + ['subject' => $this->subjectA, 'status' => 'evaluated']));
+        $this->assertEqualsCanonicalizing([$this->ots[0], $this->ots[1]], $this->listed($q + ['status' => 'pending']));
+
+        $this->reexamMarksIn();
+        $this->assertSame([$this->ots[0]], $this->listed($q + ['subject' => $this->subjectA, 'status' => 'evaluated']));
+        $this->assertSame([], $this->listed($q + ['subject' => $this->subjectA, 'status' => 'pending']));
+        // The main row's list is unchanged: every OT, on the main marks.
+        $this->assertEqualsCanonicalizing($this->ots, $this->listed(['subject' => $this->subjectA, 'status' => 'evaluated']));
+    }
+
+    public function test_notify_for_pending_on_a_reexam_row_counts_only_its_ots(): void
+    {
+        $results = app(ResultMarksService::class);
+        $course = (int) $this->drive->course_master_pk;
+
+        $this->assertSame(1, $results->notifyPending($course, $this->subjectA, null, $this->reexam->id)['pending']);
+        $this->assertSame(2, $results->notifyPending($course, null, null, $this->reexam->id)['pending']);
+        // The main row: every main mark is approved, and the re-exam is not counted there.
+        $this->assertSame(0, $results->notifyPending($course, $this->subjectA)['pending']);
+        // A main drive id is not taken as a re-exam.
+        $this->assertSame(0, $results->notifyPending($course, $this->subjectA, null, $this->drive->id)['pending']);
+    }
+
     /* ───────────── Step 6: Re-exam result ───────────── */
 
     public function test_the_result_is_pending_until_the_reexam_marks_are_approved(): void
