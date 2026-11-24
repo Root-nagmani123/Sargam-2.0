@@ -96,9 +96,14 @@
                         </thead>
                         <tbody>
                             @foreach ($rows as $row)
-                                @php $show = ['course' => $row['course_key'], 'ot' => $row['code']]; @endphp
+                                @php
+                                    // A published re-exam marksheet (Pass / Fail only) lists here too, tagged "(Re-exam)".
+                                    $rx = $row['reexam_key'];
+                                    $show = $rx ? ['reexam' => $rx, 'ot' => $row['code']] : ['course' => $row['course_key'], 'ot' => $row['code']];
+                                    $showRoute = $rx ? 'admin.coe.reexam-marksheet.show' : 'admin.coe.marksheet.show';
+                                @endphp
                                 <tr data-result="{{ $row['result'] }}" data-type="{{ $row['exam_type'] }}">
-                                    <td class="coe-nowrap">{{ $row['name'] }}</td>
+                                    <td class="coe-nowrap">{{ $row['name'] }}@if ($rx)<div class="coe-reexam-tag">(Re-exam)</div>@endif</td>
                                     <td class="coe-nowrap">{{ $row['roll'] }}</td>
                                     <td class="coe-col-wrap">{{ $row['course'] }}</td>
                                     <td class="coe-col-wrap">{{ $row['examination'] }}</td>
@@ -107,11 +112,11 @@
                                     <td><span class="coe-state coe-state--draft">Published</span></td>
                                     <td>
                                         <div class="coe-act-group" role="group" aria-label="Row actions">
-                                            <a href="{{ route('admin.coe.marksheet.show', $show) }}" class="coe-act coe-act--edit">
+                                            <a href="{{ route($showRoute, $show) }}" class="coe-act coe-act--edit">
                                                 <span class="coe-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span>
                                                 <span class="coe-act__label">View</span>
                                             </a>
-                                            <a href="{{ route('admin.coe.marksheet.show', $show + ['print' => 1]) }}" class="coe-act coe-act--edit" target="_blank" rel="noopener">
+                                            <a href="{{ route($showRoute, $show + ['print' => 1]) }}" class="coe-act coe-act--edit" target="_blank" rel="noopener">
                                                 <span class="coe-act__icon"><i class="bi bi-download" aria-hidden="true"></i></span>
                                                 <span class="coe-act__label">Download</span>
                                             </a>

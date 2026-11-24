@@ -50,6 +50,17 @@ class ReexamMarksheetService
         return $this->rowCache ??= $this->build();
     }
 
+    /**
+     * The re-exam marksheets of one tab of Marksheet Generation / Verified Marksheet, where they
+     * also list with the main ones: Archived when the re-exam drive is Closed, else Active.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function scopeRows(string $scope): array
+    {
+        return array_values(array_filter($this->rows(), fn ($m) => ($m['scope'] ?? 'active') === $scope));
+    }
+
     /** @return list<array<string, mixed>> */
     public function reexamRows(string $reexamKey): array
     {
@@ -89,8 +100,12 @@ class ReexamMarksheetService
             }
         }
 
+        // Tab of the main lists: the re-exam drive's status now (a published snapshot carries none).
+        $scopeOf = $links->mapWithKeys(fn (Reexam $l) => [(string) $l->id => $l->reexamDrive?->status === \App\Models\ExaminationDrive::STATUS_CLOSED ? 'archived' : 'active'])->all();
+        $scoped = fn (array $rows) => array_map(fn ($row) => ['scope' => $scopeOf[$row['reexam_key']] ?? 'active'] + $row, $rows);
+
         if (! self::enabled()) {
-            return array_map(fn ($row) => $row + ['number' => '-', 'generated_on' => '-', 'published' => false, 'signatures' => []] + self::status(false, []), $candidates);
+            return $scoped(array_map(fn ($row) => $row + ['number' => '-', 'generated_on' => '-', 'published' => false, 'signatures' => []] + self::status(false, []), $candidates));
         }
 
         $this->generate($candidates);
@@ -109,7 +124,7 @@ class ReexamMarksheetService
             }
         }
 
-        return $rows;
+        return $scoped($rows);
     }
 
     /** One OT's re-exam marksheet as the views read it. */

@@ -8,6 +8,12 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-24: Re-exam marksheets also list on the main Marksheet Generation / Verified
+  Marksheet.** Same table as the main marksheets, right after the OT's main one, blue
+  "(Re-exam)" under the name (Figma); View / Verify / View & Verify / Download open and sign the
+  re-exam marksheet (Pass / Fail only, own RMS number). Re-exam tab and filters unchanged.
+  Details: Re-exam → "Marksheet". Tests: `CoeReexamResultFlowTest`.
+
 - **2026-11-24: Merit & Ranking filters: Drive, Status, Re-exam.** Drive (every main drive)
   narrows the Re-exam list; Status = Pass / Fail (+ Pending on a re-exam). Picking a
   re-exam shows only its OTs: in each re-sat subject the re-exam mark (labelled "Re-exam") with
@@ -582,8 +588,15 @@ step 7 (Pass / Fail marksheet) are done.
   Verify) and Verified Marksheet (`GET verified-marksheet/reexam`, published only), view
   `GET marksheet-generation/reexam/view/{reexam}/{ot}`, verify
   `POST marksheet-generation/reexam/publish` (JSON `reexam`, `ots`). Same permissions as
-  the main pages. `coe_marksheets` and the main pages' lists are untouched (only the tab
-  link was added). Deleting a re-exam drive cascades its marksheets.
+  the main pages. `coe_marksheets` is untouched. Deleting a re-exam drive cascades its marksheets.
+  **Also in the main lists** (`MarksheetController::listing`, agreed 2026-11-24 from the Figma):
+  `ReexamMarksheetService::scopeRows($scope)` (tab = re-exam drive Closed → Archived, else
+  Active) is merged in, each row after the OT's last main row on the course (`reexam_key` set;
+  null on main rows), "(Re-exam)" under the name (`.coe-reexam-tag`). On those rows View /
+  View & Verify go to `reexam-marksheet.show` (`?verify=1`), Verify posts to the re-exam
+  publish, Download is `reexam-marksheet.show?print=1` (auto-prints). Verify Selected: main
+  rows → Verify Document as before; re-exam rows of one re-exam → re-exam publish; mixed is
+  refused. The Re-exam tab still lists them on their own.
 
 ## Marksheets and signatures (`MarksheetService`)
 

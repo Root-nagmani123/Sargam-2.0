@@ -140,6 +140,10 @@ $(function () {
             });
         });
     });
+    @if (request()->boolean('print'))
+    // Opened from Verified Marksheet's Download (as marksheet/show): wait for the signatures, then print.
+    if (document.readyState === 'complete') { window.print(); } else { $(window).on('load', function () { window.print(); }); }
+    @endif
 });
 </script>
 @endpush

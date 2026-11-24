@@ -430,6 +430,33 @@ class CoeReexamResultFlowTest extends TestCase
         $this->actingAs($this->admin)->get(route('admin.coe.marksheet-generation.index'))->assertOk()->assertSee(route('admin.coe.reexam-marksheet.index'));
     }
 
+    public function test_the_main_marksheet_lists_show_the_reexam_marksheet_tagged(): void
+    {
+        $this->needsMarksheetTable();
+        $this->reexamMarksIn();
+        $row = collect($this->marksheets())->firstWhere('code', (string) $this->ots[0]);
+
+        // Marksheet Generation: in the same list, right after the OT's main marksheet, "(Re-exam)" under the name.
+        $page = $this->actingAs($this->admin)->get(route('admin.coe.marksheet-generation.index'))->assertOk()
+            ->assertSee($row['number'])->assertSee('(Re-exam)')
+            ->assertSee(route('admin.coe.reexam-marksheet.show', ['reexam' => $row['reexam_key'], 'ot' => $row['code']]), false);
+        $list = collect($page->viewData('rows'));
+        $rx = $list->search(fn ($m) => $m['reexam_key'] === $row['reexam_key'] && $m['code'] === $row['code']);
+        $this->assertNotFalse($rx);
+        // After the OT's main marksheet on the course (and any earlier re-exam marksheet of theirs), when it has one.
+        $main = $list->search(fn ($m) => $m['reexam_key'] === null && $m['code'] === $row['code'] && $m['course_key'] === $row['course_key']);
+        if ($main !== false) {
+            $this->assertGreaterThan($main, $rx);
+            foreach ($list->slice($main, $rx - $main + 1) as $m) {
+                $this->assertSame([$row['code'], $row['course_key']], [$m['code'], $m['course_key']]);
+            }
+        }
+        // Not on the Archived tab (the re-exam drive is Active), nor on Verified Marksheet until published.
+        $this->assertFalse(collect($this->actingAs($this->admin)->get(route('admin.coe.marksheet-generation.index', ['scope' => 'archived']))
+            ->viewData('rows'))->contains(fn ($m) => $m['reexam_key'] === $row['reexam_key']));
+        $this->actingAs($this->admin)->get(route('admin.coe.verified-marksheet.index'))->assertOk()->assertDontSee($row['number']);
+    }
+
     /** The $nth user outside Super Admin and the three signatory roles, given $role (as CoeMarksheetSigningFlowTest). */
     private function signer(string $role, int $nth): User
     {
@@ -470,5 +497,7 @@ class CoeReexamResultFlowTest extends TestCase
         $this->assertEqualsCanonicalizing(['UDC', 'AAO', 'COE'], array_keys($record->snapshot['signatures']));
         $this->assertSame('Pass', $record->snapshot['result']);
         $this->actingAs($this->admin)->get(route('admin.coe.reexam-marksheet.verified'))->assertOk()->assertSee($row['number']);
+        // Published: on Verified Marksheet with the main ones too.
+        $this->actingAs($this->admin)->get(route('admin.coe.verified-marksheet.index'))->assertOk()->assertSee($row['number'])->assertSee('(Re-exam)');
     }
 }
