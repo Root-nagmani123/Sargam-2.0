@@ -8,6 +8,13 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-24: Merit & Ranking filters: Drive, Status, Re-exam.** Drive (every main drive)
+  narrows the Re-exam list; Status = Pass / Fail (+ Pending on a re-exam). Picking a
+  re-exam shows only its OTs: in each re-sat subject the re-exam mark (labelled "Re-exam") with
+  the main mark under it; Total (A), Grand Total and Pass / Fail use the re-exam marks, main
+  values shown too; **rank stays the main merit rank**. "All" = the merit list as before.
+  Details: Re-exam → "Merit filter". Tests: `CoeReexamResultFlowTest`.
+
 - **2026-11-24: Result Compilation shows re-exam rows.** One row per re-exam + subject,
   "… Maximum 100 **(Re-exam)**", right after the subject's main row, shown from creation (Action
   says why marks wait: CC approval / "Re-exam not held yet"). Counts only the re-exam OTs on the
@@ -545,6 +552,17 @@ step 7 (Pass / Fail marksheet) are done.
   re-exam's subjects + OTs only, title "… (Re-exam)"); Notify sends `reexam` →
   `notifyPending(..., $reexamDriveId)` (that drive, `entryParticipants`, subject "(Re-exam)" in
   the bell).
+- **Merit filter** (`MeritRankingController::index`, `ResultMarksService::meritReexamFilters` /
+  `reexamMerit`): query `drive`, `status`, `reexam`. Drive lists **every main drive** in scope
+  (`scopeDrives`; course name added under Course = All, since names repeat) and only narrows the
+  Re-exam options (agreed 2026-11-24, table stays the course merit); a re-exam forces its course and
+  drive (the JS clears Drive / Re-exam when a filter above changes). `reexamMerit` takes
+  `merit()` of the course (unchanged, re-exams still out of `scopeDrives`), keeps the
+  re-exam's candidates, swaps the main drive's component marks of each re-sat subject for the
+  re-exam's approved raw marks, recomputes subject / qualifying totals, Total (A), Grand Total
+  and Pass (same rule, row `passing_percent`), and keeps `rank`. `row['reexam']` holds the
+  main values of the changed cells + `total_a`, `grand`, `result`. A re-exam mark not approved:
+  cell + totals null, result `Pending`. Agreed 2026-11-24: show both marks, rank unchanged.
 - **Result** (step 6, `ReexamService::result`, `GET examination-drive/{id}/reexam-result`,
   **Result** button on CC-approved re-exam rows, popup `#edcRxResultModal`): per candidate +
   subject on the re-exam's own approved marks (no moderation): Fail if AB in any component or

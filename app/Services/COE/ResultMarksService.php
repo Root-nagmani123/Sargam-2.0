@@ -1092,6 +1092,171 @@ class ResultMarksService
         return $out;
     }
 
+    /* ───────────── Merit & Ranking: Drive / Re-exam filters ───────────── */
+
+    /**
+     * The Drive and Re-exam filter options of Merit & Ranking in $scope: every main drive
+     * in scope (Active, or Closed for archived; re-exam drives are under Re-exam), and
+     * the re-exams of those drives. Picking a drive narrows the Re-exam list only.
+     *
+     * @return array{drives: array<int, array{name:string, course:int}>, reexams: array<int, array{label:string, main:int, course:int, no:int}>}
+     */
+    public function meritReexamFilters(string $scope): array
+    {
+        $out = ['drives' => [], 'reexams' => []];
+        $mains = $this->scopeDrives($scope)->keyBy('id');
+        foreach ($mains->sortBy(fn ($d) => mb_strtolower(ReexamService::driveName($d))) as $main) {
+            $out['drives'][(int) $main->id] = ['name' => ReexamService::driveName($main), 'course' => (int) $main->course_master_pk];
+        }
+        if (! ReexamService::enabled()) {
+            return $out;
+        }
+        $links = \App\Models\COE\Reexam::with('reexamDrive')->whereIn('main_drive_id', $mains->keys())
+            ->orderBy('main_drive_id')->orderBy('reexam_no')->get();
+        foreach ($links as $link) {
+            if (! $link->reexamDrive || $link->reexamDrive->status === ExaminationDrive::STATUS_DRAFT) {
+                continue;
+            }
+            $main = $mains[$link->main_drive_id];
+            $out['reexams'][(int) $link->reexam_drive_id] = [
+                'label' => 'Re-exam '.$link->reexam_no.' · '.ReexamService::driveName($main),
+                'main' => (int) $main->id,
+                'course' => (int) $main->course_master_pk,
+                'no' => (int) $link->reexam_no,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Merit & Ranking with one re-exam picked: the merit() page of its course, narrowed to
+     * that re-exam's OTs. In each subject an OT re-sat, the re-exam mark (approved, raw: no
+     * moderation) takes the place of the main drive's mark in Total (A), Grand Total and
+     * Pass / Fail; both are shown ($row['reexam']). The **rank stays the main merit rank**
+     * (a re-exam never changes rank). A re-exam mark not approved yet: that subject and the
+     * totals are null and the result is 'Pending'. Null when the re-exam is not on this tab.
+     *
+     * @return array<string, mixed>|null merit() + reexam: {id, no, name, main}
+     */
+    public function reexamMerit(string $scope, int $reexamDriveId): ?array
+    {
+        $link = ReexamService::enabled()
+            ? \App\Models\COE\Reexam::with(['candidates', 'mainDrive.componentMaps.subject', 'mainDrive.examinationType', 'reexamDrive.componentMaps'])
+                ->where('reexam_drive_id', $reexamDriveId)->first()
+            : null;
+        $main = $link?->mainDrive;
+        if (! $main || ! $link->reexamDrive) {
+            return null;
+        }
+        $merit = $this->merit($scope, (int) $main->course_master_pk);
+        if ($merit['coursePk'] !== (int) $main->course_master_pk) {
+            return null;
+        }
+
+        // Every merit column of the course: which bucket it adds to, its max, whether it must be passed.
+        $columns = [];
+        foreach ($this->scopeDrives($scope, (int) $main->course_master_pk) as $drive) {
+            foreach ($drive->componentMaps as $map) {
+                if (! $this->examOver($drive, $map)) {
+                    continue;
+                }
+                $col = $this->column($drive, $map);
+                $bucket = self::isDirectorAssessment($drive) ? 'B'
+                    : (($paper = self::qualifyingPaper($col)) !== null ? 'q:'.$paper : self::meritKey($col['subject'], $col['subject_code'], $col['subject_pk']));
+                $columns[$col['key']] = ['bucket' => $bucket, 'max' => $col['max']];
+            }
+        }
+
+        $sits = [];
+        foreach ($link->candidates as $c) {
+            $sits[(int) $c->student_master_pk][] = (int) $c->subject_master_pk;
+        }
+        $reMaps = $link->reexamDrive->componentMaps->groupBy('subject_master_pk');
+        $reMarks = $this->marks([(int) $link->reexam_drive_id]);
+        $round = fn (array $values) => round(array_sum($values), 2);
+
+        $rows = [];
+        foreach ($merit['rows'] as $row) {
+            $pk = (int) $row['student'];
+            if (! isset($sits[$pk])) {
+                continue;
+            }
+            $marks = $row['marks'];
+            $swapped = [];
+            $pending = [];
+            foreach ($sits[$pk] as $subjectPk) {
+                foreach ($reMaps->get($subjectPk, collect()) as $map) {
+                    $mainKey = $main->id.':'.$subjectPk.':'.$map->component_master_pk;
+                    $m = $reMarks[$link->reexam_drive_id.':'.$subjectPk.':'.$map->component_master_pk][$pk] ?? null;
+                    $bucket = $columns[$mainKey]['bucket'] ?? null;
+                    if ($bucket === null) {
+                        continue;
+                    }
+                    $swapped[$bucket] = true;
+                    if (! ReexamService::markIsFinal($m, true)) {
+                        $pending[$bucket] = true;
+
+                        continue;
+                    }
+                    $marks[$mainKey] = ReexamService::markValue($m, true);
+                }
+            }
+
+            $byBucket = [];
+            foreach ($columns as $key => $col) {
+                if (array_key_exists($key, $marks)) {
+                    $byBucket[$col['bucket']][] = $marks[$key];
+                }
+            }
+            $new = $row;
+            foreach ($row['subjects'] as $key => $old) {
+                if (isset($swapped[$key])) {
+                    $new['subjects'][$key] = isset($pending[$key]) ? null : $round($byBucket[$key] ?? []);
+                }
+            }
+            foreach ($row['qualifying'] as $paper => $old) {
+                if (isset($swapped['q:'.$paper])) {
+                    $new['qualifying'][$paper] = isset($pending['q:'.$paper]) ? null : $round($byBucket['q:'.$paper] ?? []);
+                }
+            }
+            if ($pending) {
+                $new['total_a'] = $new['grand'] = null;
+                $new['result'] = ReexamService::RESULT_PENDING;
+            } else {
+                $new['total_a'] = $round(array_filter($new['subjects'], fn ($v) => $v !== null));
+                $new['grand'] = round($new['total_a'] + ($row['director'] ?? 0), 2);
+                // Pass: every Part A and qualifying column at the OT's service percentage (as merit()).
+                $passed = true;
+                foreach ($columns as $key => $col) {
+                    if ($col['bucket'] !== 'B' && array_key_exists($key, $marks)
+                        && $marks[$key] < round($col['max'] * $row['passing_percent'] / 100, 2)) {
+                        $passed = false;
+                        break;
+                    }
+                }
+                $new['result'] = $passed ? ReexamService::RESULT_PASS : ReexamService::RESULT_FAIL;
+            }
+            $new['marks'] = $marks;
+            // What the main merit showed, for the cells the re-exam changed.
+            $new['reexam'] = [
+                'subjects' => array_intersect_key($row['subjects'], $swapped),
+                'qualifying' => array_filter($row['qualifying'], fn ($v, $paper) => isset($swapped['q:'.$paper]), ARRAY_FILTER_USE_BOTH),
+                'total_a' => $row['total_a'],
+                'grand' => $row['grand'],
+                'result' => $row['result'],
+            ];
+            $rows[] = $new;
+        }
+
+        return ['rows' => $rows, 'pending' => 0, 'reexam' => [
+            'id' => (int) $link->reexam_drive_id,
+            'no' => (int) $link->reexam_no,
+            'name' => ReexamService::driveName($link->reexamDrive),
+            'main' => ReexamService::driveName($main),
+        ]] + $merit;
+    }
+
     private function courseSheet(Collection $drives, array $marks): ?array
     {
         $participants = [];

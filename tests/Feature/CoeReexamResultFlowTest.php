@@ -259,6 +259,77 @@ class CoeReexamResultFlowTest extends TestCase
         $this->assertSame(0, $results->notifyPending($course, $this->subjectA, null, $this->drive->id)['pending']);
     }
 
+    /* ───────────── Merit & Ranking: Drive / Status / Re-exam filters ───────────── */
+
+    private function meritPage(array $query = []): \Illuminate\Testing\TestResponse
+    {
+        return $this->actingAs($this->admin)->get(route('admin.coe.merit-ranking.index', $query))->assertOk();
+    }
+
+    public function test_merit_reexam_filter_shows_both_marks_and_keeps_the_rank(): void
+    {
+        $this->reexamMarksIn();
+        $course = (int) $this->drive->course_master_pk;
+        $main = collect($this->meritPage(['course' => $course])->viewData('rows'))->keyBy('student');
+        $this->assertCount(count($this->ots), $main);   // the normal list is unchanged
+
+        $page = $this->meritPage(['reexam' => $this->reexam->id]);
+        $this->assertSame($course, $page->viewData('coursePk'));
+        $this->assertSame($this->drive->id, $page->viewData('drivePk'));
+        $rows = collect($page->viewData('rows'))->keyBy('student');
+        $this->assertEqualsCanonicalizing([$this->ots[0], $this->ots[1]], $rows->keys()->all());
+
+        // OT 1 re-sat A: 30 replaces 10 in the totals, both shown; Pass now, rank as before.
+        $ot1 = $rows[$this->ots[0]];
+        $this->assertCount(1, $ot1['reexam']['subjects']);
+        $key = array_key_first($ot1['reexam']['subjects']);
+        $this->assertEquals(10.0, $ot1['reexam']['subjects'][$key]);
+        $this->assertEquals(30.0, $ot1['subjects'][$key]);
+        $this->assertEquals(round($main[$this->ots[0]]['grand'] + 20, 2), $ot1['grand']);
+        $this->assertSame('Fail', $ot1['reexam']['result']);
+        $this->assertSame('Pass', $ot1['result']);
+        $this->assertSame($main[$this->ots[0]]['rank'], $ot1['rank']);
+        // OT 2 absent again in B: still Fail.
+        $this->assertSame('Fail', $rows[$this->ots[1]]['result']);
+        $page->assertSee('Re-exam 1 of ZZ Reexam Result Drive');
+
+        // Status narrows the rows.
+        $pass = $this->meritPage(['reexam' => $this->reexam->id, 'status' => 'Pass'])->viewData('rows');
+        $this->assertSame([$this->ots[0]], array_column($pass, 'student'));
+    }
+
+    public function test_merit_reexam_filter_is_pending_until_the_reexam_marks_are_approved(): void
+    {
+        $rows = collect($this->meritPage(['reexam' => $this->reexam->id])->viewData('rows'))->keyBy('student');
+        $ot1 = $rows[$this->ots[0]];
+        $this->assertSame('Pending', $ot1['result']);
+        $this->assertNull($ot1['grand']);
+        $this->assertNull($ot1['subjects'][array_key_first($ot1['reexam']['subjects'])]);
+    }
+
+    public function test_merit_drive_filter_lists_only_its_reexams(): void
+    {
+        $filters = app(ResultMarksService::class)->meritReexamFilters('active');
+        $this->assertSame($this->drive->id, $filters['reexams'][$this->reexam->id]['main']);
+        $this->assertArrayHasKey($this->drive->id, $filters['drives']);
+        // Every main drive is listed, with or without a re-exam; a re-exam drive only under Re-exam.
+        $this->assertArrayNotHasKey($this->reexam->id, $filters['drives']);
+        $plain = ExaminationDrive::create($this->drive->only(['examination_type_master_pk', 'term_master_pk', 'course_master_pk', 'phase', 'academic_session', 'start_date', 'end_date'])
+            + ['drive_name' => 'ZZ Plain Drive', 'status' => ExaminationDrive::STATUS_ACTIVE, 'cc_status' => ExaminationDrive::CC_APPROVED]);
+        DB::table('examination_drive_component_maps')->insert(['examination_drive_id' => $plain->id, 'subject_master_pk' => $this->subjectA,
+            'component_master_pk' => $this->compY, 'max_marks' => 10, 'passing_marks' => 5, 'source' => 'Faculty', 'weightage' => 10, 'exam_mode' => 'Offline']);
+        $filters = app(ResultMarksService::class)->meritReexamFilters('active');
+        $this->assertSame('ZZ Plain Drive', $filters['drives'][$plain->id]['name']);
+
+        $page = $this->meritPage(['drive' => $this->drive->id]);
+        $this->assertArrayHasKey($this->reexam->id, $page->viewData('reexamOptions'));
+        $this->assertNull($page->viewData('reexam'));   // Drive alone does not switch the table
+
+        // A re-exam that is not the picked drive's is ignored: the normal merit list.
+        $this->assertNull($this->meritPage(['drive' => $this->drive->id + 999999, 'reexam' => $this->reexam->id])->viewData('reexam'));
+        $this->assertNull($this->meritPage(['reexam' => $this->drive->id])->viewData('reexam'));   // a main drive is not a re-exam
+    }
+
     /* ───────────── Step 6: Re-exam result ───────────── */
 
     public function test_the_result_is_pending_until_the_reexam_marks_are_approved(): void
