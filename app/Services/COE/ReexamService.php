@@ -513,6 +513,152 @@ class ReexamService
         return filled($drive->drive_name) ? trim($drive->drive_name) : 'Examination Drive #'.$drive->id;
     }
 
+    /* ───────────── Edit Re-exam (name + dates) ───────────── */
+
+    /**
+     * Why the re-exam drive cannot be edited, or null. Same lock as a main drive: not
+     * once it is Closed, pending at the CC or approved by the CC.
+     */
+    public static function editRefusal(ExaminationDrive $drive): ?string
+    {
+        if ($drive->status === ExaminationDrive::STATUS_CLOSED) {
+            return 'A closed drive cannot be edited.';
+        }
+        if ($drive->cc_status === ExaminationDrive::CC_APPROVED) {
+            return 'This re-exam has been approved by the Course Coordinator and cannot be edited.';
+        }
+        if ($drive->cc_status === ExaminationDrive::CC_PENDING) {
+            return 'This re-exam is pending at the Course Coordinator and cannot be edited.';
+        }
+
+        return null;
+    }
+
+    /**
+     * Edit Re-exam: only the name and the re-exam dates. Course, term, type, subjects,
+     * faculty and OTs stay as created (copied from the main drive). An exam range the
+     * faculty already set must stay inside the new dates. Locked like a main drive
+     * (editRefusal), checked again under a row lock.
+     *
+     * @throws ResultMarksException
+     */
+    public function update(ExaminationDrive $drive, string $name, string $start, string $end, ?User $user = null): ExaminationDrive
+    {
+        if (! self::isReexamDrive((int) $drive->id)) {
+            throw new ResultMarksException('This is not a re-exam drive.');
+        }
+
+        $drive = DB::transaction(function () use ($drive, $name, $start, $end) {
+            $drive = ExaminationDrive::whereKey($drive->id)->lockForUpdate()->firstOrFail();
+            if ($refusal = self::editRefusal($drive)) {
+                throw new ResultMarksException($refusal);
+            }
+            foreach (ExaminationDriveComponentMap::with(['subject', 'component'])->where('examination_drive_id', $drive->id)
+                ->whereNotNull('exam_date')->orderBy('id')->get() as $map) {
+                $from = $map->exam_date->toDateString();
+                $to = ($map->exam_end_date ?? $map->exam_date)->toDateString();
+                if ($from < $start || $to > $end) {
+                    $what = trim(($map->subject->subject_name ?? '').' · '.($map->component->component_name ?? ''), ' ·');
+                    throw new ResultMarksException("{$what} is set for {$map->exam_date->format('d-m-Y')}"
+                        .($to !== $from ? ' to '.($map->exam_end_date ?? $map->exam_date)->format('d-m-Y') : '')
+                        .', outside the new re-exam dates. Ask the faculty to change it first, or keep the dates around it.');
+                }
+            }
+            $drive->fill(['drive_name' => trim($name), 'start_date' => $start, 'end_date' => $end]);
+            if (array_key_exists('modified_date', $drive->getAttributes())) {
+                $drive->modified_date = now();
+            }
+            $drive->save();
+
+            return $drive;
+        });
+
+        Log::info('COE re-exam edited', ['reexam_drive_id' => $drive->id, 'start' => $start, 'end' => $end, 'by' => $user->user_id ?? null]);
+
+        return $drive;
+    }
+
+    /* ───────────── View (Faculty Coordinates & Components) ───────────── */
+
+    /**
+     * What the View page adds for re-exams:
+     *   re-exam drive  its main drive, the main drive's components of the re-exam subjects
+     *                  (exam dates, marks) and the candidates with reason, main score %,
+     *                  re-exam score % and result (result()).
+     *   main drive     its re-exams (no., name, dates, status, OTs).
+     * Null for a drive with neither.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function overview(ExaminationDrive $drive): ?array
+    {
+        if (! self::enabled()) {
+            return null;
+        }
+        $link = Reexam::with('mainDrive.componentMaps.subject', 'mainDrive.componentMaps.component', 'mainDrive.course', 'mainDrive.examinationType')
+            ->where('reexam_drive_id', $drive->id)->first();
+        if ($link) {
+            $main = $link->mainDrive;
+            $subjects = ExaminationDriveComponentMap::where('examination_drive_id', $drive->id)->distinct()->pluck('subject_master_pk')
+                ->map(fn ($pk) => (int) $pk)->all();
+
+            return [
+                'type' => 'reexam',
+                'no' => (int) $link->reexam_no,
+                'main' => $main ? [
+                    'id' => (int) $main->id,
+                    'name' => self::driveName($main),
+                    'exam_type' => $main->examinationType->exam_type_name ?? '-',
+                    'course' => $main->course->course_name ?? '-',
+                    'start_date' => optional($main->start_date)->format('d-m-Y') ?? '-',
+                    'end_date' => optional($main->end_date)->format('d-m-Y') ?? '-',
+                    'status' => $main->progress()[0],
+                    'components' => $main->componentMaps->whereIn('subject_master_pk', $subjects)->sortBy('id')
+                        ->map(fn (ExaminationDriveComponentMap $map) => [
+                            'subject' => trim((string) ($map->subject->subject_name ?? '')) ?: '-',
+                            'component' => $map->component->component_name ?? '-',
+                            'max_marks' => $map->max_marks,
+                            'passing_marks' => ResultMarksService::passingMarksLabel($map->max_marks === null ? null : (float) $map->max_marks),
+                            'exam_range' => self::examRange($map),
+                            'exam_mode' => $map->exam_mode ?: '-',
+                        ])->values()->all(),
+                ] : null,
+                'result' => $this->result($drive),
+            ];
+        }
+
+        $reexams = Reexam::with('reexamDrive')->withCount('candidates')->where('main_drive_id', $drive->id)->orderBy('reexam_no')->get();
+        if ($reexams->isEmpty()) {
+            return null;
+        }
+
+        return [
+            'type' => 'main',
+            'reexams' => $reexams->filter(fn (Reexam $r) => $r->reexamDrive)->map(fn (Reexam $r) => [
+                'id' => (int) $r->reexam_drive_id,
+                'no' => (int) $r->reexam_no,
+                'name' => self::driveName($r->reexamDrive),
+                'start_date' => optional($r->reexamDrive->start_date)->format('d-m-Y') ?? '-',
+                'end_date' => optional($r->reexamDrive->end_date)->format('d-m-Y') ?? '-',
+                'status' => $r->reexamDrive->progress()[0],
+                'ots' => (int) DB::table('coe_reexam_candidates')->where('reexam_id', $r->id)->distinct()->count('student_master_pk'),
+                'subjects' => (int) $r->candidates_count,
+            ])->values()->all(),
+        ];
+    }
+
+    /** "10-11-2026 10:00 to 10-11-2026 13:00", the dates when no times, '-' when not set. */
+    private static function examRange(ExaminationDriveComponentMap $map): string
+    {
+        if (! $map->exam_date && ! $map->exam_start_at) {
+            return '-';
+        }
+        $from = $map->exam_start_at ? $map->exam_start_at->format('d-m-Y H:i') : $map->exam_date->format('d-m-Y');
+        $to = $map->exam_end_at ? $map->exam_end_at->format('d-m-Y H:i') : optional($map->exam_end_date ?? $map->exam_date)->format('d-m-Y');
+
+        return $to && $to !== $from ? $from.' to '.$to : $from;
+    }
+
     /* ───────────── Re-exam drive setup (faculty) and CC approval ───────────── */
 
     /**

@@ -2294,6 +2294,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
             ->whereNumber('id')->name('examination-drive.reexam.show');
         Route::post('examination-drive/{id}/reexam', [\App\Http\Controllers\Admin\COE\ReexamController::class, 'store'])
             ->whereNumber('id')->middleware('throttle:10,1')->name('examination-drive.reexam.store');
+        Route::put('examination-drive/{id}/reexam', [\App\Http\Controllers\Admin\COE\ReexamController::class, 'update'])
+            ->whereNumber('id')->middleware('throttle:20,1')->name('examination-drive.reexam.update');
         Route::get('examination-drive/{id}/reexam-result', [\App\Http\Controllers\Admin\COE\ReexamController::class, 'result'])
             ->whereNumber('id')->name('examination-drive.reexam.result');
     });

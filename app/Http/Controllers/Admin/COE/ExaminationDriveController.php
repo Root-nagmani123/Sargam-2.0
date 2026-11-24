@@ -1700,6 +1700,8 @@ class ExaminationDriveController extends Controller
             'drive'    => $this->driveViewModel($drive),
             'faculty'  => $this->facultyNames(),
             'examModes'=> self::EXAM_MODES,
+            // Re-exam drive: its main drive + candidates; main drive: its re-exams (ReexamService::overview).
+            'reexam'   => app(ReexamService::class)->overview($drive),
         ]);
     }
 

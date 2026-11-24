@@ -8,6 +8,15 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-24: Re-exam View shows both exams; Edit Re-exam (name + dates).** View on a
+  re-exam row (Faculty Coordinates & Components) adds a "Re-exam N of {main}" banner, the
+  re-exam dates, the **Main Exam** components of the re-exam subjects (dates, marks) and a
+  **Re-exam OTs** table (reason, main score %, re-exam score %, subject / OT result). A main
+  drive's View lists its re-exams. Edit on a re-exam row opens **Edit Re-exam**: only name
+  and start / end dates (`PUT examination-drive/{id}/reexam`), locked once pending at / approved
+  by the CC, as on a main drive; exam dates already set must stay inside. Details: Re-exam →
+  "View" / "Edit". Tests: `CoeReexamFlowTest`.
+
 - **2026-11-24: Re-exam, steps 5–7 (result entry, result, marksheet).** Result Entry now
   lists re-exam drives with **only their subject's re-exam OTs** (main drives unchanged);
   re-exam marks count once approved (no moderation). Re-exam rows on Examination Drive
@@ -459,8 +468,19 @@ step 7 (Pass / Fail marksheet) are done.
 - **Drive list** (`ExaminationDriveDataTable`): the Re-exam button is rendered hidden on
   main drives that pass the cheap checks; after each draw the page calls
   `GET examination-drive/reexam-ready?ids[]=` once and shows the ready ones (the list
-  itself reads no marks). Re-exam rows get a "Re-exam N" tag and Edit is disabled
-  (server refuses `update` too).
+  itself reads no marks). Re-exam rows get a "Re-exam N" tag; their Edit
+  (`coe-act--rxedit`) opens Edit Re-exam, never the drive form (`update` still refuses a re-exam,
+  it would replace the faculty maps).
+- **Edit** (`ReexamService::update`, `PUT examination-drive/{id}/reexam`, popup `#edcRxEditModal`):
+  only `drive_name` and `start_date` / `end_date`; course, term, type, subjects, faculty and OTs
+  stay as created. Refused (`editRefusal`) when Closed, CC-pending or CC-approved (same as a
+  main drive; agreed 2026-11-24: no edit after CC approval), and when a component's
+  exam date already set falls outside the new dates. Under a row lock.
+- **View** (`coordinates`, `ReexamService::overview`): on a re-exam, a banner linking the main
+  drive, the re-exam dates and status, "Not set yet" for undated components, the main drive's
+  components of the re-exam subjects, and the candidates from `result()` (reason, main score %
+  = `score_percent`, re-exam score %, subject + OT result). On a main drive with re-exams, a
+  Re-exams table (no., name, dates, OTs, status, View). Exports of the page are unchanged.
 - **Create** (`POST examination-drive/{id}/reexam`, JSON `keys` = "subject:student",
   `start_date`, `end_date`, optional `name`, default "{main} — Re-exam N"): under a lock the
   list is worked out again, unknown keys refused. Copies the drive (Active, `cc_status`
@@ -468,7 +488,7 @@ step 7 (Pass / Fail marksheet) are done.
   (max marks, mode, type, sub-coordinators, assigned codes kept; exam dates and CC slots
   emptied). Bell "Re-exam Created" to the subjects' faculty (opens their setup page).
   Re-exam dates may be after the course end.
-- Routes: `examination-drive/reexam-ready`, `examination-drive/{id}/reexam` (GET/POST),
+- Routes: `examination-drive/reexam-ready`, `examination-drive/{id}/reexam` (GET/POST/PUT),
   `examination-drive/{id}/reexam-result` (GET), behind
   `menu.permission:coe_examination_drive,coe_coe_examination_drive`.
 - **Kept out** (`ReexamService::excludeFrom`): `ResultMarksService::scopeDrives`

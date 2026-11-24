@@ -254,11 +254,12 @@ class ExaminationDriveDataTable extends DataTable
         //   Approved by CC - no Edit, no Delete.
         $approved = $row->cc_status === ExaminationDrive::CC_APPROVED;
         $pending = $row->cc_status === ExaminationDrive::CC_PENDING;
-        // A re-exam drive is a copy of its main drive: Edit would replace its faculty mapping.
+        // A re-exam drive is a copy of its main drive: its Edit (coe-act--rxedit) opens Edit
+        // Re-exam (name + dates only, ReexamController::update), not the drive form, which
+        // would replace its faculty mapping. Same CC lock as a main drive.
         $isReexam = $row->relationLoaded('reexamLink') && $row->reexamLink;
-        $editLock = $isReexam ? 'A re-exam drive is copied from its main drive and cannot be edited here'
-            : ($approved ? 'Approved by the Course Coordinator - cannot be edited'
-            : ($pending ? 'Pending at the Course Coordinator - cannot be edited' : null));
+        $editLock = $approved ? 'Approved by the Course Coordinator - cannot be edited'
+            : ($pending ? 'Pending at the Course Coordinator - cannot be edited' : null);
 
         $html = '<div class="coe-act-group" role="group" aria-label="Row actions">';
         if ($this->mayHaveReexam($row)) {
@@ -271,7 +272,10 @@ class ExaminationDriveDataTable extends DataTable
         $html .= '<a href="' . $coordUrl . '" class="coe-act"><span class="coe-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span><span class="coe-act__label">View</span></a>';
 
         if ($canEdit) {
-            $html .= '<button type="button" class="coe-act coe-act--edit"'
+            $html .= '<button type="button" class="coe-act coe-act--edit' . ($isReexam ? ' coe-act--rxedit' : '') . '"'
+                . ($isReexam ? ' data-rx-name="' . e($this->driveName($row)) . '"'
+                    . ' data-rx-start="' . e(optional($row->start_date)->format('Y-m-d')) . '"'
+                    . ' data-rx-end="' . e(optional($row->end_date)->format('Y-m-d')) . '"' : '')
                 . ($editLock ? ' disabled title="' . $editLock . '"' : '')
                 . '><span class="coe-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span><span class="coe-act__label">Edit</span></button>';
         }

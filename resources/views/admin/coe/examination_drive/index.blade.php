@@ -51,7 +51,8 @@
 .edc-rx-empty                { padding:24px;text-align:center;color:var(--ds-ink-muted); }
 /* Re-exam Result (ReexamController::result) */
 .coe-page .coe-act--rxresult { color:#067647; }
-#edcRxResultModal .modal-title { font-size:1.375rem;font-weight:500;color:var(--ds-ink); }
+#edcRxResultModal .modal-title,
+#edcRxEditModal .modal-title { font-size:1.375rem;font-weight:500;color:var(--ds-ink); }
 .edc-rx-result               { display:inline-block;padding:3px 10px;border-radius:var(--ds-radius-1);font-size:13px;font-weight:500;line-height:1.4; }
 .edc-rx-result--pass         { background:#dcfae6;color:#067647; }
 .edc-rx-result--fail         { background:#fde2e4;color:#d92d20; }
@@ -395,6 +396,42 @@
     </div>
 </div>
 
+{{-- ── Edit Re-exam modal (ReexamController::update): name + dates only ─────── --}}
+<div class="modal fade" id="edcRxEditModal" tabindex="-1" aria-labelledby="edcRxEditTitle" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content coe-modal border-0 shadow">
+            <form id="edcRxEditForm" novalidate>
+                <div class="modal-header coe-modal-header coe-modal-header--rule">
+                    <h5 class="modal-title" id="edcRxEditTitle">Edit Re-exam</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body coe-modal-body">
+                    <p class="edc-rx-intro">Only the name and the re-exam dates can change. Course, term, subjects, faculty and OTs
+                        stay as the re-exam was created. Exam dates the faculty already set must stay inside the new dates.</p>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="coe-form-label" for="edcRxEditName">Name<span class="coe-req">*</span></label>
+                            <input type="text" id="edcRxEditName" class="form-control coe-control" maxlength="150" autocomplete="off">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="coe-form-label" for="edcRxEditStart">Re-exam start<span class="coe-req">*</span></label>
+                            <input type="date" id="edcRxEditStart" class="form-control coe-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="coe-form-label" for="edcRxEditEnd">Re-exam end<span class="coe-req">*</span></label>
+                            <input type="date" id="edcRxEditEnd" class="form-control coe-control">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer coe-modal-footer">
+                    <button type="button" class="btn coe-btn coe-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn coe-btn coe-btn-primary" id="edcRxEditSubmit">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @include('admin.coe.partials.confirm_delete_modal', ['id' => 'edcDeleteModal', 'confirmId' => 'edcDeleteConfirm'])
 @include('admin.coe.partials.freeze_modal', ['phoneMasked' => '+91 ******3274'])
 
@@ -688,7 +725,8 @@ $(function () {
     });
 
     $('#edcCreateBtn').on('click', function () { openForm(null); });
-    $table.on('click', '.coe-act--edit', function () { openForm($(this).closest('tr')); });
+    // A re-exam row's Edit opens Edit Re-exam (below), not the drive form.
+    $table.on('click', '.coe-act--edit:not(.coe-act--rxedit)', function () { openForm($(this).closest('tr')); });
     $modal.on('hidden.bs.modal', function () { $editingRow = null; clearErrors(); });
 
     $('#edcForm').on('submit', function (e) {
@@ -941,6 +979,45 @@ $(function () {
         $rxr.find('[data-rxr-filter]').removeClass('is-active');
         $(this).addClass('is-active');
         rxrRender();
+    });
+
+    /* ── Edit Re-exam (ReexamController::update): name + dates only, before the CC has it ── */
+    var $rxe = $('#edcRxEditModal'), rxeDriveId = null;
+
+    $table.on('click', '.coe-act--rxedit', function () {
+        var $btn = $(this);
+        rxeDriveId = $btn.closest('tr').attr('data-coe-id');
+        $('#edcRxEditName').val($btn.attr('data-rx-name') || '');
+        $('#edcRxEditStart').val($btn.attr('data-rx-start') || '');
+        $('#edcRxEditEnd').val($btn.attr('data-rx-end') || '');
+        $rxe.find('.coe-field-error').remove();
+        $rxe.find('.is-invalid').removeClass('is-invalid');
+        bootstrap.Modal.getOrCreateInstance($rxe[0]).show();
+    });
+
+    $('#edcRxEditForm').on('submit', function (e) {
+        e.preventDefault();
+        var name = $.trim($('#edcRxEditName').val()), start = $('#edcRxEditStart').val(), end = $('#edcRxEditEnd').val();
+        var ok = fieldError($('#edcRxEditName'), name ? '' : 'Enter the re-exam name.');
+        ok = fieldError($('#edcRxEditStart'), start ? '' : 'Select the re-exam start date.') && ok;
+        ok = fieldError($('#edcRxEditEnd'), !end ? 'Select the re-exam end date.'
+            : (start && end < start ? 'The re-exam cannot end before it starts.' : '')) && ok;
+        if (!ok) { return; }
+
+        var $submit = $('#edcRxEditSubmit').prop('disabled', true);
+        $.ajax({
+            url: RX_BASE_URL + '/' + rxeDriveId + '/reexam',
+            method: 'PUT',
+            contentType: 'application/json',
+            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+            data: JSON.stringify({ name: name, start_date: start, end_date: end })
+        }).done(function (res) {
+            bootstrap.Modal.getOrCreateInstance($rxe[0]).hide();
+            dt.ajax.reload(null, false);
+            Swal.fire({ icon: 'success', title: 'Updated', text: (res && res.message) || 'Re-exam updated.' });
+        }).fail(function (xhr) {
+            Swal.fire({ icon: 'error', title: 'Error', text: (xhr.responseJSON && xhr.responseJSON.message) || 'Could not update the re-exam.' });
+        }).always(function () { $submit.prop('disabled', false); });
     });
 });
 </script>

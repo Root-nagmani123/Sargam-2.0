@@ -58,6 +58,30 @@ class ReexamController extends Controller
         return response()->json($result);
     }
 
+    /** Edit Re-exam: only the name and the re-exam dates, before the CC has it (ReexamService::update). */
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $drive = ExaminationDrive::findOrFail($id);
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:150'],
+            'start_date' => ['required', 'date_format:Y-m-d'],
+            'end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:start_date'],
+        ], [
+            'name.required' => 'Enter the re-exam name.',
+            'start_date.required' => 'Select the re-exam start date.',
+            'end_date.required' => 'Select the re-exam end date.',
+            'end_date.after_or_equal' => 'The re-exam cannot end before it starts.',
+        ]);
+
+        try {
+            $drive = $this->reexams->update($drive, $data['name'], $data['start_date'], $data['end_date'], $request->user());
+        } catch (ResultMarksException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['id' => $drive->id, 'message' => "{$drive->drive_name} updated."]);
+    }
+
     public function store(Request $request, int $id): JsonResponse
     {
         $drive = ExaminationDrive::findOrFail($id);

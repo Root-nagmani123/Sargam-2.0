@@ -327,6 +327,78 @@ class CoeReexamFlowTest extends TestCase
         $this->assertSame(0, DB::table('coe_reexam_candidates')->whereNotIn('reexam_id', DB::table('coe_reexams')->select('id'))->count());
     }
 
+    /* ───────────── Edit Re-exam (name + dates) and View ───────────── */
+
+    private function editReexam(ExaminationDrive $reexam, int $from, int $to, string $name = 'ZZ Renamed Re-exam')
+    {
+        return $this->actingAs($this->admin)->putJson(route('admin.coe.examination-drive.reexam.update', $reexam->id), [
+            'name' => $name,
+            'start_date' => now()->addDays($from)->toDateString(),
+            'end_date' => now()->addDays($to)->toDateString(),
+        ]);
+    }
+
+    public function test_a_reexam_edits_only_its_name_and_dates_until_the_cc_has_it(): void
+    {
+        $reexam = $this->reexamDrive();
+        $course = $reexam->course_master_pk;
+
+        $this->editReexam($reexam, 401, 415)->assertOk();
+        $fresh = $reexam->fresh();
+        $this->assertSame('ZZ Renamed Re-exam', $fresh->drive_name);
+        $this->assertSame(now()->addDays(401)->toDateString(), $fresh->start_date->toDateString());
+        $this->assertSame(now()->addDays(415)->toDateString(), $fresh->end_date->toDateString());
+        $this->assertSame($course, $fresh->course_master_pk);
+        $this->assertSame(1, ReexamCandidate::where('reexam_id', Reexam::where('reexam_drive_id', $reexam->id)->value('id'))->count());
+
+        // Locked like a main drive once the CC has it.
+        foreach ([ExaminationDrive::CC_PENDING, ExaminationDrive::CC_APPROVED] as $cc) {
+            $reexam->update(['cc_status' => $cc]);
+            $this->editReexam($reexam, 401, 420, 'ZZ Not Saved')->assertStatus(422);
+        }
+        $reexam->update(['cc_status' => ExaminationDrive::CC_REJECTED]);
+        $this->editReexam($reexam, 401, 420)->assertOk();
+
+        // A main drive is not edited through this route; the drive form still refuses a re-exam.
+        $this->actingAs($this->admin)->putJson(route('admin.coe.examination-drive.reexam.update', $this->drive->id), [
+            'name' => 'x', 'start_date' => now()->toDateString(), 'end_date' => now()->toDateString(),
+        ])->assertStatus(422);
+        $this->assertSame('ZZ Reexam Test Drive', $this->drive->fresh()->drive_name);
+    }
+
+    public function test_edit_keeps_exam_dates_already_set_inside_the_reexam(): void
+    {
+        $reexam = $this->reexamDrive();
+        $day = now()->addDays(402)->toDateString();
+        DB::table('examination_drive_component_maps')->where('examination_drive_id', $reexam->id)
+            ->update(['exam_date' => $day, 'exam_end_date' => $day]);
+
+        $this->editReexam($reexam, 405, 410)->assertStatus(422);
+        $this->assertSame(now()->addDays(400)->toDateString(), $reexam->fresh()->start_date->toDateString());
+        $this->editReexam($reexam, 401, 403)->assertOk();
+    }
+
+    public function test_view_shows_the_main_exam_and_the_reexam_ots(): void
+    {
+        $reexam = $this->reexamDrive();
+        $subjectName = DB::table('subject_master')->where('pk', $this->subjectA)->value('subject_name');
+
+        $this->actingAs($this->admin)->get(route('admin.coe.examination-drive.coordinates', $reexam->id))
+            ->assertOk()
+            ->assertSee('Re-exam 1 of')
+            ->assertSee('Main Exam · ZZ Reexam Test Drive')
+            ->assertSee('Re-exam OTs (1)')
+            ->assertSee(e(trim($subjectName)), false)
+            ->assertSee('20.0%')        // main score: 10 / 50
+            ->assertSee('Not set yet'); // re-exam exam date not set by the faculty yet
+
+        // The main drive lists its re-exams.
+        $this->actingAs($this->admin)->get(route('admin.coe.examination-drive.coordinates', $this->drive->id))
+            ->assertOk()
+            ->assertSee('Re-exams (1)')
+            ->assertSee(route('admin.coe.examination-drive.coordinates', $reexam->id), false);
+    }
+
     /* ───────────── Step 2: faculty setup and CC approval ───────────── */
 
     /** Re-exam 1 for OT 1 in subject A, far in the future so no real exam slot clashes. */
