@@ -57,6 +57,10 @@ class RouteServiceProvider extends ServiceProvider
                  Route::middleware('web')
                 ->namespace($this->namespace)
                 ->group(base_path('routes/fc_registration.php'));
+
+            // Isolated LDAP user-creation POC (off unless LDAP_POC_ENABLED=true).
+            Route::middleware('web')
+                ->group(base_path('routes/ldap_poc.php'));
         });
     }
 
