@@ -99,14 +99,17 @@ class SecurityAndTrainingCardsTest extends TestCase
     }
 
     /**
-     * PR #356 F-002: a Security Approver III's Home card fetch stays under 200 queries (it ran
-     * 2,682: a schema lookup per family group and five lookups per permanent ID row), with the
-     * same counts the New Request tabs list (asserted above).
+     * PR #356 F-002: a Security approver's Home card fetch stays under 200 queries (Approver III ran
+     * 2,682: a schema lookup per family group and five lookups per permanent ID row; Approver II ran
+     * 1,496 on testsargam9: about twelve lookups per contractual ID row), with the same counts the
+     * New Request tabs list (asserted above).
+     *
+     * @dataProvider securityApproverRoles
      */
-    public function test_approval_three_home_fetch_stays_under_200_queries(): void
+    public function test_security_home_fetch_stays_under_200_queries(string $securityRole): void
     {
         config(['cache.default' => 'array']);
-        $user = $this->loginWithRole('Security Approver III');
+        $user = $this->loginWithRole($securityRole);
         $this->giveCards($user, self::SECURITY_CARDS);
         $user = $user->fresh();
         $roles = $user->roles->pluck('name')->all();
@@ -119,7 +122,7 @@ class SecurityAndTrainingCardsTest extends TestCase
         });
         $counts = $this->as($user, $roles)->getJson(route('admin.dashboard.cards', ['category' => $home]))->assertOk()->json('counts');
 
-        $this->assertLessThan(200, $queries, "Security Approver III Home /dashboard/cards ran $queries queries");
+        $this->assertLessThan(200, $queries, "$securityRole Home /dashboard/cards ran $queries queries");
         foreach (self::SECURITY_CARDS as $key) {
             $this->assertIsInt($counts[$key] ?? null, "$key has a figure");
         }

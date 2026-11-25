@@ -1500,9 +1500,6 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * Self-service: current user's combined mess bills for the selected period (same date logic as Process Mess Bills).
-     */
-    /**
      * "My Unpaid Mess Bills" dashboard card: the Unpaid figure My Mess Bills shows on landing
      * (this month), read from that page's own stats.
      */
@@ -1515,6 +1512,9 @@ class ProcessMessBillsEmployeeController extends Controller
         return (int) ($this->myBillsIndex(Request::create('/', 'GET'))->getData()['stats']['unpaid_count'] ?? 0);
     }
 
+    /**
+     * Self-service: current user's combined mess bills for the selected period (same date logic as Process Mess Bills).
+     */
     public function myBillsIndex(Request $request)
     {
         abort_unless(\canSeeMessSelfServiceSetup(), 403);

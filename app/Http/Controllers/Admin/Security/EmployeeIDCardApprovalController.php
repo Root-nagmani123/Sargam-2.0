@@ -48,6 +48,9 @@ class EmployeeIDCardApprovalController extends Controller
     /** The New Request rows of the last approval2() / approval3() build, counted by card type. */
     private array $newRowTypeCounts = [];
 
+    /** Set while dashboardNewRowCounts() builds a page only to count its New Request rows. */
+    private bool $countingNewRows = false;
+
     /**
      * The dashboard's four Security ID card cards for this login: how many New Request rows of
      * each type its Approval II (or III) page lists, read from that page's own build, so a card
@@ -58,9 +61,14 @@ class EmployeeIDCardApprovalController extends Controller
     public function dashboardNewRowCounts(string $level): array
     {
         $this->newRowTypeCounts = [];
-        $level === 'approval3'
-            ? $this->approval3(Request::create('/', 'GET'))
-            : $this->approval2(Request::create('/', 'GET'));
+        $this->countingNewRows = true;
+        try {
+            $level === 'approval3'
+                ? $this->approval3(Request::create('/', 'GET'))
+                : $this->approval2(Request::create('/', 'GET'));
+        } finally {
+            $this->countingNewRows = false;
+        }
 
         return $this->newRowTypeCounts + ['perm' => 0, 'cont' => 0, 'dup_perm' => 0, 'dup_cont' => 0];
     }
@@ -539,7 +547,11 @@ class EmployeeIDCardApprovalController extends Controller
         $deptMap = DB::table('department_master')->pluck('department_name', 'pk')->toArray();
         
         $contDtos = $contRows->map(function ($r) use ($contHasA2) {
-            $dto = IdCardSecurityMapper::toContractualRequestDto($r);
+            // Counting reads only status and card type, which the list mapper sets the same way
+            // without its ~12 lookups per row (PR #356 F-002: Approver II Home ran 1,496 queries).
+            $dto = $this->countingNewRows
+                ? IdCardSecurityMapper::toContractualRequestDtoForApprovalList($r, [], [])
+                : IdCardSecurityMapper::toContractualRequestDto($r);
 
             // If this contractual request already has Level 2 (A2) approval,
             // then at Approval 2 screen it should be view-only and marked
@@ -612,6 +624,9 @@ class EmployeeIDCardApprovalController extends Controller
             return (string) ($r->status ?? 'Pending') === 'Pending'
                 && !((bool) ($r->is_view_only ?? false));
         })->values(), $request);
+        if ($this->countingNewRows) {
+            return null; // the counts are in $this->newRowTypeCounts; the other tabs are not needed
+        }
 
         // Processed (in pipeline): view-only / non-pending — but not finally approved or rejected
         // (those belong only in Issued and Rejected tabs).
