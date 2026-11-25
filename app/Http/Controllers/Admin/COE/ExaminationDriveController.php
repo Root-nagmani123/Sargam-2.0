@@ -23,6 +23,8 @@ use App\Models\SubjectMaxMarksMaster;
 use App\Models\SubjectMaster;
 use App\Models\TermMaster;
 use App\Services\COE\CourseCoordinatorService;
+use App\Services\COE\ReexamService;
+use App\Services\COE\ResultMarksException;
 use App\Services\COE\ResultMarksService;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
@@ -181,6 +183,8 @@ class ExaminationDriveController extends Controller
         abort_if($drive->status === ExaminationDrive::STATUS_CLOSED, 422, 'A closed drive cannot be edited.');
         abort_if($drive->cc_status === ExaminationDrive::CC_APPROVED, 422, 'This drive has been approved by the Course Coordinator and cannot be edited.');
         abort_if($drive->cc_status === ExaminationDrive::CC_PENDING, 422, 'This drive is pending at the Course Coordinator and cannot be edited.');
+        // A re-exam drive is a copy of its main drive; editing would replace its faculty mapping.
+        abort_if(\App\Services\COE\ReexamService::isReexamDrive((int) $drive->id), 422, 'A re-exam drive is copied from its main drive and cannot be edited here.');
 
         // Who already knew about the drive, to notify only what changes.
         $wasDraft = $drive->status === ExaminationDrive::STATUS_DRAFT;
@@ -327,6 +331,8 @@ class ExaminationDriveController extends Controller
         $drive = ExaminationDrive::findOrFail($id);
         abort_if($drive->cc_status === ExaminationDrive::CC_PENDING, 422, 'This drive is pending at the Course Coordinator and cannot be deleted.');
         abort_if($drive->cc_status === ExaminationDrive::CC_APPROVED, 422, 'This drive has been approved by the Course Coordinator and cannot be deleted.');
+        abort_if(\App\Services\COE\ReexamService::hasReexams((int) $drive->id), 422, 'This drive has re-exams and cannot be deleted.');
+        // A re-exam drive's link and candidate list go with it (coe_reexams cascade).
         $drive->delete();
 
         return response()->json(['message' => 'Examination drive deleted.']);
@@ -562,6 +568,16 @@ class ExaminationDriveController extends Controller
         }
         if ($locked = $this->facultyLockMessage($drive)) {
             return response()->json(['message' => $locked], 422);
+        }
+        // Re-exam: everything stays as copied from the main drive; only the Tentative Exam
+        // Range is taken from the request (ReexamService::setupRows). The checks below then
+        // run on those rows as on any drive (inside the re-exam dates, no slot clash ...).
+        if (ReexamService::isReexamDrive((int) $drive->id)) {
+            try {
+                $data['rows'] = app(ReexamService::class)->setupRows($drive, $subjectPk, $data['rows'] ?? []);
+            } catch (ResultMarksException $e) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
         }
         // Each component's exam range must sit inside the drive's dates.
         $from = optional($drive->start_date)->toDateString();
@@ -1027,6 +1043,9 @@ class ExaminationDriveController extends Controller
         if ($locked = $this->facultyLockMessage($drive)) {
             return response()->json(['message' => $locked], 422);
         }
+        if (ReexamService::isReexamDrive((int) $drive->id)) {
+            return response()->json(['message' => 'A re-exam keeps the faculty of its main drive. Only the Tentative Exam Range can be set.'], 422);
+        }
 
         $subNames = $this->cleanNames($data['sub_faculty'] ?? []);
         $unknown = $this->unknownFacultyNames(array_merge([$data['faculty'] ?? ''], $subNames));
@@ -1157,9 +1176,19 @@ class ExaminationDriveController extends Controller
             $slots->push(['map' => $map, 'component' => $label($map), 'start' => $start, 'end' => $end]);
         }
 
-        // Within the course dates (the drive's dates are set from these slots below).
-        $this->assertWithinCourse((int) $drive->course_master_pk, $slots->min('start')->toDateString(),
-            $slots->max('end')->toDateString(), 'slots', 'The proposed exam dates');
+        // Within the course dates (the drive's dates are set from these slots below). A
+        // re-exam may run after the course ends: its slots sit inside the re-exam dates COE set.
+        if (ReexamService::isReexamDrive((int) $drive->id)) {
+            $from = optional($drive->start_date)->toDateString();
+            $to = optional($drive->end_date)->toDateString();
+            if (($from && $slots->min('start')->toDateString() < $from) || ($to && $slots->max('end')->toDateString() > $to)) {
+                return response()->json(['message' => 'The proposed exam dates must be within the re-exam dates ('
+                    . $drive->start_date->format('d-m-Y') . ' to ' . $drive->end_date->format('d-m-Y') . ').'], 422);
+            }
+        } else {
+            $this->assertWithinCourse((int) $drive->course_master_pk, $slots->min('start')->toDateString(),
+                $slots->max('end')->toDateString(), 'slots', 'The proposed exam dates');
+        }
         // Same clash rule as the faculty setup; this drive's own rows are replaced, so left out.
         if ($error = $this->courseSlotClash((int) $drive->course_master_pk, $slots, 'proposed exam slot',
             fn ($q) => $q->where('examination_drive_component_maps.examination_drive_id', '!=', $drive->id))) {
@@ -1355,8 +1384,11 @@ class ExaminationDriveController extends Controller
     private function subjectsSetUp(ExaminationDrive $drive): array
     {
         $subjects = $drive->facultyMaps->pluck('subject_master_pk')->unique();
-        $saved = ExaminationDriveComponentMap::where('examination_drive_id', $drive->id)
-            ->whereIn('subject_master_pk', $subjects)->distinct()->pluck('subject_master_pk');
+        // A re-exam's rows are copied in from the start: set up = every component dated.
+        $saved = ReexamService::isReexamDrive((int) $drive->id)
+            ? collect(ReexamService::datedSubjects((int) $drive->id))->intersect($subjects->map(fn ($pk) => (int) $pk))
+            : ExaminationDriveComponentMap::where('examination_drive_id', $drive->id)
+                ->whereIn('subject_master_pk', $subjects)->distinct()->pluck('subject_master_pk');
 
         return [$saved->count(), $subjects->count()];
     }
@@ -1443,7 +1475,21 @@ class ExaminationDriveController extends Controller
             'keepSubmitted' => $this->isMappedFaculty($drive) && $drive->cc_status === ExaminationDrive::CC_PENDING,
             'subjectTabs' => $this->accessibleSubjects($drive),
             'subjectPk'   => $subjectPk,
+            // Re-exam: only the Tentative Exam Range is editable (ReexamService::setupRows).
+            'reexam'      => $this->reexamInfo($drive),
         ]);
+    }
+
+    /** ['no' => 1, 'main' => 'Law Drive'] when $drive is a re-exam, else null. */
+    private function reexamInfo(ExaminationDrive $drive): ?array
+    {
+        $link = ReexamService::linksFor([(int) $drive->id])[(int) $drive->id] ?? null;
+        if (! $link) {
+            return null;
+        }
+        $main = ExaminationDrive::find($link->main_drive_id);
+
+        return ['no' => (int) $link->reexam_no, 'main' => filled($main?->drive_name) ? trim($main->drive_name) : 'Examination Drive #' . $link->main_drive_id];
     }
 
     /**
@@ -1654,6 +1700,8 @@ class ExaminationDriveController extends Controller
             'drive'    => $this->driveViewModel($drive),
             'faculty'  => $this->facultyNames(),
             'examModes'=> self::EXAM_MODES,
+            // Re-exam drive: its main drive + candidates; main drive: its re-exams (ReexamService::overview).
+            'reexam'   => app(ReexamService::class)->overview($drive),
         ]);
     }
 
@@ -1895,6 +1943,8 @@ class ExaminationDriveController extends Controller
                 // label every list / export shows — with times when set, else the dates.
                 'exam_start_at'  => optional($map->exam_start_at)->format('Y-m-d H:i') ?? '',
                 'exam_end_at'    => optional($map->exam_end_at)->format('Y-m-d H:i') ?? '',
+                // No range saved yet (a re-exam's copied rows start without one).
+                'dated'          => $map->exam_date !== null,
                 'exam_range'     => ($map->exam_start_at
                         ? $map->exam_start_at->format('d-m-Y H:i')
                         : (optional($map->exam_date)->format('d-m-Y') ?: (optional($drive->start_date)->format('d-m-Y') ?: '-')))

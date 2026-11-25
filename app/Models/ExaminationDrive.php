@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * COE → Examination Management → Examination Drive Configuration.
@@ -80,6 +81,12 @@ class ExaminationDrive extends Model
     public function facultyMaps(): HasMany
     {
         return $this->hasMany(ExaminationDriveFacultyMap::class, 'examination_drive_id');
+    }
+
+    /** Set when this drive is a re-exam: its link to the main drive (coe_reexams). */
+    public function reexamLink(): HasOne
+    {
+        return $this->hasOne(\App\Models\COE\Reexam::class, 'reexam_drive_id');
     }
 
     /**

@@ -10,6 +10,13 @@
 <style>
 .mr-table th { white-space: normal; min-width: 64px; vertical-align: bottom; }
 .mr-out { display: block; font-size: 11px; color: var(--ds-ink-muted, #7c7c7c); font-weight: 400; }
+/* Re-exam filter: the re-exam mark, labelled, with the main mark under it */
+.mr-rx { display: block; font-size: 11px; font-weight: 600; color: var(--coe-brand); }
+/* Filter caption inside the top of each box ("Course" over "All"), as the Figma */
+.coe-page .mr-filter { position: relative; }
+.coe-page .mr-filter .mr-filter-cap { position: absolute; top: 7px; left: 13px; z-index: 1; margin: 0; pointer-events: none;
+                                      font-size: 11px; line-height: 1; color: var(--ds-ink-muted, #667085); }
+.coe-page .mr-filter .form-select { height: 52px; padding-top: 20px; padding-bottom: 4px; }
 </style>
 @endpush
 
@@ -26,6 +33,11 @@
     // A cell's own course max, shown only where the header has none.
     $own = fn ($value, $headerMax, $rowMax) => $value !== null && $headerMax === null && $rowMax !== null
         ? '<span class="mr-out">/ '.e($outMax($rowMax)).'</span>' : '';
+    // Re-exam filter (ResultMarksService::reexamMerit): a cell the re-exam changed shows the
+    // re-exam value (or Pending), "Re-exam", and the main merit's value under it.
+    $rx = fn ($value, $main) => '<strong>'.e($value === null ? 'Pending' : $num($value)).'</strong>'
+        .'<span class="mr-rx">Re-exam</span><span class="mr-out">Main '.e($num($main)).'</span>';
+    $isRx = (bool) $reexam;
 @endphp
 <div class="container-fluid coe-page">
     <x-breadcrum title="Merit & Ranking" :showBack="false"
@@ -58,11 +70,41 @@
                       class="d-flex flex-wrap align-items-center gap-3">
                     @if ($isArchived)<input type="hidden" name="scope" value="archived">@endif
                     <span class="programme-dt-filters-label">Filter</span>
-                    <div class="programme-dt-filter-select">
-                        <select name="course" id="mrFilterCourse" class="form-select" aria-label="Course">
+                    <div class="programme-dt-filter-select mr-filter">
+                        <label class="mr-filter-cap" for="mrFilterCourse">Course</label>
+                        <select name="course" id="mrFilterCourse" class="form-select">
                             <option value="" @selected($coursePk === null)>All</option>
                             @foreach ($courses as $pk => $name)
                                 <option value="{{ $pk }}" @selected($pk === $coursePk)>{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    {{-- Drive narrows the Re-exam list (main drives with re-exams); merit stays course-wide. --}}
+                    <div class="programme-dt-filter-select mr-filter">
+                        <label class="mr-filter-cap" for="mrFilterDrive">Drive</label>
+                        <select name="drive" id="mrFilterDrive" class="form-select">
+                            <option value="" @selected($drivePk === null)>All</option>
+                            {{-- Every main drive; under All courses the course is added (names repeat across courses). --}}
+                            @foreach ($driveOptions as $pk => $d)
+                                <option value="{{ $pk }}" @selected($pk === $drivePk)>{{ $d['name'] }}{{ $coursePk === null && isset($courses[$d['course']]) ? ' · ' . $courses[$d['course']] : '' }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="programme-dt-filter-select mr-filter">
+                        <label class="mr-filter-cap" for="mrFilterStatus">Status</label>
+                        <select name="status" id="mrFilterStatus" class="form-select">
+                            <option value="" @selected($status === null)>All</option>
+                            @foreach ($statuses as $s)
+                                <option value="{{ $s }}" @selected($s === $status)>{{ $s }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="programme-dt-filter-select mr-filter">
+                        <label class="mr-filter-cap" for="mrFilterReexam">Re-exam</label>
+                        <select name="reexam" id="mrFilterReexam" class="form-select">
+                            <option value="" @selected($reexamPk === null)>All</option>
+                            @foreach ($reexamOptions as $pk => $r)
+                                <option value="{{ $pk }}" @selected($pk === $reexamPk)>{{ $r['label'] }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -82,6 +124,13 @@
                 </div>
             </div>
 
+            @if ($isRx)
+                <p class="coe-muted small mb-3">
+                    Re-exam {{ $reexam['no'] }} of {{ $reexam['main'] }}: only its OTs. In each subject they re-sat, the re-exam mark
+                    (counted once approved, no moderation) replaces the main mark in the totals and Pass / Fail; the main mark is shown under it.
+                    Rank is the main merit rank and does not change.
+                </p>
+            @endif
             @if ($pending > 0)
                 <p class="coe-muted small mb-3">
                     {{ $pending }} OT(s) on this course are not ranked yet: some of their marks are still to be approved or moderated.
@@ -125,22 +174,41 @@
                                     <td class="coe-nowrap">{{ $row['name'] ?: '-' }}</td>
                                     <td>{{ $row['service'] ?: '-' }}</td>
                                     @foreach ($subjects as $spk => $s)
-                                        <td>{{ $num($row['subjects'][$spk]) }}{!! $own($row['subjects'][$spk], $s['max'], $row['max']['subjects'][$spk] ?? null) !!}</td>
+                                        @if ($isRx && array_key_exists($spk, $row['reexam']['subjects']))
+                                            <td>{!! $rx($row['subjects'][$spk], $row['reexam']['subjects'][$spk]) !!}</td>
+                                        @else
+                                            <td>{{ $num($row['subjects'][$spk]) }}{!! $own($row['subjects'][$spk], $s['max'], $row['max']['subjects'][$spk] ?? null) !!}</td>
+                                        @endif
                                     @endforeach
-                                    <td>{{ $num($row['total_a']) }}{!! $own($row['total_a'], $maxA, $row['max']['a']) !!}</td>
+                                    @if ($isRx)
+                                        <td>{!! $rx($row['total_a'], $row['reexam']['total_a']) !!}</td>
+                                    @else
+                                        <td>{{ $num($row['total_a']) }}{!! $own($row['total_a'], $maxA, $row['max']['a']) !!}</td>
+                                    @endif
                                     <td>{{ $num($row['director']) }}{!! $own($row['director'], $maxB, $row['max']['b']) !!}</td>
-                                    <td data-order="{{ $row['grand'] }}">
+                                    <td data-order="{{ $row['grand'] ?? 0 }}">
                                         {{-- Always the row's own course max: under All courses differ. --}}
-                                        <strong>{{ $num($row['grand']) }}</strong><span class="mr-out">/ {{ $num($row['max']['max']) }}</span>
+                                        @if ($isRx)
+                                            {!! $rx($row['grand'], $row['reexam']['grand']) !!}<span class="mr-out">/ {{ $num($row['max']['max']) }}</span>
+                                        @else
+                                            <strong>{{ $num($row['grand']) }}</strong><span class="mr-out">/ {{ $num($row['max']['max']) }}</span>
+                                        @endif
                                     </td>
                                     @foreach ($qualifying as $paper => $paperMax)
-                                        <td>{{ $num($row['qualifying'][$paper]) }}{!! $own($row['qualifying'][$paper], $paperMax, $row['max']['qualifying'][$paper]) !!}</td>
+                                        @if ($isRx && array_key_exists($paper, $row['reexam']['qualifying']))
+                                            <td>{!! $rx($row['qualifying'][$paper], $row['reexam']['qualifying'][$paper]) !!}</td>
+                                        @else
+                                            <td>{{ $num($row['qualifying'][$paper]) }}{!! $own($row['qualifying'][$paper], $paperMax, $row['max']['qualifying'][$paper]) !!}</td>
+                                        @endif
                                     @endforeach
                                     <td data-search="{{ $row['result'] ?? '' }}">
                                         @if ($row['result'] === null)
                                             <span title="No passing marks set for this service">-</span>
                                         @else
-                                            <span class="coe-state coe-state--{{ $row['result'] === 'Pass' ? 'active' : 'inactive' }}">{{ strtoupper($row['result']) }}</span>
+                                            <span class="coe-state coe-state--{{ $row['result'] === 'Pass' ? 'active' : ($row['result'] === 'Pending' ? 'pending' : 'inactive') }}">{{ strtoupper($row['result']) }}</span>
+                                            @if ($isRx)
+                                                <span class="mr-rx">Re-exam</span><span class="mr-out">Main {{ strtoupper($row['reexam']['result'] ?? '-') }}</span>
+                                            @endif
                                         @endif
                                     </td>
                                 </tr>
@@ -166,7 +234,7 @@ $(function () {
 
     CoeGrid.init({
         table: '#mrTable',
-        title: @json('Merit & Ranking' . ($coursePk ? ' - ' . $courses[$coursePk] : '')),
+        title: @json('Merit & Ranking' . ($coursePk ? ' - ' . $courses[$coursePk] : '') . ($reexam ? ' - Re-exam ' . $reexam['no'] : '')),
         snoCol: false,
         // All: course by course, each in rank order, as the server sends them.
         order: @json($coursePk ? [[0, 'asc']] : []),
@@ -179,7 +247,11 @@ $(function () {
         empty: { title: 'No Ranked Officers', zeroTitle: 'No Officers Found', text: 'Nobody on this course has all their marks approved and moderated yet. Courses show here once an exam on an Active drive is over.' }
     });
 
-    $('#mrFilterCourse').on('change', function () { $('#mrFilterForm').submit(); });
+    // A filter clears the ones that depend on it (Course → Drive → Re-exam), then reloads:
+    // a re-exam picked would otherwise pull its own course and drive back.
+    $('#mrFilterCourse').on('change', function () { $('#mrFilterDrive, #mrFilterReexam').val(''); $('#mrFilterForm').submit(); });
+    $('#mrFilterDrive').on('change', function () { $('#mrFilterReexam').val(''); $('#mrFilterForm').submit(); });
+    $('#mrFilterStatus, #mrFilterReexam').on('change', function () { $('#mrFilterForm').submit(); });
 });
 </script>
 @endpush

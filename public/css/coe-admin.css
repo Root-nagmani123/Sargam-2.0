@@ -1749,3 +1749,6 @@
     .coe-sets .coe-sets-qs__text { flex-basis: calc(100% - 2.75rem); }
     .coe-sets .coe-sets-qs__marks { margin-left: 2.75rem; }
 }
+
+/* "(Re-exam)" under the participant on Marksheet Generation / Verified Marksheet (Figma) */
+.coe-page .coe-reexam-tag { color: var(--coe-brand); font-size: .8125rem; }

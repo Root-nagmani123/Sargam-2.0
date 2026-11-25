@@ -128,7 +128,7 @@
 @endphp
 <div class="container-fluid coe-page">
 
-    <x-breadcrum title="Map Faculty to Examination Drive" :showBack="true"
+    <x-breadcrum :title="$reexam ? 'Map Faculty to Examination Drive Re-exam' : 'Map Faculty to Examination Drive'" :showBack="true"
                  :backUrl="route('admin.coe.faculty-examination-drive.index')"
                  :items="['Setup', 'COE', 'Examination Management', 'Map Faculty to Examination Drive']" />
 
@@ -205,6 +205,10 @@
     @elseif ($keepSubmitted)
         <div class="alert alert-info"><i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>This drive is <strong>pending at the Course Coordinator</strong>. You can still correct values, but submitted components cannot be removed.</div>
     @endif
+    {{-- Re-exam: copied from the main drive; only the Tentative Exam Range is set here (ReexamService::setupRows). --}}
+    @if ($reexam && ! $readOnly)
+        <div class="alert alert-warning"><i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i><strong>Re-exam {{ $reexam['no'] }}</strong> of {{ $reexam['main'] }}. Components, marks, faculty and exam mode stay as in the main drive. Set the <strong>Tentative Exam Range</strong> (date and time) of each component.</div>
+    @endif
 
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
@@ -231,19 +235,19 @@
                         <tr class="fedc-map-row">
                             <td class="fedc-subject">{{ $row['subject'] }}</td>
                             <td>
-                                <select class="form-select fedc-sel-component">
+                                <select class="form-select fedc-sel-component" @disabled($reexam)>
                                     @foreach ($components as $c)
                                     <option value="{{ $c }}" @if($c === $row['component']) selected @endif>{{ $c }}</option>
                                     @endforeach
-                                    @unless ($readOnly)<option value="__add__" class="fedc-add-opt">+ Add Component</option>@endunless
+                                    @unless ($readOnly || $reexam)<option value="__add__" class="fedc-add-opt">+ Add Component</option>@endunless
                                 </select>
                             </td>
                             <td>
                                 <input type="number" class="form-control fedc-max-marks"
-                                       min="0" max="1000" step="0.01" value="{{ $row['max_marks'] }}">
+                                       min="0" max="1000" step="0.01" value="{{ $row['max_marks'] }}" @disabled($reexam)>
                             </td>
                             <td>
-                                <select class="form-select fedc-source">
+                                <select class="form-select fedc-source" @disabled($reexam)>
                                     @foreach ($sources as $s)
                                     <option value="{{ $s }}" @if($s === $row['source']) selected @endif>{{ $s }}</option>
                                     @endforeach
@@ -257,8 +261,8 @@
                                         data-sub='@json($systemSource ? [] : array_slice($row['sub_coordinators'], 1))'
                                         data-codes='@json($systemSource ? new \stdClass : (object) $row['faculty_codes'])'
                                         data-uniq='@json($systemSource ? new \stdClass : (object) $row['faculty_unique_codes'])'
-                                        @disabled($systemSource)
-                                        title="Click to assign Faculty & Sub coordinates">
+                                        @disabled($systemSource || $reexam)
+                                        title="{{ $reexam ? 'Kept from the main drive' : 'Click to assign Faculty & Sub coordinates' }}">
                                     <span class="fedc-fac-text">
                                     @if($systemSource)
                                         {{ $row['source'] }}
@@ -278,20 +282,20 @@
                                  A row saved before times existed opens as its dates, whole days. --}}
                             <td><div class="fedc-exam-pair">
                                 <input type="text" class="form-control fedc-exam-at fedc-exam-start" readonly placeholder="Start: dd/mm/yyyy hh:mm"
-                                       data-value="{{ $row['exam_start_at'] ?: \Carbon\Carbon::createFromFormat('d/m/Y', $row['exam_date'])->format('Y-m-d') . ' 00:00' }}">
+                                       data-value="{{ $reexam && ! $row['dated'] ? '' : ($row['exam_start_at'] ?: \Carbon\Carbon::createFromFormat('d/m/Y', $row['exam_date'])->format('Y-m-d') . ' 00:00') }}">
                                 <span class="fedc-exam-to">to</span>
                                 <input type="text" class="form-control fedc-exam-at fedc-exam-end" readonly placeholder="End: dd/mm/yyyy hh:mm"
-                                       data-value="{{ $row['exam_end_at'] ?: \Carbon\Carbon::createFromFormat('d/m/Y', $row['exam_end_date'])->format('Y-m-d') . ' 23:59' }}">
+                                       data-value="{{ $reexam && ! $row['dated'] ? '' : ($row['exam_end_at'] ?: \Carbon\Carbon::createFromFormat('d/m/Y', $row['exam_end_date'])->format('Y-m-d') . ' 23:59') }}">
                             </div></td>
                             <td>
-                                <select class="form-select fedc-sel-mode">
+                                <select class="form-select fedc-sel-mode" @disabled($reexam)>
                                     @foreach ($examModes as $m)
                                     <option value="{{ $m }}" @if($m === $row['exam_mode']) selected @endif>{{ $m }}</option>
                                     @endforeach
                                 </select>
                             </td>
                             <td>
-                                <select class="form-select fedc-sel-type">
+                                <select class="form-select fedc-sel-type" @disabled($reexam)>
                                     <option value="">Select</option>
                                     @foreach ($componentExamTypes as $t)
                                     <option value="{{ $t }}" @if($t === $row['exam_type']) selected @endif>{{ $t }}</option>
@@ -301,12 +305,12 @@
                             <td>
                                 <div class="fedc-actions">
                                     {{-- A submitted component stays while the drive is pending at the CC. --}}
-                                    @unless ($readOnly || $keepSubmitted)
+                                    @unless ($readOnly || $keepSubmitted || $reexam)
                                     <button type="button" class="fedc-row-del fedc-row-del-btn" aria-label="Remove row">
                                         <i class="bi bi-dash" aria-hidden="true"></i>
                                     </button>
                                     @endunless
-                                    @unless ($readOnly)
+                                    @unless ($readOnly || $reexam)
                                     <button type="button" class="fedc-row-add fedc-row-add-btn" aria-label="Add row">
                                         <i class="bi bi-plus" aria-hidden="true"></i>
                                     </button>

@@ -3,6 +3,7 @@
 namespace App\DataTables;
 
 use App\Models\ExaminationDrive;
+use App\Services\COE\ReexamService;
 use Illuminate\Database\Eloquent\Builder;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Column;
@@ -31,7 +32,7 @@ class ExaminationDriveDataTable extends DataTable
     {
         return $this->applySearch(new EloquentDataTable($query))
             ->addIndexColumn()
-            ->editColumn('name', fn ($row) => e($this->driveName($row)))
+            ->editColumn('name', fn ($row) => e($this->driveName($row)) . $this->reexamTag($row))
             ->editColumn('exam_type', fn ($row) => $row->examinationType ? e($row->examinationType->exam_type_name) : '<span class="coe-muted">-</span>')
             ->editColumn('term', fn ($row) => e($row->term->term_name ?? '-'))
             ->editColumn('course', fn ($row) => e($row->course->course_name ?? '-'))
@@ -59,7 +60,32 @@ class ExaminationDriveDataTable extends DataTable
                 'data-edc-start' => fn ($row) => optional($row->start_date)->format('d-m-Y'),
                 'data-edc-end' => fn ($row) => optional($row->end_date)->format('d-m-Y'),
             ])
-            ->rawColumns(['exam_type', 'service', 'sub_coords', 'components', 'status', 'actions']);
+            ->rawColumns(['name', 'exam_type', 'service', 'sub_coords', 'components', 'status', 'actions']);
+    }
+
+    /** "Re-exam 1" tag after the name of a re-exam drive (coe_reexams). */
+    protected function reexamTag(ExaminationDrive $row): string
+    {
+        if (! ReexamService::enabled() || ! $row->relationLoaded('reexamLink') || ! $row->reexamLink) {
+            return '';
+        }
+
+        return ' <span class="coe-state edc-status-pending edc-reexam-tag">Re-exam ' . (int) $row->reexamLink->reexam_no . '</span>';
+    }
+
+    /**
+     * Whether the row may show the Re-exam button: a main drive whose exams are all over
+     * after CC approval (ReexamService::refusal, no marks read). The button starts hidden;
+     * the page asks reexam-ready once for the drawn rows and shows those whose results are
+     * final with someone failed or absent.
+     */
+    protected function mayHaveReexam(ExaminationDrive $row): bool
+    {
+        if (! ReexamService::enabled() || ($row->relationLoaded('reexamLink') && $row->reexamLink)) {
+            return false;
+        }
+
+        return app(ReexamService::class)->refusal($row, false) === null;
     }
 
     /**
@@ -106,6 +132,10 @@ class ExaminationDriveDataTable extends DataTable
             // loaded up front so the two columns do not query per row.
             ->with(['facultyMaps' => fn ($q) => $q->with('faculty')->orderBy('id')])
             ->with('componentMaps.faculty');
+        if (ReexamService::enabled()) {
+            // Re-exam tag, and no Edit / Re-exam button on a re-exam drive.
+            $query->with('reexamLink');
+        }
 
         $scope = request()->query('scope') === 'archived' ? 'archived' : 'active';
         if ($scope === 'archived') {
@@ -224,14 +254,28 @@ class ExaminationDriveDataTable extends DataTable
         //   Approved by CC - no Edit, no Delete.
         $approved = $row->cc_status === ExaminationDrive::CC_APPROVED;
         $pending = $row->cc_status === ExaminationDrive::CC_PENDING;
+        // A re-exam drive is a copy of its main drive: its Edit (coe-act--rxedit) opens Edit
+        // Re-exam (name + dates only, ReexamController::update), not the drive form, which
+        // would replace its faculty mapping. Same CC lock as a main drive.
+        $isReexam = $row->relationLoaded('reexamLink') && $row->reexamLink;
         $editLock = $approved ? 'Approved by the Course Coordinator - cannot be edited'
             : ($pending ? 'Pending at the Course Coordinator - cannot be edited' : null);
 
-        $html = '<div class="coe-act-group" role="group" aria-label="Row actions">'
-            . '<a href="' . $coordUrl . '" class="coe-act"><span class="coe-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span><span class="coe-act__label">View</span></a>';
+        $html = '<div class="coe-act-group" role="group" aria-label="Row actions">';
+        if ($this->mayHaveReexam($row)) {
+            $html .= '<button type="button" class="coe-act coe-act--reexam d-none"><span class="coe-act__icon"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i></span><span class="coe-act__label">Re-exam</span></button>';
+        }
+        if ($isReexam && $approved) {
+            // Re-exam Result (ReexamController::result): Pass / Fail on the re-exam's own marks.
+            $html .= '<button type="button" class="coe-act coe-act--rxresult"><span class="coe-act__icon"><i class="bi bi-clipboard-check" aria-hidden="true"></i></span><span class="coe-act__label">Result</span></button>';
+        }
+        $html .= '<a href="' . $coordUrl . '" class="coe-act"><span class="coe-act__icon"><i class="bi bi-eye" aria-hidden="true"></i></span><span class="coe-act__label">View</span></a>';
 
         if ($canEdit) {
-            $html .= '<button type="button" class="coe-act coe-act--edit"'
+            $html .= '<button type="button" class="coe-act coe-act--edit' . ($isReexam ? ' coe-act--rxedit' : '') . '"'
+                . ($isReexam ? ' data-rx-name="' . e($this->driveName($row)) . '"'
+                    . ' data-rx-start="' . e(optional($row->start_date)->format('Y-m-d')) . '"'
+                    . ' data-rx-end="' . e(optional($row->end_date)->format('Y-m-d')) . '"' : '')
                 . ($editLock ? ' disabled title="' . $editLock . '"' : '')
                 . '><span class="coe-act__icon"><i class="bi bi-pencil" aria-hidden="true"></i></span><span class="coe-act__label">Edit</span></button>';
         }

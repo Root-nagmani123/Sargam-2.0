@@ -35,23 +35,41 @@ class ResultCompilationController extends Controller
         ]);
     }
 
-    /** ?course=<pk>&subject=<pk>&status=evaluated|pending&scope=active|archived */
+    /**
+     * ?course=<pk>&subject=<pk>&status=evaluated|pending&scope=active|archived[&reexam=<drive id>]
+     * With reexam (a "(Re-exam)" row): that re-exam's subjects and only its re-exam OTs, on
+     * the re-exam marks (ResultMarksService::reexamCompilationSheet).
+     */
     public function participants(Request $request)
     {
         $scope = $request->query('scope') === 'archived' ? 'archived' : 'active';
         $status = $request->query('status') === 'pending' ? 'pending' : 'evaluated';
 
-        $sheets = $this->results->courseSheets($scope);
-        $coursePk = (int) $request->query('course');
-        if (! isset($sheets[$coursePk])) {
-            $coursePk = (int) array_key_first($sheets);
+        $reexam = (int) $request->query('reexam') ?: null;
+        $rxSheet = $reexam ? $this->results->reexamCompilationSheet($scope, $reexam) : null;
+        if ($rxSheet) {
+            $sheet = $rxSheet;
+            $coursePk = $sheet['course_pk'];
+            $courses = [$coursePk => $sheet['course']];
+        } else {
+            $reexam = null;
+            $sheets = $this->results->courseSheets($scope);
+            $coursePk = (int) $request->query('course');
+            if (! isset($sheets[$coursePk])) {
+                $coursePk = (int) array_key_first($sheets);
+            }
+            $sheet = $sheets[$coursePk] ?? ['course_pk' => 0, 'course' => '', 'subjects' => [], 'rows' => []];
+            $courses = array_map(fn ($s) => $s['course'], $sheets);
         }
-        $sheet = $sheets[$coursePk] ?? ['course_pk' => 0, 'course' => '', 'subjects' => [], 'rows' => []];
 
         $subjectPk = (int) $request->query('subject');
         $subjectPk = isset($sheet['subjects'][$subjectPk]) ? $subjectPk : null;
 
         $rows = array_values(array_filter($sheet['rows'], function ($r) use ($subjectPk, $status) {
+            // A re-exam OT is listed only under the subjects they sit.
+            if ($subjectPk && isset($r['sits']) && ! in_array($subjectPk, $r['sits'], true)) {
+                return false;
+            }
             $isPending = $subjectPk ? in_array($subjectPk, $r['pending'], true) : $r['pending'] !== [];
 
             return $status === 'pending' ? $isPending : ! $isPending;
@@ -59,8 +77,9 @@ class ResultCompilationController extends Controller
 
         return view('admin.coe.result_compilation.participants', [
             'scope' => $scope,
-            'courses' => array_map(fn ($s) => $s['course'], $sheets),
+            'courses' => $courses,
             'coursePk' => $coursePk,
+            'reexam' => $reexam,
             'subjects' => $sheet['subjects'],
             'subjectPk' => $subjectPk,
             'status' => $status,
@@ -77,12 +96,15 @@ class ResultCompilationController extends Controller
             'course' => ['required', 'integer'],
             'subject' => ['nullable', 'integer'],
             'student' => ['nullable', 'integer'],
+            // A "(Re-exam)" row: that re-exam drive's OTs only.
+            'reexam' => ['nullable', 'integer'],
         ]);
 
         $result = $this->results->notifyPending(
             (int) $data['course'],
             isset($data['subject']) ? (int) $data['subject'] : null,
             isset($data['student']) ? (int) $data['student'] : null,
+            isset($data['reexam']) ? (int) $data['reexam'] : null,
         );
 
         if ($result['pending'] === 0) {
