@@ -123,31 +123,7 @@ class DashboardLayoutTest extends TestCase
         $this->assertSame(['upcoming_courses', 'upcoming_events'], $this->page()->viewData('cardsToRender')->pluck('key')->all());
     }
 
-    /**
-     * PR #356 F-005: a second request inserting this login's first layout between the save's
-     * check and its write. Reproduced deterministically: the competing row is written right
-     * after the save's first query on user_dashboard_layouts (the old exists() check).
-     */
-    public function test_a_save_racing_another_first_save_is_not_a_500(): void
-    {
-        $raced = false;
-        DB::listen(function ($query) use (&$raced) {
-            if (! $raced && str_starts_with($query->sql, 'select exists') && str_contains($query->sql, 'user_dashboard_layouts')) {
-                $raced = true;
-                DB::table('user_dashboard_layouts')->insert([
-                    'user_id' => $this->user->pk, 'sidebar_category_id' => $this->setupId,
-                    'card_order' => '["upcoming_events"]', 'hidden_cards' => '[]', 'created_at' => now(), 'updated_at' => now(),
-                ]);
-            }
-        });
-
-        $this->save(['upcoming_courses'], ['widget_calendar'])->assertOk();
-
-        $rows = DB::table('user_dashboard_layouts')->where('user_id', $this->user->pk)->where('sidebar_category_id', $this->setupId)->get();
-        $this->assertCount(1, $rows);
-        $this->assertSame(['upcoming_courses'], json_decode($rows[0]->card_order, true), 'the later save wins');
-        $this->assertSame(['widget_calendar'], json_decode($rows[0]->hidden_cards, true));
-    }
+    // PR #356 F-005, two saves racing on a login's first layout: DashboardLayoutConcurrencyTest.
 
     /** The other request already committed its row: this save updates it, keeping created_at. */
     public function test_a_save_over_an_existing_row_updates_it_in_place(): void
