@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Console\Commands\ReconcileEmployeeRoleMappings;
 use App\Http\Controllers\Admin\MemberController;
 use App\Models\EmployeeRoleMapping;
 use App\Models\User;
@@ -212,9 +213,9 @@ class EmployeeRoleSyncTest extends TestCase
 
         $this->artisan('members:reconcile-role-mappings', ['--user' => $target->pk])
             ->expectsOutputToContain('Dry run: nothing was written.')
-            ->expectsTable(['Option pk', 'Option', 'Logins gaining it', 'Logins losing it'], collect([
-                [$staleOptionPk, (string) $names[$staleOptionPk], 0, 1],
-                [$heldOptionPk, (string) $names[$heldOptionPk], 1, 0],
+            ->expectsTable(['Option pk', 'Option', 'Logins gaining it', 'Logins losing it', 'Read by'], collect([
+                [$staleOptionPk, (string) $names[$staleOptionPk], 0, 1, ReconcileEmployeeRoleMappings::notificationLookupFor((string) $names[$staleOptionPk])],
+                [$heldOptionPk, (string) $names[$heldOptionPk], 1, 0, ReconcileEmployeeRoleMappings::notificationLookupFor((string) $names[$heldOptionPk])],
             ])->sortBy(0)->values()->all())
             ->assertSuccessful();
 
@@ -229,5 +230,19 @@ class EmployeeRoleSyncTest extends TestCase
         $this->artisan('members:reconcile-role-mappings', ['--user' => $target->pk])
             ->doesntExpectOutputToContain('By option')
             ->assertSuccessful();
+    }
+
+    /**
+     * PR #354 review, F-015: the "Read by" column tells mapping-only lookups (where an
+     * added row adds a recipient) apart from the union lookups (where it does not).
+     */
+    public function test_reconcile_command_classifies_how_notifications_read_each_option(): void
+    {
+        $this->assertSame('mapping only', ReconcileEmployeeRoleMappings::notificationLookupFor('HAC Person'));
+        $this->assertSame('mapping only', ReconcileEmployeeRoleMappings::notificationLookupFor('Admin'));
+        $this->assertSame('mapping + Spatie role', ReconcileEmployeeRoleMappings::notificationLookupFor('Training-Induction'));
+        $this->assertSame('mapping + Spatie role', ReconcileEmployeeRoleMappings::notificationLookupFor('Super Admin'));
+        $this->assertSame('mapping + Spatie role', ReconcileEmployeeRoleMappings::notificationLookupFor('Estate Admin'));
+        $this->assertSame('no lookup', ReconcileEmployeeRoleMappings::notificationLookupFor('Doctor'));
     }
 }

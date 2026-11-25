@@ -9210,7 +9210,14 @@ class UserController extends Controller
         try {
             DB::beginTransaction();
 
-            $user = User::findOrFail($request->user_id);
+            // Lock the login row before any other read in this transaction (PR #354 review,
+            // F-016). mirrorOfferedOptions() below reads the login's mapping rows and inserts
+            // the missing ones, and employee_role_mapping has no unique key. Without the lock,
+            // two overlapping saves for one login (a double-clicked Save) both read the
+            // pre-save rows and both insert them. Under REPEATABLE READ the read view is taken
+            // at the first plain read, so this locking read has to come first: the second
+            // save waits here, and its later reads see what the first one committed.
+            $user = User::whereKey($request->user_id)->lockForUpdate()->firstOrFail();
             $roleNames = Role::whereIn('id', $request->input('roles', []))->pluck('name')->toArray();
             $user->syncRoles($roleNames);
 

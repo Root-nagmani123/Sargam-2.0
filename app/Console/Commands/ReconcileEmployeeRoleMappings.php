@@ -30,12 +30,25 @@ use Illuminate\Support\Facades\DB;
  * rule (EmployeeRoleMapping::belongsToSharedEmployee(), PR #354 review, F-011); this
  * command computes it in one query instead of once per login.
  *
- * Notification routing (PR #354 review, F-006): NotificationReceiverService picks
- * recipients by option name from employee_role_mapping (Admin, HAC Person,
- * Training-Induction, ...). Every row this command adds or removes therefore adds or
- * removes that login as a recipient of those notifications. The summary prints the rows
- * to add and remove per option, by name, so the routing change can be reviewed before
- * --apply. Run with -v to list each login; keep that listing as the rollback record.
+ * Notification routing (PR #354 review, F-006, F-015): NotificationReceiverService reads
+ * employee_role_mapping in two ways, and the "By option" table says which one applies to
+ * each option (the "Read by" column):
+ *
+ *  - mapping only: getEstateHacPersonUserIds() (HAC Person) and getAdminUserId() (Admin,
+ *    first mapping row only). An added row makes the login a recipient; a removed row
+ *    stops it. For Admin only the first row counts, so a change may move "the" admin.
+ *  - mapping + Spatie role: getDisciplineMemoAdminReceivers(),
+ *    getMemoNoticeManagementRoleUserIds(), getEstateRequestApproverUserIds() and
+ *    getIssueReportAdminReceivers() take the UNION of the mapping rows and the holders
+ *    of a Spatie role with the same name. This command adds a row only for a login that
+ *    holds the matching role, so an added row normally adds no recipient: the login
+ *    already receives them through the role. That holds where the Spatie role name equals
+ *    the option name; check roles.name against user_role_master.user_role_name on
+ *    staging. A removed row is for a login that does not hold the role, so it stops
+ *    those notifications unless another role in the same lookup's list still qualifies.
+ *  - no lookup: no notification effect.
+ *
+ * Run with -v to list each login; keep that listing as the rollback record.
  *
  * Dry run by default. Pass --apply to write. Re-runnable: a second run finds nothing.
  * Deploy steps: docs/deploy-notes-employee-role-sync.md.
@@ -134,7 +147,12 @@ class ReconcileEmployeeRoleMappings extends Command
                 }
 
                 if ($apply) {
-                    DB::transaction(fn () => EmployeeRoleMapping::mirrorOfferedOptions((int) $user->pk, $roleNames));
+                    DB::transaction(function () use ($user, $roleNames) {
+                        // Same lock as assignRoleSave() (F-016), so a Users-screen save of
+                        // this login cannot interleave with the mirror below.
+                        User::whereKey($user->pk)->lockForUpdate()->first();
+                        EmployeeRoleMapping::mirrorOfferedOptions((int) $user->pk, $roleNames);
+                    });
                 }
             }
         }, 'pk');
@@ -159,8 +177,45 @@ class ReconcileEmployeeRoleMappings extends Command
     }
 
     /**
-     * Rows to add and remove per option, by name. Each row is one login gained or lost
-     * as a recipient of the mapping-driven notifications for that option (F-006).
+     * Options read by a lookup that uses employee_role_mapping alone
+     * (NotificationReceiverService::getEstateHacPersonUserIds(), getAdminUserId()).
+     * Keep in step with that service.
+     */
+    public const MAPPING_ONLY_LOOKUP_OPTIONS = ['HAC Person', 'Admin'];
+
+    /**
+     * Options read by a lookup that takes the union of the mapping and the holders of the
+     * Spatie role with the same name (getDisciplineMemoAdminReceivers(),
+     * getMemoNoticeManagementRoleUserIds(), getEstateRequestApproverUserIds(),
+     * getIssueReportAdminReceivers()). Keep in step with that service.
+     */
+    public const UNION_LOOKUP_OPTIONS = [
+        'Super Admin',
+        'Training Induction Admin',
+        'Training-Induction',
+        'Estate Admin',
+    ];
+
+    /**
+     * How the notification lookups read an option, by its user_role_name (the field they
+     * match on). See the class docblock for what an added or removed row does in each case.
+     */
+    public static function notificationLookupFor(string $userRoleName): string
+    {
+        if (in_array($userRoleName, self::MAPPING_ONLY_LOOKUP_OPTIONS, true)) {
+            return 'mapping only';
+        }
+
+        if (in_array($userRoleName, self::UNION_LOOKUP_OPTIONS, true)) {
+            return 'mapping + Spatie role';
+        }
+
+        return 'no lookup';
+    }
+
+    /**
+     * Rows to add and remove per option, by name, with how the notification lookups read
+     * that option (F-006, F-015).
      *
      * @param  array<int, int>  $addedByOption    option pk => logins gaining it
      * @param  array<int, int>  $removedByOption  option pk => logins losing it
@@ -176,12 +231,16 @@ class ReconcileEmployeeRoleMappings extends Command
         sort($pks);
         $names = UserRoleMaster::whereIn('pk', $pks)->pluck('user_role_name', 'pk');
 
-        $this->line('By option (each row adds or removes the login as a recipient of notifications looked up by that option):');
-        $this->table(['Option pk', 'Option', 'Logins gaining it', 'Logins losing it'], array_map(fn ($pk) => [
+        $this->line('By option. Notification effect depends on "Read by":');
+        $this->line('  mapping only          - each added row adds the login as a recipient, each removed row stops it (Admin: first row only).');
+        $this->line('  mapping + Spatie role - an added row adds no recipient (the login already holds the role); a removed row stops it.');
+        $this->line('  no lookup             - no notification effect.');
+        $this->table(['Option pk', 'Option', 'Logins gaining it', 'Logins losing it', 'Read by'], array_map(fn ($pk) => [
             $pk,
             (string) ($names[$pk] ?? '?'),
             $addedByOption[$pk] ?? 0,
             $removedByOption[$pk] ?? 0,
+            self::notificationLookupFor((string) ($names[$pk] ?? '')),
         ], $pks));
     }
 }

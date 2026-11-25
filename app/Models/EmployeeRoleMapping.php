@@ -50,6 +50,11 @@ class EmployeeRoleMapping extends Model
      * tags such as "Staff", inactive options) are left as they are, as update() does.
      * Only rows that change are deleted or inserted.
      *
+     * Not atomic on its own: it reads the rows, then inserts the missing ones, and the
+     * table has no unique key. Call it inside a transaction whose first statement locks the
+     * login's user_credentials row (lockForUpdate), so two calls for one login run one
+     * after the other (PR #354 review, F-016).
+     *
      * @param  iterable<string>  $roleNames  canonical `roles` names the login now holds
      */
     public static function mirrorOfferedOptions(int $userCredentialPk, iterable $roleNames): void
