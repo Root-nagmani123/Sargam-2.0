@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Admin\UserController;
 use App\Models\User;
 use App\Services\StudentDetailAccessService;
 use Illuminate\Support\Facades\DB;
@@ -361,6 +362,193 @@ class RoleAliasCapabilityTest extends TestCase
             ->assertRedirect(route('admin.security.family_idcard_approval.index'))
             ->assertSessionHas('error', 'No member of this group is at your approval stage.');
         $this->assertSame($before, $this->familyState($pk));
+    }
+
+    // ----- Family ID: approve a whole group ------------------------------------------------
+
+    /**
+     * A pending family group (same emp_id_apply, created_by, created_date) whose every pending
+     * member is at $stage, largest first; returns [the member pk to post, every member pk].
+     */
+    private function familyGroup(string $stage): array
+    {
+        $atStage = $stage === 'new'
+            ? 'exists (select 1 from security_family_id_apply_approval p where p.security_fm_id_apply_pk = a.fml_id_apply and p.status = 0)
+               and not exists (select 1 from security_family_id_apply_approval p where p.security_fm_id_apply_pk = a.fml_id_apply and (p.status <> 0 or p.recommend_status = 1))'
+            : 'exists (select 1 from security_family_id_apply_approval p where p.security_fm_id_apply_pk = a.fml_id_apply and p.status = 0)
+               and exists (select 1 from security_family_id_apply_approval p where p.security_fm_id_apply_pk = a.fml_id_apply and p.status = 1)
+               and not exists (select 1 from security_family_id_apply_approval p where p.security_fm_id_apply_pk = a.fml_id_apply and p.status in (2, 3))';
+        $group = DB::selectOne("select emp_id_apply, created_by, created_date, max(fml_id_apply) pk from security_family_id_apply a
+            where a.id_status = 1 group by emp_id_apply, created_by, created_date
+            having count(*) = sum($atStage) order by count(*) desc, pk desc limit 1");
+        if (! $group) {
+            $this->markTestSkipped("no family group with every pending member at the $stage stage");
+        }
+        $members = DB::table('security_family_id_apply')->where('id_status', 1)
+            ->where('emp_id_apply', $group->emp_id_apply)->where('created_by', $group->created_by)
+            ->where('created_date', $group->created_date)->orderBy('fml_id_apply')->pluck('fml_id_apply')->all();
+
+        return [$group->pk, $members];
+    }
+
+    private function approveFamilyGroup(User $user, string $pk)
+    {
+        return $this->as($user, $this->rolesOf($user))
+            ->post(route('admin.security.family_idcard_approval.approve_group', ['id' => $this->enc($pk)]), ['approval_remarks' => 'F-001 group test']);
+    }
+
+    /** @param list<string> $members */
+    private function groupState(array $members): array
+    {
+        return array_combine($members, array_map(fn ($pk) => $this->familyState($pk), $members));
+    }
+
+    public function test_family_id_approve_group_ii_recommends_every_member_at_level_one(): void
+    {
+        [$pk, $members] = $this->familyGroup('new');
+        $before = $this->groupState($members);
+
+        $this->approveFamilyGroup($this->staffWithRole('Security Approver II'), $pk)
+            ->assertRedirect(route('admin.security.family_idcard_approval.index'))
+            ->assertSessionHas('success', 'Family ID Card group approved ('.count($members).' members)');
+
+        foreach ($this->groupState($members) as $member => $after) {
+            $this->assertSame(1, $after['id_status'], "$member stays pending for Level III");
+            $this->assertSame(['1/1', '0/n'], array_slice($after['steps'], -2), "$member recommended, next step open");
+            $this->assertCount(count($before[$member]['steps']) + 1, $after['steps'], "$member gains one step");
+        }
+    }
+
+    public function test_family_id_approve_group_iii_final_approves_a_recommended_group(): void
+    {
+        [$pk, $members] = $this->familyGroup('level1');
+
+        $this->approveFamilyGroup($this->staffWithRole('Security Approver III'), $pk)
+            ->assertRedirect(route('admin.security.family_idcard_approval.index'))
+            ->assertSessionHas('success', 'Family ID Card group approved ('.count($members).' members)');
+
+        foreach ($this->groupState($members) as $member => $after) {
+            $this->assertSame(2, $after['id_status'], "$member final-approved");
+            $this->assertContains('2/n', $after['steps'], "$member has its Level III step");
+        }
+    }
+
+    /** PR #356 L-87 on the bulk path: Level III cannot final-approve a group Level II never recommended. */
+    public function test_family_id_approve_group_iii_is_refused_a_group_level_two_never_recommended(): void
+    {
+        [$pk, $members] = $this->familyGroup('new');
+        $before = $this->groupState($members);
+
+        $this->approveFamilyGroup($this->staffWithRole('Security Approver III'), $pk)
+            ->assertRedirect(route('admin.security.family_idcard_approval.index'))
+            ->assertSessionHas('error', 'No member of this group is at your approval stage.');
+        $this->assertSame($before, $this->groupState($members), 'nothing written');
+    }
+
+    /** PR #356 L-87 on the bulk path: Level II cannot recommend a group it already recommended. */
+    public function test_family_id_approve_group_ii_is_refused_a_group_already_recommended(): void
+    {
+        [$pk, $members] = $this->familyGroup('level1');
+        $before = $this->groupState($members);
+
+        $this->approveFamilyGroup($this->staffWithRole('Security Approver II'), $pk)
+            ->assertRedirect(route('admin.security.family_idcard_approval.index'))
+            ->assertSessionHas('error', 'No member of this group is at your approval stage.');
+        $this->assertSame($before, $this->groupState($members), 'nothing written');
+    }
+
+    public function test_family_id_approve_group_refuses_an_employee_only_and_a_mess_billing_login(): void
+    {
+        [$pk, $members] = $this->familyGroup('new');
+        $before = $this->groupState($members);
+
+        foreach ([$this->employeeOnly(), $this->staffWithRole('Mess Billing')] as $user) {
+            $this->approveFamilyGroup($user, $pk)
+                ->assertRedirect(route('admin.security.family_idcard_approval.index'))
+                ->assertSessionHas('error', 'You are not authorized to approve these requests.');
+            $this->assertSame($before, $this->groupState($members), 'nothing written for '.implode(',', $this->rolesOf($user)));
+        }
+    }
+
+    // ----- OT / Participants: store a comment ----------------------------------------------
+
+    /** A running-course student who has a trainee login, so Notify OT has someone to reach. */
+    private function runningStudentWithLogin(): int
+    {
+        $pk = DB::table('student_master_course__map as s')
+            ->join('course_master as c', 'c.pk', '=', 's.course_master_pk')
+            ->join('user_credentials as u', fn ($j) => $j->on('u.user_id', '=', 's.student_master_pk')->where('u.user_category', 'S'))
+            ->where('s.active_inactive', 1)->where('c.active_inactive', 1)
+            ->where('c.end_date', '>=', now()->toDateString())
+            ->orderByDesc('s.student_master_pk')->value('s.student_master_pk');
+        if (! $pk) {
+            $this->markTestSkipped('no student with a trainee login on a running course');
+        }
+
+        return (int) $pk;
+    }
+
+    private function storeOtComment(User $user, int $studentPk, array $extra = [])
+    {
+        return $this->as($user, $this->rolesOf($user))->postJson(route('admin.dashboard.ot-participants.comment.store'), [
+            'student_master_pk' => $studentPk, 'message' => 'F-001 comment test '.uniqid(), 'notify_ot' => 1,
+        ] + $extra);
+    }
+
+    /** PR #356 L-94: Training-Induction comments on any participant and notifies them; attribution cannot be forged. */
+    public function test_training_induction_stores_an_attributed_comment_and_notifies_the_ot(): void
+    {
+        $user = $this->staffWithRole('Training-Induction');
+        $student = $this->runningStudentWithLogin();
+        $forged = (int) DB::table('user_credentials')->where('user_id', '!=', $user->user_id)->whereNotNull('user_id')->value('user_id');
+
+        $response = $this->storeOtComment($user, $student, ['comment_by_user_id' => $forged, 'created_by' => $forged, 'active_inactive' => 0]);
+
+        $response->assertOk()->assertJson(['success' => true]);
+        $comment = DB::table('ot_participant_comment')->where('student_master_pk', $student)->orderByDesc('pk')->first();
+        $this->assertNotNull($comment);
+        $this->assertSame(json_decode($response->getContent())->count, DB::table('ot_participant_comment')->where('student_master_pk', $student)->where('active_inactive', 1)->count());
+        $this->assertEquals($user->user_id, $comment->comment_by_user_id, 'author is the login, not the payload');
+        $this->assertEquals($user->user_id, $comment->created_by);
+        $this->assertEquals(1, $comment->active_inactive);
+        $this->assertTrue(DB::table('notifications')->where('type', 'ot_comment')->where('reference_pk', $comment->pk)
+            ->where('receiver_user_id', $student)->exists(), 'the OT is notified');
+    }
+
+    public function test_ot_comment_store_refuses_an_employee_only_login(): void
+    {
+        // Refused before the participant is looked up, so any student will do.
+        $student = (int) DB::table('student_master')->max('pk');
+        $comments = DB::table('ot_participant_comment')->count();
+        $notifications = DB::table('notifications')->where('type', 'ot_comment')->count();
+
+        $this->storeOtComment($this->employeeOnly(), $student)->assertForbidden();
+
+        $this->assertSame($comments, DB::table('ot_participant_comment')->count());
+        $this->assertSame($notifications, DB::table('notifications')->where('type', 'ot_comment')->count());
+    }
+
+    /** The roster is the boundary: a faculty login may not comment on a participant outside it. */
+    public function test_ot_comment_store_refuses_a_faculty_login_for_a_participant_off_its_roster(): void
+    {
+        $user = $this->staffWithRole('Faculty');
+        $this->actingAs($user)->withSession(['user_roles' => $this->rolesOf($user)]);
+        session(['user_roles' => $this->rolesOf($user)]);
+        $roster = (fn () => $this->canUseOtParticipants() ? $this->otParticipantRosterPks() : false)->call(app(UserController::class));
+        if (! is_array($roster)) {
+            $this->markTestSkipped('this Faculty login cannot use OT / Participants, or sees every participant');
+        }
+        $student = (int) DB::table('student_master')->when($roster !== [], fn ($q) => $q->whereNotIn('pk', array_keys($roster)))->max('pk');
+        $comments = DB::table('ot_participant_comment')->count();
+
+        $this->storeOtComment($user, $student)->assertForbidden()->assertJson(['message' => 'This participant is not on your roster.']);
+        $this->assertSame($comments, DB::table('ot_participant_comment')->count());
+    }
+
+    public function test_ot_comment_store_answers_404_for_an_unknown_participant(): void
+    {
+        $this->storeOtComment($this->staffWithRole('Training-Induction'), (int) DB::table('student_master')->max('pk') + 1000)
+            ->assertNotFound()->assertJson(['success' => false]);
     }
 
     // ----- Estate ------------------------------------------------------------------------
