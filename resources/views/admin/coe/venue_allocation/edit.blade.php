@@ -113,7 +113,7 @@
                         <button type="button" id="espSwapToggle" class="esp-swap-toggle is-off" aria-pressed="false">
                             <i class="bi bi-arrow-left-right" aria-hidden="true"></i><span>Swap Mode: OFF</span>
                         </button>
-                        <button type="button" id="espMoveBtn" class="esp-move-btn" disabled
+                        <button type="button" id="espMoveBtn" class="esp-move-btn"
                                 title="Tick the OTs in the list, then move them to another room">
                             <i class="bi bi-door-open" aria-hidden="true"></i>Change Room
                         </button>
@@ -403,7 +403,6 @@ $(function () {
     function picked() { return $('.esp-pick-one:checked').map(function () { return parseInt(this.value, 10); }).get(); }
     function paintPicked() {
         var n = picked().length, all = $('.esp-pick-one').length;
-        $('#espMoveBtn').prop('disabled', n === 0);
         $('#espPickAll').prop('checked', n > 0 && n === all).prop('indeterminate', n > 0 && n < all);
     }
     // A tick is not a swap pick.
@@ -413,7 +412,12 @@ $(function () {
 
     $('#espMoveBtn').on('click', function () {
         var seats = picked();
-        if (!seats.length) { return; }
+        // Always clickable (a disabled button read as "no Change Room"); with nothing ticked it says what to do.
+        if (!seats.length) {
+            Swal.fire({ icon: 'info', title: 'Select OTs first',
+                text: 'Tick the OTs to move in the list on the right (Roll No. column), then click Change Room.' });
+            return;
+        }
         $('#espMoveCount').text(seats.length);
         $('#espMoveRolls').text(seats.map(function (n) { return bySeat[n] ? bySeat[n].roll : n; }).join(', '));
         $('#espMoveRoom').val('').removeClass('is-invalid');

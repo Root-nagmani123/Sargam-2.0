@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\BuildingFloorRoomMapping;
 use App\Models\BuildingMaster;
+use App\Models\COE\LaptopResponse;
 use App\Models\COE\RollNumberAllocation;
 use App\Models\COE\SeatAllocation;
 use App\Models\COE\SeatPlan;
@@ -794,6 +795,31 @@ class CoeVenueAllocationFlowTest extends TestCase
             ->assertStatus(422)->assertJsonValidationErrors('rows.0.assistant');
         $this->saveInvigilators([['id' => $room, 'chief' => $chief, 'invigilator' => $other, 'mts' => $mts]])->assertOk();
         $this->assertNull(DB::table('coe_seat_plan_venue_invigilators')->where('seat_plan_venue_pk', $room)->value('assistant_faculty_pk'));
+    }
+
+    public function test_laptop_required_is_set_per_ot_from_map_seating_plan(): void
+    {
+        $driveId = (int) DB::table('examination_drive_component_maps')->where('id', $this->componentMapId)->value('examination_drive_id');
+        $ot = (int) DB::table('coe_roll_numbers as rn')
+            ->join('coe_roll_number_allocations as rna', 'rna.pk', '=', 'rn.roll_number_allocation_pk')
+            ->where('rna.course_master_pk', $this->course)->where('rna.batch', $this->batch)
+            ->orderBy('rn.serial_number')->value('rn.student_master_pk');
+        DB::table('coe_laptop_responses')->where('student_master_pk', $ot)->delete();
+        $url = route('admin.coe.venue-allocation.drive.laptops', $driveId);
+        $before = $this->actingAs($this->admin)->getJson(route('admin.coe.venue-allocation.drive', $driveId))->assertOk()->json('laptop_required');
+
+        $this->actingAs($this->admin)->postJson($url, ['yes' => [$ot]])->assertOk()
+            ->assertJsonPath('laptop_required', $before + 1);
+        $row = DB::table('coe_laptop_responses')->where('student_master_pk', $ot)->first();
+        $this->assertSame([1, LaptopResponse::SOURCE_ADMIN], [(int) $row->laptop_required, (int) $row->source]);
+        $this->assertNotEmpty($row->reason);
+        $ots = collect($this->actingAs($this->admin)->getJson(route('admin.coe.venue-allocation.drive', $driveId))->json('ots'));
+        $this->assertTrue($ots->firstWhere('pk', $ot)['laptop']);
+
+        $this->actingAs($this->admin)->postJson($url, ['no' => [$ot]])->assertOk()->assertJsonPath('laptop_required', $before);
+        // Not on the drive, or nothing sent: refused.
+        $this->actingAs($this->admin)->postJson($url, ['yes' => [0]])->assertStatus(422);
+        $this->actingAs($this->admin)->postJson($url, [])->assertStatus(422);
     }
 
     public function test_index_show_and_edit_render(): void

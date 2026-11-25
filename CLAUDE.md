@@ -8,6 +8,33 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-25: Venue Allocation tester fixes, round 2.** (1) Sidebar entries **My Invigilation
+  Duty** (`coe_my_invigilation_duty`: Faculty, Internal Faculty, Guest Faculty) and **My Exam
+  Seat** (`coe_my_exam_seat`: Officer Trainee, Student-OT), next to Venue Allocation, by migration
+  `2026_11_25_000001_add_coe_my_duty_and_exam_seat_menus` (the freeze bells already went out; the
+  pages had no menu). MTS invigilators still reach their page only by the bell. (2) Edit Seating
+  Plan: Change Room is always clickable; with nothing ticked it says to tick OTs first.
+  (3) Add / Edit Invigilators has an **Exam Time** column (`COALESCE(proposed_start_at,
+  exam_start_at)` – end, `examTimeLabel()`), and marks a person already in another room on that
+  date (saved before the one-room-a-day rule, or busy in another drive) when it opens.
+  (4) View / Print / export: the seat list's "Remarks" column is "Seat Type" (it only shows
+  Laptop / Scriber / Moved; nothing to enter). (5) Course / subject / component / drive names
+  decoded with `CourseParticipants::plainName()` on the list, dialogs, View / Edit / Print
+  (`&#039;` and twice-encoded names showed as entities).
+
+- **2026-11-25: Venue Allocation tester fixes.** (1) Map Seating Plan → Laptop Required has
+  **Edit**: tick per OT (PwBD first) who needs a laptop desk; saved to OT Laptop Status
+  (`coe_laptop_responses`, source Admin, a new Yes without a reason gets "Set by COE at Venue
+  Allocation"), `POST venue-allocation/drive/{id}/laptops` (`saveLaptops`). Count and room
+  laptop checks update in place; plans already mapped are not re-seated. (2) Map Seating Plan /
+  Add Invigilators footers (Cancel / Map) stay on screen at 100% zoom: the `<form>` between
+  `.modal-content` and the body broke Bootstrap's scrollable dialog. (3) "Mapped" toast was raw
+  `<ul>` HTML (the global `sargam-success-toast.js` shows `html` as text): now plain text,
+  title "Seating mapped". (4) Scriber Seating Available falls back to Room Master
+  `scriber_count` when the room has no desk map (was always 0), as laptops already did
+  (`ExamRooms` `room_scribers`, `roomScribers()`). Tests:
+  `CoeVenueAllocationFlowTest::test_laptop_required_is_set_per_ot_from_map_seating_plan`.
+
 - **2026-11-25: Add / Edit Invigilators follows the component's Exam Type.** Online Descriptive:
   all four roles. Online Objective: no Assistant Invigilator (picker disabled, header picker
   too when no room of the subject takes it; one saved earlier shows empty and is cleared on
@@ -61,14 +88,14 @@ Each COE change gets a line here; the details live in its section below.
   now opens **My Exam Seat** (`GET admin/coe/my-exam-seat`, `VenueAllocationController::mySeats`,
   OT from the session like Laptop Declaration; frozen plans only): a card per exam with date,
   Today/Upcoming/Completed, paper, drive, room, building/floor, seat + block, laptop/scriber,
-  and a hall map marking only their desk. Sidebar entry: add at /sidebar/menus. Tests:
+  and a hall map marking only their desk. Sidebar entry: since 2026-11-25 (`coe_my_exam_seat`). Tests:
   `CoeVenueAllocationFlowTest::test_an_ot_sees_their_seat_once_the_plan_is_frozen`.
 - **2026-11-20: Invigilators are notified on freeze and see their duties.** Freezing a seating
   plan sends each invigilator (faculty via `employee_master_pk`, MTS via their own
   `employee_master.pk`) a `coe_invigilation` bell: role, paper, date, room. Their page **My
   Invigilation Duty** (`GET admin/coe/my-invigilation-duty`, `VenueAllocationController::myDuties`,
   auth only, own duties on frozen plans only) lists date, Today/Upcoming/Completed, role, drive,
-  course, paper, room, OTs, with View Seating / Print. Sidebar entry: add at /sidebar/menus.
+  course, paper, room, OTs, with View Seating / Print. Sidebar entry: since 2026-11-25 (`coe_my_invigilation_duty`).
   Tests: `CoeVenueAllocationFlowTest::test_freeze_notifies_invigilators_and_lists_their_duty`.
 - **2026-11-20: Freezing a seating plan locks its invigilators.** Frozen rows lose Add / Edit
   Invigilators; the dialog refuses to open from one (422) and shows a drive's frozen rooms

@@ -137,7 +137,7 @@
                 <div class="vsp-seats__wrap">
                     <table>
                         <thead>
-                            <tr><th>S.No</th><th>Roll No.</th><th>Name</th><th>Seat</th><th>Block</th><th>Remarks</th></tr>
+                            <tr><th>S.No</th><th>Roll No.</th><th>Name</th><th>Seat</th><th>Block</th><th>Seat Type</th></tr>
                         </thead>
                         <tbody id="vspSeatBody">
                             @forelse ($allocation['seats'] as $i => $a)

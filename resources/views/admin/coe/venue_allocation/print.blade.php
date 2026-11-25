@@ -199,7 +199,7 @@
                         <th>Name</th>
                         <th class="c" style="width:10%">Seat</th>
                         <th style="width:17%">Block</th>
-                        <th style="width:18%">Remarks</th>
+                        <th style="width:18%">Seat Type</th>
                     </tr>
                 </thead>
                 <tbody>

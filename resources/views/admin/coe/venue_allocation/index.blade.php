@@ -32,11 +32,11 @@
 .va-inv-table tr.is-frozen td { color:#667085; }
 .va-inv-table thead th { background:#eef0f3;font-weight:500;font-size:13px;color:#344054;vertical-align:middle;border-bottom:0; }
 .va-inv-table td   { vertical-align:middle;font-size:14px;padding-top:14px;padding-bottom:14px;overflow-wrap:anywhere; }
-.va-inv-table .va-inv-c-comp { width:14%; }
-.va-inv-table .va-inv-c-date { width:9%; }
-.va-inv-table .va-inv-c-text { width:8%; }
-.va-inv-table .va-inv-c-ot   { width:6%; }
-.va-inv-table .va-inv-pick   { width:12.5%; }
+.va-inv-table .va-inv-c-comp { width:12%; }
+.va-inv-table .va-inv-c-date { width:8%; }   /* Exam Date, Exam Time */
+.va-inv-table .va-inv-c-text { width:7%; }
+.va-inv-table .va-inv-c-ot   { width:5%; }
+.va-inv-table .va-inv-pick   { width:11.5%; }
 /* Role headers read as "Chief Invigilator ▾": no box, the pick applies to every room below */
 .va-inv-table tbody .select2-container--default .select2-selection--single { height:auto;min-height:38px;display:flex;align-items:center;
                      padding:6px 0; }
@@ -52,6 +52,22 @@
 .va-inv-dd .select2-results__option { white-space:normal;overflow-wrap:break-word;line-height:1.35;padding:7px 10px;font-size:14px; }
 .va-inv-table thead .select2-container--default .select2-selection--single { border:0;background:transparent;box-shadow:none;padding-left:0; }
 .va-inv-table thead .select2-container--default .select2-selection--single .select2-selection__rendered { color:#344054;font-weight:500;padding-left:0;white-space:normal;line-height:1.25; }
+/* Map Seating Plan / Add Invigilators: the <form> sits between .modal-content and the body, so
+   Bootstrap's scrollable dialog never scrolled the body and the footer (Cancel / Map) fell below
+   the window at 100% zoom. The form takes the dialog's height; only the body scrolls. */
+#vaMapModal .modal-content > form,
+#vaInvModal .modal-content > form { display:flex;flex-direction:column;min-height:0;max-height:100%;overflow:hidden; }
+#vaMapModal .modal-body,
+#vaInvModal .modal-body          { flex:1 1 auto;min-height:0;overflow-y:auto; }
+#vaMapModal .modal-body          { overflow-x:hidden; }
+#vaMapModal .modal-footer,
+#vaInvModal .modal-footer        { flex:none; }
+/* Laptop Required → Edit */
+.va-laptop-panel   { border:1px solid var(--ds-line);border-radius:12px;padding:12px 14px; }
+.va-laptop-panel__head { font-weight:600;font-size:14px;color:#004384; }
+.va-laptop-search  { max-width:260px; }
+.va-laptop-list    { max-height:240px;overflow:auto;border-top:1px solid var(--ds-line);padding-top:6px; }
+.va-laptop-tag     { font-size:11px;padding:0 7px;border-radius:9px;background:#fff3cd;color:#856404;flex:none; }
 /* Modal: readonly computed fields */
 .va-readonly       { background:var(--ds-surface-2) !important;cursor:default; }
 /* Allocation-rules section inside modal */
@@ -266,7 +282,27 @@
                         </div>
                         <div class="col-sm-6">
                             <label class="coe-form-label" for="vaMapLaptop">Laptop Required<span class="coe-req">*</span></label>
-                            <input type="text" id="vaMapLaptop" class="form-control coe-control va-readonly" value="-" readonly>
+                            <div class="input-group">
+                                <input type="text" id="vaMapLaptop" class="form-control coe-control va-readonly" value="-" readonly>
+                                <button type="button" id="vaLaptopEdit" class="btn btn-outline-primary" disabled
+                                        aria-expanded="false" aria-controls="vaLaptopPanel">
+                                    <i class="bi bi-pencil" aria-hidden="true"></i> Edit
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {{-- Laptop Required → Edit: which OTs of the drive need a laptop desk (saved to OT Laptop Status) --}}
+                    <div id="vaLaptopPanel" class="va-laptop-panel mb-3 d-none">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                            <span class="va-laptop-panel__head">Laptop Required — tick the OTs who need a laptop desk</span>
+                            <input type="search" id="vaLaptopSearch" class="form-control coe-control va-laptop-search"
+                                   placeholder="Search roll no. or name" aria-label="Search OTs">
+                        </div>
+                        <div class="small text-muted mb-2">PwBD OTs are listed first. Saved to OT Laptop Status; rooms already mapped keep their seats.</div>
+                        <div id="vaLaptopList" class="va-laptop-list"></div>
+                        <div class="d-flex justify-content-end gap-2 mt-2">
+                            <button type="button" id="vaLaptopCancel" class="btn coe-btn coe-btn-cancel">Cancel</button>
+                            <button type="button" id="vaLaptopSave" class="btn coe-btn coe-btn-primary">Save Laptop Required</button>
                         </div>
                     </div>
                     @if ($buildings->isEmpty())
@@ -370,6 +406,7 @@ $(function () {
     var BUILDINGS = @json($buildings);
     var DRIVE_URL = @json(route('admin.coe.venue-allocation.drive', ['id' => '__ID__']));
     var STORE_DRIVE_URL = @json(route('admin.coe.venue-allocation.store-drive'));
+    var LAPTOPS_URL = @json(route('admin.coe.venue-allocation.drive.laptops', ['id' => '__ID__']));
     var INVIG_STORE_URL = @json(route('admin.coe.venue-allocation.invigilators.store'));
     var CSRF = $('meta[name="csrf-token"]').attr('content');
 
@@ -538,8 +575,8 @@ $(function () {
             $('<h6 class="va-inv-subject"></h6>').text('Subject: ' + s.subject).appendTo($invBody);
             var $table = $('<table class="table align-middle va-inv-table"><thead><tr></tr></thead><tbody></tbody></table>');
             var $head = $table.find('thead tr');
-            var COLS = [['Component Name', 'va-inv-c-comp'], ['Exam Date', 'va-inv-c-date'], ['Building Name', 'va-inv-c-text'],
-                ['Floor', 'va-inv-c-text'], ['Room', 'va-inv-c-text'], ['OT', 'va-inv-c-ot']];
+            var COLS = [['Component Name', 'va-inv-c-comp'], ['Exam Date', 'va-inv-c-date'], ['Exam Time', 'va-inv-c-date'],
+                ['Building Name', 'va-inv-c-text'], ['Floor', 'va-inv-c-text'], ['Room', 'va-inv-c-text'], ['OT', 'va-inv-c-ot']];
             COLS.forEach(function (c) { $('<th></th>').addClass(c[1]).text(c[0]).appendTo($head); });
             // The header pick applies one person to every room of this subject; off when no room takes the role.
             ROLES.forEach(function (role) {
@@ -550,7 +587,7 @@ $(function () {
             });
             s.rooms.forEach(function (r) {
                 var $tr = $('<tr></tr>').attr('data-id', r.id).attr('data-paper', r.paper).toggleClass('is-frozen', !!r.frozen);
-                [r.component, r.exam_date, r.building, r.floor, r.room, r.ot].forEach(function (v) {
+                [r.component, r.exam_date, r.exam_time, r.building, r.floor, r.room, r.ot].forEach(function (v) {
                     $('<td></td>').text(v).appendTo($tr);
                 });
                 // Frozen seating plan: shown for reference, locked, and not sent on save.
@@ -570,7 +607,27 @@ $(function () {
         });
         invSync();
         $invBody.find('select').each(function () { invSelect2($(this)); });
+        invFlagClashes();
         $('#vaInvSubmit').prop('disabled', !$invBody.find('tbody tr:not(.is-frozen)').length);
+    }
+
+    // Saved before the one-room-a-day rule: a person already in two rooms of a date (or busy in
+    // another drive's room that day) is marked, so it is changed before Map Invigilator.
+    function invFlagClashes() {
+        var seen = {};
+        $invBody.find('tbody .va-inv-one').each(function () {
+            if (!this.value) { return; }
+            var p = $(this).closest('tr').attr('data-paper'), list = $(this).attr('data-role') === 'mts' ? 'm' : 'f';
+            var key = p + '|' + list + '|' + this.value;
+            // A frozen room keeps its people; only the editable rooms are flagged.
+            if ($(this).prop('disabled')) { seen[key] = true; return; }
+            var outside = ((invBusy[p] || {})[list] || []).map(String).indexOf(this.value) !== -1;
+            if (seen[key] || outside) {
+                invError($(this), outside ? 'Already invigilating another exam on this date — choose someone else.'
+                    : 'Also picked in another room on this date — choose someone else.');
+            }
+            seen[key] = true;
+        });
     }
 
     function invError($s, msg) {
@@ -721,6 +778,8 @@ $(function () {
         $subjects.find('select').each(function () { if ($(this).data('select2')) { $(this).select2('destroy'); } });
         $subjects.empty();
         $('#vaMapOtCount, #vaMapLaptop').val('-');
+        $('#vaLaptopEdit').prop('disabled', true);
+        $('#vaLaptopPanel').addClass('d-none');
         refreshSubmit();
     }
 
@@ -746,6 +805,7 @@ $(function () {
                 ots.forEach(function (o) { OT_BY_PK[o.pk] = o; });
                 $('#vaMapOtCount').val(r.ot_count);
                 $('#vaMapLaptop').val(r.laptop_required);
+                $('#vaLaptopEdit').prop('disabled', !ots.length);
                 renderSubjects(r.subjects || []);
             })
             .fail(function (xhr) {
@@ -944,6 +1004,64 @@ $(function () {
         refreshSubmit();
         return !msg;
     }
+
+    /* ── Laptop Required → Edit: tick who needs a laptop desk ─────────── */
+    var $laptopPanel = $('#vaLaptopPanel'), $laptopEdit = $('#vaLaptopEdit');
+
+    function laptopPanel(open) {
+        $laptopPanel.toggleClass('d-none', !open);
+        $laptopEdit.attr('aria-expanded', open ? 'true' : 'false');
+        $laptopPanel.find('.coe-field-error').remove();
+        if (!open) { return; }
+        var $list = $('#vaLaptopList').empty();
+        $('#vaLaptopSearch').val('');
+        // PwBD OTs first, then roll order.
+        ots.slice().sort(function (a, b) { return (b.ph ? 1 : 0) - (a.ph ? 1 : 0) || a.serial - b.serial; })
+            .forEach(function (o) {
+                var $item = $('<label class="va-ot-item"></label>').attr('data-search', (o.roll + ' ' + o.name).toLowerCase());
+                $('<input type="checkbox" class="form-check-input va-laptop-cb">').val(o.pk).prop('checked', !!o.laptop).appendTo($item);
+                $('<span class="va-ot-item__roll"></span>').text(o.roll).appendTo($item);
+                $('<span class="va-ot-item__name"></span>').text(o.name).attr('title', o.name).appendTo($item);
+                if (o.ph) { $('<span class="va-laptop-tag ms-auto">PwBD</span>').appendTo($item); }
+                $list.append($item);
+            });
+        if (!ots.length) { $('<div class="small text-muted py-2">No OT of this drive has a roll number.</div>').appendTo($list); }
+    }
+
+    $laptopEdit.on('click', function () { laptopPanel($laptopPanel.hasClass('d-none')); });
+    $('#vaLaptopCancel').on('click', function () { laptopPanel(false); });
+    $('#vaLaptopSearch').on('input', function () {
+        var q = $(this).val().trim().toLowerCase();
+        $('#vaLaptopList .va-ot-item').each(function () { $(this).toggleClass('d-none', q !== '' && $(this).attr('data-search').indexOf(q) === -1); });
+    });
+
+    $('#vaLaptopSave').on('click', function () {
+        var yes = [], no = [];
+        $('#vaLaptopList .va-laptop-cb').each(function () {
+            var o = OT_BY_PK[this.value];
+            if (o && !!o.laptop !== this.checked) { (this.checked ? yes : no).push(this.value); }
+        });
+        if (!yes.length && !no.length) { laptopPanel(false); return; }
+        var $btn = $(this).prop('disabled', true);
+        $.ajax({ url: LAPTOPS_URL.replace('__ID__', encodeURIComponent($drive.val())), method: 'POST',
+            headers: { 'X-CSRF-TOKEN': CSRF }, data: { yes: yes, no: no } })
+            .done(function (r) {
+                var need = {};
+                (r.laptop || []).forEach(function (pk) { need[pk] = true; });
+                ots.forEach(function (o) { o.laptop = !!need[o.pk]; });
+                $('#vaMapLaptop').val(r.laptop_required);
+                laptopPanel(false);
+                // A room's laptop desks may no longer (or now) cover its OTs.
+                $subjects.find('.va-comp-row').each(function () { if ($(this).find('.va-row-room').val()) { checkRoom($(this)); } });
+                Swal.fire({ icon: 'success', title: 'Saved', text: r.message });
+            })
+            .fail(function (xhr) {
+                $laptopPanel.find('.coe-field-error').remove();
+                $('<div class="coe-field-error"></div>').text((xhr.responseJSON || {}).message || 'Laptop Required could not be saved.')
+                    .insertAfter('#vaLaptopList');
+            })
+            .always(function () { $btn.prop('disabled', false); });
+    });
 
     $subjects.on('click', '.va-add-room', function () {
         var $group = $(this).closest('.va-comp');
@@ -1172,8 +1290,6 @@ $(function () {
         if (loose.length) { Swal.fire({ icon: 'error', title: 'Not saved', text: loose.join('\n') }); }
     }
 
-    function esc(t) { return $('<div>').text(t).html(); }
-
     $('#vaMapForm').on('submit', function (e) {
         e.preventDefault();
         var $rows = touchedRows();
@@ -1182,11 +1298,9 @@ $(function () {
         $.ajax({ url: STORE_DRIVE_URL, method: 'POST', headers: { 'X-CSRF-TOKEN': CSRF }, data: mapPayload($rows) })
             .done(function (r) {
                 bootstrap.Modal.getOrCreateInstance($mapModal[0]).hide();
-                var html = (r.results || []).map(function (x) {
-                    return '<li class="mb-1"><strong>' + esc(x.component) + '</strong> — ' + esc(x.text) + '</li>';
-                }).join('');
-                Swal.fire({ icon: r.status === 'warning' ? 'warning' : 'success', title: 'Mapped',
-                    html: html ? '<ul class="text-start ps-3 mb-0">' + html + '</ul>' : esc(r.message) })
+                // Plain text: the app's success toast (sargam-success-toast.js) shows text only, so HTML came out as tags.
+                var text = (r.results || []).map(function (x) { return x.component + ': ' + x.text; }).join(' ') || r.message;
+                Swal.fire({ icon: r.status === 'warning' ? 'warning' : 'success', title: 'Seating mapped', text: text })
                     .then(function () { location.reload(); });
             })
             .fail(function (xhr) { mapFail(xhr, $rows); })

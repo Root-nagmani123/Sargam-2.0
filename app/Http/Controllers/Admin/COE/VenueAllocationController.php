@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\COE;
 
 use App\Http\Controllers\Concerns\ExportsMasterGrid;
 use App\Http\Controllers\Controller;
+use App\Models\COE\LaptopResponse;
 use App\Models\COE\SeatAllocation;
 use App\Models\COE\SeatPlan;
 use App\Models\COE\SeatPlanVenue;
@@ -240,8 +241,8 @@ class VenueAllocationController extends Controller
 
                 return [
                     'id' => (int) $c->id,
-                    'subject' => trim((string) $c->subject_name) ?: 'General',
-                    'component' => $c->component_name,
+                    'subject' => CourseParticipants::plainName($c->subject_name) ?: 'General',
+                    'component' => CourseParticipants::plainName($c->component_name),
                     'exam_date' => $this->examDateLabel($c->exam_date),
                     'frozen' => $own->contains(fn ($p) => (int) $p->status === SeatPlan::STATUS_PUBLISHED),
                     'taken' => $own->flatMap(fn ($p) => ($taken[$p->pk] ?? collect())->pluck('student_master_pk'))
@@ -258,7 +259,7 @@ class VenueAllocationController extends Controller
         $ots = $this->participantQuery($courseId, $batch, SeatPlan::CATEGORY_ALL, $only)
             ->orderBy('rn.serial_number')
             ->orderBy('sm.pk')
-            ->get(['sm.pk', 'rn.roll_number', 'rn.serial_number', 'lr.laptop_required', 'sm.display_name', 'sm.first_name', 'sm.middle_name', 'sm.last_name'])
+            ->get(['sm.pk', 'rn.roll_number', 'rn.serial_number', 'lr.laptop_required', 'sm.ph', 'sm.display_name', 'sm.first_name', 'sm.middle_name', 'sm.last_name'])
             ->map(fn ($o) => [
                 'pk' => (int) $o->pk,
                 'roll' => (string) $o->roll_number,
@@ -266,6 +267,8 @@ class VenueAllocationController extends Controller
                 'name' => $this->studentName($o),
                 // Needs a laptop desk under the drive's policy (Laptop Required = Yes) — for the dialog's live room check.
                 'laptop' => $this->requiresLaptop(SeatPlan::LAPTOP_REQ_DECLARED_YES, $o->laptop_required),
+                // PwBD (student_master.ph): listed first in the Laptop Required picker.
+                'ph' => LaptopDeclarationService::isPwbd($o->ph),
             ]);
 
         $laptops = (int) $this->participantQuery($courseId, $batch, SeatPlan::CATEGORY_ALL, $only)
@@ -278,6 +281,64 @@ class VenueAllocationController extends Controller
             'laptop_required' => $laptops,
             'subjects' => $subjects,
             'ots' => $ots,
+        ]);
+    }
+
+    /**
+     * Map Seating Plan → Laptop Required → Edit: set which OTs of the drive need a laptop desk.
+     * Written to OT Laptop Status (coe_laptop_responses, source Admin) like an admin answer
+     * there; only the OTs whose answer changes are sent. A new Yes without a reason on record
+     * gets one saying where it was set. Seating plans already mapped are not re-seated.
+     */
+    public function saveLaptops(Request $request, int $id, LaptopDeclarationService $declarations): JsonResponse
+    {
+        $validated = $request->validate([
+            'yes' => ['nullable', 'array'],
+            'yes.*' => ['integer', 'distinct'],
+            'no' => ['nullable', 'array'],
+            'no.*' => ['integer', 'distinct'],
+        ]);
+        $yes = array_map('intval', $validated['yes'] ?? []);
+        $no = array_map('intval', $validated['no'] ?? []);
+        if ($yes === [] && $no === []) {
+            return response()->json(['status' => 'error', 'message' => 'Nothing was changed.'], 422);
+        }
+        if (array_intersect($yes, $no) !== []) {
+            return response()->json(['status' => 'error', 'message' => 'An OT cannot need and not need a laptop at once.'], 422);
+        }
+
+        $drive = $this->mappableDrives()->firstWhere('id', $id);
+        if ($drive === null) {
+            return response()->json(['status' => 'error', 'message' => 'This examination drive is closed, not yet approved by the Course Coordinator, or its course has no roll numbers yet.'], 422);
+        }
+        $reexam = ReexamService::seatingBySubject($id);
+        $only = $reexam === null ? null : array_values(array_unique(array_merge([], ...array_values($reexam))));
+        $cohort = $this->participantQuery($drive['course_id'], $drive['batch'], SeatPlan::CATEGORY_ALL, $only)
+            ->get(['sm.pk', 'lr.reason'])->keyBy(fn ($o) => (int) $o->pk);
+        if (array_diff(array_merge($yes, $no), $cohort->keys()->all()) !== []) {
+            return response()->json(['status' => 'error', 'message' => 'One or more of those OTs are not part of this drive.'], 422);
+        }
+
+        DB::transaction(function () use ($yes, $no, $cohort, $declarations) {
+            foreach ([1 => $yes, 0 => $no] as $answer => $pks) {
+                foreach ($pks as $pk) {
+                    $reason = trim((string) $cohort[$pk]->reason);
+                    $declarations->record($pk, [
+                        'laptop_required' => (string) $answer,
+                        'reason' => $reason !== '' ? $reason : ($answer === 1 ? 'Set by COE at Venue Allocation' : null),
+                    ], LaptopResponse::SOURCE_ADMIN);
+                }
+            }
+        });
+
+        $laptop = $this->participantQuery($drive['course_id'], $drive['batch'], SeatPlan::CATEGORY_ALL, $only)
+            ->where('lr.laptop_required', 1)->pluck('sm.pk')->map(fn ($pk) => (int) $pk)->values();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Laptop Required saved for ' . (count($yes) + count($no)) . ' OT(s).',
+            'laptop_required' => $laptop->count(),
+            'laptop' => $laptop,
         ]);
     }
 
@@ -363,9 +424,10 @@ class VenueAllocationController extends Controller
 
                     $c = $components[$mapId];
                     $messages[] = [
-                        'component' => (trim((string) $c->subject_name) ?: 'General') . ' – ' . $c->component_name,
-                        'status' => $summary['unallocated'] > 0 ? 'warning' : 'success',
-                        'text' => $this->allocationMessage($summary),
+                        'component' => (CourseParticipants::plainName($c->subject_name) ?: 'General') . ' – ' . CourseParticipants::plainName($c->component_name),
+                        'status' => 'success',
+                        // Everyone is seated here (a leftover OT rolled the save back above).
+                        'text' => sprintf('%d OT(s) seated across %d room(s).', $summary['allocated'], $summary['rooms']),
                     ];
                 }
 
@@ -451,6 +513,17 @@ class VenueAllocationController extends Controller
     private function examDateLabel(?string $date): string
     {
         return $date ? date('d/m/Y', strtotime($date)) : '—';
+    }
+
+    /** "10:00 AM – 01:00 PM" from the component's start / end date-times; '—' when no time is set. */
+    private function examTimeLabel(?string $start, ?string $end): string
+    {
+        if (! $start) {
+            return '—';
+        }
+        $label = date('h:i A', strtotime($start));
+
+        return $end ? $label . ' – ' . date('h:i A', strtotime($end)) : $label;
     }
 
     /**
@@ -879,6 +952,9 @@ class VenueAllocationController extends Controller
             ->orderBy('spv.display_order')
             ->get(['spv.pk', 'spv.seat_plan_pk', 'spv.venue_id', 'sp.examination_drive_component_map_id as map_id', 'sp.subject_name', 'sp.exam_name', 'sp.exam_date as plan_date', 'sp.status as plan_status',
                 'dcm.exam_date', 'dcm.exam_type', 'vm.venue_name',
+                // Exam time: the CC's confirmed slot, else the Tentative Exam Range's times.
+                DB::raw('COALESCE(dcm.proposed_start_at, dcm.exam_start_at) as starts_at'),
+                DB::raw('COALESCE(dcm.proposed_end_at, dcm.exam_end_at) as ends_at'),
                 DB::raw('COALESCE(rp.building_name, eb.building_name) as building_name'),
                 DB::raw('COALESCE(rp.floor_name, ef.floor_name) as floor_name'),
                 'inv.chief_faculty_pk', 'inv.invigilator_faculty_pk', 'inv.assistant_faculty_pk', 'inv.mts_employee_pk']);
@@ -900,9 +976,10 @@ class VenueAllocationController extends Controller
             'id' => (int) $r->pk,
             // One person invigilates one room a day: rooms of the same exam date share a key.
             'paper' => $this->invigilationDay($r->exam_date ?? $r->plan_date, (int) $r->seat_plan_pk),
-            'subject' => trim((string) $r->subject_name) ?: 'General',
-            'component' => $r->exam_name ?: '—',
+            'subject' => CourseParticipants::plainName($r->subject_name) ?: 'General',
+            'component' => CourseParticipants::plainName($r->exam_name) ?: '—',
             'exam_date' => $this->examDateLabel($r->exam_date ?? $r->plan_date),
+            'exam_time' => $this->examTimeLabel($r->starts_at, $r->ends_at),
             'building' => $r->building_name ?: '—',
             'floor' => $r->floor_name ?: '—',
             'room' => $r->venue_name,
@@ -1226,7 +1303,7 @@ class VenueAllocationController extends Controller
     {
         $allocation = $this->allocationDetail($id);
         $drive = $allocation['drive'];
-        $text = fn ($v) => html_entity_decode((string) $v, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = fn ($v) => CourseParticipants::plainName($v);
         $blockNames = ['A' => 'Block A', 'B' => 'Block B (Centre)', 'C' => 'Block C'];
         $part = fn (array $s, int $i) => explode('-', $s['label'], 2)[$i] ?? $s['label'];
 
@@ -1236,7 +1313,7 @@ class VenueAllocationController extends Controller
             'name' => ['heading' => 'Name', 'width' => '32%', 'value' => fn ($s) => $s['name']],
             'seat' => ['heading' => 'Seat', 'width' => '9%', 'align' => 'center', 'value' => fn ($s) => $part($s, 1)],
             'block' => ['heading' => 'Block', 'width' => '17%', 'value' => fn ($s) => $blockNames[$part($s, 0)] ?? $part($s, 0)],
-            'remarks' => ['heading' => 'Remarks', 'width' => '22%', 'value' => fn ($s) => collect([
+            'remarks' => ['heading' => 'Seat Type', 'width' => '22%', 'value' => fn ($s) => collect([
                 $s['laptop'] ? 'Laptop' : null, $s['scriber'] ? 'Scriber' : null, $s['manual'] ? 'Moved' : null,
             ])->filter()->implode(', ') ?: '-'],
         ];
@@ -1275,7 +1352,7 @@ class VenueAllocationController extends Controller
 
         $seats = $this->roomSeats((int) $plan->pk, (int) $planVenue->venue_id);
         // Some names are stored HTML-encoded ("&#039;"); decode so the page shows the text.
-        $text = fn ($v) => $v === null ? null : html_entity_decode((string) $v, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = fn ($v) => $v === null ? null : CourseParticipants::plainName($v);
 
         return [
             'id' => (int) $planVenue->pk,
@@ -1923,7 +2000,7 @@ class VenueAllocationController extends Controller
             ->selectRaw('seat_plan_pk, venue_id, COUNT(*) as n')
             ->get()->keyBy(fn ($c) => $c->seat_plan_pk . ':' . $c->venue_id);
         $today = now()->toDateString();
-        $text = fn ($v) => html_entity_decode((string) $v, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = fn ($v) => CourseParticipants::plainName($v);
 
         $duties = $rows->map(function ($r) use ($facultyPks, $userId, $seated, $today, $text) {
             $roles = [];
@@ -1991,7 +2068,7 @@ class VenueAllocationController extends Controller
                 'vsl.laptop_seats', 'vsl.scriber_seats']);
 
         $today = now()->toDateString();
-        $text = fn ($v) => html_entity_decode((string) $v, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = fn ($v) => CourseParticipants::plainName($v);
         $blockNames = ['A' => 'Block A', 'B' => 'Block B (Centre)', 'C' => 'Block C'];
         $seats = $rows->map(function ($r) use ($today, $text, $blockNames) {
             $label = self::seatLabel((int) $r->seat_number);
@@ -2110,6 +2187,7 @@ class VenueAllocationController extends Controller
                 'sp.exam_name', 'sp.status', 'sp.unallocated_count', 'cm.course_name', 'vm.venue_name',
                 DB::raw('COALESCE(rp.room_capacity, vm.capacity) as capacity'),
                 DB::raw('COALESCE(rp.room_laptops, vm.laptop_capacity) as laptop_capacity'),
+                'rp.room_scribers as scriber_capacity',
                 DB::raw('COALESCE(rp.building_name, eb.building_name) as building_name'),
                 DB::raw('COALESCE(rp.floor_name, ef.floor_name) as floor_name'),
                 'vsl.laptop_seats', 'vsl.scriber_seats', 'dcm.exam_type', 'ed.drive_name',
@@ -2135,12 +2213,13 @@ class VenueAllocationController extends Controller
             return [
                 'id' => (int) $r->pk,
                 // A plan made before drives existed has no component map, so no drive.
-                'drive' => trim((string) $r->drive_name) ?: '—',
-                'course' => $r->course_name,
+                // Names stored HTML-encoded (some twice: "&amp;#039;") read as text.
+                'drive' => CourseParticipants::plainName($r->drive_name) ?: '—',
+                'course' => CourseParticipants::plainName($r->course_name),
                 'batch' => (int) $r->batch,
                 'category' => SeatPlan::categoryLabel((int) $r->candidate_category),
-                'subject' => $r->subject_name ?: 'General',
-                'component' => $r->exam_name ?: '—',
+                'subject' => CourseParticipants::plainName($r->subject_name) ?: 'General',
+                'component' => CourseParticipants::plainName($r->exam_name) ?: '—',
                 'ot_count' => (int) ($c->seated ?? 0),
                 'laptop_req' => $laptopReq,
                 'scriber_req' => (int) ($c->scriber ?? 0),
@@ -2149,7 +2228,7 @@ class VenueAllocationController extends Controller
                 'room' => $r->venue_name,
                 'capacity' => (int) $r->capacity,
                 'avail_laptop' => $availLaptop,
-                'scriber_seats' => count(VenueSeatLayout::normalise(json_decode((string) $r->scriber_seats, true))),
+                'scriber_seats' => $this->roomScribers($r),
                 'empty_laptop' => max(0, $availLaptop - $laptopReq),
                 'status' => (int) $r->status === SeatPlan::STATUS_PUBLISHED ? 'Frozen' : 'Pending',
                 'unallocated' => (int) $r->unallocated_count,
@@ -2186,6 +2265,7 @@ class VenueAllocationController extends Controller
             ->orderBy('rp.floor_name')
             ->orderBy('vm.venue_name')
             ->get(['vm.venue_id', 'vm.venue_name', 'rp.room_capacity as capacity', 'rp.room_laptops as laptop_capacity',
+                'rp.room_scribers as scriber_capacity',
                 'rp.building_pk', 'rp.building_name as building', 'rp.floor_pk', 'rp.floor_name as floor',
                 'vsl.laptop_seats', 'vsl.scriber_seats']);
     }
@@ -2201,11 +2281,19 @@ class VenueAllocationController extends Controller
                 'name' => $r->venue_name,
                 'capacity' => (int) $r->capacity,
                 'laptop' => $this->roomLaptops($r),
-                'scriber' => count(VenueSeatLayout::normalise(json_decode((string) $r->scriber_seats, true))),
+                'scriber' => $this->roomScribers($r),
             ];
         }
 
         return $tree;
+    }
+
+    /** Scriber seats a room offers: the marked scriber desks, else Room Master's scriber count. */
+    private function roomScribers(object $room): int
+    {
+        $scriberSeats = VenueSeatLayout::normalise(json_decode((string) $room->scriber_seats, true));
+
+        return $scriberSeats !== [] ? count($scriberSeats) : (int) $room->scriber_capacity;
     }
 
     /** Laptops an examRooms() row offers: the marked laptop desks, else Room Master's laptop count. */

@@ -23,7 +23,7 @@ final class ExamRooms
     /**
      * venue_id → building, floor, capacity and laptops from Room Master, active or not.
      * Columns: venue_id, building_pk, building_name, floor_pk, floor_name, room_capacity,
-     * room_laptops, is_active (room, building, floor and venue all active).
+     * room_laptops, room_scribers, is_active (room, building, floor and venue all active).
      */
     public static function placements(): Builder
     {
@@ -49,6 +49,7 @@ final class ExamRooms
                 'f.floor_name',
                 'rm.capacity as room_capacity',
                 DB::raw("{$laptops} as room_laptops"),
+                'rm.scriber_count as room_scribers',
                 DB::raw('(vm.active_inactive = 1 AND rm.active_inactive = 1 AND b.active_inactive = 1 AND f.active_inactive = 1) as is_active'),
             ]);
     }
