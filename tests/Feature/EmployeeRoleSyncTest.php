@@ -194,4 +194,40 @@ class EmployeeRoleSyncTest extends TestCase
 
         $this->assertSame([$heldOptionPk], $this->callPrivate('heldOfferedRoleOptions', $target->pk));
     }
+
+    /**
+     * PR #354 review, F-003 / F-006: members:reconcile-role-mappings. The dry run writes
+     * nothing and names, per option, the rows it would add and remove (each one changes
+     * who receives that option's mapping-driven notifications). --apply mirrors the
+     * mapping onto the held roles, and a second run finds nothing to change.
+     */
+    public function test_reconcile_command_reports_changes_by_option_and_applies_them(): void
+    {
+        [[$staleOptionPk], [$heldOptionPk, $heldRoleName]] = $this->twoOfferedRoles();
+        $names = UserRoleMaster::whereIn('pk', [$staleOptionPk, $heldOptionPk])->pluck('user_role_name', 'pk');
+
+        $target = $this->makeTestUser('reconcile');
+        $target->assignRole($heldRoleName);
+        EmployeeRoleMapping::insert(['user_credentials_pk' => $target->pk, 'user_role_master_pk' => $staleOptionPk]);
+
+        $this->artisan('members:reconcile-role-mappings', ['--user' => $target->pk])
+            ->expectsOutputToContain('Dry run: nothing was written.')
+            ->expectsTable(['Option pk', 'Option', 'Logins gaining it', 'Logins losing it'], collect([
+                [$staleOptionPk, (string) $names[$staleOptionPk], 0, 1],
+                [$heldOptionPk, (string) $names[$heldOptionPk], 1, 0],
+            ])->sortBy(0)->values()->all())
+            ->assertSuccessful();
+
+        $this->assertSame([$staleOptionPk], $this->mappedOptions($target), 'A dry run must not write.');
+
+        $this->artisan('members:reconcile-role-mappings', ['--user' => $target->pk, '--apply' => true])
+            ->expectsOutputToContain('Applied.')
+            ->assertSuccessful();
+
+        $this->assertSame([$heldOptionPk], $this->mappedOptions($target));
+
+        $this->artisan('members:reconcile-role-mappings', ['--user' => $target->pk])
+            ->doesntExpectOutputToContain('By option')
+            ->assertSuccessful();
+    }
 }

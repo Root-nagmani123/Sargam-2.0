@@ -12,10 +12,11 @@ use Illuminate\Support\Facades\DB;
  * One-off reconciliation of employee_role_mapping with the roles employee logins hold.
  *
  * The Member wizard's Step 3 now ticks the roles a login holds (Spatie). The employee
- * show and print pages still list employee_role_mapping, which until now was written
- * only by the wizard. Existing employees whose roles were changed on Role & Permission >
- * Users therefore show different roles on Step 3 and on the show/print pages until they
- * are re-saved (PR #354 review, F-003).
+ * show and print pages, and the mapping-driven notification lookups in
+ * NotificationReceiverService, still read employee_role_mapping. Before this PR the Users
+ * screen's role assignment never wrote that table, so existing employees whose roles were
+ * changed there show different roles on Step 3 and on the show/print pages until they are
+ * re-saved (PR #354 review, F-003).
  *
  * This mirrors each employee ('E') login's offered Step 3 options onto the roles it
  * holds, using EmployeeRoleMapping::mirrorOfferedOptions(), the same method the Users
@@ -29,7 +30,15 @@ use Illuminate\Support\Facades\DB;
  * rule (EmployeeRoleMapping::belongsToSharedEmployee(), PR #354 review, F-011); this
  * command computes it in one query instead of once per login.
  *
+ * Notification routing (PR #354 review, F-006): NotificationReceiverService picks
+ * recipients by option name from employee_role_mapping (Admin, HAC Person,
+ * Training-Induction, ...). Every row this command adds or removes therefore adds or
+ * removes that login as a recipient of those notifications. The summary prints the rows
+ * to add and remove per option, by name, so the routing change can be reviewed before
+ * --apply. Run with -v to list each login; keep that listing as the rollback record.
+ *
  * Dry run by default. Pass --apply to write. Re-runnable: a second run finds nothing.
+ * Deploy steps: docs/deploy-notes-employee-role-sync.md.
  */
 class ReconcileEmployeeRoleMappings extends Command
 {
@@ -66,9 +75,11 @@ class ReconcileEmployeeRoleMappings extends Command
         }
 
         $checked = $changed = $added = $removed = $skipped = 0;
+        $addedByOption = $removedByOption = [];
 
         $query->chunkById(200, function ($users) use (
-            $apply, $offered, $sharedEmployeePks, &$checked, &$changed, &$added, &$removed, &$skipped
+            $apply, $offered, $sharedEmployeePks, &$checked, &$changed, &$added, &$removed, &$skipped,
+            &$addedByOption, &$removedByOption
         ) {
             $users->load('roles');
 
@@ -105,6 +116,14 @@ class ReconcileEmployeeRoleMappings extends Command
                 $added += count($toAdd);
                 $removed += count($toRemove);
 
+                foreach ($toAdd as $pk) {
+                    $addedByOption[$pk] = ($addedByOption[$pk] ?? 0) + 1;
+                }
+
+                foreach ($toRemove as $pk) {
+                    $removedByOption[$pk] = ($removedByOption[$pk] ?? 0) + 1;
+                }
+
                 if ($this->output->isVerbose()) {
                     $this->line(sprintf(
                         'user_credentials.pk %d: add [%s] remove [%s]',
@@ -124,6 +143,8 @@ class ReconcileEmployeeRoleMappings extends Command
             [$checked, $skipped, $changed, $added, $removed],
         ]);
 
+        $this->reportByOption($addedByOption, $removedByOption);
+
         if ($apply) {
             if ($changed > 0) {
                 \App\DataTables\MemberDataTable::bumpListingCacheEpoch();
@@ -135,5 +156,32 @@ class ReconcileEmployeeRoleMappings extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Rows to add and remove per option, by name. Each row is one login gained or lost
+     * as a recipient of the mapping-driven notifications for that option (F-006).
+     *
+     * @param  array<int, int>  $addedByOption    option pk => logins gaining it
+     * @param  array<int, int>  $removedByOption  option pk => logins losing it
+     */
+    private function reportByOption(array $addedByOption, array $removedByOption): void
+    {
+        $pks = array_unique(array_merge(array_keys($addedByOption), array_keys($removedByOption)));
+
+        if ($pks === []) {
+            return;
+        }
+
+        sort($pks);
+        $names = UserRoleMaster::whereIn('pk', $pks)->pluck('user_role_name', 'pk');
+
+        $this->line('By option (each row adds or removes the login as a recipient of notifications looked up by that option):');
+        $this->table(['Option pk', 'Option', 'Logins gaining it', 'Logins losing it'], array_map(fn ($pk) => [
+            $pk,
+            (string) ($names[$pk] ?? '?'),
+            $addedByOption[$pk] ?? 0,
+            $removedByOption[$pk] ?? 0,
+        ], $pks));
     }
 }
