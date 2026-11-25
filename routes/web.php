@@ -2295,6 +2295,19 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->whereNumber('id')->name('examination-drive.show');
     Route::get('examination-drive/{id}/coordinates', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'coordinates'])
         ->whereNumber('id')->name('examination-drive.coordinates');
+    // Re-exam: Create Re-exam popup on the drive list (ReexamService).
+    Route::middleware('menu.permission:coe_examination_drive,coe_coe_examination_drive')->group(function () {
+        Route::get('examination-drive/reexam-ready', [\App\Http\Controllers\Admin\COE\ReexamController::class, 'ready'])
+            ->name('examination-drive.reexam.ready');
+        Route::get('examination-drive/{id}/reexam', [\App\Http\Controllers\Admin\COE\ReexamController::class, 'show'])
+            ->whereNumber('id')->name('examination-drive.reexam.show');
+        Route::post('examination-drive/{id}/reexam', [\App\Http\Controllers\Admin\COE\ReexamController::class, 'store'])
+            ->whereNumber('id')->middleware('throttle:10,1')->name('examination-drive.reexam.store');
+        Route::put('examination-drive/{id}/reexam', [\App\Http\Controllers\Admin\COE\ReexamController::class, 'update'])
+            ->whereNumber('id')->middleware('throttle:20,1')->name('examination-drive.reexam.update');
+        Route::get('examination-drive/{id}/reexam-result', [\App\Http\Controllers\Admin\COE\ReexamController::class, 'result'])
+            ->whereNumber('id')->name('examination-drive.reexam.result');
+    });
     Route::get('examination-drive/{id}/coordinates/export/{format}', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'coordinatesExport'])
         ->whereNumber('id')->whereIn('format', ['csv', 'excel', 'pdf', 'print'])->name('examination-drive.coordinates.export');
     Route::get('faculty-examination-drive', [\App\Http\Controllers\Admin\COE\ExaminationDriveController::class, 'facultyIndex'])
@@ -2399,4 +2412,14 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->middleware('menu.permission:coe_verified_marksheet')->name('verified-marksheet.index');
     Route::get('marksheet-generation/view/{course}/{ot}', [\App\Http\Controllers\Admin\COE\MarksheetController::class, 'show'])
         ->middleware('menu.permission:coe_marksheet_generation,coe_verified_marksheet')->name('marksheet.show');
+    // Re-exam marksheets (Pass / Fail only), the Re-exam tab of the two pages above: ReexamMarksheetController.
+    Route::get('marksheet-generation/reexam', [\App\Http\Controllers\Admin\COE\ReexamMarksheetController::class, 'generation'])
+        ->middleware('menu.permission:coe_marksheet_generation')->name('reexam-marksheet.index');
+    Route::post('marksheet-generation/reexam/publish', [\App\Http\Controllers\Admin\COE\ReexamMarksheetController::class, 'publish'])
+        ->middleware(['menu.permission:coe_marksheet_generation', 'throttle:20,1'])->name('reexam-marksheet.publish');
+    Route::get('verified-marksheet/reexam', [\App\Http\Controllers\Admin\COE\ReexamMarksheetController::class, 'verified'])
+        ->middleware('menu.permission:coe_verified_marksheet')->name('reexam-marksheet.verified');
+    Route::get('marksheet-generation/reexam/view/{reexam}/{ot}', [\App\Http\Controllers\Admin\COE\ReexamMarksheetController::class, 'show'])
+        ->whereNumber(['reexam', 'ot'])
+        ->middleware('menu.permission:coe_marksheet_generation,coe_verified_marksheet')->name('reexam-marksheet.show');
 });

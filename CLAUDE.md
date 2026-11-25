@@ -434,13 +434,8 @@ All rules in `ResultMarksService` (RMS) and `MarksModeration`.
   `max_marks` (2 decimals), `AB` = absent, blank clears. Status 1 Draft / 2 Approved;
   Approve needs every cell on the filtered sheet filled and **locks permanently**.
   Faculty see OTs per their assigned codes; COE staff (no faculty row) see everything.
-  Excel import saves as draft only. The Director component (below) is never on it.
-  `EvaluationMarksController` is now only the faculty-side mock (`faculty-evaluation-marks`,
-  sample data, no table).
-- **Director Assessment** (Evaluation & Marks, Training Section): the Director component
-  (name contains "director" on a Director Assessment drive, `RMS::isDirectorComponent()`) is
-  entered by TI, not faculty, and sent to COE. Setup, flow, data mapping and rules:
-  **`docs/coe-director-assessment.md`**.
+  Excel import saves as draft only. `EvaluationMarksController` is an old mock (sample
+  data, no table).
 - **Marks Moderation** (`MarksModerationController`, Training section): SOP COE/11
   `Mi = (UMi − Xj) × σG/σj + μG` per column, across evaluators; absents excluded;
   clamp 0..max. Only when every assigned mark in the component is approved.

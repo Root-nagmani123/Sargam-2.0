@@ -53,7 +53,9 @@ class ExaminationDriveFacultyDataTable extends ExaminationDriveDataTable
         // Search rules: ExaminationDriveDataTable::applySearch (same for every drive list).
         return $this->applySearch(new EloquentDataTable($query))
             ->addIndexColumn()
-            ->editColumn('name', fn ($row) => e($this->driveName($row)))
+            // A re-exam shows "Re-exam N" under its name (Figma).
+            ->editColumn('name', fn ($row) => e($this->driveName($row)) . ($this->isReexamRow($row)
+                ? '<span class="d-block small text-primary edc-reexam-sub">Re-exam ' . (int) $row->reexamLink->reexam_no . '</span>' : ''))
             ->editColumn('exam_type', fn ($row) => $row->examinationType ? e($row->examinationType->exam_type_name) : '<span class="coe-muted">-</span>')
             ->editColumn('term', fn ($row) => e($row->term->term_name ?? '-'))
             ->editColumn('course', fn ($row) => e($row->course->course_name ?? '-'))
@@ -66,7 +68,13 @@ class ExaminationDriveFacultyDataTable extends ExaminationDriveDataTable
             ->addColumn('status', fn ($row) => $this->statusCell($row))
             ->addColumn('actions', fn ($row) => $this->actionsCell($row))
             ->setRowAttr(['data-coe-id' => fn ($row) => $row->id])
-            ->rawColumns(['exam_type', 'sub_coords', 'components', 'status', 'actions']);
+            ->rawColumns(['name', 'exam_type', 'sub_coords', 'components', 'status', 'actions']);
+    }
+
+    /** Whether the row is a re-exam drive (reexamLink is loaded by the parent query). */
+    protected function isReexamRow(ExaminationDrive $row): bool
+    {
+        return $row->relationLoaded('reexamLink') && $row->reexamLink !== null;
     }
 
     public function getColumns(): array
@@ -132,7 +140,11 @@ class ExaminationDriveFacultyDataTable extends ExaminationDriveDataTable
 
         $own = $row->facultyMaps->whereIn('faculty_master_pk', $facultyPks);
         $subjects = ($own->isNotEmpty() ? $own : $row->facultyMaps)->pluck('subject_master_pk')->unique();
-        $saved = $row->componentMaps->pluck('subject_master_pk')->unique();
+        // A re-exam's rows are copied in from the start: a subject is set up once every
+        // component has its Tentative Exam Range.
+        $saved = $this->isReexamRow($row)
+            ? $row->componentMaps->groupBy('subject_master_pk')->filter(fn ($maps) => $maps->every(fn ($m) => $m->exam_date !== null))->keys()
+            : $row->componentMaps->pluck('subject_master_pk')->unique();
 
         return $subjects->isNotEmpty() && $subjects->diff($saved)->isEmpty();
     }

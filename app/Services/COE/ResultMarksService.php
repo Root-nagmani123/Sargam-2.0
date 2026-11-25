@@ -191,15 +191,44 @@ class ResultMarksService
     /**
      * Drives open for marks entry: released (Active, not Draft or Closed) and
      * approved by the Course Coordinator — the same gate as question-paper upload.
+     * Re-exam drives only when $withReexams (Result Entry and its "entry ready" bell; their
+     * OTs narrowed by entryParticipants). Compilation, Merit, Moderation and the "Marks
+     * Pending" reminder keep them out (ReexamService::excludeFrom).
      */
-    public function entryDrives(?int $coursePk = null): Collection
+    public function entryDrives(?int $coursePk = null, bool $withReexams = false): Collection
     {
-        return ExaminationDrive::with(['course', 'examinationType', 'facultyMaps.faculty', 'componentMaps.component', 'componentMaps.subject', 'componentMaps.faculty'])
+        $query = ExaminationDrive::with(['course', 'examinationType', 'facultyMaps.faculty', 'componentMaps.component', 'componentMaps.subject', 'componentMaps.faculty'])
             ->where('status', ExaminationDrive::STATUS_ACTIVE)
             ->where('cc_status', ExaminationDrive::CC_APPROVED)
-            ->when($coursePk, fn ($q) => $q->where('course_master_pk', $coursePk))
+            ->when($coursePk, fn ($q) => $q->where('course_master_pk', $coursePk));
+
+        return ($withReexams ? $query : ReexamService::excludeFrom($query))
             ->orderBy('id')
             ->get();
+    }
+
+    /** @var array<int, array<int, list<int>>|null> drive id => its re-exam candidates per subject (null: not a re-exam) */
+    private array $reexamCandidates = [];
+
+    /**
+     * The OTs marks are entered for on one subject of $drive: every participant on a
+     * normal drive (unchanged); on a re-exam drive only that subject's re-exam OTs
+     * (ReexamService::seatingBySubject, coe_reexam_candidates).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function entryParticipants(ExaminationDrive $drive, int $subjectPk): array
+    {
+        $participants = $this->participants($drive);
+        $id = (int) $drive->id;
+        if (! array_key_exists($id, $this->reexamCandidates)) {
+            $this->reexamCandidates[$id] = ReexamService::seatingBySubject($id);
+        }
+        if ($this->reexamCandidates[$id] === null) {
+            return $participants;
+        }
+
+        return array_intersect_key($participants, array_flip($this->reexamCandidates[$id][$subjectPk] ?? []));
     }
 
     /**
@@ -242,13 +271,14 @@ class ResultMarksService
         $mine = $this->facultyOf($user);
         $columns = [];
 
-        foreach ($this->entryDrives($coursePk) as $drive) {
-            $participants = $this->participants($drive);
+        // Re-exam drives too: only their re-exam OTs, per subject (entryParticipants).
+        foreach ($this->entryDrives($coursePk, true) as $drive) {
             foreach ($drive->componentMaps->sortBy('id') as $map) {
                 // The Director's overall assessment is the Training Section's, not faculty's.
                 if (! $this->examOver($drive, $map) || self::isDirectorComponent($drive, $map)) {
                     continue;
                 }
+                $participants = $this->entryParticipants($drive, (int) $map->subject_master_pk);
                 $owners = $this->subjectFacultyPks($drive, (int) $map->subject_master_pk);
                 // The subject's faculty see every OT of the component, unless they are given
                 // OT codes on it themselves: then, like any evaluator, only those OTs.
@@ -658,13 +688,18 @@ class ResultMarksService
             ->all();
     }
 
-    /** active = Active drives, archived = Closed drives (Draft drives are not released yet). */
+    /**
+     * active = Active drives, archived = Closed drives (Draft drives are not released yet).
+     * Re-exam drives are left out (ReexamService): Compilation's main rows, Merit, Moderation
+     * and the marksheets count the main drives only. Compilation adds its "(Re-exam)" rows
+     * separately (reexamCompilationRows).
+     */
     private function scopeDrives(string $scope, ?int $coursePk = null): Collection
     {
-        return ExaminationDrive::with(['course', 'examinationType', 'facultyMaps.faculty', 'componentMaps.component', 'componentMaps.subject', 'componentMaps.faculty'])
+        return ReexamService::excludeFrom(ExaminationDrive::with(['course', 'examinationType', 'facultyMaps.faculty', 'componentMaps.component', 'componentMaps.subject', 'componentMaps.faculty'])
             ->where('status', $scope === 'archived' ? ExaminationDrive::STATUS_CLOSED : ExaminationDrive::STATUS_ACTIVE)
             ->when($coursePk, fn ($q) => $q->where('course_master_pk', $coursePk))
-            ->whereHas('componentMaps')
+            ->whereHas('componentMaps'))
             ->orderBy('id')
             ->get();
     }
@@ -1072,6 +1107,171 @@ class ResultMarksService
         return $out;
     }
 
+    /* ───────────── Merit & Ranking: Drive / Re-exam filters ───────────── */
+
+    /**
+     * The Drive and Re-exam filter options of Merit & Ranking in $scope: every main drive
+     * in scope (Active, or Closed for archived; re-exam drives are under Re-exam), and
+     * the re-exams of those drives. Picking a drive narrows the Re-exam list only.
+     *
+     * @return array{drives: array<int, array{name:string, course:int}>, reexams: array<int, array{label:string, main:int, course:int, no:int}>}
+     */
+    public function meritReexamFilters(string $scope): array
+    {
+        $out = ['drives' => [], 'reexams' => []];
+        $mains = $this->scopeDrives($scope)->keyBy('id');
+        foreach ($mains->sortBy(fn ($d) => mb_strtolower(ReexamService::driveName($d))) as $main) {
+            $out['drives'][(int) $main->id] = ['name' => ReexamService::driveName($main), 'course' => (int) $main->course_master_pk];
+        }
+        if (! ReexamService::enabled()) {
+            return $out;
+        }
+        $links = \App\Models\COE\Reexam::with('reexamDrive')->whereIn('main_drive_id', $mains->keys())
+            ->orderBy('main_drive_id')->orderBy('reexam_no')->get();
+        foreach ($links as $link) {
+            if (! $link->reexamDrive || $link->reexamDrive->status === ExaminationDrive::STATUS_DRAFT) {
+                continue;
+            }
+            $main = $mains[$link->main_drive_id];
+            $out['reexams'][(int) $link->reexam_drive_id] = [
+                'label' => 'Re-exam '.$link->reexam_no.' · '.ReexamService::driveName($main),
+                'main' => (int) $main->id,
+                'course' => (int) $main->course_master_pk,
+                'no' => (int) $link->reexam_no,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * Merit & Ranking with one re-exam picked: the merit() page of its course, narrowed to
+     * that re-exam's OTs. In each subject an OT re-sat, the re-exam mark (approved, raw: no
+     * moderation) takes the place of the main drive's mark in Total (A), Grand Total and
+     * Pass / Fail; both are shown ($row['reexam']). The **rank stays the main merit rank**
+     * (a re-exam never changes rank). A re-exam mark not approved yet: that subject and the
+     * totals are null and the result is 'Pending'. Null when the re-exam is not on this tab.
+     *
+     * @return array<string, mixed>|null merit() + reexam: {id, no, name, main}
+     */
+    public function reexamMerit(string $scope, int $reexamDriveId): ?array
+    {
+        $link = ReexamService::enabled()
+            ? \App\Models\COE\Reexam::with(['candidates', 'mainDrive.componentMaps.subject', 'mainDrive.examinationType', 'reexamDrive.componentMaps'])
+                ->where('reexam_drive_id', $reexamDriveId)->first()
+            : null;
+        $main = $link?->mainDrive;
+        if (! $main || ! $link->reexamDrive) {
+            return null;
+        }
+        $merit = $this->merit($scope, (int) $main->course_master_pk);
+        if ($merit['coursePk'] !== (int) $main->course_master_pk) {
+            return null;
+        }
+
+        // Every merit column of the course: which bucket it adds to, its max, whether it must be passed.
+        $columns = [];
+        foreach ($this->scopeDrives($scope, (int) $main->course_master_pk) as $drive) {
+            foreach ($drive->componentMaps as $map) {
+                if (! $this->examOver($drive, $map)) {
+                    continue;
+                }
+                $col = $this->column($drive, $map);
+                $bucket = self::isDirectorAssessment($drive) ? 'B'
+                    : (($paper = self::qualifyingPaper($col)) !== null ? 'q:'.$paper : self::meritKey($col['subject'], $col['subject_code'], $col['subject_pk']));
+                $columns[$col['key']] = ['bucket' => $bucket, 'max' => $col['max']];
+            }
+        }
+
+        $sits = [];
+        foreach ($link->candidates as $c) {
+            $sits[(int) $c->student_master_pk][] = (int) $c->subject_master_pk;
+        }
+        $reMaps = $link->reexamDrive->componentMaps->groupBy('subject_master_pk');
+        $reMarks = $this->marks([(int) $link->reexam_drive_id]);
+        $round = fn (array $values) => round(array_sum($values), 2);
+
+        $rows = [];
+        foreach ($merit['rows'] as $row) {
+            $pk = (int) $row['student'];
+            if (! isset($sits[$pk])) {
+                continue;
+            }
+            $marks = $row['marks'];
+            $swapped = [];
+            $pending = [];
+            foreach ($sits[$pk] as $subjectPk) {
+                foreach ($reMaps->get($subjectPk, collect()) as $map) {
+                    $mainKey = $main->id.':'.$subjectPk.':'.$map->component_master_pk;
+                    $m = $reMarks[$link->reexam_drive_id.':'.$subjectPk.':'.$map->component_master_pk][$pk] ?? null;
+                    $bucket = $columns[$mainKey]['bucket'] ?? null;
+                    if ($bucket === null) {
+                        continue;
+                    }
+                    $swapped[$bucket] = true;
+                    if (! ReexamService::markIsFinal($m, true)) {
+                        $pending[$bucket] = true;
+
+                        continue;
+                    }
+                    $marks[$mainKey] = ReexamService::markValue($m, true);
+                }
+            }
+
+            $byBucket = [];
+            foreach ($columns as $key => $col) {
+                if (array_key_exists($key, $marks)) {
+                    $byBucket[$col['bucket']][] = $marks[$key];
+                }
+            }
+            $new = $row;
+            foreach ($row['subjects'] as $key => $old) {
+                if (isset($swapped[$key])) {
+                    $new['subjects'][$key] = isset($pending[$key]) ? null : $round($byBucket[$key] ?? []);
+                }
+            }
+            foreach ($row['qualifying'] as $paper => $old) {
+                if (isset($swapped['q:'.$paper])) {
+                    $new['qualifying'][$paper] = isset($pending['q:'.$paper]) ? null : $round($byBucket['q:'.$paper] ?? []);
+                }
+            }
+            if ($pending) {
+                $new['total_a'] = $new['grand'] = null;
+                $new['result'] = ReexamService::RESULT_PENDING;
+            } else {
+                $new['total_a'] = $round(array_filter($new['subjects'], fn ($v) => $v !== null));
+                $new['grand'] = round($new['total_a'] + ($row['director'] ?? 0), 2);
+                // Pass: every Part A and qualifying column at the OT's service percentage (as merit()).
+                $passed = true;
+                foreach ($columns as $key => $col) {
+                    if ($col['bucket'] !== 'B' && array_key_exists($key, $marks)
+                        && $marks[$key] < round($col['max'] * $row['passing_percent'] / 100, 2)) {
+                        $passed = false;
+                        break;
+                    }
+                }
+                $new['result'] = $passed ? ReexamService::RESULT_PASS : ReexamService::RESULT_FAIL;
+            }
+            $new['marks'] = $marks;
+            // What the main merit showed, for the cells the re-exam changed.
+            $new['reexam'] = [
+                'subjects' => array_intersect_key($row['subjects'], $swapped),
+                'qualifying' => array_filter($row['qualifying'], fn ($v, $paper) => isset($swapped['q:'.$paper]), ARRAY_FILTER_USE_BOTH),
+                'total_a' => $row['total_a'],
+                'grand' => $row['grand'],
+                'result' => $row['result'],
+            ];
+            $rows[] = $new;
+        }
+
+        return ['rows' => $rows, 'pending' => 0, 'reexam' => [
+            'id' => (int) $link->reexam_drive_id,
+            'no' => (int) $link->reexam_no,
+            'name' => ReexamService::driveName($link->reexamDrive),
+            'main' => ReexamService::driveName($main),
+        ]] + $merit;
+    }
+
     private function courseSheet(Collection $drives, array $marks): ?array
     {
         $participants = [];
@@ -1155,6 +1355,161 @@ class ResultMarksService
                     'average' => $done && $s['max'] > 0
                         ? round(array_sum(array_map(fn ($r) => $r['subjects'][$spk], $done)) / count($done) / $s['max'] * 100, 1)
                         : null,
+                    'reexam' => null,
+                ];
+            }
+        }
+
+        // Re-exam rows ("(Re-exam)"), each right after its subject's main row (after an earlier
+        // re-exam of it), else at the end of its course, else at the end.
+        foreach ($this->reexamCompilationRows($scope) as $rx) {
+            $same = $course = null;
+            foreach ($out as $i => $row) {
+                if ($row['course_pk'] === $rx['course_pk']) {
+                    $course = $i;
+                    if ($row['subject_pk'] === $rx['subject_pk']) {
+                        $same = $i;
+                    }
+                }
+            }
+            $at = $same ?? $course;
+            array_splice($out, $at === null ? count($out) : $at + 1, 0, [$rx]);
+        }
+
+        return $out;
+    }
+
+    /* ───────────── Result Compilation: re-exam rows ───────────── */
+
+    /**
+     * Re-exam drives in $scope (Active, or Closed for archived), optionally one. Kept out of
+     * scopeDrives(), so the main rows, Merit and Moderation never count them.
+     */
+    private function reexamScopeDrives(string $scope, ?int $driveId = null): Collection
+    {
+        if (! ReexamService::enabled()) {
+            return collect();
+        }
+
+        return ExaminationDrive::with(['course', 'examinationType', 'facultyMaps.faculty', 'componentMaps.component', 'componentMaps.subject', 'componentMaps.faculty'])
+            ->where('status', $scope === 'archived' ? ExaminationDrive::STATUS_CLOSED : ExaminationDrive::STATUS_ACTIVE)
+            ->whereIn('id', DB::table('coe_reexams')->select('reexam_drive_id'))
+            ->when($driveId, fn ($q) => $q->whereKey($driveId))
+            ->whereHas('componentMaps')
+            ->orderBy('id')
+            ->get();
+    }
+
+    /**
+     * One re-exam drive as a compilation sheet (same shape as courseSheet()): every subject
+     * of the re-exam (held or not, so the row shows from creation) and, per subject, only
+     * its re-exam OTs (coe_reexam_candidates), on the re-exam's own approved marks (raw:
+     * re-exams have no moderation). 'sits' = the subjects an OT sits; other cells are null.
+     *
+     * @param  array<string, array<int, EvaluationMark>>|null  $marks
+     * @return array{course_pk:int, course:string, drive_id:int, drive:string, subjects:array, rows:array}
+     */
+    private function reexamSheet(ExaminationDrive $drive, ?array $marks = null): array
+    {
+        $marks ??= $this->marks([(int) $drive->id]);
+        $columns = $drive->componentMaps->sortBy('id')
+            ->map(fn ($map) => $this->column($drive, $map) + ['held' => $this->examOver($drive, $map)])->values()->all();
+        $subjects = $this->groupBySubject($columns);
+        $bySubject = ReexamService::seatingBySubject((int) $drive->id) ?? [];
+        $participants = $this->participants($drive);
+
+        $rows = [];
+        foreach ($subjects as $spk => $s) {
+            foreach ($bySubject[$spk] ?? [] as $pk) {
+                if (! isset($participants[$pk])) {
+                    continue;
+                }
+                $rows[$pk] ??= $participants[$pk] + ['marks' => [], 'subjects' => [], 'pending' => [], 'sits' => []];
+                $rows[$pk]['sits'][] = $spk;
+                $total = 0.0;
+                $done = true;
+                foreach ($s['columns'] as $key => $col) {
+                    $m = ($marks[$key][$pk] ?? null)?->isApproved() ? $marks[$key][$pk] : null;
+                    $rows[$pk]['marks'][$key] = $m === null ? null : ($m->is_absent ? 'AB' : $m->marks);
+                    $done = $done && $m !== null;
+                    $total += $m && ! $m->is_absent ? (float) $m->marks : 0;
+                }
+                $rows[$pk]['subjects'][$spk] = round($total, 2);
+                if (! $done) {
+                    $rows[$pk]['pending'][] = $spk;
+                }
+            }
+        }
+        // Subjects an OT does not sit: blank cells.
+        foreach ($rows as &$row) {
+            foreach ($subjects as $spk => $s) {
+                $row['subjects'] += [$spk => null];
+                foreach (array_keys($s['columns']) as $key) {
+                    $row['marks'] += [$key => null];
+                }
+            }
+        }
+        unset($row);
+        uasort($rows, fn ($a, $b) => self::compareOtCodes($a['code'], $b['code']));
+
+        return [
+            'course_pk' => (int) $drive->course_master_pk,
+            'course' => trim((string) ($drive->course->course_name ?? '')),
+            'drive_id' => (int) $drive->id,
+            'drive' => ReexamService::driveName($drive),
+            'subjects' => $subjects,
+            'rows' => $rows,
+        ];
+    }
+
+    /** The re-exam sheet for the Evaluated / Pending lists of a "(Re-exam)" row, or null. */
+    public function reexamCompilationSheet(string $scope, int $driveId): ?array
+    {
+        $drive = $this->reexamScopeDrives($scope, $driveId)->first();
+
+        return $drive ? $this->reexamSheet($drive) : null;
+    }
+
+    /**
+     * Result Compilation rows of the re-exams in $scope: one per re-exam + subject, counting
+     * only that subject's re-exam OTs. Shown from creation; until marks can be entered the
+     * Action column says why (CC approval, exam not held yet, no faculty).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function reexamCompilationRows(string $scope): array
+    {
+        $drives = $this->reexamScopeDrives($scope);
+        if ($drives->isEmpty()) {
+            return [];
+        }
+        $marks = $this->marks($drives->pluck('id')->all());
+        $out = [];
+        foreach ($drives as $drive) {
+            $sheet = $this->reexamSheet($drive, $marks);
+            foreach ($sheet['subjects'] as $spk => $s) {
+                $sitting = array_filter($sheet['rows'], fn ($r) => in_array($spk, $r['sits'], true));
+                $done = array_filter($sitting, fn ($r) => ! in_array($spk, $r['pending'], true));
+                $out[] = [
+                    'course_pk' => $sheet['course_pk'],
+                    'course' => $sheet['course'],
+                    'subject_pk' => $spk,
+                    'subject' => $s['name'],
+                    'code' => $s['code'],
+                    'max' => $s['max'],
+                    'approved' => count($done),
+                    'pending' => count($sitting) - count($done),
+                    'total' => count($sitting),
+                    'blocker' => match (true) {
+                        ! collect($s['columns'])->contains('open', true) => 'Waiting for Course Coordinator approval',
+                        ! collect($s['columns'])->every(fn ($c) => $c['held']) => 'Re-exam not held yet',
+                        ! collect($s['columns'])->contains('has_faculty', true) => 'No faculty mapped to this subject',
+                        default => null,
+                    },
+                    'average' => $done && $s['max'] > 0
+                        ? round(array_sum(array_map(fn ($r) => $r['subjects'][$spk], $done)) / count($done) / $s['max'] * 100, 1)
+                        : null,
+                    'reexam' => $sheet['drive_id'],
                 ];
             }
         }
@@ -1362,7 +1717,7 @@ class ResultMarksService
      */
     public function notifyEntryReady(?int $driveId = null, bool $dryRun = false): array
     {
-        $drives = $this->entryDrives()->when($driveId, fn ($c) => $c->where('id', $driveId));
+        $drives = $this->entryDrives(null, true)->when($driveId, fn ($c) => $c->where('id', $driveId));
         $marks = $this->marks($drives->pluck('id')->all());
 
         // map id => [drive, map, faculty pks]
@@ -1376,7 +1731,7 @@ class ResultMarksService
                 $key = $drive->id.':'.$map->subject_master_pk.':'.$map->component_master_pk;
                 $names = [];
                 $pending = false;
-                foreach ($this->participants($drive) as $pk => $p) {
+                foreach ($this->entryParticipants($drive, (int) $map->subject_master_pk) as $pk => $p) {
                     if (($marks[$key][$pk] ?? null)?->isApproved()) {
                         continue;
                     }
@@ -1477,9 +1832,13 @@ class ResultMarksService
      *
      * @return array{pending:int, notified:int, unreachable:int}
      */
-    public function notifyPending(int $coursePk, ?int $subjectPk = null, ?int $studentPk = null): array
+    public function notifyPending(int $coursePk, ?int $subjectPk = null, ?int $studentPk = null, ?int $reexamDriveId = null): array
     {
-        $drives = $this->entryDrives($coursePk);
+        // A "(Re-exam)" row: only that re-exam drive and its re-exam OTs (entryParticipants);
+        // the main rows keep re-exam drives out, as before.
+        $drives = $reexamDriveId
+            ? $this->entryDrives($coursePk, true)->filter(fn ($d) => (int) $d->id === $reexamDriveId && ReexamService::isReexamDrive($reexamDriveId))->values()
+            : $this->entryDrives($coursePk);
         $marks = $this->marks($drives->pluck('id')->all());
 
         $pending = 0;
@@ -1495,12 +1854,12 @@ class ResultMarksService
                     continue;
                 }
                 $key = $drive->id.':'.$map->subject_master_pk.':'.$map->component_master_pk;
-                foreach ($this->participants($drive) as $pk => $p) {
+                foreach ($this->entryParticipants($drive, (int) $map->subject_master_pk) as $pk => $p) {
                     if (($studentPk && $pk !== $studentPk) || ($marks[$key][$pk] ?? null)?->isApproved()) {
                         continue;
                     }
                     $pending++;
-                    $subjects[(int) $map->subject_master_pk] = trim((string) ($map->subject->subject_name ?? ''));
+                    $subjects[(int) $map->subject_master_pk] = trim((string) ($map->subject->subject_name ?? '')).($reexamDriveId ? ' (Re-exam)' : '');
                     array_push($facultyPks, ...$this->subjectFacultyPks($drive, (int) $map->subject_master_pk));
                     array_push($names, ...$this->evaluatorNames($map, $p));
                 }

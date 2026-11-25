@@ -41,6 +41,17 @@ class MarksheetService
         'COE' => 'Controller of Examination',
     ];
 
+    /**
+     * Other Signature Master designation names that sign as one of SIGNATORIES
+     * (upper case): the COE's signature is saved under "COE-Incharge", and rows
+     * picked from the HR Designation Master carry the full names.
+     */
+    public const SIGNATORY_ALIASES = [
+        'UPPER DIVISION CLERK' => 'UDC',
+        'ASSISTANT ADMINISTRATIVE OFFICER' => 'AAO',
+        'COE-INCHARGE' => 'COE',
+    ];
+
     /** Marksheet group of the Director Assessment drives (merit's B). */
     private const DIRECTOR_GROUP = 'Director Assessment';
 
@@ -288,9 +299,10 @@ class MarksheetService
     /** Active while the course has an Active drive, else Archived. */
     private function scopeOf(int $coursePk): string
     {
-        return $this->scopeCache[$coursePk] ??= ExaminationDrive::where('course_master_pk', $coursePk)
+        // Main drives only, as ResultMarksService::scopeDrives() (re-exams left out).
+        return $this->scopeCache[$coursePk] ??= ReexamService::excludeFrom(ExaminationDrive::where('course_master_pk', $coursePk)
             ->where('status', ExaminationDrive::STATUS_ACTIVE)
-            ->whereHas('componentMaps')
+            ->whereHas('componentMaps'))
             ->exists() ? 'active' : 'archived';
     }
 
@@ -354,14 +366,34 @@ class MarksheetService
 
     /* ───────────── Signatures ───────────── */
 
-    /** Active Signature Master rows of the three signatories, keyed by designation. */
+    /**
+     * Active Signature Master rows of the three signatories (their own name or an
+     * alias, e.g. "COE-Incharge"). Group them with signatoryOf(), not designation_name.
+     */
     public function activeSignatures(): Collection
     {
         return SignatureMaster::query()
             ->where('active_inactive', 1)
-            ->whereIn('designation_name', array_keys(self::SIGNATORIES))
+            ->whereIn('designation_name', array_merge(array_keys(self::SIGNATORIES), array_keys(self::SIGNATORY_ALIASES)))
             ->orderBy('pk')
             ->get();
+    }
+
+    /** The signatory (UDC / AAO / COE) a Signature Master designation signs as, or null. */
+    public static function signatoryOf(?string $designation): ?string
+    {
+        $name = strtoupper(trim((string) $designation));
+        if (isset(self::SIGNATORIES[$name])) {
+            return $name;
+        }
+
+        return self::SIGNATORY_ALIASES[$name] ?? null;
+    }
+
+    /** Every Signature Master designation name that signs as $signatory (its own and its aliases). */
+    public static function designationNamesOf(string $signatory): array
+    {
+        return array_merge([$signatory], array_keys(array_filter(self::SIGNATORY_ALIASES, fn ($as) => $as === $signatory)));
     }
 
     /**
@@ -372,7 +404,7 @@ class MarksheetService
      */
     public function signatureProblem(?array $designations = null): ?string
     {
-        $active = $this->activeSignatures()->groupBy('designation_name');
+        $active = $this->activeSignatures()->groupBy(fn (SignatureMaster $s) => self::signatoryOf($s->designation_name));
         $disk = Storage::disk(SignatureMaster::DISK);
 
         $missing = [];
@@ -406,7 +438,7 @@ class MarksheetService
     {
         $put = $m['signatures'] ?? [];
         $kept = SignatureMaster::whereIn('pk', array_values($put) ?: [0])->get()->keyBy('pk');
-        $current = $m['published'] ? $this->activeSignatures()->keyBy('designation_name') : collect();
+        $current = $m['published'] ? $this->activeSignatures()->keyBy(fn (SignatureMaster $s) => self::signatoryOf($s->designation_name)) : collect();
 
         $out = collect();
         foreach (array_keys(self::SIGNATORIES) as $designation) {
@@ -499,7 +531,7 @@ class MarksheetService
         if ($toSign && ($problem = $this->signatureProblem($as === 'COE' ? null : [$as]))) {
             return $fail($problem, $as);
         }
-        $signatureOf = $this->activeSignatures()->mapWithKeys(fn (SignatureMaster $s) => [$s->designation_name => (int) $s->pk])->all();
+        $signatureOf = $this->activeSignatures()->mapWithKeys(fn (SignatureMaster $s) => [self::signatoryOf($s->designation_name) => (int) $s->pk])->all();
         $now = now();
 
         [$signed, $published] = DB::transaction(function () use ($rows, $codes, $courseKey, $before, $as, $signatureOf, $user, $now) {

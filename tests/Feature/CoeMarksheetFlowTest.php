@@ -45,7 +45,8 @@ class CoeMarksheetFlowTest extends TestCase
     /** Puts the UDC and AAO signatures on $row's marksheet, as if both had verified it, so the COE (Super Admin) can publish. */
     private function verifiedByUdcAndAao(array $row): void
     {
-        $pks = app(MarksheetService::class)->activeSignatures()->pluck('pk', 'designation_name');
+        $pks = app(MarksheetService::class)->activeSignatures()
+            ->mapWithKeys(fn ($s) => [MarksheetService::signatoryOf($s->designation_name) => $s->pk]);
         if (! isset($pks['UDC'], $pks['AAO'])) {
             $this->markTestSkipped('Needs an Active UDC and AAO signature.');
         }
@@ -113,7 +114,7 @@ class CoeMarksheetFlowTest extends TestCase
     {
         $row = $this->generated(true);
         $this->verifiedByUdcAndAao($row);
-        SignatureMaster::where('designation_name', 'AAO')->update(['active_inactive' => 0]);
+        SignatureMaster::whereIn('designation_name', MarksheetService::designationNamesOf('AAO'))->update(['active_inactive' => 0]);
 
         $this->actingAs($this->admin())->postJson(route('admin.coe.marksheet-generation.publish'), ['course' => $row['course_key'], 'ots' => [$row['code']]])
             ->assertUnprocessable()->assertJsonPath('message', fn ($m) => str_contains($m, 'AAO'));

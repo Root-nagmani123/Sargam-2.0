@@ -7,6 +7,10 @@
 <link rel="stylesheet" href="{{ asset('css/select2-theme.css') }}">
 <link rel="stylesheet"
       href="{{ asset('css/coe-admin.css') }}?v={{ @filemtime(public_path('css/coe-admin.css')) ?: time() }}">
+<style>
+/* "(Re-exam)" after the subject (Figma Result Compilation) */
+.rcp-reexam-tag { color: var(--coe-brand); }
+</style>
 @endpush
 
 @section('setup_content')
@@ -74,12 +78,16 @@
                         </thead>
                         <tbody>
                             @foreach ($rows as $row)
-                                @php $q = ['course' => $row['course_pk'], 'subject' => $row['subject_pk'], 'scope' => $scope]; @endphp
+                                @php
+                                    // A re-exam row (ResultMarksService::reexamCompilationRows) carries its drive id.
+                                    $q = ['course' => $row['course_pk'], 'subject' => $row['subject_pk'], 'scope' => $scope]
+                                        + ($row['reexam'] ? ['reexam' => $row['reexam']] : []);
+                                @endphp
                                 <tr>
                                     <td>{{ $row['course'] }}</td>
                                     <td class="coe-col-wrap">
                                         {{ $row['subject'] }}
-                                        <div class="coe-muted small">{{ $row['code'] !== '' ? $row['code'].' · ' : '' }}Maximum {{ \App\Services\COE\ResultMarksService::number($row['max']) }}</div>
+                                        <div class="coe-muted small">{{ $row['code'] !== '' ? $row['code'].' · ' : '' }}Maximum {{ \App\Services\COE\ResultMarksService::number($row['max']) }}@if ($row['reexam']) <span class="rcp-reexam-tag">(Re-exam)</span>@endif</div>
                                     </td>
                                     {{-- OTs with every component of the subject approved; opens the Evaluated list. --}}
                                     <td data-order="{{ $row['approved'] }}" title="{{ $row['approved'] }} of {{ $row['total'] }} participants evaluated">
@@ -94,7 +102,8 @@
                                             <span class="coe-muted small">{{ $row['blocker'] }}</span>
                                         @elseif ($row['pending'] > 0 && ! $isArchived)
                                             <button type="button" class="coe-act coe-act--edit coe-act--wide rcp-notify"
-                                                    data-course="{{ $row['course_pk'] }}" data-subject="{{ $row['subject_pk'] }}">
+                                                    data-course="{{ $row['course_pk'] }}" data-subject="{{ $row['subject_pk'] }}"
+                                                    data-reexam="{{ $row['reexam'] }}">
                                                 <span class="coe-act__icon"><i class="bi bi-chat-square-dots" aria-hidden="true"></i></span>
                                                 <span class="coe-act__label">Notify for Pending</span>
                                             </button>
@@ -146,7 +155,7 @@ $(function () {
         $.ajax({
             url: @json(route('admin.coe.result-compilation.notify')),
             method: 'POST',
-            data: { course: $btn.data('course'), subject: $btn.data('subject') },
+            data: { course: $btn.data('course'), subject: $btn.data('subject'), reexam: $btn.data('reexam') || '' },
             headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
         }).done(function (res) {
             Swal.fire({ icon: 'success', title: 'Notify for Pending', text: res.message });

@@ -832,7 +832,7 @@ $(function () {
         var $f = $('<select class="form-select coe-control va-row-floor" data-placeholder="Select Floor"></select>');
         var $r = $('<select class="form-select coe-control va-row-room" data-placeholder="Select Room"></select>');
         $row.append(field('Building Name', $b), field('Floor', $f), field('Room', $r));
-        $row.append(field('OT Roll No.', otPicker($group.data('taken'))));
+        $row.append(field('OT Roll No.', otPicker($group.data('taken'), compOts($group))));
 
         $b.append(new Option('Select Building', '', true, true));
         BUILDINGS.forEach(function (x) { $b.append(new Option(x.name, x.id)); });
@@ -882,7 +882,7 @@ $(function () {
         if (!touched) { return ''; }
         ($group.data('taken') || []).forEach(function (pk) { have[pk] = true; });
         $rows.each(function () { picked($(this)).forEach(function (pk) { have[pk] = true; }); });
-        var missing = ots.filter(function (o) { return !have[o.pk]; });
+        var missing = compOts($group).filter(function (o) { return !have[o.pk]; });
         if (!missing.length) { return ''; }
         var rolls = missing.slice(0, 5).map(function (o) { return o.roll; }).join(', ') +
             (missing.length > 5 ? ' and ' + (missing.length - 5) + ' more' : '');
@@ -984,8 +984,21 @@ $(function () {
 
     $subjects.on('change', 'select', function () { fieldError($(this), ''); });
 
+    /*
+     * The OTs a component seats: the drive's whole list, or on a re-exam only that paper's
+     * re-exam OTs (c.only, sent by VenueAllocationController::drive for re-exam drives only).
+     */
+    function compOts($group) {
+        var c = $group.data('comp') || {};
+        if (!c.only) { return ots; }
+        var only = {};
+        c.only.forEach(function (pk) { only[pk] = true; });
+        return ots.filter(function (o) { return only[o.pk]; });
+    }
+
     /* ── OT Roll No. picker: quick ranges, Select All, search, one box per OT ── */
-    function otPicker(taken) {
+    function otPicker(taken, list) {
+        list = list || ots;
         var $wrap = $('<div class="dropdown va-ot"></div>');
         var $btn = $('<button type="button" class="form-select coe-control text-start va-ot-toggle" data-bs-toggle="dropdown" aria-expanded="false">Select OT</button>').appendTo($wrap);
         var $menu = $('<div class="dropdown-menu dropdown-menu-end va-ot-menu"></div>').appendTo($wrap);
@@ -995,7 +1008,7 @@ $(function () {
         $('<label class="va-ot-item va-ot-item--all"><input type="checkbox" class="form-check-input va-ot-all"> <span>Select All</span></label>').appendTo($menu);
         var $list = $('<div class="va-ot-list"></div>').appendTo($menu);
 
-        var free = ots.filter(function (o) { return taken.indexOf(String(o.pk)) === -1; });
+        var free = list.filter(function (o) { return taken.indexOf(String(o.pk)) === -1; });
         for (var i = 0; i < free.length; i += RANGE) {
             var block = free.slice(i, i + RANGE);
             $('<button type="button" class="va-ot-range"></button>')
@@ -1003,7 +1016,7 @@ $(function () {
                 .data('pks', block.map(function (o) { return String(o.pk); }))
                 .appendTo($ranges);
         }
-        ots.forEach(function (o) {
+        list.forEach(function (o) {
             var isTaken = taken.indexOf(String(o.pk)) !== -1;
             var $item = $('<label class="va-ot-item"></label>').toggleClass('is-taken', isTaken)
                 .attr('data-search', (o.roll + ' ' + o.name).toLowerCase());

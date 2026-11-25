@@ -36,6 +36,18 @@
 .edc-sub-table td    { padding:13px 14px;border-bottom:1px solid var(--ds-line);font-size:14px; }
 .edc-sub-table tr:last-child td { border-bottom:none; }
 .edc-footer          { display:flex;justify-content:flex-end;margin-top:22px; }
+/* Re-exam (ReexamService::overview): main exam + candidates on a re-exam, re-exams on a main drive */
+.edc-rx-banner       { display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:16px;padding:12px 18px;border-radius:10px;
+                       background:#fffaeb;border:1px solid #fedf89;color:#93370d;font-size:14px; }
+.edc-rx-banner a     { color:var(--ds-brand);font-weight:600; }
+.edc-section-title   { font-size:16px;font-weight:600;color:var(--ds-ink);margin:0 0 12px; }
+.edc-section-note    { font-size:13px;color:var(--ds-ink-muted);margin:-6px 0 12px; }
+.edc-coord-table td small { display:block;margin-top:2px;color:var(--ds-ink-muted);font-size:12px; }
+.edc-badge           { display:inline-block;padding:3px 10px;border-radius:6px;font-size:13px;font-weight:500;line-height:1.4;white-space:nowrap; }
+.edc-badge--failed, .edc-badge--fail { background:#fde2e4;color:#d92d20; }
+.edc-badge--absent   { background:#fef0c7;color:#b54708; }
+.edc-badge--pass     { background:#dcfae6;color:#067647; }
+.edc-badge--pending  { background:#eef0f3;color:#475467; }
 @media print {
     .edc-toolbar, .edc-footer, .edc-toggle { display:none !important; }
     .edc-detail.d-none   { display:table-row !important; }
@@ -88,6 +100,20 @@
         </a>
     </div>
 
+    @php($isRx = ($reexam['type'] ?? null) === 'reexam')
+    @if ($isRx)
+        <div class="edc-rx-banner" role="note">
+            <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+            <span>Re-exam {{ $reexam['no'] }} of
+                @if ($reexam['main'])
+                    <a href="{{ route('admin.coe.examination-drive.coordinates', $reexam['main']['id']) }}">{{ $reexam['main']['name'] }}</a>.
+                @else
+                    a deleted drive.
+                @endif
+                The main exam and the re-exam OTs are shown below.</span>
+        </div>
+    @endif
+
     {{-- Drive info bar. FACULTY = faculty mapped when the drive was created. --}}
     <div class="edc-info-bar">
         <div class="edc-info-item">
@@ -114,7 +140,21 @@
             <span class="edc-info-label">Faculty</span>
             <span class="edc-info-value">{{ implode(', ', $drive['drive_faculty']) ?: '—' }}</span>
         </div>
+        @if ($isRx)
+            <div class="edc-info-item">
+                <span class="edc-info-label">Re-exam Dates</span>
+                <span class="edc-info-value">{{ $drive['start_date'] ?: '-' }} to {{ $drive['end_date'] ?: '-' }}</span>
+            </div>
+            <div class="edc-info-item">
+                <span class="edc-info-label">Status</span>
+                <span class="edc-info-value">{{ $drive['status'] }}</span>
+            </div>
+        @endif
     </div>
+
+    @if ($isRx)
+        <h2 class="edc-section-title">Re-exam {{ $reexam['no'] }} · Components</h2>
+    @endif
 
     <div class="card overflow-hidden rounded-3">
         <div class="card-body p-3 p-md-4">
@@ -154,7 +194,8 @@
                                     @endif
                                 </td>
                                 <td>{{ $row['weightage'] }}</td>
-                                <td>{{ $row['exam_date'] }}</td>
+                                {{-- A re-exam's copied rows have no date until the faculty sets one. --}}
+                                <td>{{ $isRx && ! $row['dated'] ? 'Not set yet' : $row['exam_date'] }}</td>
                                 <td>{{ $row['exam_mode'] }}</td>
                                 <td class="text-center">
                                     <button type="button" class="edc-toggle" data-row="{{ $i }}"
@@ -206,11 +247,138 @@
                 </table>
             </div>
 
-            <div class="edc-footer">
-                <a href="{{ route('admin.coe.examination-drive.index') }}" class="btn coe-btn coe-btn-cancel">Back</a>
-            </div>
+            @unless ($reexam)
+                <div class="edc-footer">
+                    <a href="{{ route('admin.coe.examination-drive.index') }}" class="btn coe-btn coe-btn-cancel">Back</a>
+                </div>
+            @endunless
         </div>
     </div>
+
+    @if ($isRx)
+        @php($rx = $reexam['result'])
+        {{-- Main exam: the main drive's components of the re-exam subjects. --}}
+        @if ($reexam['main'])
+            <div class="card overflow-hidden rounded-3 mt-4">
+                <div class="card-body p-3 p-md-4">
+                    <h2 class="edc-section-title">Main Exam · {{ $reexam['main']['name'] }}</h2>
+                    <p class="edc-section-note">{{ $reexam['main']['exam_type'] }} · {{ $reexam['main']['start_date'] }} to {{ $reexam['main']['end_date'] }} · {{ $reexam['main']['status'] }}.
+                        Only the subjects of this re-exam are listed.</p>
+                    <div class="table-responsive">
+                        <table class="edc-coord-table">
+                            <thead>
+                                <tr>
+                                    <th>Subject</th>
+                                    <th>Components</th>
+                                    <th>Max Marks</th>
+                                    <th>Passing Marks</th>
+                                    <th>Exam Date</th>
+                                    <th>Exam Mode</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($reexam['main']['components'] as $c)
+                                    <tr class="edc-main">
+                                        <td>{{ $c['subject'] }}</td>
+                                        <td>{{ $c['component'] }}</td>
+                                        <td>{{ $c['max_marks'] }}</td>
+                                        <td>{{ $c['passing_marks'] }}</td>
+                                        <td>{{ $c['exam_range'] }}</td>
+                                        <td>{{ $c['exam_mode'] }}</td>
+                                    </tr>
+                                @empty
+                                    <tr class="edc-main"><td colspan="6" class="text-center coe-muted py-4">No components on the main drive.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        {{-- Candidates: main exam reason + score, re-exam score + result (ReexamService::result). --}}
+        <div class="card overflow-hidden rounded-3 mt-4">
+            <div class="card-body p-3 p-md-4">
+                <h2 class="edc-section-title">Re-exam OTs ({{ count($rx['ots']) }})</h2>
+                <p class="edc-section-note">Pass {{ $rx['counts']['Pass'] }} · Fail {{ $rx['counts']['Fail'] }} · Pending {{ $rx['counts']['Pending'] }}.
+                    Re-exam marks count once approved (no moderation); they replace the main exam marks for these subjects.
+                    {{ $rx['message'] }}</p>
+                <div class="table-responsive">
+                    <table class="edc-coord-table">
+                        <thead>
+                            <tr>
+                                <th>Officer Trainee</th>
+                                <th>Roll No.</th>
+                                <th>Subject</th>
+                                <th>Main Exam</th>
+                                <th>Main Score</th>
+                                <th>Re-exam Score</th>
+                                <th>Subject Result</th>
+                                <th>OT Result</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($rx['rows'] as $r)
+                                @php($ot = $rx['ots'][$r['student_pk']] ?? null)
+                                <tr class="edc-main">
+                                    <td>{{ $r['name'] ?: '-' }}@if ($r['ot_code'])<small>{{ $r['ot_code'] }}</small>@endif</td>
+                                    <td>{{ $r['roll'] ?: '-' }}</td>
+                                    <td>{{ $r['subject'] }}</td>
+                                    <td><span class="edc-badge edc-badge--{{ strtolower($r['previous']) ?: 'pending' }}">{{ $r['previous'] ?: '-' }}</span></td>
+                                    <td>{{ number_format($r['previous_score'], 1) }}%</td>
+                                    <td>{{ $r['score'] === null ? '-' : number_format($r['score'], 1) . '%' }}@if ($r['absent'])<small>Absent</small>@endif</td>
+                                    <td><span class="edc-badge edc-badge--{{ strtolower($r['result']) }}">{{ $r['result'] }}</span></td>
+                                    <td>@if ($ot)<span class="edc-badge edc-badge--{{ strtolower($ot['result']) }}">{{ $ot['result'] }}</span>@endif</td>
+                                </tr>
+                            @empty
+                                <tr class="edc-main"><td colspan="8" class="text-center coe-muted py-4">This re-exam has no OTs.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    @elseif (($reexam['type'] ?? null) === 'main')
+        {{-- A main drive: its re-exams. --}}
+        <div class="card overflow-hidden rounded-3 mt-4">
+            <div class="card-body p-3 p-md-4">
+                <h2 class="edc-section-title">Re-exams ({{ count($reexam['reexams']) }})</h2>
+                <div class="table-responsive">
+                    <table class="edc-coord-table">
+                        <thead>
+                            <tr>
+                                <th>Re-exam</th>
+                                <th>Drive Name</th>
+                                <th>Dates</th>
+                                <th>OTs</th>
+                                <th>Status</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($reexam['reexams'] as $r)
+                                <tr class="edc-main">
+                                    <td>Re-exam {{ $r['no'] }}</td>
+                                    <td>{{ $r['name'] }}</td>
+                                    <td>{{ $r['start_date'] }} to {{ $r['end_date'] }}</td>
+                                    <td>{{ $r['ots'] }}<small>{{ $r['subjects'] }} OT-subject(s)</small></td>
+                                    <td>{{ $r['status'] }}</td>
+                                    <td class="text-center"><a href="{{ route('admin.coe.examination-drive.coordinates', $r['id']) }}" class="edc-toggle text-decoration-none">
+                                        <i class="bi bi-eye" aria-hidden="true"></i><span>View</span></a></td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if ($reexam)
+        <div class="edc-footer">
+            <a href="{{ route('admin.coe.examination-drive.index') }}" class="btn coe-btn coe-btn-cancel">Back</a>
+        </div>
+    @endif
 </div>
 @endsection
 

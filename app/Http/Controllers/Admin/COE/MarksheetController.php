@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\COE;
 
 use App\Http\Controllers\Controller;
 use App\Services\COE\MarksheetService;
+use App\Services\COE\ReexamMarksheetService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -97,10 +98,26 @@ class MarksheetController extends Controller
         ]);
     }
 
+    /**
+     * Main and re-exam marksheets in one list (Figma). A re-exam marksheet (Pass / Fail only,
+     * ReexamMarksheetService; `reexam_key` set, null on main rows) sits right after the OT's
+     * main marksheet on the same course, else at the end; its tab follows its re-exam drive.
+     * The Re-exam tab (ReexamMarksheetController) still lists them on their own.
+     */
     private function listing(Request $request, string $view, callable $keep)
     {
         $scope = $request->query('scope') === 'archived' ? 'archived' : 'active';
-        $rows = $this->withCanVerify($request, array_values(array_filter($this->marksheets->rows($scope), $keep)));
+        $rows = array_map(fn ($m) => $m + ['reexam_key' => null], array_values(array_filter($this->marksheets->rows($scope), $keep)));
+        foreach (array_filter(app(ReexamMarksheetService::class)->scopeRows($scope), $keep) as $rx) {
+            $at = null;
+            foreach ($rows as $i => $m) {
+                if ($m['course_key'] === $rx['course_key'] && $m['code'] === $rx['code']) {
+                    $at = $i;
+                }
+            }
+            array_splice($rows, $at === null ? count($rows) : $at + 1, 0, [$rx]);
+        }
+        $rows = $this->withCanVerify($request, $rows);
 
         return view($view, ['scope' => $scope, 'courses' => MarksheetService::courses($rows), 'rows' => $rows]);
     }

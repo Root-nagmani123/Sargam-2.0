@@ -224,6 +224,7 @@ $(function () {
     var $modal = $('#ccdcApproveModal');
     var driveId = null;
     var courseRange = ['', ''];
+    var rangeWhat = 'course dates';
 
     function fail(xhr, fallback) {
         var r = xhr.responseJSON || {};
@@ -279,6 +280,8 @@ $(function () {
         driveId = $tr.attr('data-coe-id');
         // The confirmed dates must sit inside the course dates (ccApprove checks it too).
         courseRange = [$tr.attr('data-cc-course-start') || '', $tr.attr('data-cc-course-end') || ''];
+        // "course dates", or "re-exam dates" on a re-exam drive.
+        rangeWhat = $tr.attr('data-cc-range-what') || 'course dates';
         loadDetails(driveId);
         bootstrap.Modal.getOrCreateInstance($modal[0]).show();
     });
@@ -294,7 +297,7 @@ $(function () {
             if (!problem && (!start || !end)) { problem = 'Enter the proposed exam date and time for ' + name + '.'; (start ? $e : $s).addClass('is-invalid'); }
             else if (!problem && end <= start) { problem = 'The proposed exam of ' + name + ' must end after it starts.'; $e.addClass('is-invalid'); }
             else if (!problem && ((courseRange[0] && start.slice(0, 10) < courseRange[0]) || (courseRange[1] && end.slice(0, 10) > courseRange[1]))) {
-                problem = 'The proposed exam of ' + name + ' must be within the course dates (' + show(courseRange[0]) + ' to ' + show(courseRange[1]) + ').';
+                problem = 'The proposed exam of ' + name + ' must be within the ' + rangeWhat + ' (' + show(courseRange[0]) + ' to ' + show(courseRange[1]) + ').';
                 $s.addClass('is-invalid');
             }
             slots[$s.attr('data-id')] = { start: start, end: end };
