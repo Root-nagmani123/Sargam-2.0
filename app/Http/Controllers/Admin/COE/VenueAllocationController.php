@@ -57,6 +57,11 @@ class VenueAllocationController extends Controller
     /** examination_drive_component_maps.exam_type that takes no invigilators. */
     private const OFFLINE_OBJECTIVE = 'Offline Objective';
 
+    /** Component exam type => the invigilator roles its rooms do not take (disabled in Add Invigilators). */
+    private const ROLES_NOT_TAKEN = [
+        'Online Objective' => ['assistant'],
+    ];
+
     /** Add Invigilators: request field => coe_seat_plan_venue_invigilators column, and whether it holds a faculty. */
     private const INVIGILATOR_ROLES = [
         'chief' => ['column' => 'chief_faculty_pk', 'faculty' => true, 'label' => 'Chief Invigilator'],
@@ -861,10 +866,16 @@ class VenueAllocationController extends Controller
             ->orderBy('sp.pk')
             ->orderBy('spv.display_order')
             ->get(['spv.pk', 'spv.seat_plan_pk', 'spv.venue_id', 'sp.examination_drive_component_map_id as map_id', 'sp.subject_name', 'sp.exam_name', 'sp.exam_date as plan_date', 'sp.status as plan_status',
-                'dcm.exam_date', 'vm.venue_name',
+                'dcm.exam_date', 'dcm.exam_type', 'vm.venue_name',
                 DB::raw('COALESCE(rp.building_name, eb.building_name) as building_name'),
                 DB::raw('COALESCE(rp.floor_name, ef.floor_name) as floor_name'),
                 'inv.chief_faculty_pk', 'inv.invigilator_faculty_pk', 'inv.assistant_faculty_pk', 'inv.mts_employee_pk']);
+        // A role the paper does not take shows empty, whatever was saved before its exam type changed.
+        foreach ($rooms as $r) {
+            foreach (self::ROLES_NOT_TAKEN[$r->exam_type] ?? [] as $role) {
+                $r->{self::INVIGILATOR_ROLES[$role]['column']} = null;
+            }
+        }
 
         // Roll-number serials seated in each room, for the OT column ("1-252").
         $serials = DB::table('coe_seat_allocations as sa')
@@ -888,6 +899,8 @@ class VenueAllocationController extends Controller
             'invigilator' => $r->invigilator_faculty_pk ? (int) $r->invigilator_faculty_pk : null,
             'assistant' => $r->assistant_faculty_pk ? (int) $r->assistant_faculty_pk : null,
             'mts' => $r->mts_employee_pk ? (int) $r->mts_employee_pk : null,
+            // Roles this paper's exam type does not take: shown disabled.
+            'locked' => self::ROLES_NOT_TAKEN[$r->exam_type] ?? [],
             // A frozen plan's room is shown read-only and is not saved.
             'frozen' => (int) $r->plan_status === SeatPlan::STATUS_PUBLISHED,
         ])
@@ -969,6 +982,10 @@ class VenueAllocationController extends Controller
             foreach (self::INVIGILATOR_ROLES as $role => $def) {
                 $pk = $row[$role] ?? null;
                 if ($pk === null) {
+                    continue;
+                }
+                if (in_array($role, self::ROLES_NOT_TAKEN[$room->exam_type] ?? [], true)) {
+                    $errors["rows.{$i}.{$role}"] = "An {$room->exam_type} paper takes no {$def['label']}.";
                     continue;
                 }
                 $pk = (int) $pk;

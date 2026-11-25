@@ -8,6 +8,13 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-25: Add / Edit Invigilators follows the component's Exam Type.** Online Descriptive:
+  all four roles. Online Objective: no Assistant Invigilator (picker disabled, header picker
+  too when no room of the subject takes it; one saved earlier shows empty and is cleared on
+  save; the server refuses it). Offline Objective still takes no invigilators.
+  `VenueAllocationController::ROLES_NOT_TAKEN`, `locked` per room in the `invigilators` JSON.
+  Tests: `CoeVenueAllocationFlowTest::test_an_online_objective_paper_takes_no_assistant_invigilator`.
+
 - **2026-11-24: Roll Numbers Freeze Selected freezes only the selected rows** (it froze the whole
   course + batch). Regenerate stays blocked once any number is frozen. Tests:
   `CoeRollNumberFlowTest::test_freezing_freezes_only_the_selected_roll_numbers`.

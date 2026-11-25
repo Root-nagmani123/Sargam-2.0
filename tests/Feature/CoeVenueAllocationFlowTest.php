@@ -771,6 +771,31 @@ class CoeVenueAllocationFlowTest extends TestCase
             ->assertDontSee(route('admin.coe.venue-allocation.invigilators', $room), false);
     }
 
+    public function test_an_online_objective_paper_takes_no_assistant_invigilator(): void
+    {
+        [[$chief, $other], $mts] = $this->people();
+        DB::table('examination_drive_component_maps')->where('id', $this->componentMapId)->update(['exam_type' => 'Online Descriptive']);
+        $this->map()->assertOk();
+        $room = $this->planVenue()->pk;
+        $dialog = fn () => collect($this->actingAs($this->admin)->getJson(route('admin.coe.venue-allocation.invigilators', $room))
+            ->assertOk()->json('subjects'))->flatMap(fn ($s) => $s['rooms'])->firstWhere('id', $room);
+
+        // Online Descriptive: all four roles.
+        $this->assertSame([], $dialog()['locked']);
+        $this->saveInvigilators([['id' => $room, 'chief' => $chief, 'assistant' => $other, 'mts' => $mts]])->assertOk();
+
+        // Online Objective: no Assistant Invigilator; one saved earlier shows empty.
+        DB::table('examination_drive_component_maps')->where('id', $this->componentMapId)->update(['exam_type' => 'Online Objective']);
+        $mine = $dialog();
+        $this->assertSame(['assistant'], $mine['locked']);
+        $this->assertSame([$chief, null, $mts], [$mine['chief'], $mine['assistant'], $mine['mts']]);
+
+        $this->saveInvigilators([['id' => $room, 'chief' => $chief, 'assistant' => $other]])
+            ->assertStatus(422)->assertJsonValidationErrors('rows.0.assistant');
+        $this->saveInvigilators([['id' => $room, 'chief' => $chief, 'invigilator' => $other, 'mts' => $mts]])->assertOk();
+        $this->assertNull(DB::table('coe_seat_plan_venue_invigilators')->where('seat_plan_venue_pk', $room)->value('assistant_faculty_pk'));
+    }
+
     public function test_index_show_and_edit_render(): void
     {
         $this->map()->assertOk();

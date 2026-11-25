@@ -541,10 +541,12 @@ $(function () {
             var COLS = [['Component Name', 'va-inv-c-comp'], ['Exam Date', 'va-inv-c-date'], ['Building Name', 'va-inv-c-text'],
                 ['Floor', 'va-inv-c-text'], ['Room', 'va-inv-c-text'], ['OT', 'va-inv-c-ot']];
             COLS.forEach(function (c) { $('<th></th>').addClass(c[1]).text(c[0]).appendTo($head); });
-            // The header pick applies one person to every room of this subject.
+            // The header pick applies one person to every room of this subject; off when no room takes the role.
             ROLES.forEach(function (role) {
+                var none = s.rooms.every(function (r) { return (r.locked || []).indexOf(role.key) !== -1; });
                 $('<th class="va-inv-pick"></th>').append(invSelect(role, '', role.label).addClass('va-inv-all')
-                    .attr('title', 'Apply to every room of ' + s.subject)).appendTo($head);
+                    .prop('disabled', none)
+                    .attr('title', none ? 'Not needed for this exam type' : 'Apply to every room of ' + s.subject)).appendTo($head);
             });
             s.rooms.forEach(function (r) {
                 var $tr = $('<tr></tr>').attr('data-id', r.id).attr('data-paper', r.paper).toggleClass('is-frozen', !!r.frozen);
@@ -553,9 +555,14 @@ $(function () {
                 });
                 // Frozen seating plan: shown for reference, locked, and not sent on save.
                 if (r.frozen) { $tr.children().first().append(' <span class="va-inv-frozen">Frozen</span>'); }
+                // A role the paper's exam type does not take (Online Objective: no Assistant
+                // Invigilator) is disabled and sent empty.
                 ROLES.forEach(function (role) {
-                    $('<td class="va-inv-pick"></td>').append(invSelect(role, r[role.key], 'Select').addClass('va-inv-one')
-                        .prop('disabled', !!r.frozen)).appendTo($tr);
+                    var locked = (r.locked || []).indexOf(role.key) !== -1;
+                    var $s = invSelect(role, locked ? '' : r[role.key], 'Select').addClass('va-inv-one')
+                        .prop('disabled', !!r.frozen || locked);
+                    if (locked) { $s.attr('title', 'Not needed for this exam type'); }
+                    $('<td class="va-inv-pick"></td>').append($s).appendTo($tr);
                 });
                 $table.find('tbody').append($tr);
             });
