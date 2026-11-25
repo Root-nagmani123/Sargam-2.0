@@ -2234,8 +2234,6 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
         ->name('venue-allocation.components');
     Route::get('venue-allocation/drive/{id}', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'drive'])
         ->whereNumber('id')->name('venue-allocation.drive');
-    Route::post('venue-allocation/drive/{id}/laptops', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'saveLaptops'])
-        ->whereNumber('id')->middleware('throttle:30,1')->name('venue-allocation.drive.laptops');
     Route::post('venue-allocation/drive', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'storeDrive'])
         ->name('venue-allocation.store-drive');
     Route::get('venue-allocation/{id}/invigilators', [\App\Http\Controllers\Admin\COE\VenueAllocationController::class, 'invigilators'])

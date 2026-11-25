@@ -18,6 +18,7 @@
 .va-act--edit i    { color:#004384; }
 .va-act--del  i    { color:#dc3545; }
 .va-act--freeze i  { color:#17a2b8; }
+.va-act:disabled   { opacity:.4;cursor:not-allowed; }
 .va-act--invig     { color:#28a745;line-height:1.15; }
 .va-act--invig i   { color:#28a745; }
 /* Add Invigilators — as wide as the screen allows; only the table scrolls sideways, never the dialog */
@@ -62,12 +63,6 @@
 #vaMapModal .modal-body          { overflow-x:hidden; }
 #vaMapModal .modal-footer,
 #vaInvModal .modal-footer        { flex:none; }
-/* Laptop Required → Edit */
-.va-laptop-panel   { border:1px solid var(--ds-line);border-radius:12px;padding:12px 14px; }
-.va-laptop-panel__head { font-weight:600;font-size:14px;color:#004384; }
-.va-laptop-search  { max-width:260px; }
-.va-laptop-list    { max-height:240px;overflow:auto;border-top:1px solid var(--ds-line);padding-top:6px; }
-.va-laptop-tag     { font-size:11px;padding:0 7px;border-radius:9px;background:#fff3cd;color:#856404;flex:none; }
 /* Modal: readonly computed fields */
 .va-readonly       { background:var(--ds-surface-2) !important;cursor:default; }
 /* Allocation-rules section inside modal */
@@ -215,7 +210,8 @@
                                 data-va-freeze-url="{{ route('admin.coe.venue-allocation.freeze', $row['id']) }}"
                                 data-va-delete-url="{{ route('admin.coe.venue-allocation.destroy', $row['id']) }}"
                                 @if ($row['invigilators']) data-va-invig-url="{{ route('admin.coe.venue-allocation.invigilators', $row['id']) }}" @endif
-                                data-va-invig-has="{{ $row['has_invigilators'] ? 1 : 0 }}">
+                                data-va-invig-has="{{ $row['has_invigilators'] ? 1 : 0 }}"
+                                data-va-freeze-blocked="{{ $row['freeze_blocked'] }}">
                                 <td></td>
                                 <td>{{ $row['drive'] }}</td>
                                 <td>{{ $row['course'] }} <span class="text-muted small">({{ $row['batch'] }})</span></td>
@@ -282,27 +278,7 @@
                         </div>
                         <div class="col-sm-6">
                             <label class="coe-form-label" for="vaMapLaptop">Laptop Required<span class="coe-req">*</span></label>
-                            <div class="input-group">
-                                <input type="text" id="vaMapLaptop" class="form-control coe-control va-readonly" value="-" readonly>
-                                <button type="button" id="vaLaptopEdit" class="btn btn-outline-primary" disabled
-                                        aria-expanded="false" aria-controls="vaLaptopPanel">
-                                    <i class="bi bi-pencil" aria-hidden="true"></i> Edit
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    {{-- Laptop Required → Edit: which OTs of the drive need a laptop desk (saved to OT Laptop Status) --}}
-                    <div id="vaLaptopPanel" class="va-laptop-panel mb-3 d-none">
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                            <span class="va-laptop-panel__head">Laptop Required — tick the OTs who need a laptop desk</span>
-                            <input type="search" id="vaLaptopSearch" class="form-control coe-control va-laptop-search"
-                                   placeholder="Search roll no. or name" aria-label="Search OTs">
-                        </div>
-                        <div class="small text-muted mb-2">PwBD OTs are listed first. Saved to OT Laptop Status; rooms already mapped keep their seats.</div>
-                        <div id="vaLaptopList" class="va-laptop-list"></div>
-                        <div class="d-flex justify-content-end gap-2 mt-2">
-                            <button type="button" id="vaLaptopCancel" class="btn coe-btn coe-btn-cancel">Cancel</button>
-                            <button type="button" id="vaLaptopSave" class="btn coe-btn coe-btn-primary">Save Laptop Required</button>
+                            <input type="text" id="vaMapLaptop" class="form-control coe-control va-readonly" value="-" readonly>
                         </div>
                     </div>
                     @if ($buildings->isEmpty())
@@ -406,7 +382,6 @@ $(function () {
     var BUILDINGS = @json($buildings);
     var DRIVE_URL = @json(route('admin.coe.venue-allocation.drive', ['id' => '__ID__']));
     var STORE_DRIVE_URL = @json(route('admin.coe.venue-allocation.store-drive'));
-    var LAPTOPS_URL = @json(route('admin.coe.venue-allocation.drive.laptops', ['id' => '__ID__']));
     var INVIG_STORE_URL = @json(route('admin.coe.venue-allocation.invigilators.store'));
     var CSRF = $('meta[name="csrf-token"]').attr('content');
 
@@ -434,7 +409,11 @@ $(function () {
         if (!isFrozen) {
             html += '<a href="' + $row.attr('data-va-edit-url') + '" class="va-act va-act--edit"><i class="bi bi-pencil-square"></i><span>Edit Seating</span></a>';
             html += '<button type="button" class="va-act va-act--del"><i class="bi bi-trash3"></i><span>Delete</span></button>';
-            html += '<button type="button" class="va-act va-act--freeze"><i class="bi bi-snow2"></i><span>Freeze</span></button>';
+            // Disabled until every room of the plan has an invigilator (freezing locks them).
+            var blocked = $row.attr('data-va-freeze-blocked');
+            html += blocked
+                ? '<button type="button" class="va-act va-act--freeze" disabled title="' + $('<div>').text('Add invigilators first: ' + blocked).html() + '"><i class="bi bi-snow2"></i><span>Freeze</span></button>'
+                : '<button type="button" class="va-act va-act--freeze"><i class="bi bi-snow2"></i><span>Freeze</span></button>';
         }
         html += '</div>';
         $row.find('.va-cell-actions').html(html);
@@ -778,8 +757,6 @@ $(function () {
         $subjects.find('select').each(function () { if ($(this).data('select2')) { $(this).select2('destroy'); } });
         $subjects.empty();
         $('#vaMapOtCount, #vaMapLaptop').val('-');
-        $('#vaLaptopEdit').prop('disabled', true);
-        $('#vaLaptopPanel').addClass('d-none');
         refreshSubmit();
     }
 
@@ -805,7 +782,6 @@ $(function () {
                 ots.forEach(function (o) { OT_BY_PK[o.pk] = o; });
                 $('#vaMapOtCount').val(r.ot_count);
                 $('#vaMapLaptop').val(r.laptop_required);
-                $('#vaLaptopEdit').prop('disabled', !ots.length);
                 renderSubjects(r.subjects || []);
             })
             .fail(function (xhr) {
@@ -877,7 +853,7 @@ $(function () {
 
         if (first) {
             $row.append(field('Component Name', readonly(c.component).addClass('va-row-component')));
-            $row.append(field('Exam Date', readonly(c.exam_date)));
+            $row.append(field('Exam Date & Time', readonly(c.exam_date)));
         } else {
             // Same width as Component Name + Exam Date, so the room fields line up under the first row's.
             $row.append($('<div class="col-12 col-lg-4 va-room-extra"></div>').append(
@@ -1004,64 +980,6 @@ $(function () {
         refreshSubmit();
         return !msg;
     }
-
-    /* ── Laptop Required → Edit: tick who needs a laptop desk ─────────── */
-    var $laptopPanel = $('#vaLaptopPanel'), $laptopEdit = $('#vaLaptopEdit');
-
-    function laptopPanel(open) {
-        $laptopPanel.toggleClass('d-none', !open);
-        $laptopEdit.attr('aria-expanded', open ? 'true' : 'false');
-        $laptopPanel.find('.coe-field-error').remove();
-        if (!open) { return; }
-        var $list = $('#vaLaptopList').empty();
-        $('#vaLaptopSearch').val('');
-        // PwBD OTs first, then roll order.
-        ots.slice().sort(function (a, b) { return (b.ph ? 1 : 0) - (a.ph ? 1 : 0) || a.serial - b.serial; })
-            .forEach(function (o) {
-                var $item = $('<label class="va-ot-item"></label>').attr('data-search', (o.roll + ' ' + o.name).toLowerCase());
-                $('<input type="checkbox" class="form-check-input va-laptop-cb">').val(o.pk).prop('checked', !!o.laptop).appendTo($item);
-                $('<span class="va-ot-item__roll"></span>').text(o.roll).appendTo($item);
-                $('<span class="va-ot-item__name"></span>').text(o.name).attr('title', o.name).appendTo($item);
-                if (o.ph) { $('<span class="va-laptop-tag ms-auto">PwBD</span>').appendTo($item); }
-                $list.append($item);
-            });
-        if (!ots.length) { $('<div class="small text-muted py-2">No OT of this drive has a roll number.</div>').appendTo($list); }
-    }
-
-    $laptopEdit.on('click', function () { laptopPanel($laptopPanel.hasClass('d-none')); });
-    $('#vaLaptopCancel').on('click', function () { laptopPanel(false); });
-    $('#vaLaptopSearch').on('input', function () {
-        var q = $(this).val().trim().toLowerCase();
-        $('#vaLaptopList .va-ot-item').each(function () { $(this).toggleClass('d-none', q !== '' && $(this).attr('data-search').indexOf(q) === -1); });
-    });
-
-    $('#vaLaptopSave').on('click', function () {
-        var yes = [], no = [];
-        $('#vaLaptopList .va-laptop-cb').each(function () {
-            var o = OT_BY_PK[this.value];
-            if (o && !!o.laptop !== this.checked) { (this.checked ? yes : no).push(this.value); }
-        });
-        if (!yes.length && !no.length) { laptopPanel(false); return; }
-        var $btn = $(this).prop('disabled', true);
-        $.ajax({ url: LAPTOPS_URL.replace('__ID__', encodeURIComponent($drive.val())), method: 'POST',
-            headers: { 'X-CSRF-TOKEN': CSRF }, data: { yes: yes, no: no } })
-            .done(function (r) {
-                var need = {};
-                (r.laptop || []).forEach(function (pk) { need[pk] = true; });
-                ots.forEach(function (o) { o.laptop = !!need[o.pk]; });
-                $('#vaMapLaptop').val(r.laptop_required);
-                laptopPanel(false);
-                // A room's laptop desks may no longer (or now) cover its OTs.
-                $subjects.find('.va-comp-row').each(function () { if ($(this).find('.va-row-room').val()) { checkRoom($(this)); } });
-                Swal.fire({ icon: 'success', title: 'Saved', text: r.message });
-            })
-            .fail(function (xhr) {
-                $laptopPanel.find('.coe-field-error').remove();
-                $('<div class="coe-field-error"></div>').text((xhr.responseJSON || {}).message || 'Laptop Required could not be saved.')
-                    .insertAfter('#vaLaptopList');
-            })
-            .always(function () { $btn.prop('disabled', false); });
-    });
 
     $subjects.on('click', '.va-add-room', function () {
         var $group = $(this).closest('.va-comp');

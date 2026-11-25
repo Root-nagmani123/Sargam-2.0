@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin\COE;
 
 use App\Http\Controllers\Concerns\ExportsMasterGrid;
 use App\Http\Controllers\Controller;
-use App\Models\COE\LaptopResponse;
 use App\Models\COE\SeatAllocation;
 use App\Models\COE\SeatPlan;
 use App\Models\COE\SeatPlanVenue;
@@ -235,7 +234,10 @@ class VenueAllocationController extends Controller
             ->orderBy('sub.subject_name')
             ->orderBy('dcm.exam_date')
             ->orderBy('comp.component_name')
-            ->get(['dcm.id', 'dcm.exam_date', 'dcm.subject_master_pk', 'sub.subject_name', 'comp.component_name'])
+            ->get(['dcm.id', 'dcm.exam_date', 'dcm.subject_master_pk', 'sub.subject_name', 'comp.component_name',
+                // Exam time: the CC's confirmed slot, else the Tentative Exam Range's times.
+                DB::raw('COALESCE(dcm.proposed_start_at, dcm.exam_start_at) as starts_at'),
+                DB::raw('COALESCE(dcm.proposed_end_at, dcm.exam_end_at) as ends_at')])
             ->map(function ($c) use ($plans, $taken, $reexam) {
                 $own = $plans->where('map_id', $c->id);
 
@@ -243,7 +245,9 @@ class VenueAllocationController extends Controller
                     'id' => (int) $c->id,
                     'subject' => CourseParticipants::plainName($c->subject_name) ?: 'General',
                     'component' => CourseParticipants::plainName($c->component_name),
-                    'exam_date' => $this->examDateLabel($c->exam_date),
+                    // "01/11/2026 03:00 – 04:00 PM" (Exam Date & Time); the date alone when no time is set.
+                    'exam_date' => trim($this->examDateLabel($c->exam_date) . ' '
+                        . ($c->starts_at ? $this->examTimeLabel($c->starts_at, $c->ends_at) : '')),
                     'frozen' => $own->contains(fn ($p) => (int) $p->status === SeatPlan::STATUS_PUBLISHED),
                     'taken' => $own->flatMap(fn ($p) => ($taken[$p->pk] ?? collect())->pluck('student_master_pk'))
                         ->map(fn ($pk) => (int) $pk)->values(),
@@ -259,7 +263,7 @@ class VenueAllocationController extends Controller
         $ots = $this->participantQuery($courseId, $batch, SeatPlan::CATEGORY_ALL, $only)
             ->orderBy('rn.serial_number')
             ->orderBy('sm.pk')
-            ->get(['sm.pk', 'rn.roll_number', 'rn.serial_number', 'lr.laptop_required', 'sm.ph', 'sm.display_name', 'sm.first_name', 'sm.middle_name', 'sm.last_name'])
+            ->get(['sm.pk', 'rn.roll_number', 'rn.serial_number', 'lr.laptop_required', 'sm.display_name', 'sm.first_name', 'sm.middle_name', 'sm.last_name'])
             ->map(fn ($o) => [
                 'pk' => (int) $o->pk,
                 'roll' => (string) $o->roll_number,
@@ -267,8 +271,6 @@ class VenueAllocationController extends Controller
                 'name' => $this->studentName($o),
                 // Needs a laptop desk under the drive's policy (Laptop Required = Yes) — for the dialog's live room check.
                 'laptop' => $this->requiresLaptop(SeatPlan::LAPTOP_REQ_DECLARED_YES, $o->laptop_required),
-                // PwBD (student_master.ph): listed first in the Laptop Required picker.
-                'ph' => LaptopDeclarationService::isPwbd($o->ph),
             ]);
 
         $laptops = (int) $this->participantQuery($courseId, $batch, SeatPlan::CATEGORY_ALL, $only)
@@ -281,64 +283,6 @@ class VenueAllocationController extends Controller
             'laptop_required' => $laptops,
             'subjects' => $subjects,
             'ots' => $ots,
-        ]);
-    }
-
-    /**
-     * Map Seating Plan → Laptop Required → Edit: set which OTs of the drive need a laptop desk.
-     * Written to OT Laptop Status (coe_laptop_responses, source Admin) like an admin answer
-     * there; only the OTs whose answer changes are sent. A new Yes without a reason on record
-     * gets one saying where it was set. Seating plans already mapped are not re-seated.
-     */
-    public function saveLaptops(Request $request, int $id, LaptopDeclarationService $declarations): JsonResponse
-    {
-        $validated = $request->validate([
-            'yes' => ['nullable', 'array'],
-            'yes.*' => ['integer', 'distinct'],
-            'no' => ['nullable', 'array'],
-            'no.*' => ['integer', 'distinct'],
-        ]);
-        $yes = array_map('intval', $validated['yes'] ?? []);
-        $no = array_map('intval', $validated['no'] ?? []);
-        if ($yes === [] && $no === []) {
-            return response()->json(['status' => 'error', 'message' => 'Nothing was changed.'], 422);
-        }
-        if (array_intersect($yes, $no) !== []) {
-            return response()->json(['status' => 'error', 'message' => 'An OT cannot need and not need a laptop at once.'], 422);
-        }
-
-        $drive = $this->mappableDrives()->firstWhere('id', $id);
-        if ($drive === null) {
-            return response()->json(['status' => 'error', 'message' => 'This examination drive is closed, not yet approved by the Course Coordinator, or its course has no roll numbers yet.'], 422);
-        }
-        $reexam = ReexamService::seatingBySubject($id);
-        $only = $reexam === null ? null : array_values(array_unique(array_merge([], ...array_values($reexam))));
-        $cohort = $this->participantQuery($drive['course_id'], $drive['batch'], SeatPlan::CATEGORY_ALL, $only)
-            ->get(['sm.pk', 'lr.reason'])->keyBy(fn ($o) => (int) $o->pk);
-        if (array_diff(array_merge($yes, $no), $cohort->keys()->all()) !== []) {
-            return response()->json(['status' => 'error', 'message' => 'One or more of those OTs are not part of this drive.'], 422);
-        }
-
-        DB::transaction(function () use ($yes, $no, $cohort, $declarations) {
-            foreach ([1 => $yes, 0 => $no] as $answer => $pks) {
-                foreach ($pks as $pk) {
-                    $reason = trim((string) $cohort[$pk]->reason);
-                    $declarations->record($pk, [
-                        'laptop_required' => (string) $answer,
-                        'reason' => $reason !== '' ? $reason : ($answer === 1 ? 'Set by COE at Venue Allocation' : null),
-                    ], LaptopResponse::SOURCE_ADMIN);
-                }
-            }
-        });
-
-        $laptop = $this->participantQuery($drive['course_id'], $drive['batch'], SeatPlan::CATEGORY_ALL, $only)
-            ->where('lr.laptop_required', 1)->pluck('sm.pk')->map(fn ($pk) => (int) $pk)->values();
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Laptop Required saved for ' . (count($yes) + count($no)) . ' OT(s).',
-            'laptop_required' => $laptop->count(),
-            'laptop' => $laptop,
         ]);
     }
 
@@ -495,11 +439,12 @@ class VenueAllocationController extends Controller
             ->map(function ($d) use ($batches) {
                 $courseBatches = $batches[$d->course_master_pk]->pluck('batch')->map(fn ($b) => (int) $b);
                 $batch = $courseBatches->contains((int) $d->academic_session) ? (int) $d->academic_session : $courseBatches->max();
-                $name = trim((string) $d->drive_name);
+                $name = CourseParticipants::plainName($d->drive_name);
+                $course = CourseParticipants::plainName($d->course_name);
 
                 return [
                     'id' => (int) $d->id,
-                    'label' => $name !== '' ? $name . ' — ' . $d->course_name : trim($d->course_name . ' ' . $d->phase),
+                    'label' => $name !== '' ? $name . ' — ' . $course : trim($course . ' ' . $d->phase),
                     'course_id' => (int) $d->course_master_pk,
                     'batch' => (int) $batch,
                 ];
@@ -515,15 +460,22 @@ class VenueAllocationController extends Controller
         return $date ? date('d/m/Y', strtotime($date)) : '—';
     }
 
-    /** "10:00 AM – 01:00 PM" from the component's start / end date-times; '—' when no time is set. */
+    /**
+     * "10:00 AM – 01:00 PM", or "03:00 – 04:00 PM" when both are on the same side of noon, from the
+     * component's start / end date-times; '—' when no time is set.
+     */
     private function examTimeLabel(?string $start, ?string $end): string
     {
         if (! $start) {
             return '—';
         }
-        $label = date('h:i A', strtotime($start));
+        $from = strtotime($start);
+        if (! $end) {
+            return date('h:i A', $from);
+        }
+        $to = strtotime($end);
 
-        return $end ? $label . ' – ' . date('h:i A', strtotime($end)) : $label;
+        return (date('A', $from) === date('A', $to) ? date('h:i', $from) : date('h:i A', $from)) . ' – ' . date('h:i A', $to);
     }
 
     /**
@@ -862,6 +814,12 @@ class VenueAllocationController extends Controller
         if (! SeatAllocation::where('seat_plan_pk', $plan->pk)->exists()) {
             return response()->json(['status' => 'error', 'message' => 'Nobody is seated in this plan yet.'], 422);
         }
+        // Freezing locks the invigilators, so every room needs them first (not an Offline Objective paper).
+        $missing = $this->roomsWithoutInvigilators([(int) $plan->pk])[(int) $plan->pk] ?? [];
+        if ($missing !== []) {
+            return response()->json(['status' => 'error', 'message' => 'Add invigilators before freezing. No invigilator in: '
+                . implode(', ', $missing) . '.'], 422);
+        }
 
         $plan->forceFill([
             'status' => SeatPlan::STATUS_PUBLISHED,
@@ -884,6 +842,31 @@ class VenueAllocationController extends Controller
         }
 
         return response()->json(['status' => 'success', 'message' => $message]);
+    }
+
+    /**
+     * Rooms of these plans that have no invigilator at all, by plan: plan pk => [room names].
+     * A plan whose paper is Offline Objective takes no invigilators and is never listed.
+     *
+     * @param  array<int, int>  $planPks
+     * @return array<int, array<int, string>>
+     */
+    private function roomsWithoutInvigilators(array $planPks): array
+    {
+        return DB::table('coe_seat_plan_venues as spv')
+            ->join('coe_seat_plans as sp', 'sp.pk', '=', 'spv.seat_plan_pk')
+            ->join('venue_master as vm', 'vm.venue_id', '=', 'spv.venue_id')
+            ->leftJoin('examination_drive_component_maps as dcm', 'dcm.id', '=', 'sp.examination_drive_component_map_id')
+            ->leftJoin('coe_seat_plan_venue_invigilators as inv', 'inv.seat_plan_venue_pk', '=', 'spv.pk')
+            ->whereIn('spv.seat_plan_pk', $planPks ?: [0])
+            ->where(fn ($w) => $w->whereNull('dcm.exam_type')->orWhere('dcm.exam_type', '!=', self::OFFLINE_OBJECTIVE))
+            ->whereNull('inv.chief_faculty_pk')->whereNull('inv.invigilator_faculty_pk')
+            ->whereNull('inv.assistant_faculty_pk')->whereNull('inv.mts_employee_pk')
+            ->orderBy('spv.display_order')
+            ->get(['spv.seat_plan_pk', 'vm.venue_name'])
+            ->groupBy(fn ($r) => (int) $r->seat_plan_pk)
+            ->map(fn ($rooms) => $rooms->pluck('venue_name')->all())
+            ->all();
     }
 
     /** Remove one room from its plan; the plan's OTs are re-seated in the rooms that remain. */
@@ -2204,7 +2187,11 @@ class VenueAllocationController extends Controller
             ])
             ->keyBy(fn ($c) => $c->seat_plan_pk . ':' . $c->venue_id);
 
-        return $rows->map(function ($r) use ($counts) {
+        // Freeze is per plan: refused while any room of it has no invigilator.
+        $noInvigilator = $this->roomsWithoutInvigilators($rows->where('status', '!=', SeatPlan::STATUS_PUBLISHED)
+            ->pluck('seat_plan_pk')->unique()->map(fn ($pk) => (int) $pk)->values()->all());
+
+        return $rows->map(function ($r) use ($counts, $noInvigilator) {
             $c = $counts[$r->seat_plan_pk . ':' . $r->venue_id] ?? null;
             $laptopSeats = VenueSeatLayout::normalise(json_decode((string) $r->laptop_seats, true));
             $availLaptop = $laptopSeats !== [] ? count($laptopSeats) : (int) $r->laptop_capacity;
@@ -2237,6 +2224,8 @@ class VenueAllocationController extends Controller
                 'invigilators' => $r->exam_type !== self::OFFLINE_OBJECTIVE && (int) $r->status !== SeatPlan::STATUS_PUBLISHED,
                 // Add Invigilators becomes Edit Invigilators once someone is assigned.
                 'has_invigilators' => (bool) $r->has_invigilators,
+                // Rooms of this plan still without an invigilator: Freeze stays disabled until none.
+                'freeze_blocked' => implode(', ', $noInvigilator[(int) $r->seat_plan_pk] ?? []),
             ];
         });
     }

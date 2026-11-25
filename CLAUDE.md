@@ -8,6 +8,12 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-25: Freeze needs an invigilator in every room.** Venue Allocation's Freeze is
+  disabled (tooltip lists the rooms) and `freeze` refuses (422) while any room of the plan has no
+  invigilator at all; an Offline Objective paper is exempt (`roomsWithoutInvigilators()`,
+  `freeze_blocked` per list row). Tests:
+  `CoeVenueAllocationFlowTest::test_freeze_needs_an_invigilator_in_every_room`.
+
 - **2026-11-25: Venue Allocation tester fixes, round 2.** (1) Sidebar entries **My Invigilation
   Duty** (`coe_my_invigilation_duty`: Faculty, Internal Faculty, Guest Faculty) and **My Exam
   Seat** (`coe_my_exam_seat`: Officer Trainee, Student-OT), next to Venue Allocation, by migration
@@ -22,18 +28,18 @@ Each COE change gets a line here; the details live in its section below.
   decoded with `CourseParticipants::plainName()` on the list, dialogs, View / Edit / Print
   (`&#039;` and twice-encoded names showed as entities).
 
-- **2026-11-25: Venue Allocation tester fixes.** (1) Map Seating Plan → Laptop Required has
-  **Edit**: tick per OT (PwBD first) who needs a laptop desk; saved to OT Laptop Status
-  (`coe_laptop_responses`, source Admin, a new Yes without a reason gets "Set by COE at Venue
-  Allocation"), `POST venue-allocation/drive/{id}/laptops` (`saveLaptops`). Count and room
-  laptop checks update in place; plans already mapped are not re-seated. (2) Map Seating Plan /
+- **2026-11-25: Venue Allocation tester fixes.** (1) Map Seating Plan follows the design:
+  Laptop Required stays a read-only count from OT Laptop Status (a per-OT Edit picker was tried
+  and removed: change answers on OT Laptop Status); each component row shows **Exam Date &
+  Time** ("01/11/2026 03:00 – 04:00 PM", CC slot else Tentative Exam Range times); the drive
+  list decodes HTML-encoded names. (2) Map Seating Plan /
   Add Invigilators footers (Cancel / Map) stay on screen at 100% zoom: the `<form>` between
   `.modal-content` and the body broke Bootstrap's scrollable dialog. (3) "Mapped" toast was raw
   `<ul>` HTML (the global `sargam-success-toast.js` shows `html` as text): now plain text,
   title "Seating mapped". (4) Scriber Seating Available falls back to Room Master
   `scriber_count` when the room has no desk map (was always 0), as laptops already did
   (`ExamRooms` `room_scribers`, `roomScribers()`). Tests:
-  `CoeVenueAllocationFlowTest::test_laptop_required_is_set_per_ot_from_map_seating_plan`.
+  `CoeVenueAllocationFlowTest::test_drive_shows_the_component_exam_date_not_the_range`.
 
 - **2026-11-25: Add / Edit Invigilators follows the component's Exam Type.** Online Descriptive:
   all four roles. Online Objective: no Assistant Invigilator (picker disabled, header picker

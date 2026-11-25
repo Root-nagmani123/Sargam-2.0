@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\BuildingFloorRoomMapping;
 use App\Models\BuildingMaster;
-use App\Models\COE\LaptopResponse;
 use App\Models\COE\RollNumberAllocation;
 use App\Models\COE\SeatAllocation;
 use App\Models\COE\SeatPlan;
@@ -317,8 +316,15 @@ class CoeVenueAllocationFlowTest extends TestCase
         $this->assertSame(1, SeatAllocation::where('seat_plan_pk', $planVenue->seat_plan_pk)->where('venue_id', $free)->count());
     }
 
+    /** A paper that takes no invigilators, so a plan can be frozen without assigning any. */
+    private function noInvigilatorsNeeded(): void
+    {
+        DB::table('examination_drive_component_maps')->where('id', $this->componentMapId)->update(['exam_type' => 'Offline Objective']);
+    }
+
     public function test_change_room_is_refused_on_a_frozen_plan(): void
     {
+        $this->noInvigilatorsNeeded();
         $this->map()->assertOk();
         $planVenue = $this->planVenue();
         $free = $this->addRoom('PHPUNIT4', 5);
@@ -376,6 +382,7 @@ class CoeVenueAllocationFlowTest extends TestCase
 
     public function test_freeze_publishes_notifies_and_locks_the_plan(): void
     {
+        $this->noInvigilatorsNeeded();
         $this->map()->assertOk();
         $planVenue = $this->planVenue();
         $seated = SeatAllocation::where('seat_plan_pk', $planVenue->seat_plan_pk)->pluck('student_master_pk');
@@ -396,6 +403,24 @@ class CoeVenueAllocationFlowTest extends TestCase
             ->assertStatus(422);
         $this->actingAs($this->admin)->deleteJson(route('admin.coe.venue-allocation.destroy', $planVenue->pk))->assertStatus(422);
         $this->assertNotNull(SeatPlanVenue::find($planVenue->pk));
+    }
+
+    public function test_freeze_needs_an_invigilator_in_every_room(): void
+    {
+        [[$chief], ] = $this->people();
+        DB::table('examination_drive_component_maps')->where('id', $this->componentMapId)->update(['exam_type' => 'Online Descriptive']);
+        $this->map()->assertOk();
+        $room = $this->planVenue()->pk;
+
+        // Listed with Freeze disabled, and refused by the server.
+        $this->assertMatchesRegularExpression('/data-coe-id="' . $room . '"[^>]*data-va-freeze-blocked="PHPUnit Exam Hall PHPUNIT"/s',
+            $this->actingAs($this->admin)->get(route('admin.coe.venue-allocation.index'))->assertOk()->getContent());
+        $this->actingAs($this->admin)->postJson(route('admin.coe.venue-allocation.freeze', $room))
+            ->assertStatus(422)->assertJsonPath('status', 'error');
+        $this->assertFalse(SeatPlan::find($this->planVenue()->seat_plan_pk)->isPublished());
+
+        $this->saveInvigilators([['id' => $room, 'chief' => $chief]])->assertOk();
+        $this->actingAs($this->admin)->postJson(route('admin.coe.venue-allocation.freeze', $room))->assertOk();
     }
 
     public function test_removing_the_only_room_deletes_the_plan(): void
@@ -454,11 +479,19 @@ class CoeVenueAllocationFlowTest extends TestCase
     public function test_drive_shows_the_component_exam_date_not_the_range(): void
     {
         DB::table('examination_drive_component_maps')->where('id', $this->componentMapId)
-            ->update(['exam_date' => '2026-11-11', 'exam_end_date' => '2026-11-14']);
-
-        $component = collect($this->driveData()['subjects'])->flatMap(fn ($s) => $s['components'])
+            ->update(['exam_date' => '2026-11-11', 'exam_end_date' => '2026-11-14',
+                'exam_start_at' => null, 'exam_end_at' => null, 'proposed_start_at' => null, 'proposed_end_at' => null]);
+        $component = fn () => collect($this->driveData()['subjects'])->flatMap(fn ($s) => $s['components'])
             ->firstWhere('id', $this->componentMapId);
-        $this->assertSame('11/11/2026', $component['exam_date']);
+        $this->assertSame('11/11/2026', $component()['exam_date']);
+
+        // Exam Date & Time: the CC's confirmed slot, else the Tentative Exam Range's times.
+        DB::table('examination_drive_component_maps')->where('id', $this->componentMapId)
+            ->update(['exam_start_at' => '2026-11-11 10:00:00', 'exam_end_at' => '2026-11-11 12:00:00']);
+        $this->assertSame('11/11/2026 10:00 AM – 12:00 PM', $component()['exam_date']);
+        DB::table('examination_drive_component_maps')->where('id', $this->componentMapId)
+            ->update(['proposed_start_at' => '2026-11-11 15:00:00', 'proposed_end_at' => '2026-11-11 16:00:00']);
+        $this->assertSame('11/11/2026 03:00 – 04:00 PM', $component()['exam_date']);
     }
 
     public function test_the_list_shows_the_examination_drive(): void
@@ -736,6 +769,7 @@ class CoeVenueAllocationFlowTest extends TestCase
 
     public function test_an_ot_sees_their_seat_once_the_plan_is_frozen(): void
     {
+        $this->noInvigilatorsNeeded();
         $this->map()->assertOk();
         $room = $this->planVenue();
         $login = DB::table('coe_seat_allocations as sa')
@@ -795,31 +829,6 @@ class CoeVenueAllocationFlowTest extends TestCase
             ->assertStatus(422)->assertJsonValidationErrors('rows.0.assistant');
         $this->saveInvigilators([['id' => $room, 'chief' => $chief, 'invigilator' => $other, 'mts' => $mts]])->assertOk();
         $this->assertNull(DB::table('coe_seat_plan_venue_invigilators')->where('seat_plan_venue_pk', $room)->value('assistant_faculty_pk'));
-    }
-
-    public function test_laptop_required_is_set_per_ot_from_map_seating_plan(): void
-    {
-        $driveId = (int) DB::table('examination_drive_component_maps')->where('id', $this->componentMapId)->value('examination_drive_id');
-        $ot = (int) DB::table('coe_roll_numbers as rn')
-            ->join('coe_roll_number_allocations as rna', 'rna.pk', '=', 'rn.roll_number_allocation_pk')
-            ->where('rna.course_master_pk', $this->course)->where('rna.batch', $this->batch)
-            ->orderBy('rn.serial_number')->value('rn.student_master_pk');
-        DB::table('coe_laptop_responses')->where('student_master_pk', $ot)->delete();
-        $url = route('admin.coe.venue-allocation.drive.laptops', $driveId);
-        $before = $this->actingAs($this->admin)->getJson(route('admin.coe.venue-allocation.drive', $driveId))->assertOk()->json('laptop_required');
-
-        $this->actingAs($this->admin)->postJson($url, ['yes' => [$ot]])->assertOk()
-            ->assertJsonPath('laptop_required', $before + 1);
-        $row = DB::table('coe_laptop_responses')->where('student_master_pk', $ot)->first();
-        $this->assertSame([1, LaptopResponse::SOURCE_ADMIN], [(int) $row->laptop_required, (int) $row->source]);
-        $this->assertNotEmpty($row->reason);
-        $ots = collect($this->actingAs($this->admin)->getJson(route('admin.coe.venue-allocation.drive', $driveId))->json('ots'));
-        $this->assertTrue($ots->firstWhere('pk', $ot)['laptop']);
-
-        $this->actingAs($this->admin)->postJson($url, ['no' => [$ot]])->assertOk()->assertJsonPath('laptop_required', $before);
-        // Not on the drive, or nothing sent: refused.
-        $this->actingAs($this->admin)->postJson($url, ['yes' => [0]])->assertStatus(422);
-        $this->actingAs($this->admin)->postJson($url, [])->assertStatus(422);
     }
 
     public function test_index_show_and_edit_render(): void
