@@ -133,11 +133,6 @@ class EmployeeIDCardRequestController extends Controller
     }
 
     /**
-     * Heavy merged list for /admin/employee-idcard (cached; pagination applied in {@see index()}).
-     *
-     * @return \Illuminate\Support\Collection<int, mixed>
-     */
-    /**
      * The employee ID card list's two queries (permanent, contractual): non-admins see only
      * the requests they created, then the status / filter tabs apply. Shared by the list and
      * the dashboard's pending count so the two never select different rows.
@@ -184,6 +179,11 @@ class EmployeeIDCardRequestController extends Controller
         return [$permQuery, $contQuery];
     }
 
+    /**
+     * Heavy merged list for /admin/employee-idcard (cached; pagination applied in {@see index()}).
+     *
+     * @return \Illuminate\Support\Collection<int, mixed>
+     */
     private function buildEmployeeIdcardIndexMergedCollection(Request $request): \Illuminate\Support\Collection
     {
 

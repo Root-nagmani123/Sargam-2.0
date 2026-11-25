@@ -7722,7 +7722,9 @@ class UserController extends Controller
         // list and OT / Participants show them (PR #356 L-93). This used to apply to faculty-portal
         // logins alone, so an Employee-only login, with no students on either list, could open
         // any student's record. A trainee is refused, as OT / Participants refuses one.
-        if (! hasRole('Super Admin') && ! $this->isTrainingAdmin()) {
+        // Admin and PA are exempt: OT / Participants shows them every participant
+        // (otParticipantsScopedFacultyPk()), so its rows must open (PR #356 F-010).
+        if (! hasRole('Super Admin') && ! hasRole('Admin') && ! hasRole('PA') && ! $this->isTrainingAdmin()) {
             $facultyPk = (isOfficerTraineeUser() || hasRole('Student-OT')) ? null : get_auth_faculty_master_pk();
             if (! $facultyPk || ! $this->canFacultyViewStudent($facultyPk, (int) $studentPk)) {
                 return redirect()->route('admin.dashboard.students')

@@ -554,7 +554,7 @@ class RoleAliasCapabilityTest extends TestCase
         $this->assertFalse($s['detail_shows_student']);
     }
 
-    /** PR #356 L-93 non-regression: a faculty login still opens its own students, and is refused others. */
+    /** PR #356 L-93 non-regression: a faculty login still opens its own students, and is refused others; F-010: Admin / PA open those too. */
     public function test_faculty_student_detail_follows_the_access_service(): void
     {
         $access = app(StudentDetailAccessService::class);
@@ -591,6 +591,13 @@ class RoleAliasCapabilityTest extends TestCase
 
             $this->assertSame(200, $open($allowed)->status(), "faculty $facultyPk opens student $allowed");
             $open($refused)->assertRedirect(route('admin.dashboard.students'));
+            // F-010: OT / Participants lists every participant for Admin and PA, so the same
+            // faculty login holding either role opens the student it was refused above.
+            foreach (['PA', 'Admin'] as $exempt) {
+                $this->assertSame(200, $this->as($user, array_merge($roles, [$exempt]))
+                    ->get(route('admin.dashboard.students.detail', ['id' => $this->enc((string) $refused)]))->status(),
+                    "$exempt with faculty $facultyPk opens student $refused");
+            }
 
             return;
         }
