@@ -638,13 +638,17 @@ class MemberWizardPayrollAndStepsTest extends TestCase
         $stepUrl = str_replace('edit-step', 'update-validate-step', route('member.edit-step', ['step' => 3, 'id' => $employeePk]));
         $this->actingAs($actor)->postJson($stepUrl, ['userrole_step_shown' => '1'])->assertOk();
 
-        $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
+        $response = $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
 
         $this->assertSame('Changed', DB::table('employee_master')->where('pk', $employeePk)->value('first_name'));
-        $this->assertSame(
-            [$hiddenPk],
+        // The post carries no rendered ticks, so it revokes nothing and says so (PR #354
+        // review, F-010). The held role's offered option is mapped again, so the show and
+        // print pages list the role the member still holds.
+        $this->assertStringContainsString('was NOT removed', (string) $response->json('warning'));
+        $this->assertEqualsCanonicalizing(
+            array_merge([$hiddenPk], UserRoleMaster::offeredOptionPksForRoles($rolesBefore)),
             DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->pluck('user_role_master_pk')->map(fn ($pk) => (int) $pk)->all(),
-            'The hidden option must be kept, and nothing else mapped.'
+            'The hidden option must be kept, plus the options of the roles still held, and nothing else.'
         );
         $this->assertSame($rolesBefore, User::find($credentialPk)->getRoleNames()->sort()->values()->all(), 'No role may be granted or removed.');
     }
@@ -760,6 +764,8 @@ class MemberWizardPayrollAndStepsTest extends TestCase
         // Doctor unticked, the new role ticked, and the hidden pk posted back as a tampered post would.
         $updatePayload['userrole'] = [$newOptionPk, $hiddenPk];
         $updatePayload['userrole_step_shown'] = '1';
+        // Step 3 displayed Doctor ticked. A post without this field revokes nothing (F-010).
+        $updatePayload['userrole_ticked_at_render'] = implode(',', $createPayload['userrole']);
 
         $response = $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
         $this->assertStringContainsString($hiddenName . ' is not managed from the Member wizard', (string) $response->json('warning'));
@@ -808,9 +814,11 @@ class MemberWizardPayrollAndStepsTest extends TestCase
         $updatePayload = $this->basicMemberPayload('UntickAllHidden', $employeePk);
         $updatePayload['userid'] = $createPayload['userid'];
         $updatePayload['first_name'] = 'Changed';
-        // Step 3 was rendered and every box unticked: only its marker is posted.
+        // Step 3 was rendered with Doctor ticked, and every box unticked: only its marker and
+        // the rendered ticks are posted. Without the rendered ticks nothing is revoked (F-010).
         unset($updatePayload['userrole']);
         $updatePayload['userrole_step_shown'] = '1';
+        $updatePayload['userrole_ticked_at_render'] = implode(',', $createPayload['userrole']);
 
         $stepUrl = str_replace('edit-step', 'update-validate-step', route('member.edit-step', ['step' => 3, 'id' => $employeePk]));
         $this->actingAs($actor)->postJson($stepUrl, ['userrole_step_shown' => '1'])->assertOk();
@@ -1157,6 +1165,129 @@ class MemberWizardPayrollAndStepsTest extends TestCase
         $this->assertSame('Changed', DB::table('employee_master')->where('pk', $employeePk)->value('first_name'));
         $this->assertSame(['Doctor'], $this->heldRoleNames($credentialPk));
         $this->assertEqualsCanonicalizing([$doctorPk, $hiddenPk], $this->mappedOptionPks($credentialPk), 'Doctor and the hidden option, each exactly once.');
+    }
+
+    /**
+     * PR #354 review, F-010: a post without userrole_ticked_at_render (a Step 3 loaded before
+     * the field existed, or a hand-built post) must not revoke a role granted on the Users
+     * screen after the form was loaded. It keeps the grant, keeps its mapping row, and says
+     * the role was not removed.
+     */
+    public function test_a_post_without_rendered_ticks_does_not_revoke_a_users_screen_grant(): void
+    {
+        $actor = $this->makeActor('legacy_post');
+        $actor->assignRole('Super Admin');
+        [$otherOptionPk, $otherRoleName] = $this->anotherGrantableOfferedRole();
+        [$employeePk, $credentialPk, $createPayload] = $this->createMemberThroughWizard($actor, 'LegacyPost');
+        $doctorPk = (int) $createPayload['userrole'][0];
+
+        [$displayedTicks] = $this->renderStep3($actor, $employeePk);
+        $this->assertSame([$doctorPk], $displayedTicks, 'Fixture: Step 3 shows Doctor ticked.');
+
+        $this->actingAs($actor)->post(route('admin.users.assignRoleSave'), [
+            'user_id' => $credentialPk,
+            'roles'   => Role::whereIn('name', ['Doctor', $otherRoleName])->pluck('id')->all(),
+        ])->assertRedirect();
+        $this->assertEqualsCanonicalizing([$doctorPk, $otherOptionPk], $this->mappedOptionPks($credentialPk), 'Fixture: the Users screen mirrored both roles.');
+
+        $updatePayload = $this->basicMemberPayload('LegacyPost', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['userrole'] = $displayedTicks;
+        $updatePayload['userrole_step_shown'] = '1';
+        // No userrole_ticked_at_render.
+
+        $response = $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
+
+        $this->assertEqualsCanonicalizing(['Doctor', $otherRoleName], $this->heldRoleNames($credentialPk), 'The Users-screen grant must be retained.');
+        $this->assertEqualsCanonicalizing([$doctorPk, $otherOptionPk], $this->mappedOptionPks($credentialPk), 'The mapping must list both held roles.');
+        $this->assertStringContainsString('was NOT removed', (string) $response->json('warning'));
+    }
+
+    /**
+     * PR #354 review, F-011: for an employee with more than one login, a Users-screen role
+     * save must not overwrite the options the wizard recorded. The wizard refuses RBAC for
+     * that employee, so the mapping is the only record of the choice, and
+     * members:reconcile-role-mappings skips such logins for the same reason.
+     */
+    public function test_a_users_screen_save_keeps_a_shared_employees_wizard_options(): void
+    {
+        $actor = $this->makeActor('shared_emp');
+        $actor->assignRole('Super Admin');
+        [$otherOptionPk] = $this->anotherGrantableOfferedRole();
+        [$employeePk, $credentialPk, $createPayload] = $this->createMemberThroughWizard($actor, 'SharedEmp');
+        $doctorPk = (int) $createPayload['userrole'][0];
+
+        // A second login for the same employee.
+        $second = $this->makeActor('shared_emp_second');
+        $second->user_id = $employeePk;
+        $second->save();
+
+        $updatePayload = $this->basicMemberPayload('SharedEmp', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['userrole'] = [$doctorPk, $otherOptionPk];
+        $updatePayload['userrole_step_shown'] = '1';
+        $updatePayload['userrole_ticked_at_render'] = (string) $doctorPk;
+
+        $response = $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
+        $this->assertStringContainsString('more than one login account', (string) $response->json('warning'), 'Fixture: the wizard refuses RBAC for a shared employee.');
+        $this->assertSame(['Doctor'], $this->heldRoleNames($credentialPk), 'Fixture: no role granted.');
+        $this->assertEqualsCanonicalizing([$doctorPk, $otherOptionPk], $this->mappedOptionPks($credentialPk), 'Fixture: the wizard recorded both options.');
+
+        // The Users screen re-saves the same login with its roles unchanged.
+        $this->actingAs($actor)->post(route('admin.users.assignRoleSave'), [
+            'user_id' => $credentialPk,
+            'roles'   => Role::where('name', 'Doctor')->pluck('id')->all(),
+        ])->assertRedirect()->assertSessionHas('success', fn ($message) => str_contains($message, 'more than one login account'));
+
+        $this->assertEqualsCanonicalizing([$doctorPk, $otherOptionPk], $this->mappedOptionPks($credentialPk), 'The wizard-recorded options must be kept.');
+        $this->assertSame(['Doctor'], $this->heldRoleNames($credentialPk));
+    }
+
+    /**
+     * PR #354 review, F-012: a wizard save that revokes a role must invalidate the cached
+     * Role & Permission > Users list, or that list keeps showing the revoked role for up to
+     * a day.
+     */
+    public function test_a_wizard_revocation_is_shown_on_the_cached_users_list(): void
+    {
+        config(['cache.redis_backed_unified_store' => 'array']);
+
+        $actor = $this->makeActor('users_list');
+        $actor->assignRole('Super Admin');
+        [$otherOptionPk, $otherRoleName] = $this->anotherGrantableOfferedRole();
+        [$employeePk, $credentialPk, $createPayload] = $this->createMemberThroughWizard($actor, 'UsersList');
+        $doctorPk = (int) $createPayload['userrole'][0];
+
+        $listedRoles = function () use ($actor, $createPayload): string {
+            $users = $this->actingAs($actor)
+                ->get(route('admin.users.index', ['search' => strtolower($createPayload['userid'])]))
+                ->assertOk()
+                ->viewData('users');
+            $row = collect($users->items())->firstWhere('user_name', $createPayload['userid']);
+            $this->assertNotNull($row, 'The member is listed.');
+
+            return (string) $row->roles;
+        };
+
+        $this->actingAs($actor)->post(route('admin.users.assignRoleSave'), [
+            'user_id' => $credentialPk,
+            'roles'   => Role::whereIn('name', ['Doctor', $otherRoleName])->pluck('id')->all(),
+        ])->assertRedirect();
+        $this->assertStringContainsString($otherRoleName, $listedRoles(), 'Fixture: the list (now cached) shows both roles.');
+
+        [$displayedTicks, $tickedAtRender] = $this->renderStep3($actor, $employeePk);
+        $this->assertEqualsCanonicalizing([$doctorPk, $otherOptionPk], $displayedTicks, 'Fixture: Step 3 shows both held roles ticked.');
+
+        $updatePayload = $this->basicMemberPayload('UsersList', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['userrole'] = [$doctorPk];
+        $updatePayload['userrole_step_shown'] = '1';
+        $updatePayload['userrole_ticked_at_render'] = $tickedAtRender;
+
+        $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
+        $this->assertSame(['Doctor'], $this->heldRoleNames($credentialPk), 'Fixture: the wizard revoked the other role.');
+
+        $this->assertSame('Doctor', $listedRoles(), 'The Users list must show only the remaining role.');
     }
 
     /**

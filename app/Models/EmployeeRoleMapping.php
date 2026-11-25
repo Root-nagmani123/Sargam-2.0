@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class EmployeeRoleMapping extends Model
 {
@@ -19,6 +20,24 @@ class EmployeeRoleMapping extends Model
     public function role()
     {
         return $this->belongsTo(UserRoleMaster::class, 'user_role_master_pk', 'pk');
+    }
+
+    /**
+     * Whether an employee owns more than one user_credentials row (a "shared employee").
+     *
+     * For such an employee the Member wizard refuses the RBAC half of a save and keeps the
+     * options the administrator ticked as the only record of that choice, and
+     * members:reconcile-role-mappings skips the login. Every writer of the offered rows
+     * has to apply the same rule, or one of them overwrites what the others leave alone
+     * (PR #354 review, F-011). Same test as the command: COUNT(*) > 1 by user_id.
+     */
+    public static function belongsToSharedEmployee(?int $employeeMasterPk): bool
+    {
+        if ($employeeMasterPk === null) {
+            return false;
+        }
+
+        return DB::table('user_credentials')->where('user_id', $employeeMasterPk)->count() > 1;
     }
 
     /**

@@ -758,8 +758,9 @@ class MemberController extends Controller
     /**
      * The offered option pks Step 3 displayed ticked when it was rendered, posted back by
      * step3.blade.php as a comma-separated `userrole_ticked_at_render`. Null when the post
-     * does not carry it (a form rendered before this field existed). The caller then
-     * keeps the earlier employee_role_mapping-based behaviour.
+     * does not carry it (a form rendered before this field existed, or a hand-built post).
+     * The caller then revokes nothing and reports the held roles the post left unticked
+     * (PR #354 review, F-010).
      *
      * @return int[]|null
      */
@@ -968,9 +969,10 @@ class MemberController extends Controller
         }
 
         // Only a role in the caller's "previously selected" set that is unticked now is
-        // removed. With rendered ticks, that set is the roles Step 3 displayed ticked and
-        // the login still holds, whichever screen granted them; without them (legacy
-        // form), it is the mapping rows this screen wrote (PR #354 review, F-008).
+        // removed. update() passes the roles Step 3 displayed ticked and the login still
+        // holds, whichever screen granted them (PR #354 review, F-008). A post without the
+        // rendered ticks passes an empty set, so it revokes nothing (F-010). store() passes
+        // nothing, because a new login holds nothing to revoke.
         $toRemove = array_diff($oldSpatieRoles, $newSpatieRoles);
         // Only a role ticked now that Step 3 did not display ticked is granted (F-007).
         $toAdd = array_diff($newSpatieRoles, $currentRoleNames, $renderedSpatieRoles);
@@ -1285,6 +1287,10 @@ class MemberController extends Controller
 
         MemberDataTable::bumpListingCacheEpoch();
 
+        // A new login and the roles granted to it appear on Role & Permission > Users, which
+        // is cached (PR #354 review, F-012).
+        UserController::bumpAdminUsersIndexCacheEpoch();
+
         $saveWarnings = array_values(array_filter($saveWarnings));
 
         if ($saveWarnings !== []) {
@@ -1393,10 +1399,14 @@ class MemberController extends Controller
         // response shape exactly.
         $duplicate = null;
 
+        // Set when the role block below ran, so Role & Permission > Users is invalidated
+        // after the commit (PR #354 review, F-012).
+        $roleBlockRan = false;
+
         // Same reasoning as store(): one transaction across employee_master,
         // payroll_salary_master, user_credentials and the role mappings.
         try {
-            DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload, &$saveWarnings, &$duplicate) {
+            DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload, &$saveWarnings, &$duplicate, &$roleBlockRan) {
             // Excludes the row being edited itself, so an unchanged emp_id never
             // collides with its own current value.
             if (EmployeeMaster::where('emp_id', $request->id)->where('pk', '!=', $request->emp_id)->lockForUpdate()->exists()) {
@@ -1530,28 +1540,37 @@ class MemberController extends Controller
                 // review, F-008). Leaving it untouched preserves it until someone
                 // deliberately reassigns the member's roles while it's active again.
                 $offeredRoleIds = \App\Models\UserRoleMaster::getUserRoleList()->keys()->all();
+                $roleBlockRan = true;
 
-                // Captured before the delete below so syncSpatieRolesFromWizardSelection()
-                // can tell "this wizard granted it last time" apart from "granted some
-                // other way" (PR #319 review, F-019) — employee_role_mapping is the only
-                // durable record of what this screen itself previously selected.
+                // The "previously selected" set: the only roles syncSpatieRolesFromWizardSelection()
+                // may revoke (PR #319 review, F-019).
                 //
-                // When Step 3 posts the ticks it displayed (userrole_ticked_at_render), the
-                // "previously selected" set is the options that were displayed ticked AND the
-                // login still holds now. Unticking a displayed role removes it, whichever
-                // screen assigned it. A role granted on Role & Permission > Users after the
-                // form was rendered was never displayed, so it is not revoked. Computing this
-                // from save-time state alone revoked such grants silently (PR #354 review, F-001).
+                // When Step 3 posts the ticks it displayed (userrole_ticked_at_render), it is the
+                // options that were displayed ticked AND the login still holds now. Unticking a
+                // displayed role removes it, whichever screen assigned it. A role granted on
+                // Role & Permission > Users after the form was rendered was never displayed, so
+                // it is not revoked. Computing this from save-time state alone revoked such
+                // grants silently (PR #354 review, F-001).
                 //
-                // A post without that field (a form rendered before it existed) keeps the
-                // earlier behaviour: the employee_role_mapping rows this screen wrote.
+                // A post without that field (a Step 3 loaded before the field existed, or a
+                // hand-built post) revokes nothing: the set is empty (PR #354 review, F-010).
+                // It used to be the offered employee_role_mapping rows. Those are not a record
+                // of this screen's own choices: the Users screen (assignRoleSave(), store(),
+                // update()) and members:reconcile-role-mappings --apply write them too, so a
+                // role granted there after the form loaded was revoked by the save. Grants
+                // still apply. Held offered roles the post leaves unticked are reported below.
                 $renderedTicks = $this->renderedRoleTicks($request);
 
+                $legacyNotRemoved = $renderedTicks === null
+                    && $this->memberCredentialIsUnambiguous((int) $userCredential->pk)
+                    ? array_values(array_diff(
+                        $this->heldOfferedRoleOptions((int) $userCredential->pk),
+                        array_map('intval', $roles)
+                    ))
+                    : [];
+
                 $previouslySelectedRoleIds = $renderedTicks === null
-                    ? EmployeeRoleMapping::where('user_credentials_pk', $userCredential->pk)
-                        ->whereIn('user_role_master_pk', $offeredRoleIds)
-                        ->pluck('user_role_master_pk')
-                        ->all()
+                    ? []
                     : array_values(array_intersect(
                         $renderedTicks,
                         $this->heldOfferedRoleOptions((int) $userCredential->pk),
@@ -1572,28 +1591,39 @@ class MemberController extends Controller
                     $renderedTicks === null ? null : array_values(array_intersect($renderedTicks, array_map('intval', $offeredRoleIds)))
                 );
 
-                // Only for a post that carries the rendered ticks, so older forms behave
-                // exactly as before. Brings the offered mapping rows back in line with the
-                // roles the login holds after the sync, so the show and print pages (which
-                // read employee_role_mapping) list the same roles as Step 3 and the Users screen:
-                //  - held but not posted: a grant made after the form was rendered, or a
-                //    blocked role (Super Admin) the wizard refused to remove. The delete above
+                // Brings the offered mapping rows back in line with the roles the login holds
+                // after the sync, so the show and print pages (which read employee_role_mapping)
+                // list the same roles as Step 3 and the Users screen:
+                //  - held but not posted: a grant made after the form was rendered, a blocked
+                //    role (Super Admin) the wizard refused to remove, or (post without rendered
+                //    ticks, F-010) any held role that post left unticked. The delete above
                 //    dropped their rows; restore them.
-                //  - posted back as displayed but no longer held: revoked on the Users screen
-                //    after the form was rendered and, per F-007, not re-granted. The insert
-                //    above wrote their rows; drop them.
+                //  - posted back as displayed but no longer held (rendered ticks only): revoked
+                //    on the Users screen after the form was rendered and, per F-007, not
+                //    re-granted. The insert above wrote their rows; drop them.
                 // A ticked option that was not displayed ticked keeps its row either way, as
                 // before (e.g. a refused Super Admin tick for a non-holder).
+                $heldAfterSync = $this->heldOfferedRoleOptions((int) $userCredential->pk);
+                $postedRoleIds = array_map('intval', $roles);
+
+                $stillHeldNotPosted = array_values(array_diff($heldAfterSync, $postedRoleIds));
+
+                if ($stillHeldNotPosted !== []) {
+                    $this->syncEmployeeRoleMappings($userCredential->pk, $stillHeldNotPosted);
+                }
+
+                // F-010: say what a post without rendered ticks did not remove, so an
+                // administrator who meant to revoke it knows to reload Step 3.
+                if ($legacyNotRemoved !== []) {
+                    $saveWarnings[] = implode(', ', UserRoleMaster::whereIn('pk', $legacyNotRemoved)
+                            ->orderBy('user_role_display_name')
+                            ->pluck('user_role_display_name')
+                            ->all())
+                        . ' was NOT removed: this form was loaded before the latest update. '
+                        . 'Reload the page and save again to remove a role.';
+                }
+
                 if ($renderedTicks !== null) {
-                    $heldAfterSync = $this->heldOfferedRoleOptions((int) $userCredential->pk);
-                    $postedRoleIds = array_map('intval', $roles);
-
-                    $stillHeldNotPosted = array_values(array_diff($heldAfterSync, $postedRoleIds));
-
-                    if ($stillHeldNotPosted !== []) {
-                        $this->syncEmployeeRoleMappings($userCredential->pk, $stillHeldNotPosted);
-                    }
-
                     $revokedSinceRender = array_values(array_diff(
                         array_intersect($postedRoleIds, $renderedTicks, array_map('intval', $offeredRoleIds)),
                         $heldAfterSync
@@ -1621,6 +1651,13 @@ class MemberController extends Controller
         }
 
         MemberDataTable::bumpListingCacheEpoch();
+
+        // The role block changes Spatie roles, which Role & Permission > Users lists from a
+        // cache of up to a day. Without this, that screen kept showing a role the wizard had
+        // just revoked (PR #354 review, F-012).
+        if ($roleBlockRan) {
+            UserController::bumpAdminUsersIndexCacheEpoch();
+        }
 
         // PR #319 review round 2 (F-002 residual) and round 3 (R-001/R-003): when part of
         // the save is refused — RBAC for an employee with more than one login, or Step 6

@@ -8606,7 +8606,11 @@ class UserController extends Controller
         );
     }
 
-    private static function bumpAdminUsersIndexCacheEpoch(): void
+    /**
+     * Invalidate every cached page of Role & Permission > Users. Public because the Member
+     * wizard also changes the Spatie roles this list shows (PR #354 review, F-012).
+     */
+    public static function bumpAdminUsersIndexCacheEpoch(): void
     {
         DataTableRedisCache::bumpListEpoch(self::ADMIN_USERS_INDEX_LIST_EPOCH_KEY, 'UserController@adminUsersIndex');
     }
@@ -9215,7 +9219,16 @@ class UserController extends Controller
             // roles as this screen. Employees only: that step exists only for 'E' logins.
             $isEmployeeLogin = strtoupper(trim((string) $user->user_category)) === 'E';
 
-            if ($isEmployeeLogin) {
+            // Not for an employee with more than one login (PR #354 review, F-011). For that
+            // employee the wizard does not change roles, and the options it records are the
+            // only record of the administrator's choice. members:reconcile-role-mappings
+            // skips these logins for the same reason. Mirroring here would replace those
+            // options with this one login's roles.
+            $mappingSkippedSharedEmployee = $isEmployeeLogin
+                && EmployeeRoleMapping::belongsToSharedEmployee($user->user_id === null ? null : (int) $user->user_id);
+            $mirrorMapping = $isEmployeeLogin && ! $mappingSkippedSharedEmployee;
+
+            if ($mirrorMapping) {
                 EmployeeRoleMapping::mirrorOfferedOptions((int) $user->pk, $roleNames);
             }
 
@@ -9224,8 +9237,14 @@ class UserController extends Controller
             app(PermissionRegistrar::class)->forgetCachedPermissions();
             self::bumpAdminUsersIndexCacheEpoch();
 
-            if ($isEmployeeLogin) {
+            if ($mirrorMapping) {
                 MemberDataTable::bumpListingCacheEpoch();
+            }
+
+            if ($mappingSkippedSharedEmployee) {
+                \Log::warning('Users screen: roles saved, employee_role_mapping not mirrored - employee has more than one user_credentials row.', [
+                    'user_credentials_pk' => $user->pk,
+                ]);
             }
 
             // PR #319 review, F-031, restored after the merge with main's permissions
@@ -9261,7 +9280,10 @@ class UserController extends Controller
             }
 
             return redirect()->route('admin.users.index')
-                ->with('success', 'Roles assigned successfully.');
+                ->with('success', $mappingSkippedSharedEmployee
+                    ? 'Roles assigned successfully. The employee\'s Role Assignment options in the Member '
+                        . 'module were not changed: this employee has more than one login account.'
+                    : 'Roles assigned successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
 

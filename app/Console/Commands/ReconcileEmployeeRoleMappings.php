@@ -25,7 +25,9 @@ use Illuminate\Support\Facades\DB;
  *
  * Skipped: logins whose employee has more than one user_credentials row. Step 3 reads
  * the mapping for those, and the wizard refuses to change their RBAC, so the mapping is
- * the only record of what was chosen for them.
+ * the only record of what was chosen for them. The Users screen skips them by the same
+ * rule (EmployeeRoleMapping::belongsToSharedEmployee(), PR #354 review, F-011); this
+ * command computes it in one query instead of once per login.
  *
  * Dry run by default. Pass --apply to write. Re-runnable: a second run finds nothing.
  */
