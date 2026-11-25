@@ -622,9 +622,9 @@ class MemberWizardPayrollAndStepsTest extends TestCase
         ]);
         DB::table('employee_role_mapping')->where('user_credentials_pk', $credentialPk)->delete();
         DB::table('employee_role_mapping')->insert(['user_credentials_pk' => $credentialPk, 'user_role_master_pk' => $hiddenPk]);
-        // The member still holds the role granted at creation (PR #354 review, F-005): this
-        // post carries no userrole_ticked_at_render, so update() keeps the mapping-based
-        // "previously selected" set, which no longer names that role. It must survive.
+        // The member still holds the role granted at creation (PR #354 review, F-005). This
+        // post carries no userrole_ticked_at_render, so update() revokes nothing (F-010) and
+        // that role must survive.
         $this->assertNotSame([], User::find($credentialPk)->getRoleNames()->all(), 'Fixture: the member holds a role.');
         $rolesBefore = User::find($credentialPk)->getRoleNames()->sort()->values()->all();
 
@@ -1201,6 +1201,41 @@ class MemberWizardPayrollAndStepsTest extends TestCase
         $this->assertEqualsCanonicalizing(['Doctor', $otherRoleName], $this->heldRoleNames($credentialPk), 'The Users-screen grant must be retained.');
         $this->assertEqualsCanonicalizing([$doctorPk, $otherOptionPk], $this->mappedOptionPks($credentialPk), 'The mapping must list both held roles.');
         $this->assertStringContainsString('was NOT removed', (string) $response->json('warning'));
+    }
+
+    /**
+     * PR #354 review, F-013: a post without userrole_ticked_at_render that leaves a held Super
+     * Admin unticked must not tell the administrator to reload and save again to remove it.
+     * The wizard never removes Super Admin, so it gets the "not managed from the Member
+     * wizard" wording, and the role is kept.
+     */
+    public function test_a_post_without_rendered_ticks_does_not_offer_a_reload_for_super_admin(): void
+    {
+        $actor = $this->makeActor('legacy_sa');
+        $actor->assignRole('Super Admin');
+        [$employeePk, $credentialPk, $createPayload] = $this->createMemberThroughWizard($actor, 'LegacySa');
+        $doctorPk = (int) $createPayload['userrole'][0];
+
+        $superAdminOptionPk = UserRoleMaster::offeredOptionPksForRoles(['Super Admin'])[0] ?? null;
+
+        if ($superAdminOptionPk === null) {
+            $this->markTestSkipped('Fixture assumption: Step 3 offers a Super Admin option.');
+        }
+
+        User::find($credentialPk)->assignRole('Super Admin');
+
+        $updatePayload = $this->basicMemberPayload('LegacySa', $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['userrole'] = [$doctorPk];
+        $updatePayload['userrole_step_shown'] = '1';
+        // No userrole_ticked_at_render.
+
+        $response = $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
+        $warning = (string) $response->json('warning');
+
+        $this->assertStringContainsString('not managed from the Member wizard', $warning);
+        $this->assertStringNotContainsString('Reload the page', $warning, 'Reloading cannot remove Super Admin.');
+        $this->assertEqualsCanonicalizing(['Doctor', 'Super Admin'], $this->heldRoleNames($credentialPk));
     }
 
     /**

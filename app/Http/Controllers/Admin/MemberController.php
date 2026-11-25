@@ -1520,11 +1520,12 @@ class MemberController extends Controller
             }
 
             // Role mappings are only rewritten by an actor entitled to manage roles.
-            // employee_role_mapping is what the show and print pages list. It is also what
-            // Step 3 pre-checks from and what is read back as "previously selected" when
-            // the login is ambiguous or the post predates userrole_ticked_at_render. So an
-            // unprivileged write here is not a cosmetic tag. It is state a later privileged
-            // save can convert into a real Spatie grant. Demonstrated
+            // employee_role_mapping is what the show and print pages list. When the login is
+            // ambiguous it is also what Step 3 pre-checks from and what update() reads as the
+            // roles the login holds (heldOfferedRoleOptions()). A post without
+            // userrole_ticked_at_render no longer reads it as "previously selected" (F-010).
+            // So an unprivileged write here is not a cosmetic tag. It is state a later
+            // privileged save can convert into a real Spatie grant. Demonstrated
             // end to end: an attacker-seeded mapping row became a live Spatie role the next
             // time a Super Admin saved that member for an unrelated reason. Skipping the
             // block leaves existing mappings untouched rather than clearing them.
@@ -1614,13 +1615,34 @@ class MemberController extends Controller
 
                 // F-010: say what a post without rendered ticks did not remove, so an
                 // administrator who meant to revoke it knows to reload Step 3.
+                //
+                // Reloading only helps for a role the wizard manages. A role it never revokes
+                // (Super Admin, RoleNames::NOT_GRANTABLE_FROM_MEMBER_WIZARD) would hit the "not
+                // managed from the Member wizard" refusal on the next save, so it gets that
+                // wording now instead of a reload instruction that cannot work (F-013).
                 if ($legacyNotRemoved !== []) {
-                    $saveWarnings[] = implode(', ', UserRoleMaster::whereIn('pk', $legacyNotRemoved)
-                            ->orderBy('user_role_display_name')
-                            ->pluck('user_role_display_name')
-                            ->all())
-                        . ' was NOT removed: this form was loaded before the latest update. '
-                        . 'Reload the page and save again to remove a role.';
+                    $legacyNames = UserRoleMaster::whereIn('pk', $legacyNotRemoved)
+                        ->orderBy('user_role_display_name')
+                        ->pluck('user_role_display_name')
+                        ->all();
+
+                    $notManaged = array_values(array_filter(
+                        $legacyNames,
+                        fn ($name) => RoleNames::isNotGrantableFromMemberWizard($name)
+                    ));
+                    $reloadable = array_values(array_diff($legacyNames, $notManaged));
+
+                    if ($reloadable !== []) {
+                        $saveWarnings[] = implode(', ', $reloadable)
+                            . ' was NOT removed: this form was loaded before the latest update. '
+                            . 'Reload the page and save again to remove a role.';
+                    }
+
+                    if ($notManaged !== []) {
+                        $saveWarnings[] = implode(', ', array_unique($notManaged))
+                            . ' was NOT removed: that role is not managed from the Member wizard. '
+                            . 'Remove it from Role & Permission > Users.';
+                    }
                 }
 
                 if ($renderedTicks !== null) {
