@@ -89,7 +89,8 @@ class RollNumberController extends Controller
                 'state' => $roll['state'],
                 'status' => self::STATE_LABELS[$roll['state']],
                 'course_pk' => (int) $student->course_master_pk,
-                'course' => (string) ($student->course_name ?: ''),
+                // Some names were HTML-encoded twice on import: show them as text.
+                'course' => CourseParticipants::plainName($student->course_name),
                 'batch' => (string) ($student->batch ?? ''),
                 // Pre-fills the Edit dialog: the digits are kept as typed so 001 stays 001.
                 'prefix' => $parsed['prefix'] ?? '',
@@ -109,6 +110,20 @@ class RollNumberController extends Controller
 
         $courseBatches = $this->courseBatchMap();
 
+        // Generate and Add Single Record: exactly the active courses Examination Drive and
+        // Unique Participant Code offer (CourseMaster::activeRunning), OTs or not. A course
+        // with no OTs yet offers its course year as the batch.
+        $activeCourses = CourseMaster::activeRunning()
+            ->whereNotNull('course_name')->where('course_name', '!=', '')
+            ->get(['pk', 'course_name', 'course_year'])
+            ->map(fn ($c) => (object) ['pk' => (int) $c->pk, 'course_name' => CourseParticipants::plainName($c->course_name), 'course_year' => $c->course_year])
+            ->sortBy('course_name', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
+        $batchesByCourse = $courseBatches['batches'];
+        foreach ($activeCourses as $c) {
+            $batchesByCourse[$c->pk] ??= [(int) trim((string) $c->course_year) ?: (int) now()->year];
+        }
+
         return view('admin.coe.roll_number.index', [
             'scope' => $scope,
             'rows' => $rows,
@@ -120,8 +135,8 @@ class RollNumberController extends Controller
             // Single Record pickers, with the batches each course actually has.
             'courses' => $courseBatches['courses'],
             // Generate and Add Single Record create roll numbers, so only running courses.
-            'activeCourses' => $courseBatches['courses']->filter(fn ($c) => isset($this->activeCourseIds()[$c->pk]))->values(),
-            'courseBatches' => $courseBatches['batches'],
+            'activeCourses' => $activeCourses,
+            'courseBatches' => $batchesByCourse,
             'strategies' => RollNumberAllocation::strategies(),
             // The strategies that honour the rule checkboxes; the form hides the rules for
             // the rest. Derived from the allocator so the screen cannot disagree with it.
@@ -194,11 +209,8 @@ class RollNumberController extends Controller
             return $this->fail('No participants are mapped to that course and batch, so there is nothing to number.');
         }
 
-        // One roll number per OT: numbering this course must not take an OT's number off another.
-        $elsewhere = CourseParticipants::rollNumbersElsewhere($participants->pluck('pk')->map(fn ($pk) => (int) $pk)->all(), $courseId, $batch);
-        if ($elsewhere !== []) {
-            return $this->fail(CourseParticipants::elsewhereMessage($elsewhere, 'roll number'));
-        }
+        // One roll number per OT per course: a number an OT holds on another course is theirs
+        // there and is left alone; this run numbers every OT of this course + batch.
 
         if ($participants->count() > self::MAX_PARTICIPANTS_PER_RUN) {
             return $this->fail(sprintf(
@@ -281,7 +293,7 @@ class RollNumberController extends Controller
                 'pk' => (int) $student->pk,
                 'generated_OT_code' => $student->generated_OT_code,
                 'display_name' => $this->studentName($student),
-                'course_name' => $student->course_name,
+                'course_name' => CourseParticipants::plainName($student->course_name),
                 'batch' => $student->batch,
                 'roll_number' => $student->roll_number,
             ]);
@@ -383,16 +395,12 @@ class RollNumberController extends Controller
             return $this->fail('That participant is not on the chosen course and batch.');
         }
 
-        $elsewhere = CourseParticipants::rollNumbersElsewhere([(int) $participant->pk], (int) $validated['course'], (int) $validated['batch']);
-        if ($elsewhere !== []) {
-            return $this->fail("{$participant->display_name} already holds roll number " . reset($elsewhere) . ' on another course. An OT can hold only one roll number.');
-        }
-
         if ($writer->groupFrozen((int) $validated['course'], (int) $validated['batch'])) {
-            return $this->fail('Roll numbers for that course and batch are frozen, so no roll number can be added to it.');
+            return $this->fail('Every roll number of that course and batch is frozen, so no roll number can be added to it.');
         }
 
-        $existing = RollNumber::where('student_master_pk', $participant->pk)->first();
+        // The OT's number on THIS course; one on another course is left alone.
+        $existing = RollNumberWriter::existingOn((int) $participant->pk, (int) $validated['course'], (int) $validated['batch']);
         if ($existing !== null && $existing->isFrozen()) {
             return $this->fail(sprintf(
                 '%s is frozen at %s and cannot be changed.',
@@ -449,8 +457,9 @@ class RollNumberController extends Controller
             return response()->json(['data' => []]);
         }
 
+        // The OT's number on this course + batch only (they may hold others on other courses).
         $rows = DB::table('student_master as sm')
-            ->leftJoin('coe_roll_numbers as rn', 'rn.student_master_pk', '=', 'sm.pk')
+            ->leftJoinSub(CourseParticipants::rollNumbersOn($courseId, $batch)->select('rn.*'), 'rn', 'rn.student_master_pk', '=', 'sm.pk')
             ->whereIn('sm.pk', CourseParticipants::of($courseId, $batch))
             ->orderByRaw('rn.serial_number is null, rn.serial_number')
             ->orderBy('sm.display_name')
@@ -522,11 +531,11 @@ class RollNumberController extends Controller
     }
 
     /**
-     * Freeze roll numbers a whole course + batch at a time: freezing any roll number
-     * freezes every one of its run, so a run is never part frozen — Generate cannot
-     * renumber a run some of whose numbers are fixed. Idempotent: an already-frozen row
-     * keeps its original frozen_at and is not counted. The OTs whose numbers this call
-     * froze are notified once it has committed; notify() resends.
+     * Freeze exactly the roll numbers selected (not the rest of their course + batch).
+     * A run with any frozen number can no longer be regenerated (regenerationBlocker); it is
+     * marked frozen once every number in it is. Idempotent: an already-frozen row keeps its
+     * original frozen_at and is not counted. The OTs whose numbers this call froze are
+     * notified once it has committed; notify() resends.
      */
     public function freeze(
         Request $request,
@@ -538,8 +547,7 @@ class RollNumberController extends Controller
             return $this->fail('Select at least one roll number to freeze.');
         }
 
-        $ids = RollNumber::whereIn('roll_number_allocation_pk',
-            RollNumber::whereIn('pk', $ids)->select('roll_number_allocation_pk'))
+        $ids = RollNumber::whereIn('pk', $ids)
             ->pluck('pk')
             ->map(fn ($id) => (int) $id)
             ->all();
@@ -585,8 +593,7 @@ class RollNumberController extends Controller
         return response()->json([
             'message' => $frozen === 0
                 ? 'Nothing to freeze — every roll number selected was already frozen.'
-                : trans_choice(':count roll number frozen.|:count roll numbers frozen', $frozen, ['count' => $frozen])
-                    . ($frozen > 1 ? ' — the whole course and batch.' : '')
+                : trans_choice(':count roll number frozen.|:count roll numbers frozen.', $frozen, ['count' => $frozen])
                     . ' ' . implode(' ', $notice['parts']),
             'frozen' => $frozen,
             'frozen_ids' => $toFreeze,
@@ -673,7 +680,7 @@ class RollNumberController extends Controller
                     'Roll number allotted',
                     sprintf(
                         'Your roll number%s is %s.',
-                        $record->course_name ? ' for ' . $record->course_name . ' (' . $record->batch . ')' : '',
+                        $record->course_name ? ' for ' . CourseParticipants::plainName($record->course_name) . ' (' . $record->batch . ')' : '',
                         $record->roll_number
                     )
                 );
@@ -864,7 +871,7 @@ class RollNumberController extends Controller
         if ($frozenRows > 0) {
             return sprintf(
                 '%d roll number(s) in that course and batch are already frozen, so the run cannot be regenerated. '
-                . 'Freeze works for the whole course and batch — freeze any of its roll numbers to freeze the rest.',
+                . 'Add or correct the remaining OTs with Add or Import Roll Number instead.',
                 $frozenRows
             );
         }
@@ -1268,7 +1275,7 @@ class RollNumberController extends Controller
         unset($list);
 
         $courses = $pairs->unique('course_master_pk')
-            ->map(fn ($p) => (object) ['pk' => $p->course_master_pk, 'course_name' => $p->course_name])
+            ->map(fn ($p) => (object) ['pk' => $p->course_master_pk, 'course_name' => CourseParticipants::plainName($p->course_name)])
             ->sortBy('course_name', SORT_NATURAL | SORT_FLAG_CASE)
             ->values();
 

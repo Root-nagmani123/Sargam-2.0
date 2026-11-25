@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * One participant's Unique Participant Code.
+ * One participant's Unique Participant Code for one subject of a course + batch.
  *
- * Both `student_master_pk` and `unique_code` are unique across the whole table: one code
- * per participant, and no code shared between two participants.
+ * One code per OT per course + batch + subject (coe_pc_student_subject_unique), and within
+ * one course + batch + subject no two OTs share a code (coe_pc_subject_code_unique). The
+ * same code may recur in another subject: a code is only ever read with its subject.
  */
 class ParticipantCode extends Model
 {
@@ -33,6 +34,7 @@ class ParticipantCode extends Model
     protected $fillable = [
         'student_master_pk',
         'course_master_pk',
+        'subject_master_pk',
         'batch',
         'unique_code',
         'created_by',
@@ -44,6 +46,7 @@ class ParticipantCode extends Model
     protected $casts = [
         'student_master_pk' => 'integer',
         'course_master_pk' => 'integer',
+        'subject_master_pk' => 'integer',
         'batch' => 'integer',
         'status' => 'integer',
         'frozen_at' => 'datetime',

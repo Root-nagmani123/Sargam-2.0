@@ -20,9 +20,9 @@ use Illuminate\Support\Facades\DB;
  *   Empty, it falls back to the course's course_year — usually the drive's academic
  *   session too, which is what Result Management matches codes on.
  *
- * coe_roll_numbers and coe_participant_codes hold one row per OT (unique on
- * student_master_pk), so an OT on two courses can hold a roll number / code on only
- * one of them; see rollNumbersElsewhere() and codesElsewhere().
+ * coe_roll_numbers holds one roll number per OT per course run (unique on allocation +
+ * student): an OT on FC and Phase-I has one on each, the same for every subject of that
+ * course (rollNumbersOn()). coe_participant_codes holds one code per OT per subject of a course.
  */
 class CourseParticipants
 {
@@ -91,56 +91,33 @@ class CourseParticipants
     }
 
     /**
-     * Of $studentPks, the OTs whose roll number belongs to another course + batch.
-     *
-     * @param  array<int, int>  $studentPks
-     * @return array<int, string> student pk => "roll number (course, batch)"
+     * The roll numbers of a course (+ batch): a builder over coe_roll_numbers `rn` joined to
+     * the run that issued them (`own`, coe_roll_number_allocations). One per OT per course;
+     * the same OT may hold another number on another course.
      */
-    public static function rollNumbersElsewhere(array $studentPks, int $courseId, int $batch): array
+    public static function rollNumbersOn(int $courseId, ?int $batch = null): Builder
     {
-        if ($studentPks === []) {
-            return [];
-        }
-
-        return DB::table('coe_roll_numbers as r')
-            ->join('coe_roll_number_allocations as a', 'a.pk', '=', 'r.roll_number_allocation_pk')
-            ->join('course_master as c', 'c.pk', '=', 'a.course_master_pk')
-            ->whereIn('r.student_master_pk', $studentPks)
-            ->where(fn ($q) => $q->where('a.course_master_pk', '!=', $courseId)->orWhere('a.batch', '!=', $batch))
-            ->get(['r.student_master_pk', 'r.roll_number', 'c.course_name', 'a.batch'])
-            ->mapWithKeys(fn ($r) => [(int) $r->student_master_pk => "{$r->roll_number} ({$r->course_name}, {$r->batch})"])
-            ->all();
+        return DB::table('coe_roll_numbers as rn')
+            ->join('coe_roll_number_allocations as own', 'own.pk', '=', 'rn.roll_number_allocation_pk')
+            ->where('own.course_master_pk', $courseId)
+            ->when($batch !== null, fn ($q) => $q->where('own.batch', $batch));
     }
 
     /**
-     * Of $studentPks, the OTs whose Unique Participant Code belongs to another course + batch.
-     *
-     * @param  array<int, int>  $studentPks
-     * @return array<int, string> student pk => "code (course, batch)"
+     * A name as text: some course names were HTML-encoded more than once on import
+     * ("&amp;quot;Land…&amp;quot;"), so decode until it stops changing. Blade escapes it again.
      */
-    public static function codesElsewhere(array $studentPks, int $courseId, int $batch): array
+    public static function plainName(?string $name): string
     {
-        if ($studentPks === []) {
-            return [];
+        $value = (string) $name;
+        for ($i = 0; $i < 3; $i++) {
+            $decoded = html_entity_decode($value, ENT_QUOTES | ENT_HTML5);
+            if ($decoded === $value) {
+                break;
+            }
+            $value = $decoded;
         }
 
-        return DB::table('coe_participant_codes as p')
-            ->join('course_master as c', 'c.pk', '=', 'p.course_master_pk')
-            ->whereIn('p.student_master_pk', $studentPks)
-            ->where(fn ($q) => $q->where('p.course_master_pk', '!=', $courseId)->orWhere('p.batch', '!=', $batch))
-            ->get(['p.student_master_pk', 'p.unique_code', 'c.course_name', 'p.batch'])
-            ->mapWithKeys(fn ($r) => [(int) $r->student_master_pk => "{$r->unique_code} ({$r->course_name}, {$r->batch})"])
-            ->all();
-    }
-
-    /** "3 OTs already hold … on another course (e.g. UC12 (FC100, 2025)) …" for a refusal. */
-    public static function elsewhereMessage(array $elsewhere, string $what): string
-    {
-        $n = count($elsewhere);
-
-        return sprintf(
-            '%d OT(s) of this course already hold a %s on another course (e.g. %s). An OT can hold only one %s, so nothing was changed. Delete those first if they should move to this course.',
-            $n, $what, implode(', ', array_slice(array_values($elsewhere), 0, 3)), $what
-        );
+        return trim(preg_replace('/\s+/u', ' ', $value));
     }
 }

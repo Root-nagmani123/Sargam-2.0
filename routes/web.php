@@ -2189,6 +2189,9 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
     });
     Route::get('unique-participant-code', [\App\Http\Controllers\Admin\COE\UniqueParticipantCodeController::class, 'index'])
         ->name('unique-participant-code.index');
+    // One OT's codes (from a course count or View on the OT list).
+    Route::get('unique-participant-code/ot/{student}', [\App\Http\Controllers\Admin\COE\UniqueParticipantCodeController::class, 'ot'])
+        ->whereNumber('student')->name('unique-participant-code.ot');
     Route::post('unique-participant-code/generate', [\App\Http\Controllers\Admin\COE\UniqueParticipantCodeController::class, 'generate'])
         ->name('unique-participant-code.generate');
     Route::post('unique-participant-code/freeze', [\App\Http\Controllers\Admin\COE\UniqueParticipantCodeController::class, 'freeze'])
