@@ -1691,6 +1691,7 @@ function canSeeMessSelfServiceSetup(): bool
         || hasRole('Doctor')
         || hasRole('Guest Faculty')
         || hasRole('Internal Faculty')
+        || hasRole('Faculty')
         || hasRole('Training-Induction')
         || hasRole('Training-MCTP')
         || hasRole('IST')
