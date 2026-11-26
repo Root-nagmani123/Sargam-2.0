@@ -30,25 +30,20 @@ use Illuminate\Support\Facades\DB;
  * rule (EmployeeRoleMapping::belongsToSharedEmployee(), PR #354 review, F-011); this
  * command computes it in one query instead of once per login.
  *
- * Notification routing (PR #354 review, F-006, F-015): NotificationReceiverService reads
- * employee_role_mapping in two ways, and the "By option" table says which one applies to
- * each option (the "Read by" column):
+ * Notification routing does not change (PR #354 review, F-006). Options whose mapping
+ * rows a NotificationReceiverService lookup reads (EmployeeRoleMapping::routingOptionNames():
+ * HAC Person, Admin, Super Admin, Training Induction Admin, Training-Induction, Estate
+ * Admin) are never added or removed by this command, nor by the Users screen. Their rows
+ * stay as the Member wizard last wrote them, so for those options Step 3 (Spatie) and the
+ * show/print pages (mapping) can still differ until an administrator saves the member in
+ * the wizard. Every other offered option is reconciled.
  *
- *  - mapping only: getEstateHacPersonUserIds() (HAC Person) and getAdminUserId() (Admin,
- *    first mapping row only). An added row makes the login a recipient; a removed row
- *    stops it. For Admin only the first row counts, so a change may move "the" admin.
- *  - mapping + Spatie role: getDisciplineMemoAdminReceivers(),
- *    getMemoNoticeManagementRoleUserIds(), getEstateRequestApproverUserIds() and
- *    getIssueReportAdminReceivers() take the UNION of the mapping rows and the holders
- *    of a Spatie role with the same name. This command adds a row only for a login that
- *    holds the matching role, so an added row normally adds no recipient: the login
- *    already receives them through the role. That holds where the Spatie role name equals
- *    the option name; check roles.name against user_role_master.user_role_name on
- *    staging. A removed row is for a login that does not hold the role, so it stops
- *    those notifications unless another role in the same lookup's list still qualifies.
- *  - no lookup: no notification effect.
+ * Concurrency (F-017): with --apply each login is mirrored in its own transaction that
+ * locks the login row first and reads its roles after the lock, so a Users-screen save
+ * made during the run is never undone.
  *
- * Run with -v to list each login; keep that listing as the rollback record.
+ * Run with -v to list each login. With --apply the listing shows the rows actually
+ * written; keep it as the rollback record.
  *
  * Dry run by default. Pass --apply to write. Re-runnable: a second run finds nothing.
  * Deploy steps: docs/deploy-notes-employee-role-sync.md.
@@ -64,7 +59,10 @@ class ReconcileEmployeeRoleMappings extends Command
     public function handle(): int
     {
         $apply = (bool) $this->option('apply');
-        $offered = UserRoleMaster::getUserRoleList()->keys()->map(fn ($pk) => (int) $pk)->all();
+        // Offered options minus the notification-routing ones, which this command never
+        // writes (F-006). Same set mirrorOfferedOptions() uses, so the dry run's counts are
+        // what --apply writes.
+        $offered = EmployeeRoleMapping::mirroredOptionPks();
 
         if ($offered === []) {
             $this->warn('No offered Role Assignment options; nothing to reconcile.');
@@ -110,16 +108,40 @@ class ReconcileEmployeeRoleMappings extends Command
                     continue;
                 }
 
-                $roleNames = $user->roles->pluck('name')->all();
-                $wanted = UserRoleMaster::offeredOptionPksForRoles($roleNames);
-                $held = collect($mapped->get($user->pk, []))
-                    ->pluck('user_role_master_pk')
-                    ->map(fn ($pk) => (int) $pk)
-                    ->unique()
-                    ->all();
+                if ($apply) {
+                    // F-017: the roles mirrored are read AFTER the lock, inside the same
+                    // transaction, not taken from the chunk loaded earlier. A Users-screen
+                    // save of this login that committed while the chunk was waiting is
+                    // therefore seen, and one that starts now waits for this commit. The
+                    // counts and the -v line below report what was actually written, so the
+                    // -v listing is a true rollback record.
+                    $result = DB::transaction(function () use ($user) {
+                        $locked = User::whereKey($user->pk)->lockForUpdate()->first();
 
-                $toAdd = array_diff($wanted, $held);
-                $toRemove = array_diff($held, $wanted);
+                        if (! $locked) {
+                            return ['added' => [], 'removed' => []];
+                        }
+
+                        return EmployeeRoleMapping::mirrorOfferedOptions(
+                            (int) $locked->pk,
+                            $locked->getRoleNames()->all()
+                        );
+                    });
+
+                    $toAdd = $result['added'];
+                    $toRemove = $result['removed'];
+                } else {
+                    $roleNames = $user->roles->pluck('name')->all();
+                    $wanted = array_values(array_intersect(UserRoleMaster::offeredOptionPksForRoles($roleNames), $offered));
+                    $held = collect($mapped->get($user->pk, []))
+                        ->pluck('user_role_master_pk')
+                        ->map(fn ($pk) => (int) $pk)
+                        ->unique()
+                        ->all();
+
+                    $toAdd = array_values(array_diff($wanted, $held));
+                    $toRemove = array_values(array_diff($held, $wanted));
+                }
 
                 if ($toAdd === [] && $toRemove === []) {
                     continue;
@@ -139,20 +161,13 @@ class ReconcileEmployeeRoleMappings extends Command
 
                 if ($this->output->isVerbose()) {
                     $this->line(sprintf(
-                        'user_credentials.pk %d: add [%s] remove [%s]',
+                        'user_credentials.pk %d: %s [%s] %s [%s]',
                         $user->pk,
+                        $apply ? 'added' : 'add',
                         implode(',', $toAdd),
+                        $apply ? 'removed' : 'remove',
                         implode(',', $toRemove)
                     ));
-                }
-
-                if ($apply) {
-                    DB::transaction(function () use ($user, $roleNames) {
-                        // Same lock as assignRoleSave() (F-016), so a Users-screen save of
-                        // this login cannot interleave with the mirror below.
-                        User::whereKey($user->pk)->lockForUpdate()->first();
-                        EmployeeRoleMapping::mirrorOfferedOptions((int) $user->pk, $roleNames);
-                    });
                 }
             }
         }, 'pk');
@@ -181,20 +196,13 @@ class ReconcileEmployeeRoleMappings extends Command
      * (NotificationReceiverService::getEstateHacPersonUserIds(), getAdminUserId()).
      * Keep in step with that service.
      */
-    public const MAPPING_ONLY_LOOKUP_OPTIONS = ['HAC Person', 'Admin'];
+    public const MAPPING_ONLY_LOOKUP_OPTIONS = EmployeeRoleMapping::MAPPING_ONLY_LOOKUP_OPTIONS;
 
     /**
      * Options read by a lookup that takes the union of the mapping and the holders of the
-     * Spatie role with the same name (getDisciplineMemoAdminReceivers(),
-     * getMemoNoticeManagementRoleUserIds(), getEstateRequestApproverUserIds(),
-     * getIssueReportAdminReceivers()). Keep in step with that service.
+     * Spatie role with the same name. Defined once on EmployeeRoleMapping.
      */
-    public const UNION_LOOKUP_OPTIONS = [
-        'Super Admin',
-        'Training Induction Admin',
-        'Training-Induction',
-        'Estate Admin',
-    ];
+    public const UNION_LOOKUP_OPTIONS = EmployeeRoleMapping::UNION_LOOKUP_OPTIONS;
 
     /**
      * How the notification lookups read an option, by its user_role_name (the field they
@@ -231,10 +239,7 @@ class ReconcileEmployeeRoleMappings extends Command
         sort($pks);
         $names = UserRoleMaster::whereIn('pk', $pks)->pluck('user_role_name', 'pk');
 
-        $this->line('By option. Notification effect depends on "Read by":');
-        $this->line('  mapping only          - each added row adds the login as a recipient, each removed row stops it (Admin: first row only).');
-        $this->line('  mapping + Spatie role - an added row adds no recipient (the login already holds the role); a removed row stops it.');
-        $this->line('  no lookup             - no notification effect.');
+        $this->line('By option. Notification-routing options are never changed by this command (F-006), so every row below has no notification effect.');
         $this->table(['Option pk', 'Option', 'Logins gaining it', 'Logins losing it', 'Read by'], array_map(fn ($pk) => [
             $pk,
             (string) ($names[$pk] ?? '?'),

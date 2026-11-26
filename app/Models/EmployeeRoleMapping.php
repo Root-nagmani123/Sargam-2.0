@@ -41,6 +41,65 @@ class EmployeeRoleMapping extends Model
     }
 
     /**
+     * Options read by a NotificationReceiverService lookup that uses employee_role_mapping
+     * alone: getEstateHacPersonUserIds() (HAC Person) and getAdminUserId() (Admin, first
+     * row only). Keep in step with that service.
+     */
+    public const MAPPING_ONLY_LOOKUP_OPTIONS = ['HAC Person', 'Admin'];
+
+    /**
+     * Options read by a lookup that takes the union of the mapping rows and the holders of
+     * the Spatie role with the same name: getDisciplineMemoAdminReceivers(),
+     * getMemoNoticeManagementRoleUserIds(), getEstateRequestApproverUserIds(),
+     * getIssueReportAdminReceivers(). Keep in step with that service.
+     */
+    public const UNION_LOOKUP_OPTIONS = [
+        'Super Admin',
+        'Training Induction Admin',
+        'Training-Induction',
+        'Estate Admin',
+    ];
+
+    /**
+     * user_role_name values whose mapping rows decide who receives notifications.
+     *
+     * Notification routing must not change because of the role sync (PR #354 review,
+     * F-006: Product owner position). Before this PR only the Member wizard and the Users
+     * create/edit forms wrote these rows, by an administrator's explicit choice. The
+     * automatic mirror (Users-screen role save, members:reconcile-role-mappings) therefore
+     * never adds or removes a row for these options; it leaves them exactly as they are.
+     *
+     * @return list<string>
+     */
+    public static function routingOptionNames(): array
+    {
+        return array_values(array_unique(array_merge(self::MAPPING_ONLY_LOOKUP_OPTIONS, self::UNION_LOOKUP_OPTIONS)));
+    }
+
+    /**
+     * Offered Step 3 option pks the automatic mirror may write: every offered option
+     * except the notification-routing ones (routingOptionNames()).
+     *
+     * @return list<int>
+     */
+    public static function mirroredOptionPks(): array
+    {
+        $offered = UserRoleMaster::getUserRoleList()->keys()->map(fn ($pk) => (int) $pk)->all();
+
+        if ($offered === []) {
+            return [];
+        }
+
+        $routing = UserRoleMaster::whereIn('pk', $offered)
+            ->whereIn('user_role_name', self::routingOptionNames())
+            ->pluck('pk')
+            ->map(fn ($pk) => (int) $pk)
+            ->all();
+
+        return array_values(array_diff($offered, $routing));
+    }
+
+    /**
      * Make a login's offered Role Assignment options (the Member wizard's Step 3
      * checkboxes) match the `roles` it actually holds.
      *
@@ -55,17 +114,21 @@ class EmployeeRoleMapping extends Model
      * login's user_credentials row (lockForUpdate), so two calls for one login run one
      * after the other (PR #354 review, F-016).
      *
+     * Notification-routing options (routingOptionNames()) are never touched, so a
+     * Users-screen save or --apply cannot change who receives notifications (F-006).
+     *
      * @param  iterable<string>  $roleNames  canonical `roles` names the login now holds
+     * @return array{added: list<int>, removed: list<int>}  option pks actually written
      */
-    public static function mirrorOfferedOptions(int $userCredentialPk, iterable $roleNames): void
+    public static function mirrorOfferedOptions(int $userCredentialPk, iterable $roleNames): array
     {
-        $offered = UserRoleMaster::getUserRoleList()->keys()->map(fn ($pk) => (int) $pk)->all();
+        $offered = self::mirroredOptionPks();
 
         if ($offered === []) {
-            return;
+            return ['added' => [], 'removed' => []];
         }
 
-        $wanted = UserRoleMaster::offeredOptionPksForRoles($roleNames);
+        $wanted = array_values(array_intersect(UserRoleMaster::offeredOptionPksForRoles($roleNames), $offered));
 
         $held = self::where('user_credentials_pk', $userCredentialPk)
             ->whereIn('user_role_master_pk', $offered)
@@ -89,5 +152,7 @@ class EmployeeRoleMapping extends Model
                 'user_role_master_pk' => $pk,
             ], $add));
         }
+
+        return ['added' => $add, 'removed' => $remove];
     }
 }

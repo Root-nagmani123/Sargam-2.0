@@ -1407,6 +1407,22 @@ class MemberController extends Controller
         // payroll_salary_master, user_credentials and the role mappings.
         try {
             DB::transaction(function () use ($request, $profile_picture, $additional_doc_upload, &$saveWarnings, &$duplicate, &$roleBlockRan) {
+            // Lock this member's login row(s) before any other read in the transaction
+            // (PR #354 review, F-018), as assignRoleSave() does (F-016). The role block below
+            // reads the roles the login holds with a plain read and then rewrites them all
+            // with syncRoles(). Under REPEATABLE READ that plain read returns the snapshot
+            // taken at the transaction's first plain read, so without this lock a
+            // Users-screen grant committed while this save runs would be invisible to it and
+            // then deleted by syncRoles(). The later $userCredential->update() is no
+            // substitute: it locks only when an attribute is dirty, and it runs after the
+            // first plain read. With the lock first, a Users-screen save that committed
+            // earlier is seen, and one that starts later waits for this commit. Locking reads
+            // (this one and the emp_id check below) do not open the snapshot.
+            UserCredential::where('user_id', $request->emp_id)
+                ->orderBy('pk')
+                ->lockForUpdate()
+                ->pluck('pk');
+
             // Excludes the row being edited itself, so an unchanged emp_id never
             // collides with its own current value.
             if (EmployeeMaster::where('emp_id', $request->id)->where('pk', '!=', $request->emp_id)->lockForUpdate()->exists()) {

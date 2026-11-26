@@ -862,11 +862,22 @@ class MemberWizardPayrollAndStepsTest extends TestCase
             ->reject(fn ($name) => \App\Support\RoleNames::isNotGrantableFromMemberWizard($name))
             ->keyBy(fn ($name) => \App\Support\RoleNames::normalize($name));
 
-        foreach (UserRoleMaster::getUserRoleList() as $pk => $displayName) {
-            $key = \App\Support\RoleNames::normalize((string) $displayName);
+        // Prefer an option the Users-screen mirror writes: notification-routing options are
+        // left alone by it (PR #354 review, F-006), so a test that relies on the mirror needs
+        // a non-routing option. Fall back to any grantable option.
+        $mirrored = array_flip(\App\Models\EmployeeRoleMapping::mirroredOptionPks());
 
-            if ($key !== \App\Support\RoleNames::normalize('Doctor') && isset($roleByKey[$key])) {
-                return [(int) $pk, $roleByKey[$key]];
+        foreach ([true, false] as $mirroredOnly) {
+            foreach (UserRoleMaster::getUserRoleList() as $pk => $displayName) {
+                if ($mirroredOnly && ! isset($mirrored[(int) $pk])) {
+                    continue;
+                }
+
+                $key = \App\Support\RoleNames::normalize((string) $displayName);
+
+                if ($key !== \App\Support\RoleNames::normalize('Doctor') && isset($roleByKey[$key])) {
+                    return [(int) $pk, $roleByKey[$key]];
+                }
             }
         }
 

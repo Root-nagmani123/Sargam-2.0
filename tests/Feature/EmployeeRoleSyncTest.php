@@ -70,8 +70,15 @@ class EmployeeRoleSyncTest extends TestCase
             ->keyBy(fn ($name) => RoleNames::normalize($name));
 
         $picked = [];
+        // The automatic mirror leaves notification-routing options alone (F-006); these
+        // tests are about the options it does write.
+        $mirrored = array_flip(EmployeeRoleMapping::mirroredOptionPks());
 
         foreach (UserRoleMaster::getUserRoleList() as $pk => $displayName) {
+            if (! isset($mirrored[(int) $pk])) {
+                continue;
+            }
+
             $key = RoleNames::normalize((string) $displayName);
 
             if (isset($roleByKey[$key])) {
@@ -244,5 +251,137 @@ class EmployeeRoleSyncTest extends TestCase
         $this->assertSame('mapping + Spatie role', ReconcileEmployeeRoleMappings::notificationLookupFor('Super Admin'));
         $this->assertSame('mapping + Spatie role', ReconcileEmployeeRoleMappings::notificationLookupFor('Estate Admin'));
         $this->assertSame('no lookup', ReconcileEmployeeRoleMappings::notificationLookupFor('Doctor'));
+    }
+
+    /**
+     * An offered option read by a notification lookup, with the Spatie role of the same
+     * name, as [optionPk, roleName, userRoleName]. Prefers HAC Person (mapping-only lookup).
+     */
+    private function offeredRoutingOption(): array
+    {
+        $roleByKey = Role::pluck('name')->keyBy(fn ($name) => RoleNames::normalize($name));
+        $offered = UserRoleMaster::getUserRoleList();
+        $candidates = UserRoleMaster::whereIn('pk', $offered->keys()->all())
+            ->whereIn('user_role_name', EmployeeRoleMapping::routingOptionNames())
+            ->get(['pk', 'user_role_name'])
+            ->sortBy(fn ($row) => $row->user_role_name === 'HAC Person' ? 0 : 1);
+
+        foreach ($candidates as $row) {
+            $key = RoleNames::normalize((string) $offered[$row->pk]);
+
+            if (isset($roleByKey[$key]) && ! RoleNames::isNotGrantableFromMemberWizard($roleByKey[$key])) {
+                return [(int) $row->pk, $roleByKey[$key], (string) $row->user_role_name];
+            }
+        }
+
+        $this->markTestSkipped('Fixture assumption: an offered notification-routing option with a grantable Spatie role.');
+    }
+
+    /**
+     * PR #354 review, F-006: notification routing must not change. Revoking a routing
+     * role on the Users screen leaves its mapping row, so the login stays a recipient
+     * exactly as at base; granting one adds no row.
+     */
+    public function test_users_screen_role_changes_do_not_change_notification_routing_rows(): void
+    {
+        [$routingPk, $routingRole, $routingName] = $this->offeredRoutingOption();
+        [[$otherPk, $otherRole]] = $this->twoOfferedRoles();
+
+        $admin = $this->makeSuperAdmin();
+
+        // Revoke: login holds the routing role and its mapping row.
+        $revoked = $this->makeTestUser('route_revoke');
+        $revoked->assignRole($routingRole);
+        EmployeeRoleMapping::insert(['user_credentials_pk' => $revoked->pk, 'user_role_master_pk' => $routingPk]);
+
+        $this->actingAs($admin)->post(route('admin.users.assignRoleSave'), [
+            'user_id' => $revoked->pk,
+            'roles' => [Role::where('name', $otherRole)->value('id')],
+        ])->assertRedirect();
+
+        $expected = [$routingPk, $otherPk];
+        sort($expected);
+        $this->assertSame($expected, $this->mappedOptions($revoked),
+            "The {$routingName} row must stay; the non-routing option is mirrored.");
+
+        // Grant: login gains the routing role on the Users screen; no row is added.
+        $granted = $this->makeTestUser('route_grant');
+
+        $this->actingAs($admin)->post(route('admin.users.assignRoleSave'), [
+            'user_id' => $granted->pk,
+            'roles' => [Role::where('name', $routingRole)->value('id')],
+        ])->assertRedirect();
+
+        $this->assertNotContains($routingPk, $this->mappedOptions($granted),
+            "A Users-screen grant must not add a {$routingName} mapping row.");
+    }
+
+    /** F-006: HAC Person recipients are unchanged by a Users-screen revoke. */
+    public function test_users_screen_revoke_of_hac_person_keeps_hac_notification_recipients(): void
+    {
+        $hacPk = UserRoleMaster::whereIn('pk', UserRoleMaster::getUserRoleList()->keys()->all())
+            ->where('user_role_name', 'HAC Person')->value('pk');
+        $hacRole = $hacPk ? Role::all()->first(fn ($r) => RoleNames::normalize($r->name) === RoleNames::normalize('HAC Person')) : null;
+
+        if (! $hacPk || ! $hacRole) {
+            $this->markTestSkipped('Fixture assumption: an offered HAC Person option and role.');
+        }
+
+        $employeePk = DB::table('employee_master')->insertGetId(['first_name' => 'Hac', 'last_name' => 'Person']);
+        $target = $this->makeTestUser('hac', 'E', $employeePk);
+        $target->assignRole($hacRole->name);
+        EmployeeRoleMapping::insert(['user_credentials_pk' => $target->pk, 'user_role_master_pk' => (int) $hacPk]);
+
+        $service = app(\App\Services\NotificationReceiverService::class);
+        $before = $service->getEstateHacPersonUserIds();
+        $this->assertContains($employeePk, $before);
+
+        $this->actingAs($this->makeSuperAdmin())->post(route('admin.users.assignRoleSave'), [
+            'user_id' => $target->pk,
+            'roles' => [],
+        ])->assertRedirect();
+
+        $this->assertSame($before, $service->getEstateHacPersonUserIds());
+    }
+
+    /** F-006: the reconcile command neither adds nor removes routing-option rows. */
+    public function test_reconcile_apply_leaves_notification_routing_rows_alone(): void
+    {
+        [$routingPk, $routingRole] = $this->offeredRoutingOption();
+
+        // Mapped-only routing row (login does not hold the role): kept.
+        $mappedOnly = $this->makeTestUser('route_mapped_only');
+        EmployeeRoleMapping::insert(['user_credentials_pk' => $mappedOnly->pk, 'user_role_master_pk' => $routingPk]);
+
+        // Held-only routing role (no row): no row added.
+        $heldOnly = $this->makeTestUser('route_held_only');
+        $heldOnly->assignRole($routingRole);
+
+        foreach ([$mappedOnly, $heldOnly] as $login) {
+            $this->artisan('members:reconcile-role-mappings', ['--user' => $login->pk, '--apply' => true])
+                ->assertSuccessful();
+        }
+
+        $this->assertSame([$routingPk], $this->mappedOptions($mappedOnly));
+        $this->assertSame([], $this->mappedOptions($heldOnly));
+    }
+
+    /**
+     * F-017: --apply mirrors the roles the login holds when it is written, not the roles
+     * the dry-run preview saw, and -v reports the rows actually written.
+     */
+    public function test_reconcile_apply_reports_the_rows_it_actually_wrote(): void
+    {
+        [[$staleOptionPk], [$heldOptionPk, $heldRoleName]] = $this->twoOfferedRoles();
+
+        $target = $this->makeTestUser('reconcile_v');
+        $target->assignRole($heldRoleName);
+        EmployeeRoleMapping::insert(['user_credentials_pk' => $target->pk, 'user_role_master_pk' => $staleOptionPk]);
+
+        $this->artisan('members:reconcile-role-mappings', ['--user' => $target->pk, '--apply' => true, '-v' => true])
+            ->expectsOutputToContain(sprintf('user_credentials.pk %d: added [%d] removed [%d]', $target->pk, $heldOptionPk, $staleOptionPk))
+            ->assertSuccessful();
+
+        $this->assertSame([$heldOptionPk], $this->mappedOptions($target));
     }
 }
