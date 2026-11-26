@@ -1594,6 +1594,19 @@ class MemberController extends Controller
                         array_map('intval', $offeredRoleIds)
                     ));
 
+                // Notification-routing options' rows as they were before this save (PR #354
+                // review, F-006). Read after the login lock above, so it is current.
+                $routingOptionPks = EmployeeRoleMapping::routingOptionPks(array_map('intval', $offeredRoleIds));
+                $routingRowsBefore = $routingOptionPks === []
+                    ? []
+                    : EmployeeRoleMapping::where('user_credentials_pk', $userCredential->pk)
+                        ->whereIn('user_role_master_pk', $routingOptionPks)
+                        ->pluck('user_role_master_pk')
+                        ->map(fn ($pk) => (int) $pk)
+                        ->unique()
+                        ->values()
+                        ->all();
+
                 EmployeeRoleMapping::where('user_credentials_pk', $userCredential->pk)
                     ->whereIn('user_role_master_pk', $offeredRoleIds)
                     ->delete();
@@ -1671,6 +1684,35 @@ class MemberController extends Controller
                         EmployeeRoleMapping::where('user_credentials_pk', $userCredential->pk)
                             ->whereIn('user_role_master_pk', $revokedSinceRender)
                             ->delete();
+                    }
+                }
+
+                // Notification routing (PR #354 review, F-006). Step 3 ticks the roles the
+                // login holds, not the mapping, so the steps above would rewrite a routing
+                // option's row from Spatie on any save made "as displayed" and start or stop
+                // that employee's notifications without anyone choosing it. A routing row
+                // therefore changes only where the administrator changed that tick against
+                // what Step 3 rendered: ticked now and not rendered ticked adds it; rendered
+                // ticked and unticked now removes it. Every other routing row keeps its
+                // pre-save state. A post without rendered ticks (F-010) carries no delta, so
+                // it leaves routing rows as they were. The Spatie sync above is unchanged.
+                if ($routingOptionPks !== []) {
+                    $postedRouting = array_values(array_intersect($postedRoleIds, $routingOptionPks));
+                    $renderedRouting = $renderedTicks === null
+                        ? $postedRouting
+                        : array_values(array_intersect($renderedTicks, $routingOptionPks));
+
+                    $routingRowsAfter = array_values(array_unique(array_diff(
+                        array_merge($routingRowsBefore, array_diff($postedRouting, $renderedRouting)),
+                        array_diff($renderedRouting, $postedRouting)
+                    )));
+
+                    EmployeeRoleMapping::where('user_credentials_pk', $userCredential->pk)
+                        ->whereIn('user_role_master_pk', $routingOptionPks)
+                        ->delete();
+
+                    if ($routingRowsAfter !== []) {
+                        $this->syncEmployeeRoleMappings($userCredential->pk, $routingRowsAfter);
                     }
                 }
             }

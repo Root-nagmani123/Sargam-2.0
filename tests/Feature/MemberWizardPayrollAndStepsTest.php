@@ -944,6 +944,130 @@ class MemberWizardPayrollAndStepsTest extends TestCase
         $this->assertEqualsCanonicalizing([$doctorPk, $otherOptionPk], $this->mappedOptionPks($credentialPk), 'The mapping must list both held roles.');
     }
 
+    /**
+     * An offered notification-routing option with a grantable Spatie role of the same name,
+     * as [optionPk, roleName]. Prefers HAC Person (read by a mapping-only lookup).
+     */
+    private function offeredRoutingOption(): array
+    {
+        $roleByKey = Role::pluck('name')->keyBy(fn ($name) => \App\Support\RoleNames::normalize($name));
+        $offered = UserRoleMaster::getUserRoleList();
+        $candidates = UserRoleMaster::whereIn('pk', $offered->keys()->all())
+            ->whereIn('user_role_name', \App\Models\EmployeeRoleMapping::routingOptionNames())
+            ->get(['pk', 'user_role_name'])
+            ->sortBy(fn ($row) => $row->user_role_name === 'HAC Person' ? 0 : 1);
+
+        foreach ($candidates as $row) {
+            $key = \App\Support\RoleNames::normalize((string) $offered[$row->pk]);
+
+            if ($key !== \App\Support\RoleNames::normalize('Doctor')
+                && isset($roleByKey[$key])
+                && ! \App\Support\RoleNames::isNotGrantableFromMemberWizard($roleByKey[$key])) {
+                return [(int) $row->pk, $roleByKey[$key]];
+            }
+        }
+
+        $this->markTestSkipped('Fixture assumption: an offered notification-routing option with a grantable Spatie role.');
+    }
+
+    /** Saves the member through member.update with the given ticks, changing only the mobile number. */
+    private function saveWizardAsDisplayed(User $actor, int $employeePk, array $createPayload, string $suffix, array $ticks, string $tickedAtRender)
+    {
+        $updatePayload = $this->basicMemberPayload($suffix, $employeePk);
+        $updatePayload['userid'] = $createPayload['userid'];
+        $updatePayload['mnumber'] = '98' . str_pad((string) random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
+        $updatePayload['userrole'] = $ticks;
+        $updatePayload['userrole_step_shown'] = '1';
+        $updatePayload['userrole_ticked_at_render'] = $tickedAtRender;
+
+        return $this->actingAs($actor)->post(route('member.update'), $updatePayload)->assertOk();
+    }
+
+    /**
+     * PR #354 review, F-006: a routing role granted on the Users screen (which leaves its
+     * mapping row alone) is not turned into a routing row by a later wizard save made as
+     * displayed. Notification routing is unchanged, as at base.
+     */
+    public function test_a_wizard_save_as_displayed_does_not_add_a_routing_row_for_a_users_screen_grant(): void
+    {
+        $actor = $this->makeActor('route_grant_wiz');
+        $actor->assignRole('Super Admin');
+        [$routingPk, $routingRole] = $this->offeredRoutingOption();
+        [$employeePk, $credentialPk, $createPayload] = $this->createMemberThroughWizard($actor, 'RouteGrantWiz');
+        $doctorPk = (int) $createPayload['userrole'][0];
+
+        $this->actingAs($actor)->post(route('admin.users.assignRoleSave'), [
+            'user_id' => $credentialPk,
+            'roles'   => Role::whereIn('name', ['Doctor', $routingRole])->pluck('id')->all(),
+        ])->assertRedirect();
+        $this->assertNotContains($routingPk, $this->mappedOptionPks($credentialPk), 'Fixture: the Users screen adds no routing row.');
+
+        [$displayedTicks, $tickedAtRender] = $this->renderStep3($actor, $employeePk);
+        $this->assertEqualsCanonicalizing([$doctorPk, $routingPk], $displayedTicks, 'Fixture: Step 3 ticks the held routing role.');
+
+        $this->saveWizardAsDisplayed($actor, $employeePk, $createPayload, 'RouteGrantWiz', $displayedTicks, $tickedAtRender);
+
+        $this->assertNotContains($routingPk, $this->mappedOptionPks($credentialPk), 'A save as displayed must not add a routing row.');
+        $this->assertContains($doctorPk, $this->mappedOptionPks($credentialPk), 'Non-routing options are still written.');
+        $this->assertEqualsCanonicalizing(['Doctor', $routingRole], $this->heldRoleNames($credentialPk), 'Spatie roles are unchanged.');
+    }
+
+    /**
+     * PR #354 review, F-006: a routing role revoked on the Users screen keeps its mapping row,
+     * and a later wizard save made as displayed does not drop it.
+     */
+    public function test_a_wizard_save_as_displayed_keeps_a_routing_row_after_a_users_screen_revoke(): void
+    {
+        $actor = $this->makeActor('route_revoke_wiz');
+        $actor->assignRole('Super Admin');
+        [$routingPk, $routingRole] = $this->offeredRoutingOption();
+
+        $createPayload = $this->basicMemberPayload('RouteRevokeWiz');
+        $doctorPk = (int) $createPayload['userrole'][0];
+        $createPayload['userrole'] = [$doctorPk, $routingPk];
+        $this->actingAs($actor)->post(route('member.store'), $createPayload)->assertOk();
+        $employeePk = (int) DB::table('employee_master')->where('emp_id', $createPayload['id'])->value('pk');
+        $credentialPk = (int) DB::table('user_credentials')->where('user_name', $createPayload['userid'])->value('pk');
+        $this->assertContains($routingPk, $this->mappedOptionPks($credentialPk), 'Fixture: the wizard wrote the routing row.');
+
+        $this->actingAs($actor)->post(route('admin.users.assignRoleSave'), [
+            'user_id' => $credentialPk,
+            'roles'   => Role::whereIn('name', ['Doctor'])->pluck('id')->all(),
+        ])->assertRedirect();
+
+        [$displayedTicks, $tickedAtRender] = $this->renderStep3($actor, $employeePk);
+        $this->assertSame([$doctorPk], $displayedTicks, 'Fixture: Step 3 no longer ticks the revoked routing role.');
+
+        $this->saveWizardAsDisplayed($actor, $employeePk, $createPayload, 'RouteRevokeWiz', $displayedTicks, $tickedAtRender);
+
+        $this->assertContains($routingPk, $this->mappedOptionPks($credentialPk), 'A save as displayed must not drop the routing row.');
+        $this->assertSame(['Doctor'], $this->heldRoleNames($credentialPk));
+    }
+
+    /** F-006 companion: an administrator's own tick or untick of a routing option still changes its row. */
+    public function test_ticking_or_unticking_a_routing_option_in_the_wizard_changes_its_row(): void
+    {
+        $actor = $this->makeActor('route_explicit');
+        $actor->assignRole('Super Admin');
+        [$routingPk, $routingRole] = $this->offeredRoutingOption();
+        [$employeePk, $credentialPk, $createPayload] = $this->createMemberThroughWizard($actor, 'RouteExplicit');
+        $doctorPk = (int) $createPayload['userrole'][0];
+
+        [$displayedTicks, $tickedAtRender] = $this->renderStep3($actor, $employeePk);
+        $this->assertSame([$doctorPk], $displayedTicks);
+
+        $this->saveWizardAsDisplayed($actor, $employeePk, $createPayload, 'RouteExplicit', [$doctorPk, $routingPk], $tickedAtRender);
+        $this->assertContains($routingPk, $this->mappedOptionPks($credentialPk), 'Ticking a routing option adds its row.');
+        $this->assertContains($routingRole, $this->heldRoleNames($credentialPk));
+
+        [$displayedTicks, $tickedAtRender] = $this->renderStep3($actor, $employeePk);
+        $this->assertEqualsCanonicalizing([$doctorPk, $routingPk], $displayedTicks);
+
+        $this->saveWizardAsDisplayed($actor, $employeePk, $createPayload, 'RouteExplicit', [$doctorPk], $tickedAtRender);
+        $this->assertNotContains($routingPk, $this->mappedOptionPks($credentialPk), 'Unticking a routing option removes its row.');
+        $this->assertSame(['Doctor'], $this->heldRoleNames($credentialPk));
+    }
+
     /** Companion to F-001: unticking a role Step 3 displayed ticked still removes it, whichever screen granted it. */
     public function test_unticking_a_displayed_role_granted_on_the_users_screen_removes_it(): void
     {

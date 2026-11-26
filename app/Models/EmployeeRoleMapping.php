@@ -68,6 +68,9 @@ class EmployeeRoleMapping extends Model
      * create/edit forms wrote these rows, by an administrator's explicit choice. The
      * automatic mirror (Users-screen role save, members:reconcile-role-mappings) therefore
      * never adds or removes a row for these options; it leaves them exactly as they are.
+     * The Member wizard changes one only when the administrator changed that tick against
+     * what Step 3 rendered (MemberController::update()); a save "as displayed" leaves
+     * these rows as they were, because Step 3's ticks now come from held Spatie roles.
      *
      * @return list<string>
      */
@@ -86,17 +89,28 @@ class EmployeeRoleMapping extends Model
     {
         $offered = UserRoleMaster::getUserRoleList()->keys()->map(fn ($pk) => (int) $pk)->all();
 
-        if ($offered === []) {
+        return array_values(array_diff($offered, self::routingOptionPks($offered)));
+    }
+
+    /**
+     * The given option pks that are notification-routing options (routingOptionNames()).
+     *
+     * @param  list<int>  $optionPks
+     * @return list<int>
+     */
+    public static function routingOptionPks(array $optionPks): array
+    {
+        if ($optionPks === []) {
             return [];
         }
 
-        $routing = UserRoleMaster::whereIn('pk', $offered)
+        return UserRoleMaster::whereIn('pk', $optionPks)
             ->whereIn('user_role_name', self::routingOptionNames())
             ->pluck('pk')
             ->map(fn ($pk) => (int) $pk)
+            ->unique()
+            ->values()
             ->all();
-
-        return array_values(array_diff($offered, $routing));
     }
 
     /**

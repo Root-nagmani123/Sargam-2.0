@@ -1,10 +1,13 @@
 # Deploy notes — Employee role sync: Users screen ↔ Employee wizard (PR #354)
 
-Branch `employee-role-sync-issue`, PR #354. No migration. One **data step** is required
+Branch `employee-role-sync-issue`, PR #354. One **migration**,
+`2026_11_26_000001_ensure_user_credentials_user_id_index`: it adds an index on
+`user_credentials.user_id` only if no index led by `user_id` exists, so it is a no-op
+where `idx_user_id` is already present (F-019). One **data step** is required
 (section 3): the PR ships a one-off reconcile command, `members:reconcile-role-mappings`,
 which changes `employee_role_mapping`.
 
-Last updated: 26 Nov 2026 (after PR #354 review round 14; F-003, F-006, F-017, F-018).
+Last updated: 26 Nov 2026 (after PR #354 review round 15; F-003, F-006, F-019).
 
 ---
 
@@ -18,9 +21,11 @@ Before this PR, roles saved on **Role & Permission › Users** went only into Sp
 - The show/print pages and notifications still read `employee_role_mapping`.
 
 Until each employee is re-saved, those two disagree for every employee whose roles were
-changed on the Users screen. On the local copy `sargam_8nov`, that was **1,214 of 1,229**
-employee logins. The reconcile command makes `employee_role_mapping` match the held roles
-in one pass.
+changed on the Users screen. On the local copy `sargam_8nov`, before routing options were
+excluded from the command, that was **1,214 of 1,229** employee logins. A dry run on a
+**local import of a live backup** (26 Nov 2026, routing options excluded) reported
+**0 logins to change** (section 4). The reconcile command makes the non-routing
+`employee_role_mapping` rows match the held roles in one pass.
 
 ## 2. Notification routing does not change (F-006)
 
@@ -46,17 +51,21 @@ Users create/edit form) last wrote them, as before this PR. So:
 | --- | --- | --- |
 | Assign or remove a role on Role & Permission › Users (employee login) | Mapping unchanged, so **notifications unchanged** | Mapping mirrored to the held roles |
 | `members:reconcile-role-mappings --apply` | Mapping unchanged | Mapping mirrored |
-| Member wizard save | Written from the ticks the administrator saves (as before this PR) | Same |
+| Member wizard save | Changed only where the administrator ticked or unticked that option against what Step 3 rendered; a save made as displayed leaves the row as it was | Written from the ticks saved |
 
 Trade-off, accepted by this design: for a routing option, Step 3 (which ticks held Spatie
 roles) and the show/print pages (which read the mapping) can still differ for an employee
 until an administrator saves that employee in the Member wizard.
 
-**Open point for the Product owner:** a Member wizard save writes the routing options' rows
-from the ticks on screen, and Step 3 now ticks held Spatie roles. Saving an employee "as
-displayed" can therefore add or remove a routing row (for example a HAC Person row for a login
-that holds the HAC Person role but had no row). Confirm in section 4 that a wizard save is
-an explicit administrator choice and may change routing, or ask for this to change too.
+**Member wizard (F-006, round 15):** Step 3 now ticks held Spatie roles, not the mapping. So
+`update()` no longer rewrites a routing option's row from the ticks on screen. It adds the row
+only when the administrator ticked an option Step 3 had shown unticked, and removes it only
+when the administrator unticked an option Step 3 had shown ticked. Every other routing row
+keeps its pre-save state. A post from a Step 3 loaded before the deploy carries no rendered
+ticks, so it changes no routing row. Saving an employee "as displayed" for an unrelated
+reason therefore never starts or stops their notifications. The Spatie role sync is
+unchanged. Route-level tests: `MemberWizardPayrollAndStepsTest`
+`test_a_wizard_save_as_displayed_*` and `test_ticking_or_unticking_a_routing_option_*`.
 
 The dry run's **By option** table now lists only non-routing options, so no row in it has a
 notification effect.
@@ -78,8 +87,9 @@ php artisan members:reconcile-role-mappings --apply -v > reconcile-apply-staging
 php artisan members:reconcile-role-mappings          # must report 0 logins to change
 ```
 
-Spot-check one changed employee on staging: Step 3 ticks, the show page and the Users list
-show the same roles.
+Spot-check one changed employee on staging: for non-routing options, Step 3 ticks, the show
+page and the Users list show the same roles. Routing options (section 2) may differ between
+Step 3 and the show page by design.
 
 ### 3.2 On production
 
@@ -112,16 +122,19 @@ Notes:
 
 | Item | Value | Owner | Date |
 | --- | --- | --- | --- |
+| Local import of a live backup, dry run (evidence only, not the staging run): 1,229 checked / 2 skipped (shared employee) / 0 to change / 0 add / 0 remove; "No database changes were written" | recorded | Developer | 26 Nov 2026 |
 | Staging dry run: logins checked / skipped / to change / rows add / rows remove | *pending* | DBA | |
 | Staging dry run: **By option** table (paste) | *pending* | DBA | |
 | Second dry run after `--apply` on staging reports 0 | *pending* | DBA | |
 | Decision: run `--apply` at deploy (section 3.2), **or** let records converge as employees are re-saved | *pending* | Product owner | |
 | Confirm: notification routing stays unchanged (section 2), as implemented | *pending* | Product owner | |
-| Decision: a Member wizard save may change routing rows (section 2, open point) | *pending* | Product owner | |
+| Confirm: a Member wizard save changes a routing row only on an explicit tick/untick (section 2), as implemented | *pending* | Product owner | |
+| `SHOW INDEX FROM user_credentials` on live shows an index led by `user_id` (else the migration adds one) | *pending* | DBA | |
 
-If the decision is **converge on save**: skip section 3.2 steps 2–4. Step 3 and the
-show/print pages will disagree for unsaved employees until each is re-saved. Notifications
-are unaffected either way.
+If the decision is **converge on save**: skip section 3.2 steps 2–4. For non-routing
+options, Step 3 and the show/print pages will disagree for unsaved employees until each is
+re-saved. Routing rows are not changed by `--apply`, by Users-screen saves, or by a wizard
+save made as displayed; only an explicit wizard tick or untick changes one.
 
 ## 5. Rollback
 
@@ -135,11 +148,13 @@ are unaffected either way.
 
 ## 6. Post-deploy checks
 
-1. Open Step 3 for an employee whose roles were set on the Users screen. The ticks match the
-   Users list and the show page.
+1. Open Step 3 for an employee whose roles were set on the Users screen. For non-routing
+   options, the ticks match the Users list and the show page.
 2. On the Users screen, remove a non-routing role (e.g. Doctor) from an employee. Step 3 and
    the show page drop it. Remove HAC Person from an employee who has it: Step 3 drops it, but
    the show page keeps it and the employee still receives HAC notifications (section 2).
+   Then save that employee in the Member wizard as displayed, editing only another field:
+   the show page still lists HAC Person and HAC notifications still arrive.
 3. From a Step 3 page loaded before the deploy, save. A role granted on the Users screen in
    the meantime is kept, and a "was NOT removed" warning is shown.
 4. After a wizard save that unticks a role, Role & Permission › Users shows the change on the
