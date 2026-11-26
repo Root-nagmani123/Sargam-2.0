@@ -8,6 +8,34 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-26: Moderation and Result Entry show the OT's code for that subject.** Unique
+  Participant Codes are per subject, but `ResultMarksService::loadParticipants()` kept one per
+  OT, so every subject showed the same code (tester: "wrong unique code" on Moderation). Each
+  participant now carries `uniques` [subject pk => code]; `codeFor($p, $subjectPk)` (else the
+  roll number) is shown on Marks Moderation and Result Entry, and `evaluatorNames()` matches a
+  sub-coordinator's assigned codes against that subject's code only (it compared another
+  subject's, so a faculty could see the wrong OTs).
+
+- **2026-11-26: Examination Drive on Moderation and Merit; Merit columns follow the drives.**
+  Result Records and Marks Moderation: Examination Drive filter and column (the component no
+  longer carries " · drive"). Merit & Ranking: Examination Drive column (the drives a row's marks
+  come from); the Drive filter now shows that drive only (`merit($scope, $course, $driveId)`, it
+  used to narrow only the Re-exam list); subject columns, ICT / Hindi and Total (A)'s max are
+  the subjects the listed drives hold (the fixed `MERIT_SUBJECTS` columns showed "-" and counted
+  in Total (A), e.g. "/ 550"; they still set the order). Director Assessment column unchanged.
+  Tests: `CoeResultManagementFlowTest::test_merit_ranks_fully_evaluated_ots_with_shared_ranks_and_service_pass_marks`.
+
+- **2026-11-26: Result Entry opens on All Courses; Result Compilation is per drive.**
+  Evaluation & Marks Entry (Faculty) no longer pre-selects the first course: "All Courses" (no
+  `course`; `entrySheet()` with null = every course; Save works there too) and a **Remove Filter**
+  link. Result Compilation: one row per **examination drive × subject** (drive name under the
+  course; `?drive=` on Evaluated / Pending lists and Notify), so Maximum and Pending are that
+  drive's components only (they summed every drive of the course: "Maximum 270"); every subject
+  is listed before any mark is approved ("Exam not held yet" when no component is over).
+  Course / subject / component / drive names decoded in `ResultMarksService::column()`.
+  Faculty scope on Result Entry is unchanged (see Results). Tests:
+  `CoeResultManagementFlowTest::test_compilation_counts_average_and_participant_lists`.
+
 - **2026-11-25: Freeze needs an invigilator in every room.** Venue Allocation's Freeze is
   disabled (tooltip lists the rooms) and `freeze` refuses (422) while any room of the plan has no
   invigilator at all; an Offline Objective paper is exempt (`roomsWithoutInvigilators()`,
@@ -473,10 +501,13 @@ All rules in `ResultMarksService` (RMS) and `MarksModeration`.
   `Mi = (UMi − Xj) × σG/σj + μG` per column, across evaluators; absents excluded;
   clamp 0..max. Only when every assigned mark in the component is approved.
   Write-once into `moderated_marks`.
-- **Result Compilation**: approved **raw** marks (not moderated), "Passing Average" is a
-  mean score, Notify for Pending sends bell notifications.
+- **Result Compilation**: approved **raw** marks (not moderated), one row per drive × subject
+  (`compilation()` → `courseSheet()` of one drive; every component, held or not), "Passing
+  Average" is a mean score, Notify for Pending sends bell notifications (`?drive=` narrows it).
+  The participants list without `drive` still spans the whole course.
 - **Merit & Ranking**: an OT is ranked only when **every** held mark is final (approved
-  and moderated, or absent). Uses moderated marks. Hard-coded `MERIT_SUBJECTS` columns,
+  and moderated, or absent). Uses moderated marks. Subject columns = the subjects the listed
+  drives hold (`MERIT_SUBJECTS` only orders / names them),
   qualifying papers ICT/Hindi (not totalled), Director Assessment = exam type matching
   `/director/i`. Pass if Grand Total ≥ the student's service passing marks; fail if a
   qualifying paper is absent or below passing; undecided if the service has no passing
@@ -537,9 +568,9 @@ dashboard; `coe_seat_allocation` opens My Exam Seat.
 ## Known gaps (don't "fix" unasked)
 
 - **Roll number per course / UPC per subject are implemented on Roll Numbers, UPC and Mapping
-  only** (scoped that way on 2026-11-24). Other screens still assume one of each per OT:
-  `ResultMarksService::loadParticipants()` reads a course's codes without the subject (an OT
-  with several gets whichever row comes last); `ExaminationDriveController::courseUniqueCodes()`
+  only** (scoped that way on 2026-11-24), plus results since 2026-11-26 (see below). Other
+  screens still assume one of each per OT: Result Compilation's participants list and Merit
+  show one code per OT (`participants()['code']`, the OT's first UPC); `ExaminationDriveController::courseUniqueCodes()`
   offers every subject's codes (duplicates when subjects share a code). These join
   `coe_roll_numbers` by student alone and so list an OT twice / pick an arbitrary number once
   an OT holds numbers on two courses: Venue Allocation `participantQuery()` and `mySeats()`,

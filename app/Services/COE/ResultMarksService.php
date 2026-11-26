@@ -86,16 +86,23 @@ class ResultMarksService
                 ->join('student_master as s', 's.pk', '=', 'p.student_master_pk')
                 ->where('p.course_master_pk', $coursePk)
                 ->where('p.batch', $batch)
-                ->get(['p.student_master_pk', 'p.unique_code', $name])
+                ->orderBy('p.pk')
+                ->get(['p.student_master_pk', 'p.subject_master_pk', 'p.unique_code', $name])
                 ->each(function ($r) use (&$rows) {
                     $pk = (int) $r->student_master_pk;
                     $rows[$pk] = ($rows[$pk] ?? ['student' => $pk, 'roll' => null, 'name' => (string) $r->name])
-                        + ['unique' => null];
-                    $rows[$pk]['unique'] = trim($r->unique_code);
+                        + ['unique' => null, 'uniques' => []];
+                    // One code per OT per subject (coe_participant_codes.subject_master_pk); 'unique'
+                    // stays the OT's first one, for screens that show one code per OT.
+                    $rows[$pk]['unique'] ??= trim($r->unique_code);
+                    if ($r->subject_master_pk !== null) {
+                        $rows[$pk]['uniques'][(int) $r->subject_master_pk] = trim($r->unique_code);
+                    }
                 });
         }
 
         foreach ($rows as &$row) {
+            $row['uniques'] ??= [];
             // The Unique Participant Code stands in for the OT during evaluation.
             $row['code'] = $row['unique'] ?? $row['roll'];
         }
@@ -104,6 +111,15 @@ class ResultMarksService
         uasort($rows, fn ($a, $b) => self::compareOtCodes($a['code'], $b['code']));
 
         return $rows;
+    }
+
+    /**
+     * The OT's Unique Participant Code for one subject (codes are per OT per subject), else
+     * their roll number: what stands in for them while that subject is evaluated.
+     */
+    public static function codeFor(array $participant, int $subjectPk): string
+    {
+        return (string) ($participant['uniques'][$subjectPk] ?? $participant['roll'] ?? $participant['code']);
     }
 
     /** Same ordering as the drive's code lists: A2 < A10, FC101-002 < FC101-010. */
@@ -160,9 +176,11 @@ class ResultMarksService
     public function evaluatorNames(ExaminationDriveComponentMap $map, array $participant): array
     {
         $names = [];
+        // The OT's code on this component's subject (codes are per subject), not another subject's.
+        $unique = $participant['uniques'][(int) $map->subject_master_pk] ?? null;
         foreach ($map->subCoordinatorNames() as $name) {
             $codes = $this->assignedCodes($map, $name);
-            if ($codes === [] || in_array($participant['roll'], $codes, true) || in_array($participant['unique'], $codes, true)) {
+            if ($codes === [] || in_array($participant['roll'], $codes, true) || ($unique !== null && in_array($unique, $codes, true))) {
                 $names[] = $name;
             }
         }
@@ -309,8 +327,8 @@ class ResultMarksService
     }
 
     /**
-     * The faculty Result Entry sheet: the user's courses, and on the chosen one
-     * (optionally one subject, and one component of it) their columns, participants
+     * The faculty Result Entry sheet: the user's courses, and on the chosen one (none = every
+     * course; optionally one subject, and one component of it) their columns, participants
      * and saved marks. $componentKey is a column key; one not on the sheet is ignored.
      *
      * @return array{courses:array<int,string>, coursePk:?int, subjects:array, subjectPk:?int, components:array<string,string>, componentKey:?string, columns:list<array>, rows:array<int,array>, marks:array}
@@ -320,9 +338,10 @@ class ResultMarksService
         $all = $this->entryColumns($user);
         $courses = collect($all)->mapWithKeys(fn ($c) => [$c['course_pk'] => $c['course']])
             ->sort(SORT_NATURAL | SORT_FLAG_CASE)->all();
-        $coursePk = isset($courses[$coursePk]) ? $coursePk : array_key_first($courses);
+        // No course (or not one of the user's): every course, nothing pre-filtered.
+        $coursePk = isset($courses[$coursePk]) ? $coursePk : null;
 
-        $courseColumns = array_values(array_filter($all, fn ($c) => $c['course_pk'] === $coursePk));
+        $courseColumns = $coursePk === null ? $all : array_values(array_filter($all, fn ($c) => $c['course_pk'] === $coursePk));
         $subjects = $this->groupBySubject($courseColumns);
         $subjectPk = isset($subjects[$subjectPk]) ? $subjectPk : null;
         $columns = $subjectPk ? array_values($subjects[$subjectPk]['columns']) : $courseColumns;
@@ -390,7 +409,7 @@ class ResultMarksService
                 $entries[] = [
                     'key' => $col['key'],
                     'student' => $pk,
-                    'code' => $rows[$pk]['code'],
+                    'code' => self::codeFor($rows[$pk], $col['subject_pk']),
                     'course' => $col['course_short'],
                     'subject' => $col['subject'],
                     'component' => $subjects[$col['subject_pk']]['columns'][$col['key']]['label'] ?? $col['component'],
@@ -420,15 +439,16 @@ class ResultMarksService
         return [
             'key' => $drive->id.':'.$map->subject_master_pk.':'.$map->component_master_pk,
             'drive_id' => (int) $drive->id,
-            'drive' => filled($drive->drive_name) ? trim($drive->drive_name) : 'Examination Drive #'.$drive->id,
+            // Names as text: some were stored HTML-encoded, some twice ("&amp;#039;").
+            'drive' => CourseParticipants::plainName($drive->drive_name) ?: 'Examination Drive #'.$drive->id,
             'course_pk' => (int) $drive->course_master_pk,
-            'course' => trim((string) ($drive->course->course_name ?? '')),
-            'course_short' => trim((string) ($drive->course->couse_short_name ?? '')) ?: trim((string) ($drive->course->course_name ?? '')),
+            'course' => CourseParticipants::plainName($drive->course->course_name ?? ''),
+            'course_short' => CourseParticipants::plainName($drive->course->couse_short_name ?? '') ?: CourseParticipants::plainName($drive->course->course_name ?? ''),
             'subject_pk' => (int) $map->subject_master_pk,
-            'subject' => trim((string) ($map->subject->subject_name ?? '')),
-            'subject_code' => trim((string) ($map->subject->sub_short_name ?? '')),
+            'subject' => CourseParticipants::plainName($map->subject->subject_name ?? ''),
+            'subject_code' => CourseParticipants::plainName($map->subject->sub_short_name ?? ''),
             'component_pk' => (int) $map->component_master_pk,
-            'component' => trim((string) ($map->component->component_name ?? '')),
+            'component' => CourseParticipants::plainName($map->component->component_name ?? ''),
             'max' => (float) $map->max_marks,
             'passing' => $map->passing_marks === null ? null : (float) $map->passing_marks,
             // Why nobody may be entering it yet (Result Compilation's Action column).
@@ -676,9 +696,9 @@ class ResultMarksService
      *
      * @return array<int, array{course_pk:int, course:string, subjects:array, rows:array}> keyed by course pk
      */
-    public function courseSheets(string $scope, ?int $coursePk = null): array
+    public function courseSheets(string $scope, ?int $coursePk = null, ?int $driveId = null): array
     {
-        $drives = $this->scopeDrives($scope, $coursePk);
+        $drives = $this->scopeDrives($scope, $coursePk, $driveId);
         $marks = $this->marks($drives->pluck('id')->all());
 
         return $drives->groupBy('course_master_pk')
@@ -694,11 +714,12 @@ class ResultMarksService
      * and the marksheets count the main drives only. Compilation adds its "(Re-exam)" rows
      * separately (reexamCompilationRows).
      */
-    private function scopeDrives(string $scope, ?int $coursePk = null): Collection
+    private function scopeDrives(string $scope, ?int $coursePk = null, ?int $driveId = null): Collection
     {
         return ReexamService::excludeFrom(ExaminationDrive::with(['course', 'examinationType', 'facultyMaps.faculty', 'componentMaps.component', 'componentMaps.subject', 'componentMaps.faculty'])
             ->where('status', $scope === 'archived' ? ExaminationDrive::STATUS_CLOSED : ExaminationDrive::STATUS_ACTIVE)
             ->when($coursePk, fn ($q) => $q->where('course_master_pk', $coursePk))
+            ->when($driveId, fn ($q) => $q->where('id', $driveId))
             ->whereHas('componentMaps'))
             ->orderBy('id')
             ->get();
@@ -845,8 +866,9 @@ class ResultMarksService
      * Every component whose exam is over counts, split three ways:
      *   B          components on a Director Assessment drive (isDirectorAssessment())
      *   ICT/Hindi  qualifying papers (qualifyingPaper()), shown but never added up
-     *   A          the MERIT_SUBJECTS columns (always shown, '-' until held), then any
-     *              other subject held; Total (A) is their sum
+     *   A          the subjects the listed drives hold, MERIT_SUBJECTS order first, then any
+     *              other; Total (A) is their sum. A subject (or ICT / Hindi) no listed
+     *              drive holds is not shown. $driveId: one examination drive only.
      * Grand Total = A + B. Marks are resultMarks(). Header max marks: what the drive
      * maps, else Subject Max Marks, else the Figma's (MERIT_SUBJECTS, DIRECTOR_MAX,
      * QUALIFYING_MAX); Total (A) / Grand Total are out of the shown columns.
@@ -863,13 +885,16 @@ class ResultMarksService
      *
      * @return array{courses:array<int,string>, coursePk:?int, subjects:array, maxA:?float, maxB:?float, max:?float, qualifying:array<string,?float>, rows:list<array>, pending:int, noPassMarks:list<string>}
      */
-    public function merit(string $scope, ?int $coursePk): array
+    public function merit(string $scope, ?int $coursePk, ?int $driveId = null): array
     {
         $byCourse = $this->scopeDrives($scope)->groupBy('course_master_pk')
             ->filter(fn (Collection $drives) => $drives->contains(fn ($d) => $d->componentMaps->contains(fn ($m) => $this->examOver($d, $m))));
-        $courses = $byCourse->map(fn (Collection $drives) => trim((string) ($drives->first()->course->course_name ?? '')))
+        $courses = $byCourse->map(fn (Collection $drives) => CourseParticipants::plainName($drives->first()->course->course_name ?? ''))
             ->sort(SORT_NATURAL | SORT_FLAG_CASE)->all();
         $coursePk = isset($courses[$coursePk]) ? $coursePk : null;
+        // Drive filter: that one examination drive only (its course, its subjects).
+        $driveCourse = $driveId ? $byCourse->search(fn (Collection $drives) => $drives->contains('id', $driveId)) : false;
+        $driveCourse = $driveCourse === false || ($coursePk && (int) $driveCourse !== $coursePk) ? null : (int) $driveCourse;
 
         // Header defaults: Subject Max Marks, else the Figma's.
         $master = $this->subjectMaxMarks();
@@ -885,21 +910,32 @@ class ResultMarksService
                 $subjects[$key]['max'] = (float) $s->max_marks;
             }
         }
-        $defaultMax = array_map(fn ($s) => $s['max'], $subjects);
         $defaultQualifying = $qualifyingMax;
 
         $sheets = [];
-        foreach ($coursePk ? [$coursePk] : array_keys($courses) as $pk) {
-            $sheets[$pk] = $this->meritSheet($byCourse[$pk], $courses[$pk]);
+        foreach ($driveCourse ? [$driveCourse] : ($coursePk ? [$coursePk] : array_keys($courses)) as $pk) {
+            $drives = $driveCourse ? $byCourse[$pk]->where('id', $driveId)->values() : $byCourse[$pk];
+            $sheets[$pk] = $this->meritSheet($drives, $courses[$pk]);
         }
+        $held = [];
+        $heldPapers = [];
         foreach ($sheets as $sheet) {
             foreach ($sheet['subjects'] as $key => $s) {
+                $held[$key] = true;
                 $subjects[$key] ??= ['name' => $s['name'], 'max' => $s['max'], 'columns' => []];
                 if ($s['columns'] && $subjects[$key]['columns'] === []) {
                     $subjects[$key]['columns'] = $s['columns'];
                 }
             }
+            foreach ($sheet['qualifying'] as $paper => $m) {
+                if ($m !== null) {
+                    $heldPapers[$paper] = true;
+                }
+            }
         }
+        // Only the subjects (and qualifying papers) the listed drives hold: the Figma's fixed
+        // columns stay in their order but are no longer shown when no drive holds them.
+        $subjects = array_intersect_key($subjects, $held);
 
         // Each course's own max marks: what its drives map, else the header defaults.
         // The same subject can be out of 70 on one course and 140 on another (two
@@ -909,7 +945,8 @@ class ResultMarksService
         $noPassMarks = [];
         $perCourse = [];
         foreach ($sheets as $pk => $sheet) {
-            $max = $defaultMax;
+            // Total (A) is out of the subjects this course's drives hold, not the fixed list.
+            $max = [];
             foreach ($sheet['subjects'] as $key => $s) {
                 $max[$key] = $s['max'];
             }
@@ -941,11 +978,11 @@ class ResultMarksService
         }
         unset($s);
         $pick = fn (string $field, $fallback) => $perCourse === [] ? $fallback : $same(array_column($perCourse, $field));
-        $maxA = $pick('a', (float) array_sum($defaultMax));
+        $maxA = $pick('a', null);
         $maxB = $pick('b', self::DIRECTOR_MAX);
         $qualifyingMax = [];
-        foreach ($defaultQualifying as $paper => $m) {
-            $qualifyingMax[$paper] = $perCourse === [] ? $m : $same(array_map(fn ($c) => $c['qualifying'][$paper], $perCourse));
+        foreach (array_intersect_key($defaultQualifying, $heldPapers) as $paper => $m) {
+            $qualifyingMax[$paper] = $same(array_map(fn ($c) => $c['qualifying'][$paper], $perCourse));
         }
 
         // Every row has every column: '-' where its course does not hold it.
@@ -981,6 +1018,7 @@ class ResultMarksService
         $partB = [];
         $qualifying = array_fill_keys(array_keys(self::QUALIFYING), []);
         $participants = [];
+        $driveNames = [];
         foreach ($drives as $drive) {
             $held = $drive->componentMaps->sortBy('id')->filter(fn ($map) => $this->examOver($drive, $map));
             foreach ($held as $map) {
@@ -998,9 +1036,12 @@ class ResultMarksService
             }
             if ($held->isNotEmpty()) {
                 $participants += $this->participants($drive);
+                $driveNames[] = CourseParticipants::plainName($drive->drive_name) ?: 'Examination Drive #'.$drive->id;
             }
         }
         $marks = $this->marks($drives->pluck('id')->all());
+        // Merit & Ranking's Examination Drive column: the drives the marks come from.
+        $driveLabel = implode(', ', array_unique($driveNames));
 
         $students = DB::table('student_master as s')
             ->leftJoin('service_master as sv', 'sv.pk', '=', 's.service_master_pk')
@@ -1049,6 +1090,7 @@ class ResultMarksService
             }
             $rows[] = $p + [
                 'course' => $course,
+                'drive' => $driveLabel,
                 'service' => (string) ($student?->service ?? ''),
                 'subjects' => $totals,
                 'total_a' => $totalA,
@@ -1277,18 +1319,16 @@ class ResultMarksService
         $participants = [];
         $columns = [];
         foreach ($drives as $drive) {
-            // Only drives with an exam already held bring their columns and participants.
-            $held = $drive->componentMaps->sortBy('id')->filter(fn ($map) => $this->examOver($drive, $map));
-            foreach ($held as $map) {
-                $columns[] = $this->column($drive, $map);
+            // Every component of the drive, held or not: a paper not held yet is pending for everyone.
+            foreach ($drive->componentMaps->sortBy('id') as $map) {
+                $columns[] = $this->column($drive, $map) + ['held' => $this->examOver($drive, $map)];
             }
-            if ($held->isNotEmpty()) {
+            if ($drive->componentMaps->isNotEmpty()) {
                 $participants += $this->participants($drive);
             }
         }
-        // A subject reaches Result Compilation only once faculty have approved some of its marks.
-        $subjects = array_filter($this->groupBySubject($columns), fn ($s) => collect(array_keys($s['columns']))
-            ->contains(fn ($key) => collect($marks[$key] ?? [])->contains(fn (EvaluationMark $m) => $m->isApproved())));
+        // Every subject of the drive, whether or not any of its marks are in yet.
+        $subjects = $this->groupBySubject($columns);
         if ($subjects === []) {
             return null;
         }
@@ -1319,26 +1359,38 @@ class ResultMarksService
 
         return [
             'course_pk' => (int) $first->course_master_pk,
-            'course' => trim((string) ($first->course->course_name ?? '')),
+            'course' => CourseParticipants::plainName($first->course->course_name ?? ''),
             'subjects' => $subjects,
             'rows' => $rows,
         ];
     }
 
     /**
-     * Result Compilation grid: one row per course × subject.
+     * Result Compilation grid: one row per examination drive × subject. Each drive is its own
+     * exam: its maximum and its pending OTs are that drive's components only, never summed
+     * with another drive of the course.
      *
      * @return list<array<string, mixed>>
      */
     public function compilation(string $scope): array
     {
+        $drives = $this->scopeDrives($scope)
+            ->sortBy(fn ($d) => [mb_strtolower(CourseParticipants::plainName($d->course->course_name ?? '')), (int) $d->id]);
+        $marks = $this->marks($drives->pluck('id')->all());
+
         $out = [];
-        foreach ($this->courseSheets($scope) as $sheet) {
+        foreach ($drives as $drive) {
+            $sheet = $this->courseSheet(collect([$drive]), $marks);
+            if ($sheet === null) {
+                continue;
+            }
             foreach ($sheet['subjects'] as $spk => $s) {
                 $done = array_filter($sheet['rows'], fn ($r) => ! in_array($spk, $r['pending'], true));
                 $out[] = [
                     'course_pk' => $sheet['course_pk'],
                     'course' => $sheet['course'],
+                    'drive_id' => (int) $drive->id,
+                    'drive' => CourseParticipants::plainName($drive->drive_name) ?: 'Examination Drive #'.$drive->id,
                     'subject_pk' => $spk,
                     'subject' => $s['name'],
                     'code' => $s['code'],
@@ -1348,6 +1400,7 @@ class ResultMarksService
                     'total' => count($sheet['rows']),
                     'blocker' => match (true) {
                         ! collect($s['columns'])->contains('open', true) => 'Waiting for Course Coordinator approval',
+                        ! collect($s['columns'])->contains('held', true) => 'Exam not held yet',
                         ! collect($s['columns'])->contains(fn ($c) => $c['open'] && $c['has_faculty']) => 'No faculty mapped to this subject',
                         default => null,
                     },
@@ -1492,7 +1545,10 @@ class ResultMarksService
                 $done = array_filter($sitting, fn ($r) => ! in_array($spk, $r['pending'], true));
                 $out[] = [
                     'course_pk' => $sheet['course_pk'],
-                    'course' => $sheet['course'],
+                    'course' => CourseParticipants::plainName($sheet['course']),
+                    // Opened with ?reexam=, not ?drive= (only its re-exam OTs).
+                    'drive_id' => null,
+                    'drive' => ReexamService::driveName($drive),
                     'subject_pk' => $spk,
                     'subject' => $s['name'],
                     'code' => $s['code'],
@@ -1589,7 +1645,8 @@ class ResultMarksService
                     $colRows[$pk] = [
                         'key' => $col['key'].'|'.$pk,
                         'mark_pk' => $m?->pk,
-                        'code' => $p['code'],
+                        // The OT's code on this subject (one Unique Participant Code per subject).
+                        'code' => self::codeFor($p, $col['subject_pk']),
                         'name' => $p['name'],
                         'drive' => $col['drive'],
                         'course' => $col['course'],
@@ -1626,20 +1683,8 @@ class ResultMarksService
             }
         }
 
-        // The same component on several drives of a course/subject is told apart by
-        // its drive name, as on the faculty Result Entry sheet.
-        $drivesOf = [];
-        foreach ($rows as $row) {
-            $drivesOf[$row['course']."\0".$row['subject']."\0".$row['component']][strtok($row['key'], ':')] = true;
-        }
-        foreach ($rows as &$row) {
-            if (count($drivesOf[$row['course']."\0".$row['subject']."\0".$row['component']]) > 1) {
-                $row['component'] .= ' · '.$row['drive'];
-            }
-        }
-        unset($row);
-
-        usort($rows, fn ($a, $b) => [$a['course'], $a['subject'], $a['component']] <=> [$b['course'], $b['subject'], $b['component']]
+        // The same component on several drives is told apart by the Examination Drive column.
+        usort($rows, fn ($a, $b) => [$a['course'], $a['drive'], $a['subject'], $a['component']] <=> [$b['course'], $b['drive'], $b['subject'], $b['component']]
             ?: self::compareOtCodes($a['code'], $b['code']));
 
         return $rows;
@@ -1832,13 +1877,13 @@ class ResultMarksService
      *
      * @return array{pending:int, notified:int, unreachable:int}
      */
-    public function notifyPending(int $coursePk, ?int $subjectPk = null, ?int $studentPk = null, ?int $reexamDriveId = null): array
+    public function notifyPending(int $coursePk, ?int $subjectPk = null, ?int $studentPk = null, ?int $reexamDriveId = null, ?int $driveId = null): array
     {
         // A "(Re-exam)" row: only that re-exam drive and its re-exam OTs (entryParticipants);
-        // the main rows keep re-exam drives out, as before.
+        // the main rows keep re-exam drives out, as before. A main row is one drive ($driveId).
         $drives = $reexamDriveId
             ? $this->entryDrives($coursePk, true)->filter(fn ($d) => (int) $d->id === $reexamDriveId && ReexamService::isReexamDrive($reexamDriveId))->values()
-            : $this->entryDrives($coursePk);
+            : $this->entryDrives($coursePk)->when($driveId, fn ($c) => $c->where('id', $driveId)->values());
         $marks = $this->marks($drives->pluck('id')->all());
 
         $pending = 0;

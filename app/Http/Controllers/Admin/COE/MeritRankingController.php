@@ -22,7 +22,8 @@ class MeritRankingController extends Controller
     /**
      * ?scope=active|archived&course=<pk>&drive=<main drive id>&status=Pass|Fail|Pending&reexam=<re-exam drive id>
      *
-     * Drive only narrows the Re-exam list (main drives with re-exams). Picking a re-exam
+     * Drive shows that examination drive only (its subjects, its marks, ranked on them) and
+     * narrows the Re-exam list. Picking a re-exam
      * shows its OTs with the re-exam marks in the subjects they re-sat, main marks beside
      * them, rank unchanged (ResultMarksService::reexamMerit). Status filters the rows.
      */
@@ -47,7 +48,7 @@ class MeritRankingController extends Controller
         }
 
         $data = ($reexam ? $this->results->reexamMerit($scope, $reexam) : null)
-            ?? $this->results->merit($scope, $coursePk) + ['reexam' => null];
+            ?? $this->results->merit($scope, $coursePk, $drive) + ['reexam' => null];
         $coursePk = $data['coursePk'];
 
         $statuses = $data['reexam'] ? ['Pass', 'Fail', 'Pending'] : ['Pass', 'Fail'];

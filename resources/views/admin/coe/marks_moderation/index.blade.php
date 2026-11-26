@@ -58,9 +58,9 @@
             <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar coe-toolbar">
                 <div class="d-flex flex-wrap align-items-center gap-3">
                     <span class="programme-dt-filters-label">Filter</span>
-                    @foreach (['Course' => $courses, 'Subject' => $subjects, 'Component' => $components] as $label => $options)
+                    @foreach (['Drive' => ['Examination Drive', $drives], 'Course' => ['Course', $courses], 'Subject' => ['Subject', $subjects], 'Component' => ['Component', $components]] as $id => [$label, $options])
                         <div class="programme-dt-filter-select">
-                            <select id="mmFilter{{ $label }}" class="form-select" data-placeholder="{{ $label }}" aria-label="{{ $label }}">
+                            <select id="mmFilter{{ $id }}" class="form-select" data-placeholder="{{ $label }}" aria-label="{{ $label }}">
                                 <option value="">{{ $label }}</option>
                                 @foreach ($options as $option)
                                     <option value="{{ $option }}">{{ $option }}</option>
@@ -102,6 +102,7 @@
                                 </th>
                                 <th scope="col">OT / Participant Name</th>
                                 <th scope="col">OT Code</th>
+                                <th scope="col">Examination Drive</th>
                                 <th scope="col">Course</th>
                                 <th scope="col">Subject</th>
                                 <th scope="col">Component</th>
@@ -126,6 +127,7 @@
                                     </td>
                                     <td class="coe-nowrap">{{ $row['name'] ?: '-' }}</td>
                                     <td>{{ $row['code'] ?: '-' }}</td>
+                                    <td>{{ $row['drive'] }}</td>
                                     <td>{{ $row['course'] }}</td>
                                     <td>{{ $row['subject'] }}</td>
                                     <td>{{ $row['component'] }}</td>
@@ -178,25 +180,26 @@
 $(function () {
     'use strict';
 
-    var COL = { check: 0, course: 3, subject: 4, component: 5, action: 10 };
+    var COL = { check: 0, drive: 3, course: 4, subject: 5, component: 6, action: 11 };
     var $table = $('#mmTable');
 
     var dt = CoeGrid.init({
         table: '#mmTable',
         title: 'Result Records and Marks Moderation',
         snoCol: false,
-        order: [[COL.course, 'asc'], [COL.subject, 'asc'], [COL.component, 'asc'], [2, 'asc']],
+        order: [[COL.course, 'asc'], [COL.drive, 'asc'], [COL.subject, 'asc'], [COL.component, 'asc'], [2, 'asc']],
         noSort: [COL.check, COL.action],
         exclude: [COL.check, COL.action],
         rowCheck: '.mm-row-check',
-        filters: { '#mmFilterCourse': COL.course, '#mmFilterSubject': COL.subject, '#mmFilterComponent': COL.component },
+        filters: { '#mmFilterDrive': COL.drive, '#mmFilterCourse': COL.course, '#mmFilterSubject': COL.subject, '#mmFilterComponent': COL.component },
         reset: '#mmResetFilters',
         download: '#mmDownloadBtn',
         print: '#mmPrintBtn',
         searchToggle: '#mmSearchToggle',
         searchSlot: '#mmDtSearch',
         colvisGrid: '#mmColumnToggleGrid',
-        colvisKey: 'coeMarksModeration:hiddenColumns:v1',
+        // v2: the Examination Drive column moved the others one to the right.
+        colvisKey: 'coeMarksModeration:hiddenColumns:v2',
         empty: { title: 'No Marks', zeroTitle: 'No Marks Found',
                  text: 'Marks show here once faculty enter them for a component whose exam is over.' }
     });

@@ -60,6 +60,17 @@ class ResultCompilationController extends Controller
             }
             $sheet = $sheets[$coursePk] ?? ['course_pk' => 0, 'course' => '', 'subjects' => [], 'rows' => []];
             $courses = array_map(fn ($s) => $s['course'], $sheets);
+
+            // A Result Compilation row is one examination drive: its components and OTs only.
+            // Dropped when the course is changed to one the drive is not on.
+            $drive = (int) $request->query('drive') ?: null;
+            $driveSheet = $drive ? ($this->results->courseSheets($scope, $coursePk, $drive)[$coursePk] ?? null) : null;
+            if ($driveSheet) {
+                $sheet = $driveSheet;
+                $driveName = collect(collect($sheet['subjects'])->first()['columns'] ?? [])->first()['drive'] ?? null;
+            } else {
+                $drive = null;
+            }
         }
 
         $subjectPk = (int) $request->query('subject');
@@ -80,6 +91,8 @@ class ResultCompilationController extends Controller
             'courses' => $courses,
             'coursePk' => $coursePk,
             'reexam' => $reexam,
+            'drive' => $drive ?? null,
+            'driveName' => $driveName ?? null,
             'subjects' => $sheet['subjects'],
             'subjectPk' => $subjectPk,
             'status' => $status,
@@ -98,6 +111,8 @@ class ResultCompilationController extends Controller
             'student' => ['nullable', 'integer'],
             // A "(Re-exam)" row: that re-exam drive's OTs only.
             'reexam' => ['nullable', 'integer'],
+            // A main row: that examination drive only.
+            'drive' => ['nullable', 'integer'],
         ]);
 
         $result = $this->results->notifyPending(
@@ -105,6 +120,7 @@ class ResultCompilationController extends Controller
             isset($data['subject']) ? (int) $data['subject'] : null,
             isset($data['student']) ? (int) $data['student'] : null,
             isset($data['reexam']) ? (int) $data['reexam'] : null,
+            isset($data['drive']) ? (int) $data['drive'] : null,
         );
 
         if ($result['pending'] === 0) {

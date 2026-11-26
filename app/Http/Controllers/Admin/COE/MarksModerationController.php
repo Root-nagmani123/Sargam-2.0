@@ -33,6 +33,7 @@ class MarksModerationController extends Controller
         return view('admin.coe.marks_moderation.index', [
             'scope' => $scope,
             'rows' => $rows,
+            'drives' => $options('drive'),
             'courses' => $options('course'),
             'subjects' => $options('subject'),
             'components' => $options('component'),

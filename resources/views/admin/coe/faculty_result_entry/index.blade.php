@@ -78,11 +78,10 @@
                     <span class="programme-dt-filters-label">Filter</span>
                     <div class="programme-dt-filter-select">
                         <select name="course" class="form-select rre-filter" aria-label="Course">
-                            @forelse ($courses as $pk => $name)
-                                <option value="{{ $pk }}" @selected($pk === $coursePk)>{{ $name }}</option>
-                            @empty
-                                <option value="">Course</option>
-                            @endforelse
+                            <option value="">All Courses</option>
+                            @foreach ($courses as $pk => $name)
+                                <option value="{{ $pk }}" @selected($pk === $coursePk)>{{ \App\Services\COE\CourseParticipants::plainName($name) }}</option>
+                            @endforeach
                         </select>
                     </div>
                     <div class="programme-dt-filter-select">
@@ -101,6 +100,9 @@
                             @endforeach
                         </select>
                     </div>
+                    {{-- Back to every course, subject and component (the tab is kept). --}}
+                    <a href="{{ route('admin.coe.faculty-result-entry.index', $isCompleted ? ['tab' => 'completed'] : []) }}"
+                       class="btn programme-dt-btn-reset d-inline-flex align-items-center">Remove Filter</a>
                 </form>
                 <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
                     <button type="button" class="btn programme-dt-btn-columns"
@@ -246,7 +248,7 @@ $(function () {
 
     var dt = CoeGrid.init({
         table: '#rreTable',
-        title: @json('Evaluation & Marks Entry' . ($coursePk ? ' - ' . $courses[$coursePk] : '')),
+        title: @json('Evaluation & Marks Entry' . ($coursePk ? ' - ' . \App\Services\COE\CourseParticipants::plainName($courses[$coursePk]) : '')),
         snoCol: false,
         // Rows arrive in OT-code order (A2 before A10), which a text sort would break.
         order: [],

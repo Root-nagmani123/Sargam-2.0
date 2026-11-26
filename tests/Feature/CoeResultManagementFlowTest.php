@@ -171,7 +171,8 @@ class CoeResultManagementFlowTest extends TestCase
         $rows = $this->actingAs($this->admin)->get(route('admin.coe.result-compilation.index'))
             ->assertOk()->viewData('rows');
 
-        return collect($rows)->first(fn ($r) => $r['course_pk'] === (int) $this->drive->course_master_pk && $r['subject_pk'] === $subject);
+        // One row per examination drive × subject.
+        return collect($rows)->first(fn ($r) => ($r['drive_id'] ?? null) === (int) $this->drive->id && $r['subject_pk'] === $subject);
     }
 
     public function test_subject_faculty_sees_every_participant_and_evaluator_only_their_codes(): void
@@ -293,12 +294,13 @@ class CoeResultManagementFlowTest extends TestCase
         $y = $this->key($this->subjectA, 'Y');
         $n = count($this->ots);
 
-        // No row until faculty approve something; a draft is not enough.
-        $this->assertNull($this->compilationRow($this->subjectA));
+        // Every subject of the drive is listed before any mark is in; a draft is not an evaluation.
+        $row = $this->compilationRow($this->subjectA);
+        $this->assertSame([0, $n, 80.0, null], [$row['approved'], $row['pending'], $row['max'], $row['average']]);
         $this->save(1, [$x => [$this->ots[0]['pk'] => '10']])->assertOk();
-        $this->assertNull($this->compilationRow($this->subjectA));
+        $this->assertSame(0, $this->compilationRow($this->subjectA)['approved']);
 
-        // F2 approves Y for their 3: the row appears, nobody fully evaluated yet (X is a draft).
+        // F2 approves Y for their 3: nobody fully evaluated yet (X is a draft).
         $three = array_slice($this->ots, 0, 3);
         $this->save(2, $this->fill($y, '15', $three), true)->assertOk();
         $row = $this->compilationRow($this->subjectA);
@@ -319,8 +321,8 @@ class CoeResultManagementFlowTest extends TestCase
         // First 3: 25 + 15 = 40 each; the rest: 25 + 5 = 30 each.
         $this->assertSame(round((3 * 40 + ($n - 3) * 30) / $n / 80 * 100, 1), $row['average']);
 
-        // Subject B: nothing approved, so no row.
-        $this->assertNull($this->compilationRow($this->subjectB));
+        // Subject B: nothing approved yet, still listed with everyone pending.
+        $this->assertSame([0, $n], [$this->compilationRow($this->subjectB)['approved'], $this->compilationRow($this->subjectB)['pending']]);
 
         $evaluated = $this->actingAs($this->admin)->get(route('admin.coe.result-compilation.participants', [
             'course' => $this->drive->course_master_pk, 'subject' => $this->subjectA, 'status' => 'evaluated',
@@ -332,8 +334,13 @@ class CoeResultManagementFlowTest extends TestCase
         $pendingWholeCourse = $this->actingAs($this->admin)->get(route('admin.coe.result-compilation.participants', [
             'course' => $this->drive->course_master_pk, 'status' => 'pending',
         ]))->assertOk();
-        // Subject B is not compiled yet, so with A complete nobody is pending.
-        $this->assertCount(0, $pendingWholeCourse->viewData('rows'));
+        // Subject B has no approved marks, so everyone is still pending on the course.
+        $this->assertCount($n, $pendingWholeCourse->viewData('rows'));
+
+        // A row opens its own drive only (?drive=).
+        $this->actingAs($this->admin)->get(route('admin.coe.result-compilation.participants', [
+            'course' => $this->drive->course_master_pk, 'subject' => $this->subjectA, 'status' => 'evaluated', 'drive' => $this->drive->id,
+        ]))->assertOk()->assertViewHas('drive', (int) $this->drive->id);
     }
 
     public function test_notify_for_pending_reaches_the_responsible_faculty(): void
@@ -461,13 +468,17 @@ class CoeResultManagementFlowTest extends TestCase
         $this->assertSame(0, $page->viewData('pending'));
         $this->assertCount(count($this->ots), $rows);
 
-        // The Figma's six subject columns are always there; the two held carry their drive max.
+        // Only the subjects the drive holds are columns, each with its drive max; Total (A) is theirs.
         $subjects = $page->viewData('subjects');
-        $this->assertSame(array_map(fn ($l) => 'f:'.$l, array_keys(\App\Services\COE\ResultMarksService::MERIT_SUBJECTS)), array_slice(array_keys($subjects), 0, 6));
-        $this->assertSame(100.0, array_sum(array_column(array_filter($subjects, fn ($s) => $s['columns'] !== []), 'max')));
+        $this->assertCount(2, $subjects);
+        $this->assertSame([], array_filter($subjects, fn ($s) => $s['columns'] === []));
+        $this->assertSame(100.0, array_sum(array_column($subjects, 'max')));
+        $this->assertSame(100.0, $page->viewData('maxA'));
         $this->assertSame($page->viewData('maxA') + $page->viewData('maxB'), $page->viewData('max'));
-        // No Director Assessment drive and no ICT / Hindi subject: '-' there, Figma max in the header.
+        $this->assertSame(\App\Services\COE\CourseParticipants::plainName($this->drive->drive_name) ?: 'Examination Drive #'.$this->drive->id, $rows[$o0]['drive']);
+        // No Director Assessment drive: Figma max in the header; no ICT / Hindi subject: no column.
         $this->assertSame(\App\Services\COE\ResultMarksService::DIRECTOR_MAX, $page->viewData('maxB'));
+        $this->assertSame([], $page->viewData('qualifying'));
         $this->assertSame([55.0, null, ['ICT' => null, 'Hindi' => null]], [$rows[$o0]['total_a'], $rows[$o0]['director'], $rows[$o0]['qualifying']]);
         $this->assertCount(count($subjects), $rows[$o0]['subjects']);
 

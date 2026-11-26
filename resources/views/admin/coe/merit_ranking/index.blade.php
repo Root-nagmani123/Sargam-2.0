@@ -79,7 +79,7 @@
                             @endforeach
                         </select>
                     </div>
-                    {{-- Drive narrows the Re-exam list (main drives with re-exams); merit stays course-wide. --}}
+                    {{-- Drive: that examination drive only (its subjects and marks); also narrows the Re-exam list. --}}
                     <div class="programme-dt-filter-select mr-filter">
                         <label class="mr-filter-cap" for="mrFilterDrive">Drive</label>
                         <select name="drive" id="mrFilterDrive" class="form-select">
@@ -152,6 +152,7 @@
                                 <th scope="col">Roll No.</th>
                                 <th scope="col">OT Code</th>
                                 <th scope="col">Officer Trainee</th>
+                                <th scope="col">Examination Drive</th>
                                 <th scope="col">Service</th>
                                 @foreach ($subjects as $s)
                                     <th scope="col">{{ $s['name'] }}{!! $head($s['max']) !!}</th>
@@ -172,6 +173,7 @@
                                     <td class="coe-nowrap">{{ $row['roll'] ?: '-' }}</td>
                                     <td>{{ $row['code'] ?: '-' }}</td>
                                     <td class="coe-nowrap">{{ $row['name'] ?: '-' }}</td>
+                                    <td>{{ ($row['drive'] ?? '') ?: '-' }}</td>
                                     <td>{{ $row['service'] ?: '-' }}</td>
                                     @foreach ($subjects as $spk => $s)
                                         @if ($isRx && array_key_exists($spk, $row['reexam']['subjects']))
@@ -243,7 +245,8 @@ $(function () {
         searchToggle: '#mrSearchToggle',
         searchSlot: '#mrDtSearch',
         colvisGrid: '#mrColumnToggleGrid',
-        colvisKey: 'coeMeritRanking:hiddenColumns:v4',
+        // v5: the Examination Drive column and per-drive subject columns changed the indexes.
+        colvisKey: 'coeMeritRanking:hiddenColumns:v5',
         empty: { title: 'No Ranked Officers', zeroTitle: 'No Officers Found', text: 'Nobody on this course has all their marks approved and moderated yet. Courses show here once an exam on an Active drive is over.' }
     });
 

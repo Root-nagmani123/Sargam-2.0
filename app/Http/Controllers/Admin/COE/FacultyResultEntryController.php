@@ -47,7 +47,8 @@ class FacultyResultEntryController extends Controller
     public function save(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'course' => ['required', 'integer'],
+            // No course: the All Courses sheet.
+            'course' => ['nullable', 'integer'],
             'subject' => ['nullable', 'integer'],
             'component' => ['nullable', 'string', 'max:64'],
             'marks' => ['array'],
@@ -57,13 +58,13 @@ class FacultyResultEntryController extends Controller
 
         $sheet = $this->results->entrySheet(
             $request->user(),
-            (int) $data['course'],
+            isset($data['course']) ? (int) $data['course'] : null,
             isset($data['subject']) ? (int) $data['subject'] : null,
             $data['component'] ?? null,
         );
-        // The sheet falls back to another course, all subjects or all components when the
+        // The sheet falls back to all courses, all subjects or all components when the
         // asked one is not the user's; saving must never land on columns other than those asked for.
-        if ($sheet['coursePk'] !== (int) $data['course']
+        if ($sheet['coursePk'] !== (isset($data['course']) ? (int) $data['course'] : null)
             || (isset($data['subject']) && $sheet['subjectPk'] !== (int) $data['subject'])
             || (isset($data['component']) && $sheet['componentKey'] !== $data['component'])) {
             return response()->json(['message' => 'You are not assigned to marks entry on this course, subject or component.'], 403);

@@ -79,12 +79,18 @@
                         <tbody>
                             @foreach ($rows as $row)
                                 @php
-                                    // A re-exam row (ResultMarksService::reexamCompilationRows) carries its drive id.
+                                    // One row = one examination drive × subject: a main row opens with ?drive=,
+                                    // a re-exam row (ResultMarksService::reexamCompilationRows) with ?reexam=.
                                     $q = ['course' => $row['course_pk'], 'subject' => $row['subject_pk'], 'scope' => $scope]
-                                        + ($row['reexam'] ? ['reexam' => $row['reexam']] : []);
+                                        + ($row['reexam'] ? ['reexam' => $row['reexam']] : [])
+                                        + (($row['drive_id'] ?? null) ? ['drive' => $row['drive_id']] : []);
                                 @endphp
                                 <tr>
-                                    <td>{{ $row['course'] }}</td>
+                                    {{-- The Course filter matches the course name exactly, not the drive under it. --}}
+                                    <td data-search="{{ $row['course'] }}">
+                                        {{ $row['course'] }}
+                                        @if (! empty($row['drive']))<div class="coe-muted small">{{ $row['drive'] }}</div>@endif
+                                    </td>
                                     <td class="coe-col-wrap">
                                         {{ $row['subject'] }}
                                         <div class="coe-muted small">{{ $row['code'] !== '' ? $row['code'].' · ' : '' }}Maximum {{ \App\Services\COE\ResultMarksService::number($row['max']) }}@if ($row['reexam']) <span class="rcp-reexam-tag">(Re-exam)</span>@endif</div>
@@ -103,7 +109,7 @@
                                         @elseif ($row['pending'] > 0 && ! $isArchived)
                                             <button type="button" class="coe-act coe-act--edit coe-act--wide rcp-notify"
                                                     data-course="{{ $row['course_pk'] }}" data-subject="{{ $row['subject_pk'] }}"
-                                                    data-reexam="{{ $row['reexam'] }}">
+                                                    data-reexam="{{ $row['reexam'] }}" data-drive="{{ $row['drive_id'] ?? '' }}">
                                                 <span class="coe-act__icon"><i class="bi bi-chat-square-dots" aria-hidden="true"></i></span>
                                                 <span class="coe-act__label">Notify for Pending</span>
                                             </button>
@@ -155,7 +161,7 @@ $(function () {
         $.ajax({
             url: @json(route('admin.coe.result-compilation.notify')),
             method: 'POST',
-            data: { course: $btn.data('course'), subject: $btn.data('subject'), reexam: $btn.data('reexam') || '' },
+            data: { course: $btn.data('course'), subject: $btn.data('subject'), reexam: $btn.data('reexam') || '', drive: $btn.data('drive') || '' },
             headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
         }).done(function (res) {
             Swal.fire({ icon: 'success', title: 'Notify for Pending', text: res.message });
