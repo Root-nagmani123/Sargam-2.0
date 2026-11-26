@@ -10,6 +10,7 @@ class ProtocolRequestGuest extends Model
     protected $table = 'protocol_request_guests';
 
     protected $fillable = [
+        'salutation',
         'batch_id',
         'guest_name',
         'age',
@@ -29,5 +30,14 @@ class ProtocolRequestGuest extends Model
     public function batch(): BelongsTo
     {
         return $this->belongsTo(ProtocolRequestBatch::class, 'batch_id');
+    }
+
+    public static function salutationTypes()
+    {
+        return [
+            'Mr.'    => 'Mr.',
+            'Mrs.'   => 'Mrs.',
+            'Ms.'    => 'Ms.',
+        ];
     }
 }

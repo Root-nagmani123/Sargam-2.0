@@ -22,4 +22,11 @@ class TicketRequest extends Model
     {
         return $this->hasMany(TicketJourney::class, 'ticket_id')->orderBy('sort_order');
     }
+
+    public static function mealTypes(){
+        return [
+            'Veg' => 'Veg',
+            'Non-Veg' => 'Non-Veg',
+        ];
+    }
 }

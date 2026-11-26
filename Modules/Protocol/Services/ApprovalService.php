@@ -164,11 +164,12 @@ class ApprovalService
         }
 
         // Booking permissions decide the scope; requests recommended to this user
-        // (the approver) are always included on top, whatever their permissions
+        // (the approver) are always included on top, whatever their permissions.
+        // Use whereHas for recommendation history so multiple log entries never duplicate a request.
         return ProtocolRequest::where(function ($q) use ($userPermissions) {
             $q->where(function ($scope) use ($userPermissions) {
                 if (in_array('protocol.recommended_booking', $userPermissions)) {
-                    $scope->where('status', 'recommended');
+                    $scope->where('recommended_to_id', Auth::id());
                     return;
                 }
 
@@ -190,7 +191,9 @@ class ApprovalService
                 empty($requestTypes)
                     ? $scope->whereRaw('1 = 0')
                     : $scope->whereIn('request_type', $requestTypes);
-            })->orWhere('recommended_to_id', Auth::id());
+            })
+                ->orWhere('recommended_to_id', Auth::id())
+                ->orWhereHas('logs', fn ($logs) => $logs->where('recommended_to_id', Auth::id()));
         });
     }
 
@@ -237,12 +240,37 @@ class ApprovalService
     {
         // A request awaiting this user's final decision opens the approver screen
         $editUrl = $data->status === ProtocolRequest::STATUS_RECOMMENDED && (int) $data->recommended_to_id === (int) Auth::id()
-            ? route('protocol.manager.review', $data->id)
+            ? route('protocol.approval.review', $data->id)
             : route('protocol.approval.review', $data->id);
-        return '<div class="pr-act-group" role="group" aria-label="Row actions">'
+        $btn = '<div class="pr-act-group" role="group" aria-label="Row actions">'
             . '<a href="' . $editUrl . '" class="pr-act pr-act--review">'
             . '<span class="pr-act__icon"><i class="bi bi-clipboard-check" aria-hidden="true"></i></span>'
-            . '<span class="pr-act__label">Review</span></a></div>';
+            . '<span class="pr-act__label">Review</span></a>';
+
+        if (
+            $data->request_type === 'vehicle'
+            && $data->status === ProtocolRequest::STATUS_APPROVED
+            && $data->current_stage === 'Completed'
+        ) {
+            $btn .= '<button type="button" class="pr-act pr-act--bill"'
+                . ' data-request-id="' . e($data->id) . '"'
+                . ' data-request-number="' . e($data->request_number) . '"'
+                . ' aria-label="Generate bill for request ' . e($data->request_number) . '">'
+                . '<span class="pr-act__icon"><i class="bi bi-receipt" aria-hidden="true"></i></span>'
+                . '<span class="pr-act__label">Generate Bill</span></button>';
+        }
+
+        if ($data->request_type === 'ticket' && $data->status === ProtocolRequest::STATUS_APPROVED) {
+            $btn .= '<button type="button" class="pr-act pr-act--upload js-ticket-upload"'
+                . ' data-upload-url="' . e(route('protocol.requests.ticket-files.store', $data->id)) . '"'
+                . ' data-request-id="' . e($data->id) . '"'
+                . ' data-request-number="' . e($data->request_number) . '"'
+                . ' aria-label="Upload tickets for request ' . e($data->request_number) . '">'
+                . '<span class="pr-act__icon"><i class="bi bi-upload" aria-hidden="true"></i></span>'
+                . '<span class="pr-act__label">Upload Tickets</span></button>';
+        }
+
+        return $btn . '</div>';
     }
 
     public function getAll()

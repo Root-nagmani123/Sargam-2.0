@@ -5,7 +5,7 @@
     <div class="timeline-item done">
       <div class="t-title">
         {{ ucfirst($log->action) }}
-        <span class="text-muted fw-normal">&mdash; {{ $log->actionBy->name ?? 'User #' . $log->action_by_id }} ({{ $log->action_by_role }})</span>
+        <span class="text-muted fw-normal">&mdash; {{ $log->actionBy->name ?? 'User #' . $log->action_by_id }}</span>
       </div>
       @if ($log->action === 'recommended' && $log->recommended_to_id)
         <div class="t-meta">Recommended to <span class="fw-semibold text-body">{{ \Modules\Protocol\Entities\ProtocolRequest::userDisplayName($log->recommendedTo) ?? 'User #' . $log->recommended_to_id }}</span></div>

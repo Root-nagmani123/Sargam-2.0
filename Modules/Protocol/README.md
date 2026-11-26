@@ -72,16 +72,30 @@ custom properties at the top, no preprocessing required).
 
 The module ships no migrations. The DBA creates and maintains the Protocol
 tables on every environment (production gets them before the release tag is
-deployed). The code expects these 11 tables:
+deployed). The code expects these 13 tables:
 
 - `protocol_request_batches`, `protocol_request_guests` — one combined-form submission and its guests
 - `protocol_requests` — the master table (polymorphic link to the type table, status, current handler)
 - `protocol_guest_houses`, `protocol_vehicle_passes`, `protocol_vehicle_legs`, `protocol_tickets`, `protocol_ticket_journeys` — type-specific fields
 - `protocol_approval_logs` — the audit trail (action, actor, role, remarks, timestamp)
+- `protocol_request_drivers` — one assigned vehicle and driver per approved vehicle request
+- `protocol_ticket_files` — private PDF/image files uploaded for approved ticket requests
 - `protocol_driver_masters`, `protocol_vehicle_masters` — admin masters
 
-Permission rows are not tables: every route is gated with `can:protocol.*`, and a
-missing row denies everyone. Run this once on each environment as a deploy step
+Create `protocol_request_drivers` from
+[`Database/protocol_request_drivers.sql`](./Database/protocol_request_drivers.sql) before
+deploying this change. Its unique `protocol_request_id` foreign key keeps one driver
+assignment per request.
+
+Vehicle/driver and guest-house assignments are saved after approval by users with the
+configured Protocol Staff role. Ticket requests do not have an assignment step.
+
+Ticket file uploads use the private filesystem disk. Create their metadata table from
+[`Database/protocol_ticket_files.sql`](./Database/protocol_ticket_files.sql) before enabling uploads.
+
+Permission rows are not tables. Ticket-file uploads require an authenticated user and
+intentionally allow any signed-in user to upload files for an approved ticket request.
+Run this once on each environment as a deploy step
 (it creates rows only, grants nothing, and is safe to re-run):
 
 ```bash
@@ -117,6 +131,9 @@ Who may decide is controlled by which roles carry `protocol.protocol_requests`. 
 this (per-type deciding, or blocking self-approval) is a policy change to make in code
 deliberately, not a bug fix.
 
+Protocol Staff may recommend or re-recommend a request while it is not approved.
+Direct approval remains available only while a request is pending.
+
 `ProtocolRolesSeeder` and `config('protocol.roles')` still exist for the sidebar partial's
 `@role(...)` checks; the routes themselves do not use `role:` middleware.
 
@@ -143,7 +160,9 @@ refused (422 when raising a request, 403 when deciding).
 | `protocol.requests.my` | `/protocol/my-requests` | `protocol.my_requests` |
 | `protocol.requests.show` / `edit` / `update` | `/protocol/requests/{id}` | `protocol.my_requests`, own requests only |
 | `protocol.requests.all` | `/protocol/all-requests` | `protocol.protocol_requests` |
+| `protocol.requests.ticket-files.store` | `POST /protocol/all-requests/{id}/ticket-files` | Authenticated; approved ticket requests only |
 | `protocol.approval.queue` / `review` / `decide` | `/protocol/approval/queue/...` | `protocol.protocol_requests` |
+| `protocol.approval.assign` | `POST /protocol/approval/queue/{id}/assign` | Configured Protocol Staff role; approved vehicle/guest-house requests only |
 | `protocol.recommended-booking` | `/protocol/recommended_booking` | `protocol.recommended_booking` |
 | `protocol.manager.queue` / `review` / `decide` | `/protocol/manager/queue/...` | signed in; only the person the request is recommended to |
 | `protocol.driver-master.*` | `/protocol/driver-master` | `protocol.driver_master` |

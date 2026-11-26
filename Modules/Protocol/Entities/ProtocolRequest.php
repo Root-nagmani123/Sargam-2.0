@@ -5,6 +5,7 @@ namespace Modules\Protocol\Entities;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
@@ -67,6 +68,16 @@ class ProtocolRequest extends Model
     public function batch(): BelongsTo
     {
         return $this->belongsTo(ProtocolRequestBatch::class, 'batch_id');
+    }
+
+    public function vehicleDriver(): HasOne
+    {
+        return $this->hasOne(ProtocolRequestDriver::class, 'protocol_request_id');
+    }
+
+    public function ticketFiles(): HasMany
+    {
+        return $this->hasMany(ProtocolTicketFile::class, 'protocol_request_id')->latest();
     }
 
     public function logs(): HasMany
@@ -178,27 +189,62 @@ class ProtocolRequest extends Model
     }
 
     /**
-     * Protocol Staff recommends the request to a manager/senior staff
-     * for final approval.
+     * Protocol Staff rejects a request before it is recommended for further review.
      */
-    public function recommendTo(int $protocolStaffId, int $recommendedToId, ?string $remarks = null): void
+    public function rejectDirectly(int $protocolStaffId, string $remarks): void
     {
-        DB::transaction(function () use ($protocolStaffId, $recommendedToId, $remarks) {
+        DB::transaction(function () use ($protocolStaffId, $remarks) {
             $this->lockStatus(self::STATUS_PENDING, 'This request is no longer awaiting Protocol Staff review.');
+
+            $this->update([
+                'status' => self::STATUS_REJECTED,
+                'current_stage' => 'Completed',
+                'decided_by_id' => $protocolStaffId,
+                'decided_at' => now(),
+            ]);
+
+            $this->logs()->create([
+                'action' => 'rejected',
+                'action_by_id' => $protocolStaffId,
+                'action_by_role' => 'Protocol Staff',
+                'remarks' => $remarks,
+                'action_at' => now(),
+            ]);
+        });
+    }
+
+    /**
+     * Protocol Staff or the assigned approver recommends a request for further review.
+     */
+    public function recommendTo(
+        int $actorEmployeeId,
+        int $recommendedToId,
+        ?string $remarks = null,
+        string $actionByRole = 'Protocol Staff'
+    ): void {
+        DB::transaction(function () use ($actorEmployeeId, $recommendedToId, $remarks, $actionByRole) {
+            $status = static::whereKey($this->getKey())->lockForUpdate()->value('status');
+            abort_unless(
+                in_array($status, [self::STATUS_PENDING, self::STATUS_RECOMMENDED, self::STATUS_REJECTED], true),
+                403,
+                'This request can no longer be recommended.'
+            );
 
             $recommendedToName = self::userDisplayName(User::find($recommendedToId)) ?? "User #{$recommendedToId}";
             $this->update([
                 'status' => self::STATUS_RECOMMENDED,
                 'current_stage' => "Recommended to {$recommendedToName}",
-                'protocol_staff_id' => $protocolStaffId,
+                'protocol_staff_id' => $actorEmployeeId,
                 'recommended_to_id' => $recommendedToId,
                 'recommended_at' => now(),
+                'decided_by_id' => null,
+                'decided_at' => null,
             ]);
 
             $this->logs()->create([
                 'action' => 'recommended',
-                'action_by_id' => $protocolStaffId,
-                'action_by_role' => 'Protocol Staff',
+                'action_by_id' => $actorEmployeeId,
+                'action_by_role' => $actionByRole,
                 'recommended_to_id' => $recommendedToId,
                 'remarks' => $remarks,
                 'action_at' => now(),
@@ -335,8 +381,8 @@ class ProtocolRequest extends Model
     /**
      * Eager-load the polymorphic `requestable` together with the nested
      * relation that only exists on some of its possible morph targets
-     * (VehiclePassRequest::legs, TicketRequest::journeys — GuestHouseRequest
-     * has neither). Plain dot-notation eager loading (`with('requestable.legs')`)
+     * (VehiclePassRequest::legs / vehicle, GuestHouseRequest::assignedGuestHouse,
+     * and TicketRequest::journeys). Plain dot-notation eager loading (`with('requestable.legs')`)
      * does not work reliably across a MorphTo when only some target
      * classes define the relation, so this uses morphWith() instead.
      */
@@ -344,7 +390,8 @@ class ProtocolRequest extends Model
     {
         return static::with(['requestable' => function ($morphTo) {
             $morphTo->morphWith([
-                VehiclePassRequest::class => ['legs'],
+                GuestHouseRequest::class => ['assignedGuestHouse'],
+                VehiclePassRequest::class => ['legs', 'vehicle'],
                 TicketRequest::class => ['journeys'],
             ]);
         }]);
@@ -359,7 +406,8 @@ class ProtocolRequest extends Model
     {
         return $this->load(['requestable' => function ($morphTo) {
             $morphTo->morphWith([
-                VehiclePassRequest::class => ['legs'],
+                GuestHouseRequest::class => ['assignedGuestHouse'],
+                VehiclePassRequest::class => ['legs', 'vehicle'],
                 TicketRequest::class => ['journeys'],
             ]);
         }]);
@@ -413,4 +461,18 @@ class ProtocolRequest extends Model
         $name = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''));
         return $name !== '' ? $name : null;
     }
+
+    public static function getPurposes()
+    {
+        return [
+            'Official Visit' => 'Official Visit',
+            'Training Programme' => 'Training Programme',
+            'Field Visit' => 'Field Visit',
+            'Guest Lecture' => 'Guest Lecture',
+            'Family Visit' => 'Family Visit',
+            'Personal Visit' => 'Personal Visit',
+            'Other' => 'Other',
+        ];
+    }
+
 }

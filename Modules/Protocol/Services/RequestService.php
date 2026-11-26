@@ -126,6 +126,11 @@ class RequestService
                 break;
         }
 
+        $status = $request->input('status');
+        if (is_string($status) && array_key_exists($status, config('protocol.statuses', []))) {
+            $query->where('status', $status);
+        }
+
         return $query;
     }
 

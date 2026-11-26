@@ -17,6 +17,7 @@ use Modules\Protocol\Entities\VehiclePassRequest;
 use Modules\Protocol\Http\Requests\{StoreCombinedRequest,UpdateCombinedRequest};
 use Modules\Protocol\Authorization\ProtocolRequestAccess;
 use App\Models\CourseMaster;
+use Modules\Protocol\Entities\ProtocolRequestGuest;
 use Modules\Protocol\Services\{RequestService,ApprovalService,ProtocolDirectory};
 
 class ProtocolRequestController extends Controller
@@ -77,7 +78,10 @@ class ProtocolRequestController extends Controller
     {
         $courses = CourseMaster::activeRunning()->orderBy('course_name', 'asc')->pluck('course_name', 'pk');
         $vehicles = $this->vehicleOptions();
-        return view('protocol::requests.create', compact('courses', 'vehicles'));
+        $mealTypes = TicketRequest::mealTypes();
+        $salutationTypes = ProtocolRequestGuest::salutationTypes();
+        $purposes = ProtocolRequest::getPurposes();
+        return view('protocol::requests.create', compact('courses', 'vehicles', 'mealTypes', 'salutationTypes', 'purposes'));
     }
 
     /**
@@ -105,7 +109,7 @@ class ProtocolRequestController extends Controller
         abort_unless(ProtocolRequestAccess::canView(Auth::user(), $protocolRequest), 403);
 
         $protocolRequest->loadFullRequestable();
-        $protocolRequest->load('batch.guests', 'logs.actionBy');
+        $protocolRequest->load('batch.guests', 'logs.actionBy', 'vehicleDriver');
         return view('protocol::requests.show', compact('protocolRequest'));
     }
 
@@ -123,7 +127,10 @@ class ProtocolRequestController extends Controller
             ->pluck('course_name', 'pk');
         // Active vehicles, but keep the one already saved even if it has since been retired
         $vehicles = $this->vehicleOptions($protocolRequest->request_type === 'vehicle' ? $protocolRequest->requestable?->vehicle_type : null);
-        return view('protocol::requests.edit', compact('protocolRequest', 'courses', 'vehicles'));
+        $mealTypes = TicketRequest::mealTypes();
+        $salutationTypes = ProtocolRequestGuest::salutationTypes();
+        $purposes = ProtocolRequest::getPurposes();
+        return view('protocol::requests.edit', compact('protocolRequest', 'courses', 'vehicles', 'mealTypes', 'salutationTypes', 'purposes'));
     }
 
     /**
@@ -186,6 +193,7 @@ class ProtocolRequestController extends Controller
                 // 2. Create the shared guest rows (entered once, reused across types)
                 foreach (($data['guests'] ?? []) as $index => $guestData) {
                     $batch->guests()->create([
+                        'salutation' => $guestData['salutation'],
                         'guest_name' => $guestData['guest_name'],
                         'age' => $guestData['age'] ?? null,
                         'sex' => $guestData['sex'],
@@ -258,7 +266,7 @@ class ProtocolRequestController extends Controller
             'no_of_guests' => $data['no_of_guests'] ?? null,
             'no_of_rooms' => $data['no_of_rooms'] ?? null,
             'remarks' => $data['remarks'] ?? null,
-            'payment_done_by' => $data['payment_done_by'] ?? 'Myself',
+            'payment_done_by' => $this->paymentValue($data, 'payment_done_by'),
         ]);
 
         return $this->linkProtocolRequest($batch, 'guesthouse', $requestable, GuestHouseRequest::class);
@@ -269,7 +277,7 @@ class ProtocolRequestController extends Controller
         $requestable = VehiclePassRequest::create([
             'vehicle_type' => $data['vehicle_type'] ?? null,
             'one_way_booking' => (bool) ($data['one_way_booking'] ?? false),
-            'payment_will_be_done_by' => $data['payment_will_be_done_by'] ?? 'Myself',
+            'payment_will_be_done_by' => $this->paymentValue($data, 'payment_will_be_done_by'),
         ]);
 
         foreach (($data['legs'] ?? []) as $index => $legData) {
@@ -308,8 +316,9 @@ class ProtocolRequestController extends Controller
                 'train_flight_bus_no' => $journeyData['train_flight_bus_no'] ?? null,
                 'quota' => $journeyData['quota'] ?? 'General',
                 'book_if_waiting' => (bool) ($journeyData['book_if_waiting'] ?? false),
-                'payment_will_be_done_by' => $journeyData['payment_will_be_done_by'] ?? 'Myself',
+                'payment_will_be_done_by' => $this->paymentValue($journeyData, 'payment_will_be_done_by'),
                 'remarks' => $journeyData['remarks'] ?? null,
+                'meal_type' => $journeyData['meal_type'] ?? null,
                 'sort_order' => $index,
             ]);
         }
@@ -406,6 +415,7 @@ class ProtocolRequestController extends Controller
 
                 // 2. Shared guest rows
                 $this->syncChildren($batch->guests(), $data['guests'] ?? [], fn($g, $index) => [
+                     'salutation' => $g['salutation'],
                     'guest_name' => $g['guest_name'],
                     'age' => $g['age'] ?? null,
                     'sex' => $g['sex'],
@@ -503,7 +513,8 @@ class ProtocolRequestController extends Controller
             'no_of_guests' => $data['no_of_guests'] ?? null,
             'no_of_rooms' => $data['no_of_rooms'] ?? null,
             'remarks' => $data['remarks'] ?? null,
-            'payment_done_by' => $data['payment_done_by'] ?? 'Myself',
+            'payment_done_by' => $this->paymentValue($data, 'payment_done_by'),
+            'meal_type' => $data['meal_type'] ?? null,
         ]);
     }
 
@@ -512,7 +523,7 @@ class ProtocolRequestController extends Controller
         $requestable->update([
             'vehicle_type' => $data['vehicle_type'] ?? null,
             'one_way_booking' => (bool) ($data['one_way_booking'] ?? false),
-            'payment_will_be_done_by' => $data['payment_will_be_done_by'] ?? 'Myself',
+            'payment_will_be_done_by' => $this->paymentValue($data, 'payment_will_be_done_by'),
         ]);
 
         // Assumes VehiclePassRequest::legs() => hasMany(VehicleLeg::class, 'vehicle_pass_id')
@@ -531,6 +542,15 @@ class ProtocolRequestController extends Controller
         ]);
     }
 
+    protected function paymentValue(array $data, string $field): string
+    {
+        $value = $data[$field] ?? 'Myself';
+
+        return $value === 'Other'
+            ? 'Other: ' . trim($data[$field . '_other'] ?? '')
+            : $value;
+    }
+
     protected function updateTicketRequest($requestable, array $data): void
     {
         // Assumes TicketRequest::journeys() => hasMany(TicketJourney::class, 'ticket_id')
@@ -544,7 +564,7 @@ class ProtocolRequestController extends Controller
             'train_flight_bus_no' => $j['train_flight_bus_no'] ?? null,
             'quota' => $j['quota'] ?? 'General',
             'book_if_waiting' => (bool) ($j['book_if_waiting'] ?? false),
-            'payment_will_be_done_by' => $j['payment_will_be_done_by'] ?? 'Myself',
+            'payment_will_be_done_by' => $this->paymentValue($j, 'payment_will_be_done_by'),
             'remarks' => $j['remarks'] ?? null,
             'sort_order' => $index,
         ]);

@@ -5,8 +5,13 @@ namespace Modules\Protocol\Http\Controllers;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Modules\Protocol\Entities\ProtocolRequest;
+use Modules\Protocol\Http\Requests\AssignProtocolRequest;
 use Modules\Protocol\Http\Requests\ReviewProtocolRequest;
+use Modules\Protocol\Http\Requests\StoreProtocolTicketFilesRequest;
 use App\Models\HostelBuildingMaster;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Http\Request;
@@ -59,9 +64,8 @@ class ApprovalController extends Controller
     /**
      * Review screen for a single pending request.
      */
-    public function review(ProtocolRequest $protocolRequest)
+    public function review(Request $request, ProtocolRequest $protocolRequest)
     {
-
         if ($protocolRequest->request_type === 'guesthouse') {
             $protocolRequest->load([
                 'requestable.assignedGuestHouse',
@@ -75,9 +79,20 @@ class ApprovalController extends Controller
             $protocolRequest->load([
                 'batch.guests',
                 'logs.actionBy',
+                'vehicleDriver',
             ]);
-          
-        $GuestHouse = HostelBuildingMaster::orderBy('building_name', 'asc')->pluck('building_name', 'pk');
+
+            if ($request->boolean('pdf')) {
+                return Pdf::loadView('protocol::approval.request-pdf', compact('protocolRequest'))
+                    ->setPaper('a4', 'landscape')
+                    ->setOptions([
+                        'isRemoteEnabled' => false,
+                        'isPhpEnabled' => false,
+                    ])
+                    ->stream($protocolRequest->request_number . '.pdf');
+            }
+
+        $GuestHouse = HostelBuildingMaster::orderBy('building_name', 'asc')->where('active_room', 1)->pluck('building_name', 'pk');
        
 
         // The list of Protocol Approvers that can be recommended to
@@ -86,44 +101,143 @@ class ApprovalController extends Controller
         return view('protocol::approval.review', compact('protocolRequest', 'managers','GuestHouse'));
     }
 
+    public function assign(AssignProtocolRequest $request, ProtocolRequest $protocolRequest)
+    {
+        $data = $request->validated();
+        $staffEmployeeId = app(ProtocolDirectory::class)->employeePkFor(Auth::user());
+        abort_if($staffEmployeeId === null, 403, 'Your login is not linked to a single employee record. Please contact the administrator.');
+
+        DB::transaction(function () use ($data, $protocolRequest, $staffEmployeeId) {
+            $lockedRequest = ProtocolRequest::whereKey($protocolRequest->getKey())->lockForUpdate()->firstOrFail();
+            abort_if(
+                $lockedRequest->status !== ProtocolRequest::STATUS_APPROVED
+                    || ! in_array($lockedRequest->request_type, ['vehicle', 'guesthouse'], true),
+                403,
+                'Only approved vehicle and guest house requests can be assigned.'
+            );
+
+            if ($lockedRequest->request_type === 'vehicle') {
+                $lockedRequest->vehicleDriver()->updateOrCreate([], [
+                    'vehicle_no' => $data['vehicle_no'],
+                    'vehicle_name' => $data['vehicle_name'],
+                    'driver_name' => $data['driver_name'],
+                    'driver_number' => $data['driver_number'],
+                ]);
+            } else {
+                $requestable = $lockedRequest->requestable;
+                abort_if($requestable === null, 404, 'The guest house request details could not be found.');
+                $requestable->update(['assigned_guest_house' => $data['assigned_guest_house']]);
+            }
+
+            $lockedRequest->logs()->create([
+                'action' => 'assigned',
+                'action_by_id' => $staffEmployeeId,
+                'action_by_role' => 'Protocol Staff',
+                'remarks' => null,
+                'action_at' => now(),
+            ]);
+        });
+
+        return redirect()
+            ->route('protocol.approval.review', $protocolRequest)
+            ->with('success', "Assignment saved for request {$protocolRequest->request_number}.");
+    }
+
     /**
-     * Handle the Protocol Staff decision: Approve directly, or Recommend
-     * to a selected manager/staff member.
+     * Handle Protocol Staff decisions and onward recommendations from the assigned approver.
      */
     public function decide(ReviewProtocolRequest $request, ProtocolRequest $protocolRequest)
     {
-        abort_if($protocolRequest->status !== ProtocolRequest::STATUS_PENDING, 403,
-            'This request is no longer awaiting Protocol Staff review.');
+        abort_if($protocolRequest->status === ProtocolRequest::STATUS_APPROVED, 403,
+            'This request is already approved.');
 
         $data = $request->validated();
+        $isAssignedApprover = $protocolRequest->status === ProtocolRequest::STATUS_RECOMMENDED
+            && (int) $protocolRequest->recommended_to_id === (int) Auth::id();
+
+        if (in_array($data['decision'], ['approve', 'reject'], true)) {
+            abort_if($protocolRequest->status !== ProtocolRequest::STATUS_PENDING, 403,
+                'Only pending requests can be decided directly.');
+        } elseif ($protocolRequest->status !== ProtocolRequest::STATUS_PENDING) {
+            abort_unless(Auth::user()->can('protocol.protocol_requests') || $isAssignedApprover, 403,
+                'Only Protocol Staff or the assigned approver may recommend this request further.');
+        }
 
         // Recorded as the employee the login resolves to (pk, else a unique pk_old)
         $staffEmployeeId = app(ProtocolDirectory::class)->employeePkFor(Auth::user());
         abort_if($staffEmployeeId === null, 403, 'Your login is not linked to a single employee record. Please contact the administrator.');
 
-        // One transaction, so the guest house assignment rolls back if another
-        // staff member decided the request first (the model re-checks under a lock)
         $message = DB::transaction(function () use ($data, $protocolRequest, $staffEmployeeId) {
-            // If Protocol Staff assigned a physical guest house, persist it
-            // on the type-specific row (employee never sets this themselves).
-            if ($protocolRequest->request_type === 'guesthouse' && ! empty($data['assigned_guest_house'])) {
-                $protocolRequest->requestable?->update([
-                    'assigned_guest_house' => $data['assigned_guest_house'],
-                ]);
-            }
-
             if ($data['decision'] === 'approve') {
                 $protocolRequest->approveDirectly($staffEmployeeId, $data['remarks'] ?? null);
                 return "Request {$protocolRequest->request_number} approved.";
             }
 
-            $protocolRequest->recommendTo($staffEmployeeId, (int) $data['recommended_to_id'], $data['remarks'] ?? null);
+            if ($data['decision'] === 'reject') {
+                $protocolRequest->rejectDirectly($staffEmployeeId, $data['remarks']);
+                return "Request {$protocolRequest->request_number} rejected.";
+            }
+
+            $recommendationRole = $protocolRequest->status === ProtocolRequest::STATUS_RECOMMENDED
+                && (int) $protocolRequest->recommended_to_id === (int) Auth::id()
+                    ? 'Manager'
+                    : 'Protocol Staff';
+            $protocolRequest->recommendTo(
+                $staffEmployeeId,
+                (int) $data['recommended_to_id'],
+                $data['remarks'] ?? null,
+                $recommendationRole
+            );
             return "Request {$protocolRequest->request_number} recommended for further approval.";
         });
 
         return redirect()
             ->route('protocol.requests.all')
             ->with('success', $message);
+    }
+
+    public function storeTicketFiles(StoreProtocolTicketFilesRequest $request, ProtocolRequest $protocolRequest)
+    {
+        $storedFiles = [];
+        $files = $request->validated()['ticket_files'];
+
+        try {
+            foreach ($files as $file) {
+                $path = $file->store('protocol/tickets/' . $protocolRequest->getKey(), 'private');
+                if (! $path) {
+                    throw new \RuntimeException('Unable to store an uploaded ticket file.');
+                }
+
+                $storedFiles[] = [
+                    'file' => $file,
+                    'path' => $path,
+                ];
+            }
+
+            DB::transaction(function () use ($storedFiles, $protocolRequest) {
+                foreach ($storedFiles as $storedFile) {
+                    $file = $storedFile['file'];
+
+                    $protocolRequest->ticketFiles()->create([
+                        'uploaded_by_user_id' => Auth::id(),
+                        'file_path' => $storedFile['path'],
+                        'original_name' => Str::substr($file->getClientOriginalName(), 0, 255),
+                        'mime_type' => $file->getMimeType(),
+                        'file_size' => $file->getSize(),
+                    ]);
+                }
+            });
+        } catch (\Throwable $exception) {
+            if ($storedFiles !== []) {
+                Storage::disk('private')->delete(array_column($storedFiles, 'path'));
+            }
+
+            throw $exception;
+        }
+
+        return redirect()
+            ->route('protocol.requests.all')
+            ->with('success', count($storedFiles) . ' ticket file(s) uploaded successfully.');
     }
 
 }

@@ -17,7 +17,7 @@ return [
             'route_segment' => 'guest-house',
         ],
         'vehicle' => [
-            'label' => 'Vehicle Pass',
+            'label' => 'Vehicle',
             'model' => \Modules\Protocol\Entities\VehiclePassRequest::class,
             'route_segment' => 'vehicle-pass',
         ],

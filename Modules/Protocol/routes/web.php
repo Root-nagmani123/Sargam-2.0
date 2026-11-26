@@ -34,11 +34,16 @@ Route::group(['middleware' => ['web', 'auth'], 'prefix' => 'protocol', 'as' => '
     // Requests routes
     Route::middleware('can:protocol.protocol_requests')->group(function () {
         Route::get('/all-requests', [ApprovalController::class, 'allRequests'])->name('requests.all');
+        Route::post('/all-requests/{protocolRequest}/ticket-files', [ApprovalController::class, 'storeTicketFiles'])->name('requests.ticket-files.store');
         Route::group(['prefix' => 'approval','as' => 'approval.',], function () {
             Route::get('/queue', [ApprovalController::class, 'queue'])->name('queue');
             Route::get('/queue/{protocolRequest}', [ApprovalController::class, 'review'])->name('review');
             Route::post('/queue/{protocolRequest}/decide', [ApprovalController::class, 'decide'])->name('decide');
         });
+    });
+
+    Route::group(['prefix' => 'approval','as' => 'approval.',], function () {
+        Route::post('/queue/{protocolRequest}/assign', [ApprovalController::class, 'assign'])->name('assign');
     });
 
     // Driver Master routes

@@ -41,7 +41,7 @@
           <label class="type-check-card" for="type_vehicle">
             <input type="checkbox" name="types[]" value="vehicle" id="type_vehicle" class="type-check-input" onchange="toggleSection('vehicle')">
             <div class="icon-circle pr-tint-vehicle"><i class="bi bi-truck-front"></i></div>
-            <div class="fw-bold text-dark">Vehicle Pass</div>
+            <div class="fw-bold text-dark">Vehicle Demand</div>
             <div class="text-muted small mt-1">Request an official vehicle for local/outstation travel</div>
           </label>
         </div>
@@ -76,12 +76,9 @@
           <label class="form-label">Purpose <span class="required-star">*</span></label>
           <select name="purpose" class="form-select" onchange="toggleOther(this.value)" required>
             <option value="">-- select --</option>
-            <option value="Official Visit">Official Visit</option>
-            <option value="Training Programme">Training Programme</option>
-            <option value="Field Visit">Field Visit</option>
-            <option value="Guest Lecture">Guest Lecture</option>
-            <option value="Family Visit">Family Visit</option>
-            <option value="Other">Other</option>
+            @foreach ($purposes as $k => $purpose)
+                <option value="{{ $k }}">{{ $purpose }}</option>
+            @endforeach
           </select>
           <div class="invalid-feedback" id="err_purpose"></div>
         </div>
@@ -114,6 +111,7 @@
           <table class="table table-bordered table-sm mb-0" id="guestsTable">
             <thead class="table-primary">
               <tr>
+                <th>Salutation</th>
                 <th>Guest Name <span class="required-star">*</span></th>
                 <th style="width:80px;">Age</th>
                 <th style="width:110px;">Sex <span class="required-star">*</span></th>
@@ -155,14 +153,25 @@
             <input type="number" name="guest_house[no_of_rooms]" class="form-control section-field" data-section="guesthouse" value="1" min="1">
             <div class="invalid-feedback" id="err_guest_house-no_of_rooms"></div>
           </div>
-          <div class="col-md-2">
-            <label class="form-label">Payment Done By</label>
-            <select name="guest_house[payment_done_by]" class="form-select">
-              <option>Myself</option>
-              <option>Institute</option>
-              <option>Guest</option>
-            </select>
-            <div class="invalid-feedback" id="err_guest_house-payment_done_by"></div>
+          <div class="col-md-4">
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label">Payment Done By</label>
+                <select name="guest_house[payment_done_by]" class="form-select" data-payment-other-select data-section="guesthouse" data-other-payment-input="guestHousePaymentOther">
+                  <option value="Myself">Myself</option>
+                  <option value="Academy">Academy</option>
+                  <option value="Institute">Institute</option>
+                  <option value="Guest">Guest</option>
+                  <option value="Other">Other</option>
+                </select>
+                <div class="invalid-feedback" id="err_guest_house-payment_done_by"></div>
+              </div>
+              <div class="col-6" data-other-payment-container style="display:none;">
+                <label class="form-label" for="guestHousePaymentOther">Specify Other <span class="required-star">*</span></label>
+                <input type="text" name="guest_house[payment_done_by_other]" id="guestHousePaymentOther" class="form-control" maxlength="93" placeholder="Enter payer">
+                <div class="invalid-feedback" id="err_guest_house-payment_done_by_other"></div>
+              </div>
+            </div>
           </div>
           <div class="col-12">
             <label class="form-label">Remarks</label>
@@ -215,17 +224,28 @@
             <tbody id="vehicleLegsTableBody"></tbody>
           </table>
         </div>
-        <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addVehicleLeg()"><i class="bi bi-plus-lg"></i> Add Leg</button>
+        <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addVehicleLeg()">Add</button>
 
         <div class="row g-3 mt-3">
-          <div class="col-md-4">
-            <label class="form-label">Payment Will Be Done By</label>
-            <select name="vehicle[payment_will_be_done_by]" class="form-select">
-              <option>Myself</option>
-              <option>Institute</option>
-              <option>Guest</option>
-            </select>
-            <div class="invalid-feedback" id="err_vehicle-payment_will_be_done_by"></div>
+          <div class="col-md-6">
+            <div class="row g-2">
+              <div class="col-6">
+                <label class="form-label">Payment Will Be Done By</label>
+                <select name="vehicle[payment_will_be_done_by]" class="form-select" data-payment-other-select data-section="vehicle" data-other-payment-input="vehiclePaymentOther">
+                  <option value="Myself">Myself</option>
+                  <option value="Academy">Academy</option>
+                  <option value="Institute">Institute</option>
+                  <option value="Guest">Guest</option>
+                  <option value="Other">Other</option>
+                </select>
+                <div class="invalid-feedback" id="err_vehicle-payment_will_be_done_by"></div>
+              </div>
+              <div class="col-6" data-other-payment-container style="display:none;">
+                <label class="form-label" for="vehiclePaymentOther">Specify Other <span class="required-star">*</span></label>
+                <input type="text" name="vehicle[payment_will_be_done_by_other]" id="vehiclePaymentOther" class="form-control" maxlength="93" placeholder="Enter payer">
+                <div class="invalid-feedback" id="err_vehicle-payment_will_be_done_by_other"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -275,12 +295,32 @@ let guestRowIndex = 0;
 let vehicleLegIndex = 0;
 let ticketJourneyIndex = 0;
 
+function updateOtherPaymentField(select) {
+  const input = document.getElementById(select.dataset.otherPaymentInput);
+  const container = input.closest('[data-other-payment-container]');
+  const section = select.closest('.form-section');
+  const visible = select.value === 'Other' && section.style.display !== 'none';
+
+  container.style.display = visible ? 'block' : 'none';
+  input.required = visible;
+}
+
+function updateOtherPaymentFields(section) {
+  section.querySelectorAll('[data-payment-other-select]').forEach(updateOtherPaymentField);
+}
+
+document.querySelectorAll('[data-payment-other-select]').forEach(select => {
+  select.addEventListener('change', () => updateOtherPaymentField(select));
+  updateOtherPaymentField(select);
+});
+
 function toggleSection(type) {
   const checkbox = document.getElementById('type_' + type);
   const section = document.getElementById('section_' + type);
   section.style.display = checkbox.checked ? 'block' : 'none';
 
   section.querySelectorAll('.section-field').forEach(f => f.required = checkbox.checked);
+  updateOtherPaymentFields(section);
 
   // Ensure at least one row exists when a section is opened for the first time
   if (checkbox.checked) {
@@ -305,6 +345,17 @@ function addGuestRow() {
   const row = document.createElement('tr');
   row.dataset.rowIndex = i;
   row.innerHTML = `
+    
+    <td>
+      <select name="guests[${i}][salutation]" class="form-select" required>
+        <option value="">Select</option>
+        @foreach($salutationTypes as $k => $salutation)
+          <option value="{{ $k }}">{{ $salutation }}</option>
+        @endforeach
+      </select>
+      <div class="invalid-feedback" data-err="guests.${i}.salutation"></div>
+    </td>
+    
     <td>
       <input type="text" name="guests[${i}][guest_name]" class="form-control" required>
       <div class="invalid-feedback" data-err="guests.${i}.guest_name"></div>
@@ -448,13 +499,31 @@ function addTicketJourney() {
           <label class="form-check-label" for="waiting_${i}">Book if in waiting</label>
         </div>
       </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Meal</label>
+        <select name="ticket[journeys][${i}][meal_type]" class="form-select">
+          <option value="">Select</option>
+          @foreach($mealTypes as $k => $meal)
+            <option value="{{ $k }}">{{ $meal }}</option>
+          @endforeach
+        </select>
+      </div>
+
       <div class="col-md-3">
         <label class="form-label">Payment Will Be Done By</label>
-        <select name="ticket[journeys][${i}][payment_will_be_done_by]" class="form-select">
-          <option>Myself</option>
-          <option>Institute</option>
-          <option>Guest</option>
+        <select name="ticket[journeys][${i}][payment_will_be_done_by]" class="form-select" data-payment-other-select data-other-payment-input="ticketPaymentOther_${i}">
+          <option value="Myself">Myself</option>
+          <option value="Academy">Academy</option>
+          <option value="Guest">Guest</option>
+          <option value="Other">Other</option>
         </select>
+        <div class="invalid-feedback" data-err="ticket.journeys.${i}.payment_will_be_done_by"></div>
+      </div>
+      <div class="col-md-3" data-other-payment-container style="display:none;">
+        <label class="form-label" for="ticketPaymentOther_${i}">Specify Other <span class="required-star">*</span></label>
+        <input type="text" name="ticket[journeys][${i}][payment_will_be_done_by_other]" id="ticketPaymentOther_${i}" class="form-control" maxlength="93" placeholder="Enter payer">
+        <div class="invalid-feedback" data-err="ticket.journeys.${i}.payment_will_be_done_by_other"></div>
       </div>
       <div class="col-md-6">
         <label class="form-label">Remarks</label>
@@ -463,6 +532,9 @@ function addTicketJourney() {
     </div>
   `;
   wrap.appendChild(block);
+  const paymentSelect = block.querySelector('[data-payment-other-select]');
+  paymentSelect.addEventListener('change', () => updateOtherPaymentField(paymentSelect));
+  updateOtherPaymentField(paymentSelect);
 }
 
 // Seed one guest row by default so the table isn't empty on load

@@ -27,6 +27,12 @@
       <div class="card-body">
         <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
           <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+            <select id="my-requests-status-filter" class="form-select w-auto" aria-label="Filter by status">
+              <option value="">All statuses</option>
+              @foreach (config('protocol.statuses', []) as $status => $label)
+                <option value="{{ $status }}">{{ $label }}</option>
+              @endforeach
+            </select>
             <div class="programme-dt-search" data-dt-search-for="my-requests-table"></div>
           </div>
         </div>
@@ -47,3 +53,19 @@
     </div>
   </div>
 @endsection
+
+@push('scripts')
+  <script>
+    $(function () {
+      var table = $('#my-requests-table').DataTable();
+
+      table.on('preXhr.dt', function (event, settings, data) {
+        data.status = $('#my-requests-status-filter').val();
+      });
+
+      $('#my-requests-status-filter').on('change', function () {
+        table.draw();
+      });
+    });
+  </script>
+@endpush

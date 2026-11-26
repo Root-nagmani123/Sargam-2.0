@@ -2,7 +2,7 @@
 
 namespace Modules\Protocol\Services;
 
-use App\Models\{EmployeeMaster,User};
+use App\Models\{EmployeeMaster, FacultyMaster, User};
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -32,6 +32,7 @@ class ProtocolDirectory
             })
             ->leftJoin('designation_master as d', 'e.designation_master_pk', '=', 'd.pk')
             ->where('uc.user_category', '!=', 'S')
+            ->where('e.status', 1)
             ->select(
                 'e.pk as employee_pk',
                 DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
@@ -103,5 +104,12 @@ class ProtocolDirectory
         $employeePk = User::resolveEmployeePk($user->user_id);
 
         return $employeePk === null ? null : (int) $employeePk;
+    }
+
+    public function facultyApprovers()
+    {
+        return  FacultyMaster::join('employee_master as e', 'employee_master_pk','=','e.pk')->join('user_credentials as uc', 'uc.user_id', '=', 'e.pk')->select( 'e.pk as employee_pk',
+                DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
+                DB::raw('uc.pk as user_credentials_pk'))->where(['faculty_type' => FacultyMaster::FACULTY_TYPE_INTERNAL, 'status' => 1])->get();
     }
 }

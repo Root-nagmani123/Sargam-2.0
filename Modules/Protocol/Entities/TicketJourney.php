@@ -21,6 +21,7 @@ class TicketJourney extends Model
         'quota',
         'book_if_waiting',
         'payment_will_be_done_by',
+        'meal_type',
         'remarks',
         'sort_order',
     ];

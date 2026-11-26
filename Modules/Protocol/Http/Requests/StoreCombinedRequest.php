@@ -42,6 +42,7 @@ class StoreCombinedRequest extends FormRequest
 
             // ---------------- Guest Details (shared, repeatable) ----------------
             'guests' => ['required', 'array', 'min:1'],
+            'guests.*.salutation' => ['required'],
             'guests.*.guest_name' => ['required', 'string', 'max:150'],
             'guests.*.age' => ['nullable', 'integer', 'min:0', 'max:120'],
             'guests.*.sex' => ['required', 'in:Male,Female'],
@@ -58,11 +59,13 @@ class StoreCombinedRequest extends FormRequest
             'guest_house.no_of_rooms' => [Rule::requiredIf($hasGuestHouse), 'nullable', 'integer', 'min:1', 'max:50'],
             'guest_house.remarks' => ['nullable', 'string', 'max:1000'],
             'guest_house.payment_done_by' => ['nullable', 'string', 'max:100'],
+            'guest_house.payment_done_by_other' => [Rule::requiredIf($hasGuestHouse && $this->input('guest_house.payment_done_by') === 'Other'), 'nullable', 'string', 'max:93'],
 
             // ---------------- Vehicle section ----------------
             'vehicle.vehicle_type' => [Rule::requiredIf($hasVehicle), 'nullable', 'string', 'max:100'],
             'vehicle.one_way_booking' => ['nullable', 'boolean'],
             'vehicle.payment_will_be_done_by' => ['nullable', 'string', 'max:100'],
+            'vehicle.payment_will_be_done_by_other' => [Rule::requiredIf($hasVehicle && $this->input('vehicle.payment_will_be_done_by') === 'Other'), 'nullable', 'string', 'max:93'],
 
             'vehicle.legs' => [Rule::requiredIf($hasVehicle), 'nullable', 'array', 'min:1'],
             'vehicle.legs.*.date_time_from' => [Rule::requiredIf($hasVehicle), 'nullable', 'date'],
@@ -88,8 +91,32 @@ class StoreCombinedRequest extends FormRequest
             'ticket.journeys.*.quota' => ['nullable', 'string', 'max:100'],
             'ticket.journeys.*.book_if_waiting' => ['nullable', 'boolean'],
             'ticket.journeys.*.payment_will_be_done_by' => ['nullable', 'string', 'max:100'],
+            'ticket.journeys.*.payment_will_be_done_by_other' => ['nullable', 'string', 'max:93'],
             'ticket.journeys.*.remarks' => ['nullable', 'string', 'max:1000'],
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            if (! in_array('ticket', (array) $this->input('types', []), true)) {
+                return;
+            }
+
+            foreach ((array) $this->input('ticket.journeys', []) as $index => $journey) {
+                if (
+                    is_array($journey)
+                    && ($journey['payment_will_be_done_by'] ?? null) === 'Other'
+                    && (! is_string($journey['payment_will_be_done_by_other'] ?? null)
+                        || trim($journey['payment_will_be_done_by_other']) === '')
+                ) {
+                    $validator->errors()->add(
+                        "ticket.journeys.{$index}.payment_will_be_done_by_other",
+                        'Please specify who will pay when Other is selected.'
+                    );
+                }
+            }
+        });
     }
 
 
@@ -123,6 +150,8 @@ class StoreCombinedRequest extends FormRequest
             'guests.required' => 'Please provide at least one guest.',
             'guests.array' => 'Guest details must be submitted in a valid format.',
             'guests.min' => 'Please add at least one guest.',
+
+            'guests.*.salutation' => 'Salutation is required',
 
             'guests.*.guest_name.required' => 'Guest name is required.',
             'guests.*.guest_name.string' => 'Guest name must be valid text.',
@@ -174,6 +203,9 @@ class StoreCombinedRequest extends FormRequest
 
             'guest_house.payment_done_by.string' => 'Payment Done By must be valid text.',
             'guest_house.payment_done_by.max' => 'Payment Done By cannot exceed 100 characters.',
+            'guest_house.payment_done_by_other.required' => 'Please specify who will pay when Other is selected.',
+            'guest_house.payment_done_by_other.string' => 'Other payer must be valid text.',
+            'guest_house.payment_done_by_other.max' => 'Other payer cannot exceed 93 characters.',
 
             // ---------------- Vehicle ----------------
             'vehicle.vehicle_type.required' => 'Vehicle Type is required for the Vehicle request.',
@@ -184,6 +216,9 @@ class StoreCombinedRequest extends FormRequest
 
             'vehicle.payment_will_be_done_by.string' => 'Vehicle Payment Done By must be valid text.',
             'vehicle.payment_will_be_done_by.max' => 'Vehicle Payment Done By cannot exceed 100 characters.',
+            'vehicle.payment_will_be_done_by_other.required' => 'Please specify who will pay when Other is selected.',
+            'vehicle.payment_will_be_done_by_other.string' => 'Other payer must be valid text.',
+            'vehicle.payment_will_be_done_by_other.max' => 'Other payer cannot exceed 93 characters.',
 
             'vehicle.legs.required' => 'Please provide at least one travel leg for the Vehicle request.',
             'vehicle.legs.array' => 'Vehicle travel details must be submitted in a valid format.',
@@ -252,7 +287,8 @@ class StoreCombinedRequest extends FormRequest
 
             'ticket.journeys.*.payment_will_be_done_by.string' => 'Ticket Payment Done By must be valid text.',
             'ticket.journeys.*.payment_will_be_done_by.max' => 'Ticket Payment Done By cannot exceed 100 characters.',
-
+            'ticket.journeys.*.payment_will_be_done_by_other.string' => 'Other payer must be valid text.',
+            'ticket.journeys.*.payment_will_be_done_by_other.max' => 'Other payer cannot exceed 93 characters.',
             'ticket.journeys.*.remarks.string' => 'Ticket remarks must be valid text.',
             'ticket.journeys.*.remarks.max' => 'Ticket remarks cannot exceed 1000 characters.',
         ];

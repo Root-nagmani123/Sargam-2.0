@@ -26,14 +26,14 @@
     <h3 class="pr-card__title">Guest Details</h3>
     <div class="programme-dt-panel">
       <div class="table-responsive">
-        <table class="table align-middle mb-0 w-100 programme-dt-table">
+        <table class="table align-middle mb-0 w-100 programme-dt-table pr-guest-table">
           <thead>
             <tr><th>Guest Name</th><th>Age</th><th>Sex</th><th>Designation</th><th>Mobile No</th><th>Email ID</th><th>ID Proof</th><th>Main</th></tr>
           </thead>
           <tbody>
             @forelse ($batch->guests as $guest)
               <tr>
-                <td class="fw-semibold">{{ $guest->guest_name }}</td>
+                <td class="fw-semibold">{{ ($guest->salutation ?? '').' '.$guest->guest_name }}</td>
                 <td>{{ $guest->age ?? '—' }}</td>
                 <td>{{ $guest->sex ?? '—' }}</td>
                 <td>{{ $guest->designation ?? '—' }}</td>
@@ -75,7 +75,7 @@
       </div>
       <div class="programme-dt-panel">
         <div class="table-responsive">
-          <table class="table align-middle mb-0 w-100 programme-dt-table">
+          <table class="table align-middle mb-0 w-100 programme-dt-table pr-vehicle-legs-table">
             <thead><tr><th>From</th><th>To</th><th>Pickup</th><th>Drop</th><th>Persons</th><th>Remarks</th></tr></thead>
             <tbody>
               @foreach ($d->legs as $leg)
@@ -92,6 +92,17 @@
           </table>
         </div>
       </div>
+      @if ($protocolRequest->vehicleDriver)
+        <div class="mt-3">
+          <h4 class="pr-card__title">Assigned Vehicle and Driver</h4>
+          <div class="pr-facts">
+            <div><span class="pr-fact__label">Vehicle Number</span><div class="pr-fact__value">{{ $protocolRequest->vehicleDriver->vehicle_no }}</div></div>
+            <div><span class="pr-fact__label">Vehicle Name</span><div class="pr-fact__value">{{ $protocolRequest->vehicleDriver->vehicle_name }}</div></div>
+            <div><span class="pr-fact__label">Driver Name</span><div class="pr-fact__value">{{ $protocolRequest->vehicleDriver->driver_name }}</div></div>
+            <div><span class="pr-fact__label">Driver Number</span><div class="pr-fact__value">{{ $protocolRequest->vehicleDriver->driver_number }}</div></div>
+          </div>
+        </div>
+      @endif
 
     @else
       @foreach ($d->journeys as $journey)
@@ -105,6 +116,7 @@
             <div><span class="pr-fact__label">Train/Flight/Bus</span><div class="pr-fact__value">{{ $journey->train_flight_bus_name }} ({{ $journey->train_flight_bus_no }})</div></div>
             <div><span class="pr-fact__label">Quota</span><div class="pr-fact__value">{{ $journey->quota }}</div></div>
             <div><span class="pr-fact__label">Waitlist OK</span><div class="pr-fact__value">{{ $journey->book_if_waiting ? 'Yes' : 'No' }}</div></div>
+            <div><span class="pr-fact__label">Meal</span><div class="pr-fact__value">{{ $journey->meal_type ?? '-' }}</div></div>
             <div><span class="pr-fact__label">Payment By</span><div class="pr-fact__value">{{ $journey->payment_will_be_done_by }}</div></div>
           </div>
           @if ($journey->remarks)

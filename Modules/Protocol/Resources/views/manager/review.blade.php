@@ -47,7 +47,7 @@
           </div>
 
           <div class="pr-form-footer">
-            <a href="{{ route('protocol.manager.queue') }}" class="btn pr-btn-cancel">Cancel</a>
+            <a href="{{ route('protocol.requests.all') }}" class="btn pr-btn-cancel">Cancel</a>
             <button type="submit" class="btn btn-outline-danger" onclick="document.getElementById('managerDecisionField').value='reject'">
               <i class="bi bi-x-lg me-1"></i> Reject
             </button>

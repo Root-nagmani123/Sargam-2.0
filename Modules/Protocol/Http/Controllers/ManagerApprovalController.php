@@ -4,6 +4,7 @@ namespace Modules\Protocol\Http\Controllers;
 
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Modules\Protocol\Entities\ProtocolRequest;
 use Modules\Protocol\Http\Requests\ManagerDecisionRequest;
 use Modules\Protocol\Services\ProtocolDirectory;
@@ -36,7 +37,7 @@ class ManagerApprovalController extends Controller
         );
 
         $protocolRequest->loadFullRequestable();
-        $protocolRequest->load('batch.guests', 'logs.actionBy');
+        $protocolRequest->load('batch.guests', 'logs.actionBy', 'vehicleDriver');
 
         return view('protocol::manager.review', compact('protocolRequest'));
     }
@@ -61,7 +62,9 @@ class ManagerApprovalController extends Controller
         abort_if($managerEmployeeId === null, 403, 'Your login is not linked to a single employee record. Please contact the administrator.');
 
         if ($data['decision'] === 'approve') {
-            $protocolRequest->approveByManager($managerEmployeeId, $data['remarks'] ?? null);
+            DB::transaction(function () use ($data, $managerEmployeeId, $protocolRequest) {
+                $protocolRequest->approveByManager($managerEmployeeId, $data['remarks'] ?? null);
+            });
             $message = "Request {$protocolRequest->request_number} approved.";
         } else {
             $protocolRequest->rejectByManager($managerEmployeeId, $data['remarks'] ?? null);
@@ -69,7 +72,7 @@ class ManagerApprovalController extends Controller
         }
 
         return redirect()
-            ->route('protocol.manager.queue')
+            ->route('protocol.requests.all')
             ->with('success', $message);
     }
 }

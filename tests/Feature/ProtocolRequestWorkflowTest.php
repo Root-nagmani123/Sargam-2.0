@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Modules\Protocol\Entities\ProtocolRequest;
 use Modules\Protocol\Entities\VehiclePassRequest;
+use Modules\Protocol\Services\ApprovalService;
 use Modules\Protocol\Services\ProtocolDirectory;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -77,7 +78,7 @@ class ProtocolRequestWorkflowTest extends TestCase
 
         $this->actingAs($manager)
             ->post(route('protocol.manager.decide', $request), ['decision' => 'approve', 'remarks' => 'test'])
-            ->assertRedirect(route('protocol.manager.queue'));
+            ->assertRedirect(route('protocol.requests.all'));
 
         $request->refresh();
         $this->assertSame(ProtocolRequest::STATUS_APPROVED, $request->status);
@@ -109,10 +110,129 @@ class ProtocolRequestWorkflowTest extends TestCase
 
         $this->actingAs($manager)
             ->post(route('protocol.manager.decide', $request), ['decision' => 'reject', 'remarks' => 'Dates clash with the convocation'])
-            ->assertRedirect(route('protocol.manager.queue'));
+            ->assertRedirect(route('protocol.requests.all'));
         $request->refresh();
         $this->assertSame(ProtocolRequest::STATUS_REJECTED, $request->status);
         $this->assertSame('Dates clash with the convocation', $this->lastLog($request)->remarks);
+    }
+
+    public function test_protocol_staff_can_reject_a_pending_request_with_remarks(): void
+    {
+        $owner = $this->employeeLogin();
+        $staff = $this->allow($this->employeeLogin([$owner->pk]), 'protocol.protocol_requests');
+        $request = $this->seedRequest($owner);
+        $staffEmployeePk = app(ProtocolDirectory::class)->employeePkFor($staff);
+
+        $this->actingAs($staff)
+            ->get(route('protocol.approval.review', $request))
+            ->assertOk()
+            ->assertSee('Approve')
+            ->assertSee('Recommend')
+            ->assertSee('Reject')
+            ->assertSee('required when rejecting');
+
+        $this->actingAs($staff)
+            ->post(route('protocol.approval.decide', $request), ['decision' => 'reject'])
+            ->assertSessionHasErrors('remarks');
+        $this->assertSame(ProtocolRequest::STATUS_PENDING, $request->refresh()->status);
+
+        $this->actingAs($staff)
+            ->post(route('protocol.approval.decide', $request), [
+                'decision' => 'reject',
+                'remarks' => 'Insufficient information',
+            ])
+            ->assertRedirect(route('protocol.requests.all'))
+            ->assertSessionHas('success', "Request {$request->request_number} rejected.");
+
+        $request->refresh();
+        $this->assertSame(ProtocolRequest::STATUS_REJECTED, $request->status);
+        $this->assertSame($staffEmployeePk, (int) $request->decided_by_id);
+        $this->assertSame('rejected', $this->lastLog($request)->action);
+        $this->assertSame('Protocol Staff', $this->lastLog($request)->action_by_role);
+        $this->assertSame('Insufficient information', $this->lastLog($request)->remarks);
+    }
+
+    public function test_review_actions_are_limited_to_pending_or_current_recommended_user(): void
+    {
+        $owner = $this->employeeLogin();
+        $staff = $this->allow($this->employeeLogin([$owner->pk]), 'protocol.protocol_requests');
+        $manager = $this->employeeLogin([$owner->pk, $staff->pk]);
+        $nextManager = $this->employeeLogin([$owner->pk, $staff->pk, $manager->pk]);
+        $approverRole = Role::firstOrCreate(['name' => ProtocolDirectory::APPROVER_ROLE, 'guard_name' => 'web']);
+        $manager->assignRole($approverRole);
+        $nextManager->assignRole($approverRole);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $recommended = $this->seedRequest($owner, ProtocolRequest::STATUS_RECOMMENDED, null, [
+            'recommended_to_id' => $manager->pk,
+        ]);
+
+        $this->actingAs($manager)
+            ->get(route('protocol.approval.review', $recommended))
+            ->assertOk()
+            ->assertSee('Approve')
+            ->assertSee('Reject')
+            ->assertSee('Recommend')
+            ->assertSee(route('protocol.requests.all'), false)
+            ->assertSee(route('protocol.manager.decide', $recommended), false);
+
+        $this->actingAs($manager)
+            ->post(route('protocol.approval.decide', $recommended), [
+                'decision' => 'recommend',
+                'recommended_to_id' => $nextManager->pk,
+                'remarks' => 'Please review this request.',
+            ])
+            ->assertRedirect(route('protocol.requests.all'));
+
+        $recommended->refresh();
+        $this->assertSame(ProtocolRequest::STATUS_RECOMMENDED, $recommended->status);
+        $this->assertSame($nextManager->pk, (int) $recommended->recommended_to_id);
+        $this->assertSame('Manager', $this->lastLog($recommended)->action_by_role);
+
+        $this->actingAs($staff)
+            ->get(route('protocol.approval.review', $recommended))
+            ->assertOk()
+            ->assertDontSee('id="decisionForm"', false)
+            ->assertDontSee('id="recommendModal"', false);
+
+        foreach ([ProtocolRequest::STATUS_APPROVED, ProtocolRequest::STATUS_REJECTED] as $status) {
+            $decided = $this->seedRequest($owner, $status);
+            $this->actingAs($staff)
+                ->get(route('protocol.approval.review', $decided))
+                ->assertOk()
+                ->assertDontSee('id="decisionForm"', false)
+                ->assertDontSee('id="recommendModal"', false);
+        }
+    }
+
+    public function test_all_requests_includes_log_recommendations_once(): void
+    {
+        $owner = $this->employeeLogin();
+        $recommendedUser = $this->employeeLogin([$owner->pk]);
+        $otherUser = $this->employeeLogin([$owner->pk, $recommendedUser->pk]);
+        $request = $this->seedRequest($owner, ProtocolRequest::STATUS_APPROVED, null, [
+            'recommended_to_id' => $otherUser->pk,
+        ]);
+        $actorEmployeeId = app(ProtocolDirectory::class)->employeePkFor($owner);
+
+        foreach (['First recommendation', 'Second recommendation'] as $remarks) {
+            $request->logs()->create([
+                'action' => 'recommended',
+                'action_by_id' => $actorEmployeeId,
+                'action_by_role' => 'Protocol Staff',
+                'recommended_to_id' => $recommendedUser->pk,
+                'remarks' => $remarks,
+                'action_at' => now(),
+            ]);
+        }
+
+        $this->actingAs($recommendedUser);
+        $listedRequests = app(ApprovalService::class)
+            ->scopedQuery()
+            ->whereKey($request->getKey())
+            ->get();
+
+        $this->assertCount(1, $listedRequests);
+        $this->assertSame($request->getKey(), $listedRequests->first()->getKey());
     }
 
     /** PR #355 F-002: a manager the request was not recommended to gets 403, with or without remarks */
@@ -155,7 +275,7 @@ class ProtocolRequestWorkflowTest extends TestCase
 
         $this->actingAs($approver)
             ->post(route('protocol.manager.decide', $request), ['decision' => 'approve'])
-            ->assertRedirect(route('protocol.manager.queue'));
+            ->assertRedirect(route('protocol.requests.all'));
 
         $request->refresh();
         $this->assertSame($approverEmployeePk, (int) $request->decided_by_id);
