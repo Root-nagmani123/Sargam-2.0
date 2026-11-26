@@ -7,7 +7,7 @@ where `idx_user_id` is already present (F-019). One **data step** is required
 (section 3): the PR ships a one-off reconcile command, `members:reconcile-role-mappings`,
 which changes `employee_role_mapping`.
 
-Last updated: 26 Nov 2026 (after PR #354 review round 15; F-003, F-006, F-019).
+Last updated: 26 Nov 2026 (after PR #354 review round 16; F-020: migration step and rollback).
 
 ---
 
@@ -75,6 +75,7 @@ notification effect.
 ### 3.1 On staging (a copy of live), before production
 
 ```bash
+php artisan migrate --force                          # adds the user_id index if missing (F-019)
 php artisan members:reconcile-role-mappings          # dry run, writes nothing
 php artisan members:reconcile-role-mappings -v       # same, plus one line per login
 ```
@@ -96,11 +97,17 @@ Step 3 and the show page by design.
 Only after section 4 is filled in and the decision allows it:
 
 1. Deploy the code.
-2. `php artisan members:reconcile-role-mappings -v > reconcile-dryrun-prod.log`, and compare
+2. `php artisan migrate --force`. This runs
+   `2026_11_26_000001_ensure_user_credentials_user_id_index`, which adds an index on
+   `user_credentials.user_id` only if none led by `user_id` exists (F-019). If the release
+   process already runs `migrate`, confirm in its output that this migration ran (or was
+   already recorded) before going on. Do not continue until it has run: the Member wizard
+   save locks by `user_id` (F-018) and relies on this index.
+3. `php artisan members:reconcile-role-mappings -v > reconcile-dryrun-prod.log`, and compare
    its totals with the staging ones.
-3. `php artisan members:reconcile-role-mappings --apply -v > reconcile-apply-prod.log`
-4. `php artisan members:reconcile-role-mappings`, which must report 0 logins to change.
-5. Keep both log files with the release record. They are the rollback record (section 5).
+4. `php artisan members:reconcile-role-mappings --apply -v > reconcile-apply-prod.log`
+5. `php artisan members:reconcile-role-mappings`, which must report 0 logins to change.
+6. Keep both log files with the release record. They are the rollback record (section 5).
 
 Notes:
 
@@ -116,7 +123,7 @@ Notes:
   (F-017). A Users-screen role save made while the command runs is never undone, so role
   edits do not need to be frozen during the run. The `-v` line for each login is printed
   after its write and lists the rows actually `added` / `removed`.
-- If step 4's second dry run reports any login, re-run `--apply --user=<pk>` for it.
+- If step 5's second dry run reports any login, re-run `--apply --user=<pk>` for it.
 
 ## 4. Sign-off (fill in before production)
 
@@ -131,14 +138,25 @@ Notes:
 | Confirm: a Member wizard save changes a routing row only on an explicit tick/untick (section 2), as implemented | *pending* | Product owner | |
 | `SHOW INDEX FROM user_credentials` on live shows an index led by `user_id` (else the migration adds one) | *pending* | DBA | |
 
-If the decision is **converge on save**: skip section 3.2 steps 2–4. For non-routing
+If the decision is **converge on save**: skip section 3.2 steps 3–5 (step 2, the migration,
+still runs). For non-routing
 options, Step 3 and the show/print pages will disagree for unsaved employees until each is
 re-saved. Routing rows are not changed by `--apply`, by Users-screen saves, or by a wizard
 save made as displayed; only an explicit wizard tick or untick changes one.
 
 ## 5. Rollback
 
-- Code: revert the PR's commits. There is no migration to roll back.
+- Migration: `2026_11_26_000001_ensure_user_credentials_user_id_index` is additive and
+  non-unique, so the default is to **leave the index in place**. Old code runs unchanged
+  with it. To remove it anyway, do it **before** reverting the code, while the migration
+  file still exists:
+  `php artisan migrate:rollback --path=database/migrations/2026_11_26_000001_ensure_user_credentials_user_id_index.php`.
+  `down()` drops only `user_credentials_user_id_index`, the index this migration created,
+  never a pre-existing `idx_user_id`. That command only rolls back the migration if it is
+  in the latest batch. If a later deploy has migrated since, the DBA drops that index by
+  hand (only if it exists) and deletes its row from `migrations`.
+- Code: revert the PR's commits, after the migration step above if you chose to roll it
+  back. If you left the index, the `migrations` row stays. That is harmless.
 - Data: a code revert does **not** restore `employee_role_mapping` rows written by `--apply`,
   by Users-screen saves, or by wizard saves. To undo `--apply`, use
   `reconcile-apply-prod.log`. Each line reads
