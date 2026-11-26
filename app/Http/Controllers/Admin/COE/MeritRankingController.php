@@ -48,7 +48,9 @@ class MeritRankingController extends Controller
         }
 
         $data = ($reexam ? $this->results->reexamMerit($scope, $reexam) : null)
-            ?? $this->results->merit($scope, $coursePk, $drive) + ['reexam' => null];
+            // No course in the address (menu link, Remove Filter): the first course. "All" in the
+            // dropdown sends course= (empty) and lists every course.
+            ?? $this->results->merit($scope, $coursePk, $drive, ! $request->has('course')) + ['reexam' => null];
         $coursePk = $data['coursePk'];
 
         $statuses = $data['reexam'] ? ['Pass', 'Fail', 'Pending'] : ['Pass', 'Fail'];

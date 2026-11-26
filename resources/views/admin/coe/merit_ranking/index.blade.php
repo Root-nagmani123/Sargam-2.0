@@ -158,7 +158,9 @@
                                     <th scope="col">{{ $s['name'] }}{!! $head($s['max']) !!}</th>
                                 @endforeach
                                 <th scope="col">Total (A){!! $head($maxA) !!}</th>
-                                <th scope="col">Director Assessment{!! $head($maxB) !!}</th>
+                                @if ($hasDirector ?? true)
+                                    <th scope="col">Director Assessment{!! $head($maxB) !!}</th>
+                                @endif
                                 <th scope="col">Grand Total (A+B){!! $head($max) !!}</th>
                                 @foreach ($qualifying as $paper => $paperMax)
                                     <th scope="col">{{ $paper }}{!! $head($paperMax) !!}</th>
@@ -187,7 +189,9 @@
                                     @else
                                         <td>{{ $num($row['total_a']) }}{!! $own($row['total_a'], $maxA, $row['max']['a']) !!}</td>
                                     @endif
-                                    <td>{{ $num($row['director']) }}{!! $own($row['director'], $maxB, $row['max']['b']) !!}</td>
+                                    @if ($hasDirector ?? true)
+                                        <td>{{ $num($row['director']) }}{!! $own($row['director'], $maxB, $row['max']['b']) !!}</td>
+                                    @endif
                                     <td data-order="{{ $row['grand'] ?? 0 }}">
                                         {{-- Always the row's own course max: under All courses differ. --}}
                                         @if ($isRx)

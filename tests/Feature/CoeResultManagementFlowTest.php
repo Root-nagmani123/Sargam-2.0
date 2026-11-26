@@ -476,8 +476,9 @@ class CoeResultManagementFlowTest extends TestCase
         $this->assertSame(100.0, $page->viewData('maxA'));
         $this->assertSame($page->viewData('maxA') + $page->viewData('maxB'), $page->viewData('max'));
         $this->assertSame(\App\Services\COE\CourseParticipants::plainName($this->drive->drive_name) ?: 'Examination Drive #'.$this->drive->id, $rows[$o0]['drive']);
-        // No Director Assessment drive: Figma max in the header; no ICT / Hindi subject: no column.
-        $this->assertSame(\App\Services\COE\ResultMarksService::DIRECTOR_MAX, $page->viewData('maxB'));
+        // No Director Assessment drive: no Part B column, Grand Total = Total (A); no ICT / Hindi subject: no column.
+        $this->assertSame([false, 0.0, 100.0], [$page->viewData('hasDirector'), $page->viewData('maxB'), $page->viewData('max')]);
+        $page->assertDontSee('Director Assessment');
         $this->assertSame([], $page->viewData('qualifying'));
         $this->assertSame([55.0, null, ['ICT' => null, 'Hindi' => null]], [$rows[$o0]['total_a'], $rows[$o0]['director'], $rows[$o0]['qualifying']]);
         $this->assertCount(count($subjects), $rows[$o0]['subjects']);
@@ -530,7 +531,9 @@ class CoeResultManagementFlowTest extends TestCase
         $this->save(3, $this->fill($z, '10'), true)->assertOk();
         $this->moderateAll();
 
-        $page = $this->actingAs($this->admin)->get(route('admin.coe.merit-ranking.index'))->assertOk()->assertSee('>All</option>', false);
+        // Opened from the menu: the first course. "All" (course= empty) lists every course.
+        $this->assertNotNull($this->actingAs($this->admin)->get(route('admin.coe.merit-ranking.index'))->assertOk()->viewData('coursePk'));
+        $page = $this->actingAs($this->admin)->get(route('admin.coe.merit-ranking.index', ['course' => '']))->assertOk()->assertSee('>All</option>', false);
         $this->assertNull($page->viewData('coursePk'));
         $mine = collect($page->viewData('rows'))->where('student', $this->ots[0]['pk'])->first();
         // Everyone on the test drive has 25: all share rank 1 within their course.

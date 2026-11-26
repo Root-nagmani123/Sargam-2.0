@@ -885,12 +885,17 @@ class ResultMarksService
      *
      * @return array{courses:array<int,string>, coursePk:?int, subjects:array, maxA:?float, maxB:?float, max:?float, qualifying:array<string,?float>, rows:list<array>, pending:int, noPassMarks:list<string>}
      */
-    public function merit(string $scope, ?int $coursePk, ?int $driveId = null): array
+    public function merit(string $scope, ?int $coursePk, ?int $driveId = null, bool $firstCourseByDefault = false): array
     {
         $byCourse = $this->scopeDrives($scope)->groupBy('course_master_pk')
             ->filter(fn (Collection $drives) => $drives->contains(fn ($d) => $d->componentMaps->contains(fn ($m) => $this->examOver($d, $m))));
         $courses = $byCourse->map(fn (Collection $drives) => CourseParticipants::plainName($drives->first()->course->course_name ?? ''))
             ->sort(SORT_NATURAL | SORT_FLAG_CASE)->all();
+        // Opened with no course: the first course, so the columns are that course's subjects
+        // (All lists every course's subjects side by side).
+        if ($coursePk === null && $driveId === null && $firstCourseByDefault) {
+            $coursePk = array_key_first($courses);
+        }
         $coursePk = isset($courses[$coursePk]) ? $coursePk : null;
         // Drive filter: that one examination drive only (its course, its subjects).
         $driveCourse = $driveId ? $byCourse->search(fn (Collection $drives) => $drives->contains('id', $driveId)) : false;
@@ -944,6 +949,7 @@ class ResultMarksService
         $pending = 0;
         $noPassMarks = [];
         $perCourse = [];
+        $hasDirector = false;
         foreach ($sheets as $pk => $sheet) {
             // Total (A) is out of the subjects this course's drives hold, not the fixed list.
             $max = [];
@@ -951,7 +957,9 @@ class ResultMarksService
                 $max[$key] = $s['max'];
             }
             $a = (float) array_sum($max);
-            $b = $sheet['maxB'] ?? self::DIRECTOR_MAX;
+            // No Director Assessment drive on the course: no Part B (Grand Total = Total (A)).
+            $b = $sheet['maxB'] ?? 0.0;
+            $hasDirector = $hasDirector || $sheet['maxB'] !== null;
             $q = array_map(fn ($m) => $m, $defaultQualifying);
             foreach ($sheet['qualifying'] as $paper => $m) {
                 $q[$paper] = $m ?? $q[$paper];
@@ -979,7 +987,7 @@ class ResultMarksService
         unset($s);
         $pick = fn (string $field, $fallback) => $perCourse === [] ? $fallback : $same(array_column($perCourse, $field));
         $maxA = $pick('a', null);
-        $maxB = $pick('b', self::DIRECTOR_MAX);
+        $maxB = $hasDirector ? $pick('b', null) : 0.0;
         $qualifyingMax = [];
         foreach (array_intersect_key($defaultQualifying, $heldPapers) as $paper => $m) {
             $qualifyingMax[$paper] = $same(array_map(fn ($c) => $c['qualifying'][$paper], $perCourse));
@@ -1000,6 +1008,8 @@ class ResultMarksService
             'subjects' => $subjects,
             'maxA' => $maxA,
             'maxB' => $maxB,
+            // Director Assessment column only when a listed drive is a Director Assessment one.
+            'hasDirector' => $hasDirector,
             'max' => $maxA !== null && $maxB !== null ? $maxA + $maxB : $pick('max', null),
             'qualifying' => $qualifyingMax,
             'rows' => $rows,

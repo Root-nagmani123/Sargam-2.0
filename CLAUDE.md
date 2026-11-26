@@ -8,6 +8,14 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-26: Merit opens on the first course; Director Assessment only when held.** Merit &
+  Ranking with no `course` in the address (menu, Remove Filter) shows the first course, so its
+  columns are that course's subjects; "All" in the dropdown (`course=` empty) still lists every
+  course side by side (`merit(..., $firstCourseByDefault)`). The Director Assessment column, its
+  "/ 172.50" and Part B in Grand Total's max appear only when a listed drive is a Director
+  Assessment drive (`hasDirector`; was always shown, so Grand Total read "/ 262.50" for a 90-mark
+  course).
+
 - **2026-11-26: Moderation and Result Entry show the OT's code for that subject.** Unique
   Participant Codes are per subject, but `ResultMarksService::loadParticipants()` kept one per
   OT, so every subject showed the same code (tester: "wrong unique code" on Moderation). Each
