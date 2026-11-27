@@ -5,9 +5,10 @@ namespace App\Models\COE;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * One OT's marksheet on one course: Generated once they are ranked in Merit &
- * Ranking, Published by COE (MarksheetService). A published marksheet is read
- * from `snapshot`, never recomputed.
+ * One OT's marksheet on one examination drive (examination_drive_id; NULL on legacy
+ * course-wise marksheets published before 2026-11-27): Generated once they are ranked
+ * in that drive's Merit & Ranking, Published by COE (MarksheetService). A published
+ * marksheet is read from `snapshot`, never recomputed.
  */
 class Marksheet extends Model
 {
@@ -24,6 +25,7 @@ class Marksheet extends Model
     /** status / published_* / snapshot are set by MarksheetService::publish(), never from a request. */
     protected $fillable = [
         'course_master_pk',
+        'examination_drive_id',
         'student_master_pk',
         'serial',
         'marksheet_number',
@@ -34,6 +36,7 @@ class Marksheet extends Model
 
     protected $casts = [
         'course_master_pk' => 'integer',
+        'examination_drive_id' => 'integer',
         'student_master_pk' => 'integer',
         'serial' => 'integer',
         'status' => 'integer',

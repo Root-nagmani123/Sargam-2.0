@@ -8,6 +8,14 @@ method names to find code; line numbers drift.
 
 Each COE change gets a line here; the details live in its section below.
 
+- **2026-11-27: Merit & Ranking and marksheets are drive-wise.** Each examination drive is
+  ranked on its own marks (other drives of the course no longer hold it back); a course opens
+  on its first drive. Marksheets: one per OT per drive (`coe_marksheets.examination_drive_id`,
+  migration `2026_11_27_000001_make_coe_marksheets_per_drive`; unpublished course-wise rows
+  deleted, published kept as legacy). Re-exam follows its main drive's merit. Merit also lists
+  "Why not ranked". Details: Results → Merit & Ranking; Marksheets. Tests:
+  `CoeMeritMultiSubjectFlowTest`.
+
 - **2026-11-26: Merit opens on the first course; Director Assessment only when held.** Merit &
   Ranking with no `course` in the address (menu, Remove Filter) shows the first course, so its
   columns are that course's subjects; "All" in the dropdown (`course=` empty) still lists every
@@ -513,10 +521,13 @@ All rules in `ResultMarksService` (RMS) and `MarksModeration`.
   (`compilation()` → `courseSheet()` of one drive; every component, held or not), "Passing
   Average" is a mean score, Notify for Pending sends bell notifications (`?drive=` narrows it).
   The participants list without `drive` still spans the whole course.
-- **Merit & Ranking**: an OT is ranked only when **every** held mark is final (approved
-  and moderated, or absent), on **every** Active drive of the course (Drive = All) whose
-  component exam is over: one drive whose exam just ended with no marks holds the whole
-  course back. The page's "Why not ranked" list (`merit()['blocked']`) names each drive ·
+- **Merit & Ranking is DRIVE-WISE** (agreed 2026-11-27): each examination drive is ranked on
+  its own marks (`merit()` builds one sheet per drive; rows carry `drive_id`). A course picked
+  opens on its first drive (by name) with an exam over; Drive "All" exists only under Course
+  All (every drive, each ranked within itself). Other drives of the course never hold a drive
+  back. An OT is ranked on a drive only when **every** held mark of that drive is final
+  (approved and moderated, or absent). A Director Assessment drive is a drive of its own
+  (its Grand Total is its B; nothing adds it to a subject drive). The page's "Why not ranked" list (`merit()['blocked']`) names each drive ·
   subject — component still missing a final mark and why (no mark / not approved / not
   moderated). Uses moderated marks. Subject columns = the subjects the listed
   drives hold (`MERIT_SUBJECTS` only orders / names them),
@@ -527,8 +538,15 @@ All rules in `ResultMarksService` (RMS) and `MarksModeration`.
 
 ## Marksheets and signatures (`MarksheetService`)
 
-- Generated **on GET** for every OT with a Pass/Fail result: `coe_marksheets`, number
-  `MS/{COURSE}/{year}/{0001}`.
+- **One marksheet per OT per examination drive** (2026-11-27): `coe_marksheets.examination_drive_id`
+  + unique (drive, OT), migration `2026_11_27_000001_make_coe_marksheets_per_drive` (deleted the
+  unpublished course-wise rows; published ones stay as legacy, drive NULL). Generated **on GET**
+  for every OT with a Pass/Fail on that drive's merit (`meritSheets()` is per drive), number
+  `MS/{COURSE}/{year}/{0001}` with the serial running on **per course** across its drives.
+  A marksheet is addressed by its **sheet key**: the drive id, or `c<course pk>` for a legacy
+  one (`marksheet-generation/view/{sheet}/{ot}`, `?sheet=` on Verify, `sheet` on publish).
+  Verify Selected takes one drive at a time. Re-exam: opens once the main **drive's** merit
+  shows Pass / Fail; `reexamMerit()` uses the main drive's ranking and columns.
 - Signing in strict order **UDC (Prepared By) → AAO (Compared By) → COE (Controller of
   Examination)**; signer = user's highest of the Spatie roles COE > AAO > UDC (Super Admin
   signs as COE). JSON `signed` column holds each signature.

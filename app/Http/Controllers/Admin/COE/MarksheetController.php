@@ -11,8 +11,9 @@ use Illuminate\Http\Request;
 /**
  * COE → Document Management → Marksheet Generation / Verified Marksheet.
  *
- * Marksheets of the OTs ranked in Merit & Ranking; Verify & Publish needs the
- * UDC, AAO and COE signatures in Signature Master. Rules: MarksheetService.
+ * Marksheets of the OTs ranked in Merit & Ranking, one per OT per examination drive
+ * (a "sheet": the drive id, or "c<course>" for a legacy course-wise one); Verify &
+ * Publish needs the UDC, AAO and COE signatures in Signature Master. Rules: MarksheetService.
  */
 class MarksheetController extends Controller
 {
@@ -31,13 +32,13 @@ class MarksheetController extends Controller
     }
 
     /**
-     * Verify Document. ?course=…&ots[]=… — the marksheets ticked (Verify, Verify Selected);
-     * ?course=…&first=… — View & Verify: every marksheet of the course the user may still verify, the clicked one first.
+     * Verify Document. ?sheet=…&ots[]=… — the marksheets ticked (Verify, Verify Selected);
+     * ?sheet=…&first=… — View & Verify: every marksheet of the drive the user may still verify, the clicked one first.
      */
     public function verify(Request $request)
     {
-        $courseKey = (string) $request->query('course');
-        $rows = $this->withCanVerify($request, $this->marksheets->courseRows($courseKey));
+        $sheetKey = (string) $request->query('sheet');
+        $rows = $this->withCanVerify($request, $this->marksheets->sheetRows($sheetKey));
 
         if ($request->filled('first')) {
             $first = (string) $request->query('first');
@@ -49,7 +50,7 @@ class MarksheetController extends Controller
         }
         abort_if($rows === [], 404);
 
-        return view('admin.coe.marksheet.verify', ['rows' => $rows, 'courseKey' => $courseKey]);
+        return view('admin.coe.marksheet.verify', ['rows' => $rows, 'sheetKey' => $sheetKey]);
     }
 
     /**
@@ -59,12 +60,12 @@ class MarksheetController extends Controller
     public function publish(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'course' => ['required', 'string', 'regex:/^\d+$/'],
+            'sheet' => ['required', 'string', 'regex:/^c?\d+$/'],
             'ots' => ['required', 'array', 'min:1'],
             'ots.*' => ['required', 'string', 'regex:/^\d+$/'],
         ]);
 
-        $result = $this->marksheets->verify($request->user(), $data['course'], array_values(array_unique($data['ots'])));
+        $result = $this->marksheets->verify($request->user(), $data['sheet'], array_values(array_unique($data['ots'])));
         if ($result['error']) {
             return response()->json(['message' => $result['error']], $result['as'] === null ? 403 : 422);
         }
@@ -84,9 +85,9 @@ class MarksheetController extends Controller
     }
 
     /** View Marksheet — ?verify=1 when opened from "View & Verify". */
-    public function show(Request $request, string $course, string $ot)
+    public function show(Request $request, string $sheet, string $ot)
     {
-        $marksheet = $this->marksheets->find($course, $ot);
+        $marksheet = $this->marksheets->find($sheet, $ot);
         abort_if($marksheet === null, 404);
 
         return view('admin.coe.marksheet.show', [
@@ -101,7 +102,7 @@ class MarksheetController extends Controller
     /**
      * Main and re-exam marksheets in one list (Figma). A re-exam marksheet (Pass / Fail only,
      * ReexamMarksheetService; `reexam_key` set, null on main rows) sits right after the OT's
-     * main marksheet on the same course, else at the end; its tab follows its re-exam drive.
+     * marksheet of its main drive, else at the end; its tab follows its re-exam drive.
      * The Re-exam tab (ReexamMarksheetController) still lists them on their own.
      */
     private function listing(Request $request, string $view, callable $keep)
@@ -111,7 +112,7 @@ class MarksheetController extends Controller
         foreach (array_filter(app(ReexamMarksheetService::class)->scopeRows($scope), $keep) as $rx) {
             $at = null;
             foreach ($rows as $i => $m) {
-                if ($m['course_key'] === $rx['course_key'] && $m['code'] === $rx['code']) {
+                if ($m['sheet_key'] === ($rx['sheet_key'] ?? null) && $m['code'] === $rx['code']) {
                     $at = $i;
                 }
             }

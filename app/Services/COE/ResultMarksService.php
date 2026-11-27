@@ -860,8 +860,11 @@ class ResultMarksService
     }
 
     /**
-     * Merit & Ranking in $scope (as courseSheets()) of one course, or of every course
-     * ($coursePk null = All; each ranked within its own course).
+     * Merit & Ranking in $scope (as courseSheets()), DRIVE-WISE (agreed 2026-11-27): every
+     * examination drive is a sheet of its own, its OTs ranked on that drive's marks only.
+     * $driveId: that drive; else every held drive of $coursePk (or of every course, $coursePk
+     * null = All), each ranked within itself. Rows carry drive_id / course_pk; 'drives' lists
+     * the drives shown (id => course pk). A Director Assessment drive is a drive of its own too.
      *
      * Every component whose exam is over counts, split three ways:
      *   B          components on a Director Assessment drive (isDirectorAssessment())
@@ -873,15 +876,15 @@ class ResultMarksService
      * maps, else Subject Max Marks, else the Figma's (MERIT_SUBJECTS, DIRECTOR_MAX,
      * QUALIFYING_MAX); Total (A) / Grand Total are out of the shown columns.
      *
-     * An OT is ranked once every one of those marks is approved and moderated
+     * An OT is ranked (on a drive) once every one of that drive's marks is approved and moderated
      * (isFinal()); the rest are only counted ($pending). Equal Grand Totals share a rank (1, 2, 2, 4), in OT-code order.
      * Pass: every Part A and qualifying component at or above its passing marks —
      * passingPercent() of that component's max marks, by the OT's own service (Bhutan
      * services 25%, all others 50%). Absent counts 0, so it fails. Part B (Director
      * Assessment) is not a pass/fail paper. Every ranked OT gets a result.
      *
-     * Under All, a header max is null where the courses listed differ on it; each row
-     * carries its course's own in row['max'] (subjects, a, b, max, qualifying).
+     * With several drives listed, a header max is null where they differ on it; each row
+     * carries its drive's own in row['max'] (subjects, a, b, max, qualifying).
      *
      * @return array{courses:array<int,string>, coursePk:?int, subjects:array, maxA:?float, maxB:?float, max:?float, qualifying:array<string,?float>, rows:list<array>, pending:int, noPassMarks:list<string>}
      */
@@ -917,10 +920,15 @@ class ResultMarksService
         }
         $defaultQualifying = $qualifyingMax;
 
+        // Merit is drive-wise (agreed 2026-11-27): one sheet per examination drive, each OT
+        // ranked within that drive on its marks only. Drive filter: that drive; else every
+        // held drive of the course (or of every course), each a sheet of its own.
         $sheets = [];
         foreach ($driveCourse ? [$driveCourse] : ($coursePk ? [$coursePk] : array_keys($courses)) as $pk) {
-            $drives = $driveCourse ? $byCourse[$pk]->where('id', $driveId)->values() : $byCourse[$pk];
-            $sheets[$pk] = $this->meritSheet($drives, $courses[$pk]);
+            $drives = $byCourse[$pk]->filter(fn ($d) => $d->componentMaps->contains(fn ($m) => $this->examOver($d, $m)));
+            foreach ($driveCourse ? $drives->where('id', $driveId) : $drives as $drive) {
+                $sheets[(int) $drive->id] = ['course_pk' => (int) $pk] + $this->meritSheet(collect([$drive]), $courses[$pk]);
+            }
         }
         $held = [];
         $heldPapers = [];
@@ -952,7 +960,8 @@ class ResultMarksService
         $perCourse = [];
         $hasDirector = false;
         foreach ($sheets as $pk => $sheet) {
-            // Total (A) is out of the subjects this course's drives hold, not the fixed list.
+            // Keyed by drive id from here: each drive is ranked, and has its maxes, on its own.
+            // Total (A) is out of the subjects this drive holds, not the fixed list.
             $max = [];
             foreach ($sheet['subjects'] as $key => $s) {
                 $max[$key] = $s['max'];
@@ -968,11 +977,11 @@ class ResultMarksService
             $perCourse[$pk] = ['subjects' => $max, 'a' => $a, 'b' => $b, 'max' => $a + $b, 'qualifying' => $q];
 
             foreach ($sheet['rows'] as $row) {
-                $rows[] = $row + ['max' => $perCourse[$pk]];
+                $rows[] = $row + ['max' => $perCourse[$pk], 'drive_id' => $pk, 'course_pk' => $sheet['course_pk']];
             }
             $pending += $sheet['pending'];
             foreach ($sheet['blocked'] as $b) {
-                $blocked[] = $b + ['course' => $courses[$pk] ?? ''];
+                $blocked[] = $b + ['course' => $courses[$sheet['course_pk']] ?? ''];
             }
             $noPassMarks = array_merge($noPassMarks, $sheet['noPassMarks']);
         }
@@ -1002,8 +1011,10 @@ class ResultMarksService
             $row['subjects'] = array_replace(array_map(fn ($s) => null, $subjects), $row['subjects']);
         }
         unset($row);
-        if (! $coursePk) {
-            usort($rows, fn ($a, $b) => strnatcasecmp($a['course'], $b['course']) ?: $a['rank'] <=> $b['rank'] ?: self::compareOtCodes($a['code'], $b['code']));
+        // Several drives listed: each drive's ranking together, course by course.
+        if (count($sheets) > 1) {
+            usort($rows, fn ($a, $b) => strnatcasecmp($a['course'], $b['course']) ?: strnatcasecmp($a['drive'], $b['drive'])
+                ?: $a['drive_id'] <=> $b['drive_id'] ?: $a['rank'] <=> $b['rank'] ?: self::compareOtCodes($a['code'], $b['code']));
         }
 
         return [
@@ -1020,6 +1031,8 @@ class ResultMarksService
             'pending' => $pending,
             // Why each unranked OT is not ranked yet (the columns missing a final mark).
             'blocked' => $blocked,
+            // The drives listed (each ranked on its own): id => course pk.
+            'drives' => array_map(fn ($sheet) => $sheet['course_pk'], $sheets),
             'noPassMarks' => array_values(array_unique($noPassMarks)),
         ];
     }
@@ -1160,28 +1173,28 @@ class ResultMarksService
     }
 
     /**
-     * Merit & Ranking of every course in $scope, as the marksheets need it
-     * (MarksheetService): each course's merit sheet — rows carry their mark per
-     * column key — with the drives whose exams are over.
+     * Merit & Ranking of every examination drive in $scope, as the marksheets need it
+     * (MarksheetService): each drive's merit sheet (drive-wise, as merit()) — rows carry
+     * their mark per column key — for the drives with an exam over.
      *
-     * @return array<int, array<string, mixed>> keyed by course pk
+     * @return array<int, array<string, mixed>> keyed by drive id
      */
     public function meritSheets(string $scope): array
     {
         $out = [];
-        foreach ($this->scopeDrives($scope)->groupBy('course_master_pk') as $pk => $drives) {
-            $held = $drives->filter(fn ($d) => $d->componentMaps->contains(fn ($m) => $this->examOver($d, $m)))->values();
-            if ($held->isEmpty()) {
+        foreach ($this->scopeDrives($scope) as $drive) {
+            if (! $drive->componentMaps->contains(fn ($m) => $this->examOver($drive, $m))) {
                 continue;
             }
-            $course = $held->first()->course;
+            $course = $drive->course;
             $name = trim((string) ($course->course_name ?? ''));
-            $out[(int) $pk] = [
-                'course_pk' => (int) $pk,
+            $out[(int) $drive->id] = [
+                'drive_id' => (int) $drive->id,
+                'course_pk' => (int) $drive->course_master_pk,
                 'course' => $name,
                 'course_short' => trim((string) ($course->couse_short_name ?? '')) ?: $name,
-                'drives' => $held,
-            ] + $this->meritSheet($drives, $name);
+                'drives' => collect([$drive]),
+            ] + $this->meritSheet(collect([$drive]), $name);
         }
 
         return $out;
@@ -1244,14 +1257,15 @@ class ResultMarksService
         if (! $main || ! $link->reexamDrive) {
             return null;
         }
-        $merit = $this->merit($scope, (int) $main->course_master_pk);
+        // Merit is drive-wise: the re-exam sits on its main drive's ranking and columns.
+        $merit = $this->merit($scope, (int) $main->course_master_pk, (int) $main->id);
         if ($merit['coursePk'] !== (int) $main->course_master_pk) {
             return null;
         }
 
-        // Every merit column of the course: which bucket it adds to, its max, whether it must be passed.
+        // Every merit column of the main drive: which bucket it adds to, its max, whether it must be passed.
         $columns = [];
-        foreach ($this->scopeDrives($scope, (int) $main->course_master_pk) as $drive) {
+        foreach ($this->scopeDrives($scope, (int) $main->course_master_pk, (int) $main->id) as $drive) {
             foreach ($drive->componentMaps as $map) {
                 if (! $this->examOver($drive, $map)) {
                     continue;

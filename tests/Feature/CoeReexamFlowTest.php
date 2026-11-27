@@ -195,8 +195,8 @@ class CoeReexamFlowTest extends TestCase
 
     public function test_no_reexam_until_merit_shows_pass_or_fail(): void
     {
-        // Another Active drive on the course whose exam is over but has no marks yet:
-        // Merit & Ranking cannot rank (Pass / Fail) anyone, so no re-exam.
+        // Merit is drive-wise (2026-11-27): another Active drive on the course whose exam is
+        // over but has no marks does NOT hold this drive's re-exam back.
         $other = ExaminationDrive::create([
             'drive_name' => 'ZZ Reexam Test Other', 'examination_type_master_pk' => $this->drive->examination_type_master_pk,
             'term_master_pk' => $this->drive->term_master_pk, 'course_master_pk' => $this->drive->course_master_pk,
@@ -210,6 +210,12 @@ class CoeReexamFlowTest extends TestCase
             'faculty_master_pk' => $this->facultyPk, 'max_marks' => 10, 'passing_marks' => 5, 'source' => 'Faculty',
             'weightage' => 100, 'exam_date' => now()->subDays(2)->toDateString(), 'exam_end_date' => now()->subDays(2)->toDateString(),
         ]);
+        $this->assertTrue($this->sheet()['ready']);
+
+        // One of THIS drive's marks not moderated: Merit & Ranking cannot give that OT a
+        // Pass / Fail on the drive, so no re-exam.
+        DB::table('coe_evaluation_marks')->where('examination_drive_id', $this->drive->id)
+            ->where('is_absent', 0)->whereNotNull('moderated_marks')->limit(1)->update(['moderated_marks' => null]);
 
         $sheet = $this->sheet();
 

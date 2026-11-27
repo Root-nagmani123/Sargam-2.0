@@ -138,4 +138,87 @@ class CoeMeritMultiSubjectFlowTest extends TestCase
         $this->assertCount(count($this->ots), $merit['rows']);
         $this->assertSame(75.0, $merit['rows'][0]['grand']);
     }
+
+    /** Approve and moderate every mark of $this->drive (A·X 40, A·Y 20, B·Z 15 each). */
+    private function completeDrive(): void
+    {
+        $fill = fn (string $s, string $c, string $v) => [$this->key($s, $c) => array_fill_keys($this->ots, $v)];
+        $this->actingAs($this->admin)->postJson(route('admin.coe.faculty-result-entry.save'), [
+            'course' => $this->drive->course_master_pk,
+            'marks' => $fill('A', 'X', '40') + $fill('A', 'Y', '20') + $fill('B', 'Z', '15'),
+            'approve' => true,
+        ])->assertOk();
+        $results = app(ResultMarksService::class);
+        $keys = collect($results->moderationSheet('active'))->pluck('key')
+            ->filter(fn ($k) => str_starts_with($k, $this->drive->id.':'))->all();
+        $this->assertNull($results->moderate($this->admin, $keys)['error']);
+    }
+
+    public function test_merit_and_marksheets_are_drive_wise(): void
+    {
+        $this->completeDrive();
+        $course = (int) $this->drive->course_master_pk;
+
+        // A second drive on the course whose exam is over, with no marks yet.
+        $other = ExaminationDrive::create(array_merge(
+            $this->drive->only(['examination_type_master_pk', 'term_master_pk', 'course_master_pk', 'phase', 'academic_session', 'start_date', 'end_date', 'status', 'cc_status']),
+            ['drive_name' => 'ZZZ Merit Second Drive']
+        ));
+        DB::table('examination_drive_component_maps')->insert([
+            'examination_drive_id' => $other->id, 'subject_master_pk' => $this->subjects['A'],
+            'component_master_pk' => $this->components['X'], 'max_marks' => 50, 'passing_marks' => 0,
+            'source' => 'Sargam 2.0', 'weightage' => 30,
+            'exam_date' => now()->subDays(3)->toDateString(), 'exam_end_date' => now()->subDays(2)->toDateString(),
+        ]);
+
+        $results = app(ResultMarksService::class);
+
+        // The course: each drive ranked on its own. The first drive is complete, so ranked;
+        // the second (no marks) holds nobody back on the first.
+        $merit = $results->merit('active', $course);
+        $this->assertEqualsCanonicalizing([$this->drive->id, $other->id], array_keys($merit['drives']));
+        $this->assertSame([$this->drive->id], array_values(array_unique(array_column($merit['rows'], 'drive_id'))));
+        $this->assertCount(count($this->ots), $merit['rows']);
+        $this->assertSame(['ZZZ Merit Second Drive'], array_values(array_unique(array_merge(...array_map(fn ($b) => array_column($b['missing'], 'drive'), $merit['blocked'])))));
+
+        // One drive: only its OTs and marks.
+        $this->assertCount(count($this->ots), $results->merit('active', $course, $this->drive->id)['rows']);
+        $this->assertSame([], $results->merit('active', $course, $other->id)['rows']);
+
+        // The page opens a course on its first drive (by name) with an exam over: no "All".
+        $page = $this->actingAs($this->admin)->get(route('admin.coe.merit-ranking.index', ['course' => $course]))->assertOk();
+        $this->assertSame($this->drive->id, $page->viewData('drivePk'));
+        $this->assertCount(count($this->ots), $page->viewData('rows'));
+
+        // Marksheets: one per OT per drive, the serial running on per course.
+        $this->actingAs($this->admin)->get(route('admin.coe.marksheet-generation.index'))->assertOk();
+        $sheets = DB::table('coe_marksheets')->where('course_master_pk', $course)->get();
+        $this->assertCount(count($this->ots), $sheets);
+        $this->assertSame([$this->drive->id], $sheets->pluck('examination_drive_id')->map(fn ($v) => (int) $v)->unique()->values()->all());
+        $serials = $sheets->pluck('serial')->map(fn ($v) => (int) $v)->sort()->values()->all();
+        $this->assertSame(range(1, count($this->ots)), $serials);
+
+        // The second drive completed too: a second marksheet per OT, numbers carrying on.
+        $fill = fn (string $v) => [$other->id.':'.$this->subjects['A'].':'.$this->components['X'] => array_fill_keys($this->ots, $v)];
+        $this->actingAs($this->admin)->postJson(route('admin.coe.faculty-result-entry.save'), [
+            'course' => $course, 'marks' => $fill('30'), 'approve' => true,
+            'component' => $other->id.':'.$this->subjects['A'].':'.$this->components['X'],
+        ])->assertOk();
+        $keys = collect($results->moderationSheet('active'))->pluck('key')->filter(fn ($k) => str_starts_with($k, $other->id.':'))->all();
+        $this->assertNull(app(ResultMarksService::class)->moderate($this->admin, $keys)['error']);
+
+        // A fresh service: within one test the route keeps its first controller (and its row cache).
+        $listed = app(\App\Services\COE\MarksheetService::class)->rows('active');
+        $sheets = DB::table('coe_marksheets')->where('course_master_pk', $course)->get();
+        $this->assertCount(2 * count($this->ots), $sheets);
+        $this->assertSame(range(1, 2 * count($this->ots)), $sheets->pluck('serial')->map(fn ($v) => (int) $v)->sort()->values()->all());
+        $this->assertSame(2 * count($this->ots), $sheets->pluck('marksheet_number')->unique()->count());
+
+        // View / verify address one drive's marksheet.
+        $row = collect($listed)->first(fn ($r) => ($r['sheet_key'] ?? null) === (string) $other->id);
+        $this->assertNotNull($row);
+        $this->actingAs($this->admin)->get(route('admin.coe.marksheet.show', ['sheet' => $other->id, 'ot' => $row['code']]))
+            ->assertOk()->assertSee(e($row['name']), false);
+        $this->actingAs($this->admin)->get(route('admin.coe.marksheet-generation.verify', ['sheet' => $other->id, 'ots' => [$row['code']]]))->assertOk();
+    }
 }

@@ -91,12 +91,9 @@ class CoeDirectorAssessmentFlowTest extends TestCase
             'cc_status' => ExaminationDrive::CC_APPROVED,
         ]);
 
-        $this->ots = DB::table('coe_participant_codes')
-            ->where('course_master_pk', $cohort->course_master_pk)->where('batch', $cohort->batch)
-            ->get(['student_master_pk as pk', 'unique_code as code'])
-            ->map(fn ($r) => ['pk' => (int) $r->pk, 'code' => trim($r->code)])
-            ->sort(fn ($a, $b) => \App\Services\COE\ResultMarksService::compareOtCodes($a['code'], $b['code']))
-            ->values()->all();
+        // The drive's OTs as the screens list them (codes are per subject now: one OT, several codes).
+        $this->ots = array_values(array_map(fn ($p) => ['pk' => (int) $p['student'], 'code' => (string) $p['code']],
+            app(\App\Services\COE\ResultMarksService::class)->participants($this->drive)));
 
         DB::table('examination_drive_faculty_maps')->insert([
             'examination_drive_id' => $this->drive->id, 'subject_master_pk' => $this->subject, 'faculty_master_pk' => $faculty->pk,
@@ -240,7 +237,8 @@ class CoeDirectorAssessmentFlowTest extends TestCase
             ->update(['moderated_marks' => DB::raw('marks'), 'moderated_by' => $this->admin->user_id, 'moderated_at' => now()]);
 
         $rows = collect($this->actingAs($this->admin)
-            ->get(route('admin.coe.merit-ranking.index', ['course' => $this->drive->course_master_pk]))->assertOk()
+            // Merit is drive-wise: this drive's ranking (the course may hold other drives).
+            ->get(route('admin.coe.merit-ranking.index', ['course' => $this->drive->course_master_pk, 'drive' => $this->drive->id]))->assertOk()
             ->viewData('rows'))->keyBy('student');
         $this->assertSame([85.0, 85.0], [$rows[$this->ots[0]['pk']]['director'], $rows[$this->ots[0]['pk']]['grand']]);
     }

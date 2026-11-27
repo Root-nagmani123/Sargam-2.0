@@ -83,7 +83,10 @@
                     <div class="programme-dt-filter-select mr-filter">
                         <label class="mr-filter-cap" for="mrFilterDrive">Drive</label>
                         <select name="drive" id="mrFilterDrive" class="form-select">
-                            <option value="" @selected($drivePk === null)>All</option>
+                            {{-- Ranking is per drive: "All" only under All courses (each drive ranked within itself). --}}
+                            @if ($coursePk === null)
+                                <option value="" @selected($drivePk === null)>All</option>
+                            @endif
                             {{-- Every main drive; under All courses the course is added (names repeat across courses). --}}
                             @foreach ($driveOptions as $pk => $d)
                                 <option value="{{ $pk }}" @selected($pk === $drivePk)>{{ $d['name'] }}{{ $coursePk === null && isset($courses[$d['course']]) ? ' · ' . $courses[$d['course']] : '' }}</option>

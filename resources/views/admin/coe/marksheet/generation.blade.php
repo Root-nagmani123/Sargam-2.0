@@ -116,15 +116,16 @@
                                     // A re-exam marksheet (Pass / Fail only) lists here too, tagged "(Re-exam)";
                                     // it opens and verifies through ReexamMarksheetController.
                                     $rx = $row['reexam_key'];
-                                    $show = $rx ? ['reexam' => $rx, 'ot' => $row['code']] : ['course' => $row['course_key'], 'ot' => $row['code']];
+                                    $show = $rx ? ['reexam' => $rx, 'ot' => $row['code']] : ['sheet' => $row['sheet_key'], 'ot' => $row['code']];
                                     $showRoute = $rx ? 'admin.coe.reexam-marksheet.show' : 'admin.coe.marksheet.show';
                                 @endphp
-                                <tr data-course="{{ $row['course_key'] }}" data-code="{{ $row['code'] }}" data-reexam="{{ $rx }}">
+                                <tr data-course="{{ $row['course_key'] }}" data-sheet="{{ $row['sheet_key'] ?? '' }}" data-code="{{ $row['code'] }}" data-reexam="{{ $rx }}">
                                     <td><input type="checkbox" class="form-check-input mg-row-check" aria-label="Select {{ $row['name'] }}"></td>
                                     <td></td>
                                     <td class="coe-nowrap">{{ $row['name'] }}<div class="coe-muted small">Result locked</div>@if ($rx)<div class="coe-reexam-tag">(Re-exam)</div>@endif</td>
                                     <td class="coe-nowrap">{{ $row['roll'] }}</td>
-                                    <td class="coe-col-wrap">{{ $row['course'] }}</td>
+                                    {{-- One marksheet per examination drive: name the drive under its course. --}}
+                                    <td class="coe-col-wrap">{{ $row['course'] }}@if (($row['examination'] ?? '-') !== '-')<div class="coe-muted small">{{ $row['examination'] }}</div>@endif</td>
                                     <td class="coe-col-wrap">{{ $row['batch'] }}</td>
                                     <td>{{ $row['exam_term'] }}</td>
                                     <td class="coe-col-wrap">{{ $row['exam_type'] }}</td>
@@ -141,12 +142,12 @@
                                                 <span class="coe-act__label">View</span>
                                             </a>
                                             @if ($row['can_verify'])
-                                                <a href="{{ $rx ? '#' : route('admin.coe.marksheet-generation.verify', ['course' => $row['course_key'], 'ots' => [$row['code']]]) }}"
+                                                <a href="{{ $rx ? '#' : route('admin.coe.marksheet-generation.verify', ['sheet' => $row['sheet_key'], 'ots' => [$row['code']]]) }}"
                                                    class="coe-act coe-act--approve mg-verify">
                                                     <span class="coe-act__icon"><i class="bi bi-check2" aria-hidden="true"></i></span>
                                                     <span class="coe-act__label">Verify</span>
                                                 </a>
-                                                <a href="{{ $rx ? route($showRoute, $show + ['verify' => 1]) : route('admin.coe.marksheet-generation.verify', ['course' => $row['course_key'], 'first' => $row['code']]) }}" class="coe-act coe-act--edit coe-act--wide">
+                                                <a href="{{ $rx ? route($showRoute, $show + ['verify' => 1]) : route('admin.coe.marksheet-generation.verify', ['sheet' => $row['sheet_key'], 'first' => $row['code']]) }}" class="coe-act coe-act--edit coe-act--wide">
                                                     <span class="coe-act__icon"><i class="bi bi-eye-fill" aria-hidden="true"></i></span>
                                                     <span class="coe-act__label">View &amp; Verify</span>
                                                 </a>
@@ -208,7 +209,7 @@ $(function () {
 
     /* ── Verify on a row: puts the logged-in UDC / AAO / COE signature on it here, after a confirm; the COE's publishes it ── */
     // Main: MarksheetController::publish ({course, ots}); re-exam: ReexamMarksheetController::publish ({reexam, ots}).
-    function verify(reexam, course, ots) {
+    function verify(reexam, sheet, ots) {
         Swal.fire({
             icon: 'question', title: 'Verify',
             text: (ots.length === 1 ? 'Verify this ' : 'Verify these ' + ots.length + ' ') + (reexam ? 're-exam ' : '')
@@ -219,7 +220,7 @@ $(function () {
             $.ajax({
                 url: reexam ? @json(route('admin.coe.reexam-marksheet.publish')) : @json(route('admin.coe.marksheet-generation.publish')),
                 method: 'POST', contentType: 'application/json',
-                data: JSON.stringify(reexam ? { reexam: String(reexam), ots: ots } : { course: String(course), ots: ots }),
+                data: JSON.stringify(reexam ? { reexam: String(reexam), ots: ots } : { sheet: String(sheet), ots: ots }),
                 headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
             }).done(function (res) {
                 Swal.fire({ icon: 'success', title: 'Verified', text: res.message }).then(function () { window.location.reload(); });
@@ -232,7 +233,7 @@ $(function () {
     $('#mgTable').on('click', '.mg-verify', function (e) {
         e.preventDefault();
         var $tr = $(this).closest('tr');
-        verify($tr.attr('data-reexam') || '', $tr.attr('data-course'), [String($tr.attr('data-code'))]);
+        verify($tr.attr('data-reexam') || '', $tr.attr('data-sheet'), [String($tr.attr('data-code'))]);
     });
 
     $('#mgVerifySelected').on('click', function () {
@@ -247,12 +248,13 @@ $(function () {
             verify(reexams[0], null, $rows.map(function () { return String($(this).attr('data-code')); }).get());
             return;
         }
-        var courses = $.unique($rows.map(function () { return $(this).attr('data-course'); }).get());
-        if (courses.length !== 1) {
-            Swal.fire({ icon: 'warning', title: 'One course at a time', text: 'Select marksheets of a single course to verify together.' });
+        // Marksheets are per examination drive: verify one drive's at a time.
+        var sheets = $.unique($rows.map(function () { return $(this).attr('data-sheet'); }).get());
+        if (sheets.length !== 1) {
+            Swal.fire({ icon: 'warning', title: 'One drive at a time', text: 'Select marksheets of a single examination drive to verify together.' });
             return;
         }
-        var q = $.param({ course: courses[0], ots: $rows.map(function () { return $(this).attr('data-code'); }).get() });
+        var q = $.param({ sheet: sheets[0], ots: $rows.map(function () { return $(this).attr('data-code'); }).get() });
         window.location.href = VERIFY_URL + '?' + q;
     });
 });

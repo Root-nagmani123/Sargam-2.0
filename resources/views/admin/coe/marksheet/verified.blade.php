@@ -99,7 +99,7 @@
                                 @php
                                     // A published re-exam marksheet (Pass / Fail only) lists here too, tagged "(Re-exam)".
                                     $rx = $row['reexam_key'];
-                                    $show = $rx ? ['reexam' => $rx, 'ot' => $row['code']] : ['course' => $row['course_key'], 'ot' => $row['code']];
+                                    $show = $rx ? ['reexam' => $rx, 'ot' => $row['code']] : ['sheet' => $row['sheet_key'], 'ot' => $row['code']];
                                     $showRoute = $rx ? 'admin.coe.reexam-marksheet.show' : 'admin.coe.marksheet.show';
                                 @endphp
                                 <tr data-result="{{ $row['result'] }}" data-type="{{ $row['exam_type'] }}">

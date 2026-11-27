@@ -144,7 +144,7 @@ $(function () {
             if (!r.isConfirmed) { return; }
             $.ajax({
                 url: @json(route('admin.coe.marksheet-generation.publish')), method: 'POST', contentType: 'application/json',
-                data: JSON.stringify({ course: @json($m['course_key']), ots: [@json($m['code'])] }),
+                data: JSON.stringify({ sheet: @json($m['sheet_key']), ots: [@json($m['code'])] }),
                 headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
             }).done(function (res) {
                 Swal.fire({ icon: 'success', title: 'Verified', text: res.message }).then(function () { window.location.reload(); });

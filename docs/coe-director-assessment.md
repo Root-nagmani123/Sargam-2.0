@@ -149,8 +149,10 @@ column on once the column exists (`ResultMarksService::remarksEnabled()`).
   `has_faculty` is true for it.
 - **Marks Moderation:** the evaluator is named **"Training Section"**. With one evaluator, the
   moderated marks equal the raw marks.
-- **Merit & Ranking:** part B (all components of a Director Assessment drive). An OT is
-  ranked only once **every** held mark is approved **and moderated**.
+- **Merit & Ranking:** part B. Merit is drive-wise (2026-11-27): the Director Assessment drive
+  is ranked on its own (all its components, Director's Overall included). It is not added to
+  a subject drive's Grand Total. An OT is ranked there only once **every** mark of that drive
+  is approved **and moderated**.
 - **No bell to COE** on Send to COE.
 
 ## Open points

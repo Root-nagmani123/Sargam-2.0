@@ -51,7 +51,7 @@ class CoeMarksheetFlowTest extends TestCase
             $this->markTestSkipped('Needs an Active UDC and AAO signature.');
         }
         $at = now()->format('Y-m-d H:i:s');
-        $record = Marksheet::where('course_master_pk', (int) $row['course_key'])->where('student_master_pk', (int) $row['code'])->first();
+        $record = Marksheet::where('examination_drive_id', (int) $row['sheet_key'])->where('student_master_pk', (int) $row['code'])->first();
         $record->signed = [
             'UDC' => ['signature' => (int) $pks['UDC'], 'by' => null, 'at' => $at],
             'AAO' => ['signature' => (int) $pks['AAO'], 'by' => null, 'at' => $at],
@@ -67,7 +67,7 @@ class CoeMarksheetFlowTest extends TestCase
             $admin->get(route($route))->assertOk();
             $admin->get(route($route, ['scope' => 'archived']))->assertOk();
         }
-        $admin->get(route('admin.coe.marksheet-generation.verify', ['course' => '1', 'ots' => ['1']]))->assertNotFound();
+        $admin->get(route('admin.coe.marksheet-generation.verify', ['sheet' => '1', 'ots' => ['1']]))->assertNotFound();
     }
 
     public function test_every_listed_marksheet_is_a_ranked_ot_with_a_result_and_a_number(): void
@@ -76,11 +76,11 @@ class CoeMarksheetFlowTest extends TestCase
 
         $this->assertContains($row['result'], ['Pass', 'Fail']);
         $this->assertMatchesRegularExpression('#^MS/[A-Z0-9]+/\d{4}/\d{4}$#', $row['number']);
-        $this->assertTrue(Marksheet::where('course_master_pk', (int) $row['course_key'])
+        $this->assertTrue(Marksheet::where('examination_drive_id', (int) $row['sheet_key'])
             ->where('student_master_pk', (int) $row['code'])->where('marksheet_number', $row['number'])->exists());
 
         $this->actingAs($this->admin())->get(route('admin.coe.marksheet-generation.index'))->assertOk();
-        $page = $this->actingAs($this->admin())->get(route('admin.coe.marksheet.show', ['course' => $row['course_key'], 'ot' => $row['code']]))
+        $page = $this->actingAs($this->admin())->get(route('admin.coe.marksheet.show', ['sheet' => $row['sheet_key'], 'ot' => $row['code']]))
             ->assertOk()->assertSee($row['number'])->assertSee($row['name']);
         // Nobody has signed it yet: no signatures on it.
         if (empty($row['signatures'])) {
@@ -93,11 +93,11 @@ class CoeMarksheetFlowTest extends TestCase
         $row = $this->generated(true);
         $this->verifiedByUdcAndAao($row);
         // The Super Admin signs as the COE, so sees only the marksheets the AAO has verified.
-        $pending = collect(app(MarksheetService::class)->courseRows($row['course_key']))
+        $pending = collect(app(MarksheetService::class)->sheetRows($row['sheet_key']))
             ->filter(fn ($m) => ! $m['published'] && isset($m['signatures']['AAO']) && ! isset($m['signatures']['COE']));
 
         $rows = $this->actingAs($this->admin())
-            ->get(route('admin.coe.marksheet-generation.verify', ['course' => $row['course_key'], 'first' => $row['code']]))
+            ->get(route('admin.coe.marksheet-generation.verify', ['sheet' => $row['sheet_key'], 'first' => $row['code']]))
             ->assertOk()->viewData('rows');
 
         $this->assertSame($row['code'], $rows[0]['code']);
@@ -106,8 +106,8 @@ class CoeMarksheetFlowTest extends TestCase
 
     public function test_publish_is_validated(): void
     {
-        $this->actingAs($this->admin())->postJson(route('admin.coe.marksheet-generation.publish'), ['course' => 'x', 'ots' => []])
-            ->assertUnprocessable()->assertJsonValidationErrors(['course', 'ots']);
+        $this->actingAs($this->admin())->postJson(route('admin.coe.marksheet-generation.publish'), ['sheet' => 'x', 'ots' => []])
+            ->assertUnprocessable()->assertJsonValidationErrors(['sheet', 'ots']);
     }
 
     public function test_publish_is_refused_until_all_three_signatures_are_active(): void
@@ -116,10 +116,10 @@ class CoeMarksheetFlowTest extends TestCase
         $this->verifiedByUdcAndAao($row);
         SignatureMaster::whereIn('designation_name', MarksheetService::designationNamesOf('AAO'))->update(['active_inactive' => 0]);
 
-        $this->actingAs($this->admin())->postJson(route('admin.coe.marksheet-generation.publish'), ['course' => $row['course_key'], 'ots' => [$row['code']]])
+        $this->actingAs($this->admin())->postJson(route('admin.coe.marksheet-generation.publish'), ['sheet' => $row['sheet_key'], 'ots' => [$row['code']]])
             ->assertUnprocessable()->assertJsonPath('message', fn ($m) => str_contains($m, 'AAO'));
 
-        $this->assertFalse(Marksheet::where('course_master_pk', (int) $row['course_key'])
+        $this->assertFalse(Marksheet::where('examination_drive_id', (int) $row['sheet_key'])
             ->where('student_master_pk', (int) $row['code'])->where('status', Marksheet::STATUS_PUBLISHED)->exists());
     }
 
@@ -131,20 +131,20 @@ class CoeMarksheetFlowTest extends TestCase
         }
         $this->verifiedByUdcAndAao($row);
 
-        $this->actingAs($this->admin())->postJson(route('admin.coe.marksheet-generation.publish'), ['course' => $row['course_key'], 'ots' => [$row['code']]])
+        $this->actingAs($this->admin())->postJson(route('admin.coe.marksheet-generation.publish'), ['sheet' => $row['sheet_key'], 'ots' => [$row['code']]])
             ->assertOk()->assertJsonPath('published', 1);
 
-        $record = Marksheet::where('course_master_pk', (int) $row['course_key'])->where('student_master_pk', (int) $row['code'])->first();
+        $record = Marksheet::where('examination_drive_id', (int) $row['sheet_key'])->where('student_master_pk', (int) $row['code'])->first();
         $this->assertTrue($record->isPublished());
         $this->assertEquals($row['grand'], $record->snapshot['grand']);
         $this->assertEqualsCanonicalizing(['UDC', 'AAO', 'COE'], array_keys($record->snapshot['signatures']));
 
         // Published: signed.
-        $this->actingAs($this->admin())->get(route('admin.coe.marksheet.show', ['course' => $row['course_key'], 'ot' => $row['code']]))
+        $this->actingAs($this->admin())->get(route('admin.coe.marksheet.show', ['sheet' => $row['sheet_key'], 'ot' => $row['code']]))
             ->assertOk()->assertSee('signature-master/', false);
 
         // Publishing again changes nothing.
-        $this->actingAs($this->admin())->postJson(route('admin.coe.marksheet-generation.publish'), ['course' => $row['course_key'], 'ots' => [$row['code']]])
+        $this->actingAs($this->admin())->postJson(route('admin.coe.marksheet-generation.publish'), ['sheet' => $row['sheet_key'], 'ots' => [$row['code']]])
             ->assertOk()->assertJsonPath('published', 0);
 
         $scope = collect(app(MarksheetService::class)->rows('active'))->contains('number', $row['number']) ? [] : ['scope' => 'archived'];

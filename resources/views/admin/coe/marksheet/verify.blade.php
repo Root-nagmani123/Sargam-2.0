@@ -62,7 +62,7 @@ $(function () {
     'use strict';
     var PUBLISH_URL = @json(route('admin.coe.marksheet-generation.publish'));
     var BACK_URL = @json(route('admin.coe.marksheet-generation.index'));
-    var COURSE = @json($courseKey);
+    var SHEET = @json($sheetKey);
     var ALL = @json(array_column($rows, 'code'));
 
     // Verify puts the logged-in UDC / AAO / COE signature on the marksheet; the COE's publishes it (MarksheetService::verify()).
@@ -76,7 +76,7 @@ $(function () {
             if (!r.isConfirmed) { return; }
             $.ajax({
                 url: PUBLISH_URL, method: 'POST', contentType: 'application/json',
-                data: JSON.stringify({ course: COURSE, ots: ots }),
+                data: JSON.stringify({ sheet: SHEET, ots: ots }),
                 headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
             }).done(function (res) {
                 Swal.fire({ icon: 'success', title: 'Verified', text: res.message }).then(function () { window.location.href = BACK_URL; });

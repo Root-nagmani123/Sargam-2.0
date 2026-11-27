@@ -137,6 +137,8 @@ class ReexamMarksheetService
             'code' => (string) $ot['student_pk'],
             'reexam_key' => (string) $link->id,
             'reexam_no' => (int) $link->reexam_no,
+            // Its main drive's marksheet sheet (MarksheetService::sheet_key): listed right after it.
+            'sheet_key' => (string) $link->main_drive_id,
             'course_key' => (string) $drive->course_master_pk,
             'course' => trim((string) ($drive->course->course_name ?? '')),
             'course_short' => trim((string) ($drive->course->couse_short_name ?? '')) ?: trim((string) ($drive->course->course_name ?? '')),

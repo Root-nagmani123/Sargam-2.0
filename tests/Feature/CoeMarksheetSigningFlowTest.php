@@ -66,18 +66,18 @@ class CoeMarksheetSigningFlowTest extends TestCase
 
     private function verify(User $user, array $row)
     {
-        return $this->actingAs($user)->postJson(route('admin.coe.marksheet-generation.publish'), ['course' => $row['course_key'], 'ots' => [$row['code']]]);
+        return $this->actingAs($user)->postJson(route('admin.coe.marksheet-generation.publish'), ['sheet' => $row['sheet_key'], 'ots' => [$row['code']]]);
     }
 
     private function record(array $row): Marksheet
     {
-        return Marksheet::where('course_master_pk', (int) $row['course_key'])->where('student_master_pk', (int) $row['code'])->first();
+        return Marksheet::where('examination_drive_id', (int) $row['sheet_key'])->where('student_master_pk', (int) $row['code'])->first();
     }
 
     /** The marksheet's Status column as Marksheet Generation lists it now. */
     private function status(array $row): string
     {
-        return app(MarksheetService::class)->find($row['course_key'], $row['code'])['status'];
+        return app(MarksheetService::class)->find($row['sheet_key'], $row['code'])['status'];
     }
 
     public function test_udc_then_aao_then_coe_sign_and_the_coe_publishes(): void
@@ -145,7 +145,7 @@ class CoeMarksheetSigningFlowTest extends TestCase
 
     public function test_someone_outside_the_three_roles_cannot_verify(): void
     {
-        $this->verify($this->signer(null), ['course_key' => '1', 'code' => '1'])
+        $this->verify($this->signer(null), ['sheet_key' => '1', 'code' => '1'])
             ->assertForbidden()->assertJsonPath('message', 'Only the UDC, AAO or COE can verify marksheets.');
     }
 }

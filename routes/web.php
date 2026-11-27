@@ -2410,7 +2410,8 @@ Route::middleware(['auth'])->prefix('admin/coe')->name('admin.coe.')->group(func
     });
     Route::get('verified-marksheet', [\App\Http\Controllers\Admin\COE\MarksheetController::class, 'verified'])
         ->middleware('menu.permission:coe_verified_marksheet')->name('verified-marksheet.index');
-    Route::get('marksheet-generation/view/{course}/{ot}', [\App\Http\Controllers\Admin\COE\MarksheetController::class, 'show'])
+    // {sheet}: the examination drive id, or c<course pk> for a legacy course-wise marksheet.
+    Route::get('marksheet-generation/view/{sheet}/{ot}', [\App\Http\Controllers\Admin\COE\MarksheetController::class, 'show'])
         ->middleware('menu.permission:coe_marksheet_generation,coe_verified_marksheet')->name('marksheet.show');
     // Re-exam marksheets (Pass / Fail only), the Re-exam tab of the two pages above: ReexamMarksheetController.
     Route::get('marksheet-generation/reexam', [\App\Http\Controllers\Admin\COE\ReexamMarksheetController::class, 'generation'])

@@ -213,7 +213,7 @@ class ReexamService
         if ($mains->isEmpty()) {
             return $out;
         }
-        // Only once Merit & Ranking shows the drive's OTs with Pass / Fail (once per course on the page).
+        // Only once Merit & Ranking shows the drive's OTs with Pass / Fail (merit is drive-wise).
         $results = $this->meritResults($mains);
         $mains = $mains->filter(fn (ExaminationDrive $d) => self::resultRefusal($d, $this->results->participants($d), $results) === null);
         if ($mains->isEmpty()) {
@@ -242,49 +242,43 @@ class ReexamService
     /**
      * Agreed flow (2026-11-23): a re-exam opens once **Merit & Ranking shows Pass / Fail**
      * for every participant of the drive (an OT is ranked there only when all their marks
-     * on the course are approved and moderated). No marksheet signing needed. Else why
-     * not, or null.
+     * on the drive are approved and moderated; merit is drive-wise). No marksheet signing
+     * needed. Else why not, or null.
      *
-     * @param  array<int, array<int, true>>  $results  course pk => student pk => true (has Pass / Fail)
+     * @param  array<int, array<int, true>>  $results  drive id => student pk => true (has Pass / Fail)
      */
     private static function resultRefusal(ExaminationDrive $main, array $participants, array $results): ?string
     {
         if ($participants === []) {
             return 'The drive has no participants.';
         }
-        $have = $results[(int) $main->course_master_pk] ?? [];
+        $have = $results[(int) $main->id] ?? [];
         $missing = count(array_diff_key($participants, $have));
 
         return $missing === 0 ? null
             : 'Merit & Ranking does not show Pass / Fail yet for '.$missing.' of '.count($participants)
-                .' OTs (their marks on this course are not all approved and moderated). The re-exam opens once it does.';
+                .' OTs (their marks on this drive are not all approved and moderated). The re-exam opens once it does.';
     }
 
     /**
-     * Who has a Pass / Fail on Merit & Ranking, per course of $drives (the tab the drive
-     * is on: Active, or Archived for a Closed drive). One merit sheet per course.
+     * Who has a Pass / Fail on Merit & Ranking, per drive of $drives (the tab the drive is
+     * on: Active, or Archived for a Closed drive). Merit is drive-wise: one sheet per drive.
      *
      * @param  Collection<int, ExaminationDrive>  $drives
-     * @return array<int, array<int, true>> course pk => student pk => true
+     * @return array<int, array<int, true>> drive id => student pk => true
      */
     private function meritResults(Collection $drives): array
     {
         $out = [];
-        $seen = [];
         foreach ($drives as $drive) {
             $scope = $drive->status === ExaminationDrive::STATUS_CLOSED ? 'archived' : 'active';
-            $coursePk = (int) $drive->course_master_pk;
-            if (isset($seen[$scope.':'.$coursePk])) {
-                continue;
-            }
-            $seen[$scope.':'.$coursePk] = true;
-            $merit = $this->results->merit($scope, $coursePk);
-            if ((int) ($merit['coursePk'] ?? 0) !== $coursePk) {
-                continue;   // the course is not on that Merit tab (nothing held yet)
+            $merit = $this->results->merit($scope, (int) $drive->course_master_pk, (int) $drive->id);
+            if ((int) ($merit['coursePk'] ?? 0) !== (int) $drive->course_master_pk) {
+                continue;   // the drive is not on that Merit tab (nothing held yet)
             }
             foreach ($merit['rows'] as $row) {
-                if (in_array($row['result'] ?? null, ['Pass', 'Fail'], true)) {
-                    $out[$coursePk][(int) $row['student']] = true;
+                if ((int) ($row['drive_id'] ?? 0) === (int) $drive->id && in_array($row['result'] ?? null, ['Pass', 'Fail'], true)) {
+                    $out[(int) $drive->id][(int) $row['student']] = true;
                 }
             }
         }

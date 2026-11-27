@@ -16,11 +16,13 @@ use Illuminate\Support\Facades\Storage;
  * COE → Document Management: Marksheet Generation and Verified Marksheet.
  *
  * The flow:
- *   1. Merit & Ranking ranks an OT (every mark approved) with a Pass / Fail
- *      (ResultMarksService::meritSheets()), decided by the fixed passing rule
+ *   1. Merit & Ranking ranks an OT on an examination drive (every mark of the drive
+ *      approved and moderated) with a Pass / Fail (ResultMarksService::meritSheets(),
+ *      drive-wise since 2026-11-27), decided by the fixed passing rule
  *      (ResultMarksService::passingPercent). A row with no result is skipped.
- *   2. Their marksheet is Generated: a coe_marksheets row with its number,
- *      MS/<course short name>/<year>/<serial>, the first time it is listed.
+ *   2. Their marksheet for that drive is Generated: a coe_marksheets row (drive + OT)
+ *      with its number, MS/<course short name>/<year>/<serial>, the serial running on
+ *      per course across its drives, the first time it is listed.
  *   3. It is signed one by one with Verify (verify()), in order: the UDC first,
  *      then the AAO once the UDC has, then the COE once the AAO has, which
  *      publishes it. Each puts only their own signature, the designation's Active
@@ -28,9 +30,11 @@ use Illuminate\Support\Facades\Storage;
  *      a published marksheet is never recomputed.
  *   4. Verified Marksheet lists the published ones.
  *
- * A course is Active while it has an Active drive, else Archived, so each
- * marksheet sits on one tab. Rows keep the keys the marksheet views read; `code`
- * is the OT's student_master pk, which is what the routes carry.
+ * A drive marksheet sits on the tab of its drive (Active / Closed = Archived); a legacy
+ * course-wise one (published before marksheets were per drive, no drive) on its course's.
+ * Rows keep the keys the marksheet views read; `code` is the OT's student_master pk and
+ * `sheet_key` the marksheet's sheet: the drive id, or "c<course pk>" for a legacy one.
+ * The routes carry both.
  */
 class MarksheetService
 {
@@ -58,8 +62,11 @@ class MarksheetService
     /** @var array<string, list<array<string, mixed>>> */
     private array $rowCache = [];
 
-    /** @var array<int, string> */
+    /** @var array<int, string> course pk => tab, for legacy course-wise marksheets */
     private array $scopeCache = [];
+
+    /** @var array<int, string> drive id => tab */
+    private array $driveScopeCache = [];
 
     public function __construct(private ResultMarksService $results)
     {
@@ -94,23 +101,27 @@ class MarksheetService
         return $this->rowCache[$scope] ??= $this->build($scope);
     }
 
-    /** @return list<array<string, mixed>> */
-    public function courseRows(string $courseKey): array
+    /**
+     * The marksheets of one sheet: a drive (its id) or a legacy course-wise one ("c<course pk>").
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function sheetRows(string $sheetKey): array
     {
-        if (! ctype_digit($courseKey)) {
+        if (! preg_match('/^c?\d+$/', $sheetKey)) {
             return [];
         }
 
         return array_values(array_filter(
-            $this->rows($this->scopeOf((int) $courseKey)),
-            fn ($m) => $m['course_key'] === $courseKey
+            array_merge($this->rows('active'), $this->rows('archived')),
+            fn ($m) => $m['sheet_key'] === $sheetKey
         ));
     }
 
-    /** One marksheet by course pk and student pk, or null. */
-    public function find(string $courseKey, string $code): ?array
+    /** One marksheet by sheet key and student pk, or null. */
+    public function find(string $sheetKey, string $code): ?array
     {
-        foreach ($this->courseRows($courseKey) as $m) {
+        foreach ($this->sheetRows($sheetKey) as $m) {
             if ($m['code'] === $code) {
                 return $m;
             }
@@ -139,7 +150,8 @@ class MarksheetService
     /** @return list<array<string, mixed>> */
     private function build(string $scope): array
     {
-        $live = array_filter($this->results->meritSheets($scope), fn ($sheet) => $this->scopeOf($sheet['course_pk']) === $scope);
+        // Drive-wise: meritSheets() of $scope are the drives on this tab.
+        $live = $this->results->meritSheets($scope);
 
         $candidates = [];
         foreach ($live as $sheet) {
@@ -161,20 +173,20 @@ class MarksheetService
 
         $records = Marksheet::query()
             ->where(function ($q) use ($candidates) {
-                $q->whereIn('course_master_pk', array_unique(array_map(fn ($r) => (int) $r['course_key'], $candidates)) ?: [0])
+                $q->whereIn('examination_drive_id', array_unique(array_map(fn ($r) => (int) $r['sheet_key'], $candidates)) ?: [0])
                     ->orWhere('status', Marksheet::STATUS_PUBLISHED);
             })
             ->get()
-            ->keyBy(fn (Marksheet $m) => $m->course_master_pk.'|'.$m->student_master_pk);
+            ->keyBy(fn (Marksheet $m) => self::sheetKeyOf($m).'|'.$m->student_master_pk);
 
         $rows = [];
         foreach ($records as $record) {
-            if ($record->isPublished() && $this->scopeOf($record->course_master_pk) === $scope && is_array($record->snapshot)) {
-                $rows[] = $this->stamp($record->snapshot, $record);
+            if ($record->isPublished() && $this->recordScope($record) === $scope && is_array($record->snapshot)) {
+                $rows[] = $this->stamp($record->snapshot + ['sheet_key' => self::sheetKeyOf($record)], $record);
             }
         }
         foreach ($candidates as $row) {
-            $record = $records[$row['course_key'].'|'.$row['code']] ?? null;
+            $record = $records[$row['sheet_key'].'|'.$row['code']] ?? null;
             if ($record && ! $record->isPublished()) {
                 $rows[] = $this->stamp($row, $record);
             }
@@ -187,6 +199,23 @@ class MarksheetService
      * A marksheet row with its record's number, date and status. `signatures` is
      * designation => Signature Master pk: those put on it so far, or as published.
      */
+    /** A record's sheet: its drive id, or "c<course pk>" for a legacy course-wise marksheet. */
+    public static function sheetKeyOf(Marksheet $record): string
+    {
+        return $record->examination_drive_id ? (string) $record->examination_drive_id : 'c'.$record->course_master_pk;
+    }
+
+    /** The tab a record is listed on: its drive's (Closed = Archived), else its course's. */
+    private function recordScope(Marksheet $record): string
+    {
+        if (! $record->examination_drive_id) {
+            return $this->scopeOf($record->course_master_pk);
+        }
+
+        return $this->driveScopeCache[$record->examination_drive_id] ??=
+            ExaminationDrive::whereKey($record->examination_drive_id)->value('status') === ExaminationDrive::STATUS_CLOSED ? 'archived' : 'active';
+    }
+
     private function stamp(array $row, Marksheet $record): array
     {
         $signed = $record->isPublished() || ! self::signingEnabled() ? [] : ($record->signed ?? []);
@@ -281,6 +310,7 @@ class MarksheetService
 
         return [
             'code' => (string) $r['student'],
+            'sheet_key' => (string) $sheet['drive_id'],
             'course_key' => (string) $sheet['course_pk'],
             'course' => $sheet['course'],
             'course_short' => $sheet['course_short'],
@@ -296,7 +326,7 @@ class MarksheetService
         ] + array_intersect_key($info, array_flip(['batch', 'exam_term', 'exam_type', 'examination']));
     }
 
-    /** Active while the course has an Active drive, else Archived. */
+    /** Legacy course-wise marksheets: Active while the course has an Active drive, else Archived. */
     private function scopeOf(int $coursePk): string
     {
         // Main drives only, as ResultMarksService::scopeDrives() (re-exams left out).
@@ -309,29 +339,31 @@ class MarksheetService
     /* ───────────── Generation ───────────── */
 
     /**
-     * Number the marksheets not generated yet, course by course in merit order,
-     * continuing each course's serial. Two people opening the page at once may
-     * both try: the unique keys turn the second away and the page shows the first.
+     * Number the marksheets not generated yet, drive by drive in merit order. The
+     * serial runs on per course, across its drives (agreed 2026-11-27), so numbers stay
+     * unique. Two people opening the page at once may both try: the unique keys turn the
+     * second away and the page shows the first.
      *
      * @param  list<array<string, mixed>>  $candidates
      */
     private function generate(array $candidates): void
     {
-        $byCourse = [];
+        $byDrive = [];
         foreach ($candidates as $row) {
-            $byCourse[$row['course_key']][] = $row;
+            $byDrive[$row['sheet_key']][] = $row;
         }
 
-        foreach ($byCourse as $courseKey => $rows) {
-            $coursePk = (int) $courseKey;
-            $have = Marksheet::where('course_master_pk', $coursePk)->pluck('student_master_pk')->map(fn ($pk) => (int) $pk)->all();
+        foreach ($byDrive as $driveKey => $rows) {
+            $driveId = (int) $driveKey;
+            $coursePk = (int) $rows[0]['course_key'];
+            $have = Marksheet::where('examination_drive_id', $driveId)->pluck('student_master_pk')->map(fn ($pk) => (int) $pk)->all();
             $new = array_values(array_filter($rows, fn ($r) => ! in_array((int) $r['code'], $have, true)));
             if ($new === []) {
                 continue;
             }
 
             try {
-                DB::transaction(function () use ($coursePk, $new) {
+                DB::transaction(function () use ($coursePk, $driveId, $new) {
                     $serial = (int) Marksheet::where('course_master_pk', $coursePk)->lockForUpdate()->max('serial');
                     $now = now();
                     $userId = auth()->user()?->user_id;
@@ -339,6 +371,7 @@ class MarksheetService
                         $serial++;
                         Marksheet::create([
                             'course_master_pk' => $coursePk,
+                            'examination_drive_id' => $driveId,
                             'student_master_pk' => (int) $row['code'],
                             'serial' => $serial,
                             'marksheet_number' => $this->number($row, $serial),
@@ -480,7 +513,7 @@ class MarksheetService
     /* ───────────── Verify & Publish ───────────── */
 
     /**
-     * Verify the course's marksheets of these OTs (student pks) as $user: put their
+     * Verify the sheet's (drive's) marksheets of these OTs (student pks) as $user: put their
      * designation's signature on each. The order is fixed: the AAO only after the
      * UDC, the COE only after the AAO; the COE's signature publishes the marksheet
      * and needs all three Active in Signature Master. All or nothing; a published
@@ -489,7 +522,7 @@ class MarksheetService
      * @param  string[]  $codes
      * @return array{as:?string, signed:int, published:int, error:?string}
      */
-    public function verify(User $user, string $courseKey, array $codes): array
+    public function verify(User $user, string $sheetKey, array $codes): array
     {
         $fail = fn (string $error, ?string $as = null) => ['as' => $as, 'signed' => 0, 'published' => 0, 'error' => $error];
 
@@ -501,7 +534,9 @@ class MarksheetService
             return $fail('Marksheets cannot be signed yet: run the coe_marksheets migrations.', $as);
         }
 
-        $rows = collect($this->courseRows($courseKey))->keyBy('code');
+        $rows = collect($this->sheetRows($sheetKey))->keyBy('code');
+        // A legacy course-wise sheet is published already: nothing left to sign there.
+        $driveId = ctype_digit($sheetKey) ? (int) $sheetKey : 0;
         foreach ($codes as $code) {
             if (! $rows->has($code)) {
                 return $fail('Some of these marksheets are no longer listed. Reload the page.', $as);
@@ -510,7 +545,7 @@ class MarksheetService
 
         // UDC → AAO → COE: the one before must have signed first.
         $before = self::signsBefore($as);
-        $records = Marksheet::where('course_master_pk', (int) $courseKey)->whereIn('student_master_pk', array_map('intval', $codes))
+        $records = Marksheet::where('examination_drive_id', $driveId)->whereIn('student_master_pk', array_map('intval', $codes))
             ->get()->keyBy(fn (Marksheet $m) => (string) $m->student_master_pk);
 
         $toSign = 0;
@@ -534,11 +569,11 @@ class MarksheetService
         $signatureOf = $this->activeSignatures()->mapWithKeys(fn (SignatureMaster $s) => [self::signatoryOf($s->designation_name) => (int) $s->pk])->all();
         $now = now();
 
-        [$signed, $published] = DB::transaction(function () use ($rows, $codes, $courseKey, $before, $as, $signatureOf, $user, $now) {
+        [$signed, $published] = DB::transaction(function () use ($rows, $codes, $driveId, $before, $as, $signatureOf, $user, $now) {
             $signed = 0;
             $published = 0;
             foreach ($codes as $code) {
-                $record = Marksheet::where('course_master_pk', (int) $courseKey)->where('student_master_pk', (int) $code)
+                $record = Marksheet::where('examination_drive_id', $driveId)->where('student_master_pk', (int) $code)
                     ->lockForUpdate()->first();
                 if (! $record || $record->isPublished()) {
                     continue;
