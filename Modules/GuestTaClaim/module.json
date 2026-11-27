@@ -1,0 +1,11 @@
+{
+    "name": "GuestTaClaim",
+    "alias": "guest-ta-claim",
+    "description": "Guest faculty TA and honorarium claims for Sargam 2.0: TA & Training prepares, course coordinator approves, Accounts pays.",
+    "keywords": ["sargam", "ta", "claim", "honorarium"],
+    "priority": 0,
+    "providers": [
+        "Modules\\GuestTaClaim\\Providers\\GuestTaClaimServiceProvider"
+    ],
+    "files": []
+}

@@ -1,0 +1,22 @@
+{
+    "name": "sargam/guest-ta-claim",
+    "description": "Guest TA Claim module for Sargam 2.0",
+    "type": "laravel-module",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.1"
+    },
+    "suggest": {
+        "barryvdh/laravel-dompdf": "Adds a PDF download to the claim report"
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\GuestTaClaim\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\GuestTaClaim\\Tests\\": "Tests/"
+        }
+    }
+}
