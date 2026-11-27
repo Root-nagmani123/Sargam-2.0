@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Tests\Feature\Concerns\ReopensRunningCourse;
 use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
 use Tests\TestCase;
 
@@ -15,16 +16,27 @@ use Tests\TestCase;
  */
 class OtParticipantsCoordinatorRosterTest extends TestCase
 {
+    use ReopensRunningCourse;
     use RollsBackAgainstAppDatabase;
 
-    /** A Faculty login coordinating a running course and mapped to no course group. */
+    /** A Faculty login coordinating a running course that has participants, and mapped to no course group. */
     private function coordinatorOnly(): User
     {
-        $faculty = DB::table('course_coordinator_master as ccm')
+        $noGroup = fn ($q) => $q->whereNotExists(fn ($g) => $g->from('group_type_master_course_master_map as g')
+            ->whereColumn('g.facility_id', 'ccm.Coordinator_name')->where('g.active_inactive', 1));
+        // PR #356 F-016: no dev course runs any more, so reopen one this kind of coordinator has (rolled back).
+        $this->ensureRunningCourse(fn ($q) => $q->whereExists(fn ($e) => $noGroup($e->from('course_coordinator_master as ccm')
+            ->join('faculty_master as f', 'f.pk', '=', 'ccm.Coordinator_name')
+            ->join('user_credentials as u', 'u.user_id', '=', 'f.employee_master_pk')
+            ->join('model_has_roles as m', fn ($j) => $j->on('m.model_id', '=', 'u.pk')->where('m.model_type', User::class))
+            ->join('roles as r', fn ($j) => $j->on('r.id', '=', 'm.role_id')->where('r.name', 'Faculty'))
+            ->whereColumn('ccm.courses_master_pk', 'c.pk'))));
+
+        $faculty = $noGroup(DB::table('course_coordinator_master as ccm')
             ->join('course_master as cm', 'cm.pk', '=', 'ccm.courses_master_pk')
             ->where('cm.active_inactive', 1)->where('cm.end_date', '>=', now()->toDateString())
-            ->whereNotExists(fn ($q) => $q->from('group_type_master_course_master_map as g')
-                ->whereColumn('g.facility_id', 'ccm.Coordinator_name')->where('g.active_inactive', 1))
+            ->whereExists(fn ($q) => $q->from('student_master_course__map as s')
+                ->whereColumn('s.course_master_pk', 'cm.pk')->where('s.active_inactive', 1)))
             ->pluck('ccm.Coordinator_name');
         foreach ($faculty as $pk) {
             $emp = DB::table('faculty_master')->where('pk', $pk)->value('employee_master_pk');

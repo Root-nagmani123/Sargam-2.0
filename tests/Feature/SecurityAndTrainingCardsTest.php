@@ -6,6 +6,7 @@ use App\Models\SecurityParmIdApply;
 use App\Models\User;
 use App\Support\IdCardSecurityMapper;
 use Illuminate\Support\Facades\DB;
+use Tests\Feature\Concerns\ReopensRunningCourse;
 use Tests\Feature\Concerns\RollsBackAgainstAppDatabase;
 use Tests\TestCase;
 
@@ -18,6 +19,7 @@ use Tests\TestCase;
  */
 class SecurityAndTrainingCardsTest extends TestCase
 {
+    use ReopensRunningCourse;
     use RollsBackAgainstAppDatabase;
 
     private const SECURITY_CARDS = [
@@ -246,6 +248,7 @@ class SecurityAndTrainingCardsTest extends TestCase
 
     public function test_training_induction_total_students_opens_the_roster_it_counts(): void
     {
+        $this->ensureRunningCourse();
         $user = $this->loginWithRole('Training-Induction');
         $this->giveCards($user, ['total_students']);
         $user = $user->fresh();
