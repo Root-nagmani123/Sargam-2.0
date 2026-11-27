@@ -165,7 +165,7 @@
                 <div class="col-md-4">
                     <ul class="list-unstyled d-flex justify-content-md-end justify-content-center mb-0 gap-4">
                         <li>
-                            <a href="#" class="text-white text-decoration-underline small fw-semibold link-light link-opacity-75-hover">Privacy Policy</a>
+                            <a href="{{ route('privacy-policy') }}" class="text-white text-decoration-underline small fw-semibold link-light link-opacity-75-hover">Privacy Policy</a>
                         </li>
                         <li>
                             <a href="#" class="text-white text-decoration-underline small fw-semibold link-light link-opacity-75-hover">Need Help</a>

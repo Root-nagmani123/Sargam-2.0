@@ -325,6 +325,12 @@
                 </a>
             </li>
             <li>
+                <a class="dropdown-item profile-dd-item d-flex align-items-center gap-3" href="{{ route('privacy-policy') }}">
+                    <i class="material-icons material-symbols-rounded">policy</i>
+                    <span>Privacy Policy</span>
+                </a>
+            </li>
+            <li>
                 <form action="{{ route('logout') }}" method="POST" class="m-0">
                     @csrf
                     <button type="submit" class="dropdown-item header-profile-logout-item d-flex align-items-center gap-3 rounded-2 py-2 px-3">

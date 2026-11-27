@@ -11,7 +11,7 @@
                 <div class="col-md-4 text-end">
                     <ul class="list-unstyled d-flex justify-content-end mb-0">
                         <li class="me-3">
-                            <a href="#" class="text-white text-decoration-none"
+                            <a href="{{ route('privacy-policy') }}" class="text-white text-decoration-none"
                                 style="font-size: 14px;">Privacy Policy</a>
                         </li>
                         <li>

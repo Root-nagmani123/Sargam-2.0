@@ -71,6 +71,7 @@ use App\Http\Controllers\Admin\Setup\EmployeeGroupController;
 use App\Http\Controllers\Admin\Setup\EmployeeTypeController;
 use App\Http\Controllers\Admin\Setup\QuickLinksSetupController;
 use App\Http\Controllers\AccountDeletionController;
+use App\Http\Controllers\PrivacyPolicyController;
 use App\Http\Controllers\Admin\AccountDeletionRequestController;
 use App\Http\Controllers\Admin\Setup\UsefulLinksSetupController;
 use App\Http\Controllers\Admin\StationedLeaveMasterController;
@@ -160,6 +161,13 @@ Route::get('/logout', function () {
 // Public Routes
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'authenticate'])->middleware('throttle:login')->name('post_login');
+
+// Privacy Policy: public (linked from the login page), signed-in users see it inside the app layout.
+Route::prefix('privacy-policy')->name('privacy-policy')->controller(PrivacyPolicyController::class)->group(function () {
+    Route::get('/', 'show');
+    Route::get('/print', 'print')->name('.print');
+    Route::get('/download', 'download')->middleware('throttle:20,1')->name('.download');
+});
 
 // Role and permission administration.
 //

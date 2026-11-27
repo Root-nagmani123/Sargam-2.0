@@ -1290,7 +1290,7 @@
                 <div class="container">
                     <a href="#" title="Website Policies">Web Information Manager</a>
                     <span class="link-separator" aria-hidden="true">|</span>
-                    <a href="#" title="Privacy Policy">Privacy Policy</a>
+                    <a href="{{ route('privacy-policy') }}" title="Privacy Policy">Privacy Policy</a>
                     <span class="link-separator" aria-hidden="true">|</span>
                     <a href="#" title="Terms and Conditions">Terms & Conditions</a>
                     <span class="link-separator" aria-hidden="true">|</span>
