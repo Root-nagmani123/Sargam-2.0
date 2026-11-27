@@ -39,3 +39,6 @@ tools/phpstan/vendor/
 bootstrap/
 Modules/Protocol_old/
 tools/phpstan/
+composer.phar
+docs/employee-role-sync.md
+docs/deploy-notes-employee-role-sync.md

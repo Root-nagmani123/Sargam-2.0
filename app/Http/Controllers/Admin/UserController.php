@@ -8418,7 +8418,11 @@ class UserController extends Controller
         );
     }
 
-    private static function bumpAdminUsersIndexCacheEpoch(): void
+    /**
+     * Invalidate every cached page of Role & Permission > Users. Public because the Member
+     * wizard also changes the Spatie roles this list shows (PR #354 review, F-012).
+     */
+    public static function bumpAdminUsersIndexCacheEpoch(): void
     {
         DataTableRedisCache::bumpListEpoch(self::ADMIN_USERS_INDEX_LIST_EPOCH_KEY, 'UserController@adminUsersIndex');
     }
@@ -9018,14 +9022,49 @@ class UserController extends Controller
         try {
             DB::beginTransaction();
 
-            $user = User::findOrFail($request->user_id);
+            // Lock the login row before any other read in this transaction (PR #354 review,
+            // F-016). mirrorOfferedOptions() below reads the login's mapping rows and inserts
+            // the missing ones, and employee_role_mapping has no unique key. Without the lock,
+            // two overlapping saves for one login (a double-clicked Save) both read the
+            // pre-save rows and both insert them. Under REPEATABLE READ the read view is taken
+            // at the first plain read, so this locking read has to come first: the second
+            // save waits here, and its later reads see what the first one committed.
+            $user = User::whereKey($request->user_id)->lockForUpdate()->firstOrFail();
             $roleNames = Role::whereIn('id', $request->input('roles', []))->pluck('name')->toArray();
             $user->syncRoles($roleNames);
+
+            // Keep the Member wizard's Role Assignment step (employee_role_mapping) in
+            // step with what was just assigned, so the employee module shows the same
+            // roles as this screen. Employees only: that step exists only for 'E' logins.
+            $isEmployeeLogin = strtoupper(trim((string) $user->user_category)) === 'E';
+
+            // Not for an employee with more than one login (PR #354 review, F-011). For that
+            // employee the wizard does not change roles, and the options it records are the
+            // only record of the administrator's choice. members:reconcile-role-mappings
+            // skips these logins for the same reason. Mirroring here would replace those
+            // options with this one login's roles.
+            $mappingSkippedSharedEmployee = $isEmployeeLogin
+                && EmployeeRoleMapping::belongsToSharedEmployee($user->user_id === null ? null : (int) $user->user_id);
+            $mirrorMapping = $isEmployeeLogin && ! $mappingSkippedSharedEmployee;
+
+            if ($mirrorMapping) {
+                EmployeeRoleMapping::mirrorOfferedOptions((int) $user->pk, $roleNames);
+            }
 
             DB::commit();
 
             app(PermissionRegistrar::class)->forgetCachedPermissions();
             self::bumpAdminUsersIndexCacheEpoch();
+
+            if ($mirrorMapping) {
+                MemberDataTable::bumpListingCacheEpoch();
+            }
+
+            if ($mappingSkippedSharedEmployee) {
+                \Log::warning('Users screen: roles saved, employee_role_mapping not mirrored - employee has more than one user_credentials row.', [
+                    'user_credentials_pk' => $user->pk,
+                ]);
+            }
 
             // PR #319 review, F-031, restored after the merge with main's permissions
             // rewrite (which removed the block below's original, permanently-dead
@@ -9060,7 +9099,10 @@ class UserController extends Controller
             }
 
             return redirect()->route('admin.users.index')
-                ->with('success', 'Roles assigned successfully.');
+                ->with('success', $mappingSkippedSharedEmployee
+                    ? 'Roles assigned successfully. The employee\'s Role Assignment options in the Member '
+                        . 'module were not changed: this employee has more than one login account.'
+                    : 'Roles assigned successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
 
