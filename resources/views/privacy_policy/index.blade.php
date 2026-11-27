@@ -48,10 +48,10 @@
     </x-breadcrum>
 
     <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
-        <a href="{{ route('privacy-policy.download') }}" class="btn programme-dt-btn-columns border-0 text-primary bg-white">
+        <a href="{{ route('privacy-policy.download') }}" class="btn programme-dt-btn-columns border-0 text-primary">
             <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
         </a>
-        <a href="{{ route('privacy-policy.print') }}" target="_blank" rel="noopener" class="btn programme-dt-btn-columns border-0 text-primary bg-white">
+        <a href="{{ route('privacy-policy.print') }}" target="_blank" rel="noopener" class="btn programme-dt-btn-columns border-0 text-primary">
             <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
         </a>
     </div>

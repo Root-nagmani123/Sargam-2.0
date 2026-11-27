@@ -38,7 +38,9 @@ class PrivacyPolicyPageTest extends TestCase
     public function test_print_and_pdf_carry_the_same_text(): void
     {
         $this->get(route('privacy-policy.print'))->assertOk()
-            ->assertSee('onload="window.print()"', false)
+            ->assertSee('onload="window.print();"', false)
+            ->assertSee('class="mst-print-hdr"', false) // the shared branded header every module prints with
+            ->assertSee('Last Updated: '.PrivacyPolicyController::LAST_UPDATED)
             ->assertSee('14. Applicable Laws');
 
         $pdf = $this->get(route('privacy-policy.download'))->assertOk();
