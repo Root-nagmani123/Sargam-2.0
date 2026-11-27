@@ -136,6 +136,34 @@
                     {{ $pending }} OT(s) on this course are not ranked yet: some of their marks are still to be approved or moderated.
                     They show here once every subject held so far is evaluated and moderated.
                 </p>
+                {{-- Why: each unranked OT and the components still without a final mark. --}}
+                @if (! empty($blocked))
+                    @php
+                        $why = ['no mark' => 'No mark entered (Result Entry)', 'not approved' => 'Saved as draft, not approved (Result Entry)', 'not moderated' => 'Approved, not moderated (Marks Moderation)'];
+                        $byComponent = collect($blocked)->flatMap(fn ($b) => collect($b['missing'])->map(fn ($m) => $m + ['ot' => $b['code']]))
+                            ->groupBy(fn ($m) => $m['drive'].' · '.$m['subject'].' — '.$m['component'].'|'.$m['reason']);
+                    @endphp
+                    <details class="mb-3 small">
+                        <summary class="coe-muted" style="cursor:pointer">Why not ranked: {{ $byComponent->count() }} component(s) still need a final mark</summary>
+                        <div class="table-responsive mt-2">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr><th>Drive · Subject — Component</th><th>Still to do</th><th>OTs</th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($byComponent as $group => $items)
+                                        @php [$label, $reason] = explode('|', $group); @endphp
+                                        <tr>
+                                            <td>{{ $label }}</td>
+                                            <td>{{ $why[$reason] ?? $reason }}</td>
+                                            <td>{{ $items->count() }}: {{ $items->pluck('ot')->unique()->take(12)->implode(', ') }}{{ $items->count() > 12 ? '…' : '' }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+                @endif
             @endif
             <p class="coe-muted small mb-3">
                 Pass: at least {{ rtrim(rtrim(number_format(\App\Services\COE\ResultMarksService::PASSING_PERCENT, 2), '0'), '.') }}% of the max marks in

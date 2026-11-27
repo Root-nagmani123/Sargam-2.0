@@ -947,6 +947,7 @@ class ResultMarksService
         // drives), so under All every row carries its course's maxes.
         $rows = [];
         $pending = 0;
+        $blocked = [];
         $noPassMarks = [];
         $perCourse = [];
         $hasDirector = false;
@@ -970,6 +971,9 @@ class ResultMarksService
                 $rows[] = $row + ['max' => $perCourse[$pk]];
             }
             $pending += $sheet['pending'];
+            foreach ($sheet['blocked'] as $b) {
+                $blocked[] = $b + ['course' => $courses[$pk] ?? ''];
+            }
             $noPassMarks = array_merge($noPassMarks, $sheet['noPassMarks']);
         }
 
@@ -1014,6 +1018,8 @@ class ResultMarksService
             'qualifying' => $qualifyingMax,
             'rows' => $rows,
             'pending' => $pending,
+            // Why each unranked OT is not ranked yet (the columns missing a final mark).
+            'blocked' => $blocked,
             'noPassMarks' => array_values(array_unique($noPassMarks)),
         ];
     }
@@ -1068,14 +1074,35 @@ class ResultMarksService
         $rows = [];
         // Kept for the views/marksheet contract; the fixed rule decides every result now.
         $noPassMarks = [];
+        // Every column an OT needs a final mark in, with what the page names it by.
+        $needed = $partB + array_merge(...array_values(array_column($subjects, 'columns'))) + array_merge([], ...array_values($qualifying));
+        // Unranked OTs and why: the columns still missing a final mark (Merit page, "Why not ranked").
+        $blocked = [];
         foreach ($participants as $pk => $p) {
             $approved = [];
-            foreach (array_merge(array_keys($partB), ...array_map('array_keys', array_values(array_column($subjects, 'columns'))), ...array_map('array_keys', array_values($qualifying))) as $key) {
+            $missing = [];
+            foreach ($needed as $key => $col) {
                 $m = $marks[$key][$pk] ?? null;
                 if (! self::isFinal($m)) {
-                    continue 2;
+                    $missing[] = [
+                        'subject' => $col['subject'],
+                        'component' => $col['component'],
+                        'drive' => $col['drive'],
+                        'reason' => match (true) {
+                            $m === null => 'no mark',
+                            ! $m->isApproved() => 'not approved',
+                            default => 'not moderated',
+                        },
+                    ];
+
+                    continue;
                 }
                 $approved[$key] = $m;
+            }
+            if ($missing) {
+                $blocked[] = ['student' => $pk, 'code' => $p['code'], 'name' => $p['name'], 'missing' => $missing];
+
+                continue;
             }
 
             $totals = array_map(fn ($s) => $sum(array_keys($s['columns']), $approved), $subjects);
@@ -1127,6 +1154,7 @@ class ResultMarksService
             'qualifying' => array_map(fn ($cols) => $cols ? (float) array_sum(array_column($cols, 'max')) : null, $qualifying),
             'rows' => $rows,
             'pending' => count($participants) - count($rows),
+            'blocked' => $blocked,
             'noPassMarks' => $noPassMarks,
         ];
     }

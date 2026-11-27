@@ -514,7 +514,11 @@ All rules in `ResultMarksService` (RMS) and `MarksModeration`.
   Average" is a mean score, Notify for Pending sends bell notifications (`?drive=` narrows it).
   The participants list without `drive` still spans the whole course.
 - **Merit & Ranking**: an OT is ranked only when **every** held mark is final (approved
-  and moderated, or absent). Uses moderated marks. Subject columns = the subjects the listed
+  and moderated, or absent), on **every** Active drive of the course (Drive = All) whose
+  component exam is over: one drive whose exam just ended with no marks holds the whole
+  course back. The page's "Why not ranked" list (`merit()['blocked']`) names each drive ·
+  subject — component still missing a final mark and why (no mark / not approved / not
+  moderated). Uses moderated marks. Subject columns = the subjects the listed
   drives hold (`MERIT_SUBJECTS` only orders / names them),
   qualifying papers ICT/Hindi (not totalled), Director Assessment = exam type matching
   `/director/i`. Pass if Grand Total ≥ the student's service passing marks; fail if a
