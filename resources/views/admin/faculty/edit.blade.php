@@ -1,6 +1,7 @@
 @extends('admin.layouts.master')
 
 @section('title', 'Edit Faculty')
+@include('admin.partials.date-dmy-assets')
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">

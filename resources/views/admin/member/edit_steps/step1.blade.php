@@ -55,7 +55,7 @@
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-            <x-input name="date_of_birth" label="Date of Birth" type="date" value="{{ $member->dob ?? old('date_of_birth') }}" formLabelClass="form-label" formInputClass="form-control" labelRequired="true" />
+            <x-input name="date_of_birth" label="Date of Birth" type="date" data-date-dmy data-date-max="today" value="{{ $member->dob ?? old('date_of_birth') }}" formLabelClass="form-label" formInputClass="form-control" labelRequired="true" />
         </div>
     </div>
     <div class="col-md-6">

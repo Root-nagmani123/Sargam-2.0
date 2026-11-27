@@ -1,6 +1,7 @@
 @extends('admin.layouts.master')
 
 @section('title', 'Member')
+@include('admin.partials.date-dmy-assets')
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/member-admin.css') }}?v={{ @filemtime(public_path('css/member-admin.css')) ?: time() }}">
@@ -323,6 +324,9 @@ $(document).ready(function() {
             }
 
             var target = input.first();
+            // A DD-MM-YYYY date field posts through a hidden input; mark the
+            // one the user sees (public/js/date-dmy.js).
+            if (window.SargamDate) target = $(window.SargamDate.visibleField(target[0]));
             target.addClass("is-invalid")
                   .after($('<div class="text-danger mt-1"></div>').text(message));
 

@@ -1567,7 +1567,11 @@ class MemberController extends Controller
                 'Middle Name' => $member->middle_name,
                 'Last Name' => $member->last_name,
                 "Father's / Husband's Name" => $member->father_name,
-                'Date of Birth' => $member->dob,
+                // DD-MM-YYYY, like every other date in the member screens. format_date()
+                // answers '-' for an empty or zero date; null keeps the view's "—".
+                'Date of Birth' => filled($member->dob) && format_date($member->dob) !== '-'
+                    ? format_date($member->dob)
+                    : null,
                 'Gender' => EmployeeMaster::gender[$member->gender] ?? null,
                 'Marital Status' => EmployeeMaster::maritalStatus[$member->marital_status] ?? null,
                 'Height (Without Shoes)' => filled($member->height) ? $member->height.' cm' : null,

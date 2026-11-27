@@ -1,6 +1,7 @@
 @extends('admin.layouts.master')
 
 @section('title', 'Edit Member Profile')
+@include('admin.partials.date-dmy-assets')
 
 @section('content')
     @php
@@ -646,7 +647,12 @@
                     const message = messages[0];
                     const errorDiv = $('<div class="text-danger mt-1"></div>').text(message);
                     if (input.length) {
-                        input.addClass("is-invalid").first().after(errorDiv);
+                        // A DD-MM-YYYY date field posts through a hidden input;
+                        // mark the one the user sees (public/js/date-dmy.js).
+                        const shown = window.SargamDate
+                            ? input.map(function () { return window.SargamDate.visibleField(this); })
+                            : input;
+                        shown.addClass("is-invalid").first().after(errorDiv);
                     } else {
                         stepElement.prepend(errorDiv);
                     }

@@ -1,5 +1,5 @@
 @php
-    $printedOn = $generatedAt ?? now()->format('d M Y, h:i A');
+    $printedOn = $generatedAt ?? now()->format('d-m-Y h:i A');
 
     $emblemSrc = $emblemSrc ?? pdf_emblem_src();
     foreach ([

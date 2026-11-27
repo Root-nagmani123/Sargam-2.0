@@ -53,6 +53,7 @@
         <div class="col-6 mt-3">
             <x-input
                 type="date"
+                data-date-dmy
                 name="joiningdate"
                 label="Joining Date :"
                 placeholder="Joining Date"

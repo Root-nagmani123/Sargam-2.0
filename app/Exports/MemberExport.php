@@ -112,7 +112,7 @@ class MemberExport implements FromCollection, WithHeadings, WithMapping, ShouldA
             $row->middle_name ?? '',
             $row->last_name ?? '',
             $row->father_name ?? '',
-            $row->dob ?? '',
+            $this->date($row->dob),
             isset(EmployeeMaster::gender[$row->gender]) ? EmployeeMaster::gender[$row->gender] : '',
             isset(EmployeeMaster::maritalStatus[$row->marital_status]) ? EmployeeMaster::maritalStatus[$row->marital_status] : '',
             $row->nationality ?? '',
@@ -133,11 +133,11 @@ class MemberExport implements FromCollection, WithHeadings, WithMapping, ShouldA
             $row->reporting_to_employee_pk ?? '',
             $row->alternate_reporting_to_emp_pk ?? '',
             $row->experience ?? '',
-            $row->doj ?? '',
-            $row->govt_doj ?? '',
-            $row->initial_leaving_date ?? '',
-            $row->appraisal_date ?? '',
-            $row->payroll_date ?? '',
+            $this->date($row->doj),
+            $this->date($row->govt_doj),
+            $this->date($row->initial_leaving_date),
+            $this->date($row->appraisal_date),
+            $this->date($row->payroll_date),
             $row->payroll ?? '',
             optional($row->employeeType)->category_type_name ?? '',
             $row->finance_bookEntityCode ?? '',
@@ -152,10 +152,28 @@ class MemberExport implements FromCollection, WithHeadings, WithMapping, ShouldA
             $row->sigPath ?? '',
             $row->status ?? '',
             $row->created_by ?? '',
-            $row->created_date ?? '',
+            $this->date($row->created_date, 'd-m-Y H:i'),
             $row->modified_by ?? '',
-            $row->modified_date ?? '',
+            $this->date($row->modified_date, 'd-m-Y H:i'),
         ];
 
+    }
+
+    /**
+     * A date column as DD-MM-YYYY (with the time for audit timestamps), the
+     * format every member screen uses. Empty and zero dates stay blank, and a
+     * value Carbon cannot read is passed through rather than failing the export.
+     */
+    private function date($value, string $format = 'd-m-Y'): string
+    {
+        if (blank($value) || str_starts_with((string) $value, '0000-00-00')) {
+            return '';
+        }
+
+        try {
+            return \Carbon\Carbon::parse($value)->format($format);
+        } catch (\Throwable $e) {
+            return (string) $value;
+        }
     }
 }

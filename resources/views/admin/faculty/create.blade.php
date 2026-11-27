@@ -1,6 +1,7 @@
 @extends('admin.layouts.master')
 
 @section('title', 'Faculty')
+@include('admin.partials.date-dmy-assets')
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/master-admin.css') }}?v={{ @filemtime(public_path('css/master-admin.css')) ?: time() }}">
@@ -724,6 +725,7 @@ input.is-invalid {
                                 <div class="col-12 col-md-6 mt-3">
                                     <x-input
                                         type="date"
+                                        data-date-dmy
                                         name="joiningdate"
                                         label="Joining Date :"
                                         placeholder="Joining Date"
@@ -1248,8 +1250,19 @@ if (faculty.Reference_Recommendation) {
 
 
 	if (faculty.joining_date) {
-    let formattedDate = new Date(faculty.joining_date).toISOString().slice(0, 10);
-    $("input[name='joiningdate']").val(formattedDate);
+    // joining_date is cast to 'date', so it arrives as an ISO instant in UTC
+    // (IST midnight = 18:30Z the day before). Read it back in local time —
+    // toISOString() would hand back the previous day.
+    let joiningDate = new Date(faculty.joining_date);
+    if (!isNaN(joiningDate.getTime())) {
+        if (window.SargamDate) {
+            window.SargamDate.setValue($("input[name='joiningdate']"), joiningDate);
+        } else {
+            const pad = n => String(n).padStart(2, '0');
+            $("input[name='joiningdate']").val(
+                joiningDate.getFullYear() + '-' + pad(joiningDate.getMonth() + 1) + '-' + pad(joiningDate.getDate()));
+        }
+    }
 	}
 
 	faculty.faculty_expertise_map.forEach(item => {

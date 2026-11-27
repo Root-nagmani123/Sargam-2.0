@@ -175,7 +175,7 @@ class WhosWhoController extends Controller
                 }
             }
 
-            $cacheKey = 'whos_who_students:v4:' . md5(json_encode([
+            $cacheKey = 'whos_who_students:v5:' . md5(json_encode([
                 'name' => $name,
                 'course_id' => $courseId,
                 'cadre_id' => $cadreId,
@@ -636,7 +636,7 @@ class WhosWhoController extends Controller
                     ? build_student_photo_url($student->photo_path)
                     : 'https://via.placeholder.com/180x180?text='.urlencode(substr($student->display_name ?? 'Student', 0, 1)),
                 'image_src' => $forExport ? $this->resolveStudentPhotoDataUri($student->photo_path) : null,
-                'dob' => $student->dob ? Carbon::parse($student->dob)->format('d-M-y') : 'N/A',
+                'dob' => $student->dob ? Carbon::parse($student->dob)->format('d-m-Y') : 'N/A',
                 'domicile' => strtoupper($stateName),
                 'district' => strtoupper($cityName),
                 'category' => strtoupper($categoryName),
@@ -732,7 +732,7 @@ class WhosWhoController extends Controller
                 'cadreLabel' => $cadreLabel,
                 'serviceLabel' => $serviceLabel,
                 'searchLabel' => $search,
-                'generatedAt' => Carbon::now()->format('d M Y, h:i A'),
+                'generatedAt' => Carbon::now()->format('d-m-Y h:i A'),
             ])
                 ->setPaper('a4', 'portrait')
                 ->setOptions([
@@ -775,7 +775,7 @@ class WhosWhoController extends Controller
                     $export['cadreLabel'],
                     $export['serviceLabel'],
                     $export['search'],
-                    Carbon::now()->format('d M Y, h:i A'),
+                    Carbon::now()->format('d-m-Y h:i A'),
                 ),
                 $filename,
                 ExcelWriter::XLSX

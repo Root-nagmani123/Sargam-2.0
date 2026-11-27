@@ -163,7 +163,7 @@
         <h3 class="mst-card__title">Other Information</h3>
         <div class="mst-facts">
             @foreach ([
-                'Joining Date',
+                'Joining Date (DD-MM-YYYY)',
                 'Current Sector',
                 'Service',
                 'Reference / Recommendation',

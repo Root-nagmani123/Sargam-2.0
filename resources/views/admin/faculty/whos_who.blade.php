@@ -325,7 +325,7 @@
                             </div>
                             <div class="whos-who-field">
                                 <span class="whos-who-field-label">Date of Birth:</span>
-                                <span class="whos-who-field-value" id="profileDob">15-May-00</span>
+                                <span class="whos-who-field-value" id="profileDob">15-05-2000</span>
                             </div>
                             <div class="whos-who-field">
                                 <span class="whos-who-field-label">Domicile State:</span>
