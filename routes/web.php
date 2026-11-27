@@ -245,6 +245,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/admin/navigation-error', [NavigationErrorController::class, 'show'])
         ->name('admin.navigation.error');
+    // The dashboard's card figures (fetched by the page: counts can take seconds) and the login's own card layout.
+    Route::get('/dashboard/cards', [UserController::class, 'dashboardCards'])->name('admin.dashboard.cards');
+    Route::post('/dashboard/layout', [\App\Http\Controllers\Admin\DashboardLayoutController::class, 'store'])->middleware('throttle:30,1')->name('admin.dashboard.layout.store');
+    Route::delete('/dashboard/layout', [\App\Http\Controllers\Admin\DashboardLayoutController::class, 'destroy'])->middleware('throttle:30,1')->name('admin.dashboard.layout.destroy');
     Route::get('/dashboard/feed', [UserController::class, 'dashboardFeed'])->name('admin.dashboard.feed');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/ot-participants', [UserController::class, 'otParticipantsList'])->name('admin.dashboard.ot-participants');
@@ -1521,8 +1525,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/faculty/whos-who/static-info', [WhosWhoController::class, 'getStaticInfo'])->name('admin.faculty.whos-who.static-info');
     Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
 
+    // The Upcoming Events card's page: the holidays it counts (was a static template).
     Route::get('/upcoming-events', function () {
-        return view('admin.dashboard.upcoming_events');
+        return view('admin.dashboard.upcoming_events', [
+            'holidays' => \App\Models\Holiday::active()->upcoming()->orderBy('holiday_date')->orderBy('holiday_name')->get(),
+        ]);
     })->name('admin.dashboard.upcoming_events');
 
     //    Route::get('/guest-faculty', function () {

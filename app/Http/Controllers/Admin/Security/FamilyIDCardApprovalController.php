@@ -11,7 +11,6 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Family ID Card Approval - List pending family ID card requests and approve/reject.
@@ -211,7 +210,7 @@ class FamilyIDCardApprovalController extends Controller
             return ((int) ($g->status_int ?? 1) === 2) && ((bool) ($g->has_level2 ?? false));
         })->values()->map(function ($g) {
             $memberFirst = isset($g->members) ? $g->members->sortBy('fml_id_apply')->first() : null;
-            $g->id_card_physical_print_done = Schema::hasColumn('security_family_id_apply', 'id_card_generate_date')
+            $g->id_card_physical_print_done = fc_schema_has_column('security_family_id_apply', 'id_card_generate_date')
                 && $memberFirst
                 && ! empty($memberFirst->id_card_generate_date);
 
@@ -303,18 +302,31 @@ class FamilyIDCardApprovalController extends Controller
             'approval_remarks' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $application = SecurityFamilyIdApply::where('fml_id_apply', $fmlIdApply)->firstOrFail();
+        // The application row lock is the transaction's first read, so a second approve/reject of
+        // the same request waits here and then sees this one's rows (PR #356 F-009).
+        return DB::transaction(fn () => $this->approveAtStage($fmlIdApply, $validated));
+    }
+
+    private function approveAtStage($fmlIdApply, array $validated)
+    {
+        $application = SecurityFamilyIdApply::whereKey($fmlIdApply)->lockForUpdate()->firstOrFail();
 
         $user = Auth::user();
         $employeePk = $user->user_id ?? null;
 
-        // Determine level based on role
-        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') || hasRole('Admin');
-
-        if (! $isLevel1 && ! $isLevel2) {
+        if (! hasRole('Security Card') && ! hasRole('Admin Security') && ! hasRole('Admin')) {
             return redirect()->back()->with('error', 'You are not authorized to approve this request.');
         }
+
+        // The request's stage decides the step, as on the approval list (PR #356 L-87): level 2
+        // never final-approves a request level 1 has not recommended, and a recommended request
+        // is not recommended again.
+        $action = self::approvalAction($fmlIdApply);
+        if ($action === null) {
+            return redirect()->back()->with('error', 'This request is not at your approval stage.');
+        }
+        $isLevel1 = $action === 'level1';
+        $isLevel2 = $action === 'level2';
 
         // On first approval: update existing status 0 row (or create) to status=1, recommend_status=1,
         // and create a fresh status 0 row for the next level.
@@ -384,9 +396,34 @@ class FamilyIDCardApprovalController extends Controller
             $application->save();
         }
 
-        FamilyIDCardRequestController::bumpIndexListCacheEpoch();
+        DB::afterCommit(fn () => FamilyIDCardRequestController::bumpIndexListCacheEpoch());
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card approved successfully');
+    }
+
+    /**
+     * The step this login may take on family ID request $fmlIdApply now: 'level1' (recommend)
+     * when it has no level-1 row and the login holds Approval II, 'level2' (final approval) when
+     * level 1 is done, level 2 is not, and the login holds Approval III (or Admin); else null.
+     * The same rule index() uses for can_approve.
+     */
+    private static function approvalAction($fmlIdApply): ?string
+    {
+        $flags = DB::table('security_family_id_apply_approval')
+            ->where('security_fm_id_apply_pk', $fmlIdApply)
+            ->selectRaw('MAX(CASE WHEN status = 1 THEN 1 ELSE 0 END) as has_level1, MAX(CASE WHEN status = 2 THEN 1 ELSE 0 END) as has_level2')
+            ->first();
+        $hasLevel1 = $flags && (bool) $flags->has_level1;
+        $hasLevel2 = $flags && (bool) $flags->has_level2;
+
+        if (! $hasLevel1) {
+            return hasRole('Security Card') ? 'level1' : null;
+        }
+        if (! $hasLevel2) {
+            return (hasRole('Admin Security') || hasRole('Admin')) ? 'level2' : null;
+        }
+
+        return null;
     }
 
     public function reject(Request $request, $id)
@@ -401,10 +438,21 @@ class FamilyIDCardApprovalController extends Controller
             'approval_remarks' => ['required', 'string', 'max:500'],
         ]);
 
-        $application = SecurityFamilyIdApply::where('fml_id_apply', $fmlIdApply)->firstOrFail();
+        // Locked like approve() (PR #356 F-009).
+        return DB::transaction(fn () => $this->rejectAtStage($fmlIdApply, $validated));
+    }
+
+    private function rejectAtStage($fmlIdApply, array $validated)
+    {
+        $application = SecurityFamilyIdApply::whereKey($fmlIdApply)->lockForUpdate()->firstOrFail();
 
         if ((int) $application->id_status !== 1) {
             return redirect()->back()->with('error', 'Application already processed');
+        }
+
+        // Only the approver at the request's current stage may reject it, as for approve().
+        if (self::approvalAction($fmlIdApply) === null) {
+            return redirect()->back()->with('error', 'This request is not at your approval stage.');
         }
 
         $user = Auth::user();
@@ -421,7 +469,7 @@ class FamilyIDCardApprovalController extends Controller
             'created_date' => now(),
         ]);
 
-        FamilyIDCardRequestController::bumpIndexListCacheEpoch();
+        DB::afterCommit(fn () => FamilyIDCardRequestController::bumpIndexListCacheEpoch());
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card rejected');
     }
@@ -439,11 +487,19 @@ class FamilyIDCardApprovalController extends Controller
         }
 
         $application = SecurityFamilyIdApply::where('fml_id_apply', $firstId)->firstOrFail();
-        $groupRows = SecurityFamilyIdApply::where('emp_id_apply', $application->emp_id_apply)
+        $groupPks = SecurityFamilyIdApply::where('emp_id_apply', $application->emp_id_apply)
             ->where('created_by', $application->created_by)
             ->where('created_date', $application->created_date)
             ->where('id_status', 1)
-            ->get();
+            ->pluck('fml_id_apply');
+
+        // Members are locked by primary key as the transaction's first read (PR #356 F-009).
+        return DB::transaction(fn () => $this->approveGroupAtStage($request, $groupPks));
+    }
+
+    private function approveGroupAtStage(Request $request, $groupPks)
+    {
+        $groupRows = SecurityFamilyIdApply::whereKey($groupPks)->where('id_status', 1)->lockForUpdate()->get();
 
         if ($groupRows->isEmpty()) {
             return redirect()->route('admin.security.family_idcard_approval.index')
@@ -454,16 +510,19 @@ class FamilyIDCardApprovalController extends Controller
         $employeePk = $user->user_id ?? null;
         $remarks = $request->input('approval_remarks', null);
 
-        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') || hasRole('Admin');
-
-        if (! $isLevel1 && ! $isLevel2) {
+        if (! hasRole('Security Card') && ! hasRole('Admin Security') && ! hasRole('Admin')) {
             return redirect()->route('admin.security.family_idcard_approval.index')
                 ->with('error', 'You are not authorized to approve these requests.');
         }
 
+        $approved = 0;
         foreach ($groupRows as $row) {
-            if ($isLevel1) {
+            // Each member at its own stage (PR #356 L-87); a member not at this login's stage is skipped.
+            $action = self::approvalAction($row->fml_id_apply);
+            if ($action === null) {
+                continue;
+            }
+            if ($action === 'level1') {
                 if ((int) $row->id_status !== 1) {
                     continue;
                 }
@@ -500,7 +559,8 @@ class FamilyIDCardApprovalController extends Controller
                     'modified_by' => $employeePk,
                     'modified_date' => now(),
                 ]);
-            } elseif ($isLevel2) {
+                $approved++;
+            } else {
                 if ((int) $row->id_status !== 1) {
                     continue;
                 }
@@ -523,12 +583,18 @@ class FamilyIDCardApprovalController extends Controller
 
                 $row->id_status = 2;
                 $row->save();
+                $approved++;
             }
         }
 
-        FamilyIDCardRequestController::bumpIndexListCacheEpoch();
+        if ($approved === 0) {
+            return redirect()->route('admin.security.family_idcard_approval.index')
+                ->with('error', 'No member of this group is at your approval stage.');
+        }
+
+        DB::afterCommit(fn () => FamilyIDCardRequestController::bumpIndexListCacheEpoch());
         return redirect()->route('admin.security.family_idcard_approval.index')
-            ->with('success', 'Family ID Card group approved (' . $groupRows->count() . ' members)');
+            ->with('success', 'Family ID Card group approved (' . $approved . ' members)');
     }
 
     /**
@@ -548,15 +614,30 @@ class FamilyIDCardApprovalController extends Controller
         ]);
 
         $application = SecurityFamilyIdApply::where('fml_id_apply', $firstId)->firstOrFail();
-        $groupRows = SecurityFamilyIdApply::where('emp_id_apply', $application->emp_id_apply)
+        $groupPks = SecurityFamilyIdApply::where('emp_id_apply', $application->emp_id_apply)
             ->where('created_by', $application->created_by)
             ->where('created_date', $application->created_date)
             ->where('id_status', 1)
-            ->get();
+            ->pluck('fml_id_apply');
+
+        // Locked like approveGroup() (PR #356 F-009).
+        return DB::transaction(fn () => $this->rejectGroupAtStage($groupPks, $validated));
+    }
+
+    private function rejectGroupAtStage($groupPks, array $validated)
+    {
+        $groupRows = SecurityFamilyIdApply::whereKey($groupPks)->where('id_status', 1)->lockForUpdate()->get();
 
         if ($groupRows->isEmpty()) {
             return redirect()->route('admin.security.family_idcard_approval.index')
                 ->with('error', 'No pending members to reject');
+        }
+
+        // Only members at this login's approval stage are rejected, as in approveGroup().
+        $groupRows = $groupRows->filter(fn ($row) => self::approvalAction($row->fml_id_apply) !== null);
+        if ($groupRows->isEmpty()) {
+            return redirect()->route('admin.security.family_idcard_approval.index')
+                ->with('error', 'No member of this group is at your approval stage.');
         }
 
         $user = Auth::user();
@@ -574,7 +655,7 @@ class FamilyIDCardApprovalController extends Controller
             ]);
         }
 
-        FamilyIDCardRequestController::bumpIndexListCacheEpoch();
+        DB::afterCommit(fn () => FamilyIDCardRequestController::bumpIndexListCacheEpoch());
         return redirect()->route('admin.security.family_idcard_approval.index')
             ->with('success', 'Family ID Card group rejected (' . $groupRows->count() . ' members)');
     }

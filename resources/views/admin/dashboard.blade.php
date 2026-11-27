@@ -209,16 +209,28 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             {{ $greeting }},
                             <span class="text-primary fw-semibold">{{ $userName }}</span>
                         </p>
-                        <h1 class="h3 fw-bold text-dark mb-0">Dashboard</h1>
+                        @php
+                            $dashboardTitle = $dashboardModule && $dashboardModule->slug !== 'home'
+                                ? $dashboardModule->name.' Dashboard' : 'Dashboard';
+                        @endphp
+                        <h1 class="h3 fw-bold text-dark mb-0">{{ $dashboardTitle }}</h1>
+                        <div id="dashboard-hero-action" aria-live="polite">
+                            @include('admin.dashboard.partials.hero-action')
+                        </div>
                     </div>
-                    <div class="ms-auto d-flex align-items-center gap-2 gap-sm-3">
-                        <i class="bi bi-clock text-primary lh-1" style="font-size: 1.85rem;" aria-hidden="true"></i>
-                        <div class="lh-sm">
-                            <div class="text-primary fw-bold tabular-nums lh-1"
-                                style="font-size: 1.7rem; letter-spacing: -0.01em;">
+                    <div class="ms-auto d-flex align-items-center gap-2 gap-md-3">
+                        @if($customiseCards->isNotEmpty() || $customisePanels->isNotEmpty())
+                        <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
+                            data-bs-toggle="modal" data-bs-target="#dashboardCustomiseModal">
+                            <i class="bi bi-sliders" aria-hidden="true"></i> Customise
+                        </button>
+                        @endif
+                        <i class="bi bi-clock text-primary lh-1 fs-5" aria-hidden="true"></i>
+                        <div class="lh-sm text-end">
+                            <div class="text-primary fw-bold tabular-nums lh-1 fs-5">
                                 <span id="dashboard-live-time">{{ now()->format('H:i') }}</span>
                             </div>
-                            <p class="text-body-secondary mb-0 mt-1" style="font-size: 0.9rem;">
+                            <p class="text-body-secondary small mb-0 mt-1">
                                 {{ now()->format('l, d F Y') }}
                             </p>
                         </div>
@@ -267,48 +279,77 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
         @endif
 
         
-        <div class="dashboard-stats-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-3 mb-3 mt-3">
-            @foreach($cardsToRender as $card)
-            <div class="col">
-                @if($card['link'])
-                <a href="{{ $card['link'] }}" class="text-decoration-none d-block h-100">
-                @endif
-                    <div class="card stat-card h-100 p-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper {{ $card['color_class'] }}">
-                                <i class="material-symbols-rounded">{{ $card['icon'] }}</i>
-                            </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">{{ $card['label'] }}</p>
-                                @if($card['show_count'] ?? true)
-                                @php
-                                    // Counts are whole numbers and keep their 0-padding, but a
-                                    // marks total can carry a half mark, and (int) would have
-                                    // shown 13.5 as 13.
-                                    $v = is_numeric($card['count']) ? (float) $card['count'] : 0;
-                                    $statValue = floor($v) == $v
-                                        ? ($v < 10 ? sprintf('%02d', $v) : (string) (int) $v)
-                                        : rtrim(rtrim(number_format($v, 2, '.', ''), '0'), '.');
-                                @endphp
-                                <p class="stat-value">{{ $statValue }}</p>
-                                @else
-                                {{-- Cards that open a page rather than count rows (the
-                                     timetables) carry no number — an "00" would read as
-                                     "nothing there". --}}
-                                <p class="stat-value stat-value-link">Open</p>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                @if($card['link'])
-                </a>
-                @endif
-            </div>
-            @endforeach
+        @if($hasCountedCards || ($dashboardModule && $dashboardModule->slug === 'home'))
+        {{-- Figures, grouping, the hero's action line and Home's module strip come from
+             admin.dashboard.cards; until then the tiles show placeholders. --}}
+        <div id="dashboard-module-queues" aria-live="polite"></div>
+        @endif
+        <div id="dashboard-card-grid" @if($hasCountedCards || ($dashboardModule && $dashboardModule->slug === 'home')) data-src="{{ route('admin.dashboard.cards', ['category' => $dashboardModule?->id]) }}" aria-busy="true" @endif>
+            @include('admin.dashboard.partials.card-grid')
         </div>
+        <p id="dashboard-card-error" class="small text-danger mb-3" role="alert" hidden>
+            The card figures could not be loaded.
+            <button type="button" class="btn btn-link btn-sm p-0 align-baseline" id="dashboard-card-retry">Try again</button>
+        </p>
+        <script>
+            (function () {
+                'use strict';
+                var grid = document.getElementById('dashboard-card-grid');
+                if (!grid || !grid.getAttribute('data-src')) { return; }
+                var error = document.getElementById('dashboard-card-error');
+                var load = function () {
+                    error.hidden = true;
+                    grid.setAttribute('aria-busy', 'true');
+                    fetch(grid.getAttribute('data-src'), {
+                        credentials: 'same-origin',
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    }).then(function (r) {
+                        if (!r.ok) { throw new Error(r.status); }
+                        return r.json();
+                    }).then(function (data) {
+                        grid.innerHTML = data.grid;
+                        document.getElementById('dashboard-hero-action').innerHTML = data.hero;
+                        var queues = document.getElementById('dashboard-module-queues');
+                        if (queues) { queues.innerHTML = data.queues; }
+                        // The Dashboard Preview tabs carry the same figures.
+                        document.querySelectorAll('[data-count-for]').forEach(function (el) {
+                            var raw = (data.counts || {})[el.getAttribute('data-count-for')];
+                            // null = that card's count failed: leave the tab without a figure, not "0".
+                            var n = raw === null || raw === undefined ? NaN : Number(raw);
+                            if (!isFinite(n)) { return; }
+                            el.textContent = n.toLocaleString('en-IN');
+                            el.classList.toggle('is-action', el.hasAttribute('data-actionable') && n > 0);
+                            el.hidden = false;
+                        });
+                    }).catch(function () {
+                        // A lapsed session answers with the login page, which is not JSON: lands here too.
+                        grid.querySelectorAll('.stat-value-skeleton').forEach(function (el) { el.parentNode.textContent = '–'; });
+                        error.hidden = false;
+                    }).finally(function () {
+                        grid.setAttribute('aria-busy', 'false');
+                    });
+                };
+                document.getElementById('dashboard-card-retry').addEventListener('click', load);
+                load();
+            })();
+        </script>
+
+        @if($cardsToRender->isEmpty() && empty($enabledWidgetKeys))
+        <div class="ds-empty-state mb-4">
+            <i class="bi bi-grid-3x3-gap fs-2 d-block mb-2 opacity-50" aria-hidden="true"></i>
+            <p class="fw-semibold text-body mb-1">Nothing on this dashboard yet</p>
+            @if($hiddenCardCount > 0)
+            <p class="small mb-0">You have hidden every card here. Use <strong>Customise</strong> to show them again.</p>
+            @else
+            <p class="small mb-0">No cards are assigned to your role here. Ask your administrator to add them under Assign Dashboard.</p>
+            @endif
+        </div>
+        @endif
 
         <div class="row g-3 g-lg-4">
-            <div class="col">
+            <div class="col-12 col-xl">
+                {{-- Level with the right-hand panels (House wise Performance, ...). --}}
+                @include('admin.dashboard.partials.module-preview')
                 @if(in_array('widget_notices', $enabledWidgetKeys))
                 @php
                 $noticeCategoryLabels = [
@@ -571,7 +612,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
             </div>
 
             @if(in_array('widget_todays_birthdays', $enabledWidgetKeys) || in_array('widget_calendar', $enabledWidgetKeys) || in_array('widget_house_performance', $enabledWidgetKeys))
-            <div class="col-auto" style="width: 480px; min-width: 480px;">
+            {{-- Side by side from xl only: below that a fixed 480px column squeezed the left one to nothing (and overflowed phones). --}}
+            <div class="col-12 col-xl-auto dashboard-side-col">
                 @if(in_array('widget_house_performance', $enabledWidgetKeys))
                 {{-- House wise Performance: every house on the courses running now,
                      least against it first. The figure is the marks its officer
@@ -682,7 +724,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                     <button type="button" class="btn btn-sm dashboard-birthday-wish-btn btn-custom-wish"
                                         data-name="{{ $fullName }}" data-email="{{ $email }}"
                                         data-mobile="{{ $employee->mobile ?? '' }}" data-pk="{{ $employee->pk }}"
-                                        title="Send birthday wish to {{ $fullName }}">Wish them</button>
+                                        title="Send birthday wish to {{ $fullName }}">Wish {{ $emp_dob_data->count() > 1 ? 'them' : (['Male' => 'him', 'Female' => 'her'][$employee->gender ?? ''] ?? 'them') }}</button>
                                 </div>
                                 @if($hasContact)
                                 <div class="dashboard-birthday-detail">
@@ -833,6 +875,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
         </div>
     </div>
 
+    @include('admin.dashboard.partials.customise')
     @include('admin.dashboard.partials.report_issue')
 
     {{-- Notice detail modal — driven by the data-notice-* payload on

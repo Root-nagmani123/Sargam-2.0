@@ -44,6 +44,22 @@ class CourseRepositoryController extends Controller
         })->only(['store', 'update', 'destroy', 'uploadDocument', 'updateDocument', 'deleteDocument']);
     }
 
+    /** The folders this page lists at its root: not deleted, no parent. */
+    private function rootRepositoriesQuery()
+    {
+        return CourseRepositoryMaster::where('del_folder_status', 1)
+            ->where(function ($query) {
+                $query->whereNull('parent_type')
+                    ->orWhere('parent_type', 0);
+            });
+    }
+
+    /** "Course Repository Folders" dashboard card: the folders index() lists at its root. */
+    public function dashboardRootFolderCount(): int
+    {
+        return $this->rootRepositoriesQuery()->count();
+    }
+
     /**
      * Display listing of all course repositories
      * GET /course-repository
@@ -88,11 +104,7 @@ class CourseRepositoryController extends Controller
                 }
             } else {
                 // Show only root repositories (no parent or parent_type = 0)
-                $repositories = CourseRepositoryMaster::where('del_folder_status', 1)
-                    ->where(function($query) {
-                        $query->whereNull('parent_type')
-                              ->orWhere('parent_type', 0);
-                    })
+                $repositories = $this->rootRepositoriesQuery()
                     ->with(['children', 'documents'])
                     ->orderBy('created_date', 'desc')
                     ->get();

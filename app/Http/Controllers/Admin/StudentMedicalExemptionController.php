@@ -112,26 +112,19 @@ class StudentMedicalExemptionController extends Controller
                     $query->where('exemption_category_master_pk', $request->exemption_category);
                 }
 
-                /* 📅 Date Filter */
-                if ($request->filled('from_date') && $request->filled('to_date')) {
-                    $query->whereBetween('from_date', [
-                        $request->from_date,
-                        $request->to_date
-                    ]);
-                } elseif ($request->filled('from_date')) {
-                    $query->whereDate('from_date', '>=', $request->from_date);
-                } elseif ($request->filled('to_date')) {
-                    $query->whereDate('from_date', '<=', $request->to_date);
-                }
+                /* 📅 Date Filter: exemptions in effect at any time in the period,
+                   the same rule the export applies. */
+                $query->overlapping(
+                    is_string($request->from_date) && $request->from_date !== '' ? $request->from_date : null,
+                    is_string($request->to_date) && $request->to_date !== '' ? $request->to_date : null
+                );
 
                 /* 📌 Active / Archive Filter */
                 $currentDate = now()->format('Y-m-d');
                 $status = $request->get('status', 'active');
 
                 if ($status === 'active') {
-                    $query->whereHas('course', function ($q) use ($currentDate) {
-                        $q->whereDate('end_date', '>=', $currentDate);
-                    });
+                    $query->onRunningCourse();
                 } else {
                     $query->whereHas('course', function ($q) use ($currentDate) {
                         $q->whereDate('end_date', '<', $currentDate);

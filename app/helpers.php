@@ -858,6 +858,22 @@ function hasRole($role)
         return $user->hasRole('Super Admin') || $user->hasRole('SuperAdmin');
     }
 
+    // Role names the code checks that no role carries, read as the role that does:
+    // - The Security ID card / family / vehicle pass code names its two approval levels
+    //   'Security Card' (Approval II) and 'Admin Security' (Approval III); the roles are
+    //   'Security Approver II' / 'Security Approver III'.
+    // - Training, Estate, Memo, Attendance and Calendar checks name 'Training Induction
+    //   Admin'; the Induction admins hold 'Training-Induction'.
+    // Without this every such check is false for everyone.
+    $roleAliases = [
+        'Security Card' => 'Security Approver II',
+        'Admin Security' => 'Security Approver III',
+        'Training Induction Admin' => 'Training-Induction',
+    ];
+    if (isset($roleAliases[$role])) {
+        return hasRole($roleAliases[$role]) || $user->hasRole($role);
+    }
+
     // Spatie already has hasRole() method
     return $user->hasRole($role);
 }

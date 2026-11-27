@@ -57,10 +57,12 @@
                 <div class="col-12 col-md-4 col-lg-3">
                     <label for="estateStatusFilter" class="form-label fw-semibold small mb-1">Status</label>
                     <select id="estateStatusFilter" class="form-select form-select-sm">
+                        {{-- ?status_filter= (a dashboard card) preselects; the DataTable sends this value. --}}
+                        @php $estateStatusFromUrl = is_string(request()->query('status_filter')) ? request()->query('status_filter') : ''; @endphp
                         <option value="">All</option>
-                        <option value="0">Pending</option>
-                        <option value="1">Allotted</option>
-                        <option value="3">Returned</option>
+                        <option value="0" @selected($estateStatusFromUrl === '0')>Pending</option>
+                        <option value="1" @selected($estateStatusFromUrl === '1')>Allotted</option>
+                        <option value="3" @selected($estateStatusFromUrl === '3')>Returned</option>
                     </select>
                 </div>
                 <div class="col-auto mt-2 mt-md-0">

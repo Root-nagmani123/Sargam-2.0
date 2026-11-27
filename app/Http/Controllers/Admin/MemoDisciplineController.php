@@ -25,6 +25,31 @@ use App\Support\PdfPageNumbers;
 
 class MemoDisciplineController extends Controller
 {
+    /** Status filter shared by the listing and its export: "open" = Recorded or Memo Sent. */
+    private function applyStatusFilter($query, $statusFilter): void
+    {
+        if ($statusFilter === 'open') {
+            $query->whereIn('status', MemoDiscipline::OPEN_STATUSES);
+        } else {
+            $query->where('status', $statusFilter);
+        }
+    }
+
+    /**
+     * "Open Discipline Memos" dashboard card: what index() lists for a staff login on
+     * ?status=open&from_date=&to_date= (all dates, no other filter).
+     */
+    public function dashboardOpenCount(): int
+    {
+        $courseIds = get_Role_by_course();
+
+        return MemoDiscipline::query()
+            ->when(! empty($courseIds), fn ($q) => $q->whereIn('course_master_pk', $courseIds))
+            ->whereIn('status', MemoDiscipline::OPEN_STATUSES)
+            ->whereHas('discipline', fn ($q) => $q->where('active_inactive', 1))
+            ->count();
+    }
+
  public function index(Request $request)
 {
     // Officer Trainees are managed on their own dedicated page (view own records + chat),
@@ -106,7 +131,7 @@ class MemoDisciplineController extends Controller
             $q->where('course_master_pk', $programNameFilter);
         })
         ->when($statusFilter !== null && $statusFilter !== '', function ($q) use ($statusFilter) {
-            $q->where('status', $statusFilter);
+            $this->applyStatusFilter($q, $statusFilter);
         })
         ->when($disciplineFilter, function ($q) use ($disciplineFilter) {
             $q->whereHas('discipline', fn($d) => $d->where('discipline_name', $disciplineFilter));
@@ -707,7 +732,7 @@ private function buildDisciplineExportData(Request $request): array
             $q->where('course_master_pk', $programNameFilter);
         })
         ->when($statusFilter !== null && $statusFilter !== '', function ($q) use ($statusFilter) {
-            $q->where('status', $statusFilter);
+            $this->applyStatusFilter($q, $statusFilter);
         })
         ->when($disciplineFilter, function ($q) use ($disciplineFilter) {
             $q->whereHas('discipline', fn($d) => $d->where('discipline_name', $disciplineFilter));
@@ -756,7 +781,7 @@ private function buildDisciplineExportData(Request $request): array
     $dateRange = ($fromDateFilter || $toDateFilter)
         ? (($fromDateFilter ? Carbon::parse($fromDateFilter)->format('d-m-Y') : '—') . ' to ' . ($toDateFilter ? Carbon::parse($toDateFilter)->format('d-m-Y') : '—'))
         : 'All Dates';
-    $statusLabels = ['1' => 'Recorded', '2' => 'Memo Sent', '3' => 'Closed'];
+    $statusLabels = ['open' => 'Open (Recorded / Memo Sent)', '1' => 'Recorded', '2' => 'Memo Sent', '3' => 'Closed'];
     $categoryLabels = ['1' => 'Minor', '2' => 'Major'];
 
     $filters = [

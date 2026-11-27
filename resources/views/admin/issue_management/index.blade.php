@@ -86,6 +86,7 @@
                     <div class="programme-dt-filter-select">
                         <select name="status" class="form-select im-auto-filter" aria-label="Filter by status">
                             <option value="">Status</option>
+                            <option value="open" {{ request('status') === 'open' ? 'selected' : '' }} title="Every status except Completed">Open</option>
                             <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Reported</option>
                             <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>In Progress</option>
                             <option value="2" {{ request('status') === '2' ? 'selected' : '' }}>Completed</option>

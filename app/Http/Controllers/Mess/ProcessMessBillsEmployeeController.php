@@ -100,6 +100,20 @@ class ProcessMessBillsEmployeeController extends Controller
     /** Max tracked summary cache keys; entries beyond this are evicted, never silently dropped. */
     private const MODAL_SUMMARY_KEY_INDEX_MAX = 200;
 
+    /**
+     * "Unpaid Mess Bills" dashboard card: how many bills this page lists for ?status=$status
+     * on its default view (this month, invoice sent). Runs the DataTable path itself, so the
+     * card and the page cannot count differently.
+     */
+    public function dashboardBillCount(string $status): int
+    {
+        $response = $this->index(Request::create('/', 'GET', [
+            'draw' => 1, 'start' => 0, 'length' => 1, 'status' => $status, 'skip_lifetime_due' => 1,
+        ]));
+
+        return (int) ($response->getData(true)['recordsTotal'] ?? 0);
+    }
+
     public function index(Request $request)
     {
         // DataTables serverSide sends `draw` on every AJAX request; do not require X-Requested-With.
@@ -1483,6 +1497,19 @@ class ProcessMessBillsEmployeeController extends Controller
             $namesForSlug(ClientType::TYPE_SECTION),
             $allBuyerNames,
         ];
+    }
+
+    /**
+     * "My Unpaid Mess Bills" dashboard card: the Unpaid figure My Mess Bills shows on landing
+     * (this month), read from that page's own stats.
+     */
+    public function dashboardMyUnpaidCount(): int
+    {
+        if (! \canSeeMessSelfServiceSetup()) {
+            return 0;
+        }
+
+        return (int) ($this->myBillsIndex(Request::create('/', 'GET'))->getData()['stats']['unpaid_count'] ?? 0);
     }
 
     /**

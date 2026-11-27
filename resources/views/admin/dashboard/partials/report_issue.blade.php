@@ -6,7 +6,7 @@
 
 {{-- Labelled launcher: visible text (never icon-only), large type, 56px+ target — readable at any age. --}}
 <button type="button" class="dash-report-fab" data-bs-toggle="modal" data-bs-target="#reportIssueModal"
-    title="Report a problem with this application">
+    title="Report a problem with Sargam 2.0">
     <span class="dash-report-fab__icon" aria-hidden="true"><i class="bi bi-exclamation-triangle-fill"></i></span>
     <span class="dash-report-fab__text">
         <span class="dash-report-fab__label">Report a Problem</span>
@@ -24,7 +24,7 @@
                 <input type="hidden" name="page_url" value="{{ url()->current() }}">
 
                 <div class="ir-modal-header">
-                    <h5 class="ir-modal-title" id="reportIssueModalLabel">Report a problem</h5>
+                    <h5 class="ir-modal-title" id="reportIssueModalLabel">Report a problem with Sargam 2.0</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 

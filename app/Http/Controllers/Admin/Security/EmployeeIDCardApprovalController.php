@@ -45,6 +45,53 @@ class EmployeeIDCardApprovalController extends Controller
      */
     public const DEFAULT_REQUEST_DATE_FROM = '2026-03-01';
 
+    /** The New Request rows of the last approval2() / approval3() build, counted by card type. */
+    private array $newRowTypeCounts = [];
+
+    /** Set while dashboardNewRowCounts() builds a page only to count its New Request rows. */
+    private bool $countingNewRows = false;
+
+    /**
+     * The dashboard's four Security ID card cards for this login: how many New Request rows of
+     * each type its Approval II (or III) page lists, read from that page's own build, so a card
+     * and the tab it opens (?type=) cannot disagree.
+     *
+     * @return array{perm: int, cont: int, dup_perm: int, dup_cont: int}
+     */
+    public function dashboardNewRowCounts(string $level): array
+    {
+        $this->newRowTypeCounts = [];
+        $this->countingNewRows = true;
+        try {
+            $level === 'approval3'
+                ? $this->approval3(Request::create('/', 'GET'))
+                : $this->approval2(Request::create('/', 'GET'));
+        } finally {
+            $this->countingNewRows = false;
+        }
+
+        return $this->newRowTypeCounts + ['perm' => 0, 'cont' => 0, 'dup_perm' => 0, 'dup_cont' => 0];
+    }
+
+    /** perm, cont, dup_perm or dup_cont: which dashboard card a New Request row belongs to. */
+    private static function newRowCardType(object $row): string
+    {
+        $duplicate = ($row->request_type ?? null) === 'duplicate' || ($row->request_for ?? null) === 'Duplication';
+
+        return ($duplicate ? 'dup_' : '').((($row->employee_type ?? '') === 'Permanent Employee') ? 'perm' : 'cont');
+    }
+
+    /** Counts the New Request rows by card type, then keeps only ?type= (a dashboard card's link). */
+    private function newRowsForCardType(\Illuminate\Support\Collection $newRows, Request $request): \Illuminate\Support\Collection
+    {
+        $this->newRowTypeCounts = $newRows->countBy(fn ($r) => self::newRowCardType($r))->all();
+        $type = $request->get('type');
+
+        return in_array($type, ['perm', 'cont', 'dup_perm', 'dup_cont'], true)
+            ? $newRows->filter(fn ($r) => self::newRowCardType($r) === $type)->values()
+            : $newRows;
+    }
+
     /**
      * Approval I: Only contractual employee requests where current user is the Approval Authority.
      * Includes:
@@ -66,6 +113,8 @@ class EmployeeIDCardApprovalController extends Controller
             'date_from' => $request->get('date_from'),
             'date_to' => $request->get('date_to'),
             'card_type' => $request->get('card_type'),
+            'pending' => $request->boolean('pending'),
+            'type' => $request->get('type'),
         ]));
 
         $payload = DataTableRedisCache::remember(
@@ -103,6 +152,13 @@ class EmployeeIDCardApprovalController extends Controller
      */
     private function buildApproval1ListPayload(Request $request, $currentEmployeePk): array
     {
+        // ?pending=1: only the requests still waiting for this authority's Approval I, by the
+        // same rule as the dashboard's "Pending ID Card (Approval I)" cards (pending, section
+        // approval not given, no Approval I row); ?type=idcard|duplicate: one of the two lists.
+        // Without them the page keeps its full history, as before.
+        $pendingOnly = $request->boolean('pending');
+        $type = in_array($request->get('type'), ['idcard', 'duplicate'], true) ? $request->get('type') : null;
+
         // Contractual regular ID Card requests - Approval 1
         $contA1Done = DB::table('security_con_oth_id_apply_approval')
             ->where('status', 1)
@@ -136,8 +192,14 @@ class EmployeeIDCardApprovalController extends Controller
         if ($request->filled('card_type')) {
             $contQuery->where('permanent_type', $request->card_type);
         }
+        if ($pendingOnly) {
+            $contQuery->where('id_status', 1)->where('depart_approval_status', 1);
+            if ($contA1Done->isNotEmpty()) {
+                $contQuery->whereNotIn('emp_id_apply', $contA1Done);
+            }
+        }
 
-        $contRows = $contQuery->get();
+        $contRows = $type === 'duplicate' ? collect() : $contQuery->get();
         $contA1DoneArr = $contA1Done->toArray();
         $contDtos = $contRows->map(function ($r) use ($contA1DoneArr) {
             $dto = IdCardSecurityMapper::toContractualRequestDto($r);
@@ -195,8 +257,14 @@ class EmployeeIDCardApprovalController extends Controller
             $to = \Carbon\Carbon::parse($request->date_to)->endOfDay()->toDateTimeString();
             $dupContQuery->where('created_date', '<=', $to);
         }
+        if ($pendingOnly) {
+            $dupContQuery->where('id_status', 1)->where('depart_approval_status', 1);
+            if ($dupContA1Done->isNotEmpty()) {
+                $dupContQuery->whereNotIn('emp_id_apply', $dupContA1Done);
+            }
+        }
 
-        $dupContRows = $dupContQuery->get();
+        $dupContRows = $type === 'idcard' ? collect() : $dupContQuery->get();
         $deptMap = DB::table('department_master')->pluck('department_name', 'pk')->toArray();
         $dupContA1DoneArr = $dupContA1Done->toArray();
         $dupContDtos = $dupContRows->map(function ($r) use ($deptMap, $dupContA1DoneArr) {
@@ -346,8 +414,9 @@ class EmployeeIDCardApprovalController extends Controller
 
 
         // Map Permanent rows to DTOs and mark those which already have Approval II as view-only (pending final approval).
-        $permDtos = $permRows->map(function ($r) {
-            $dto = IdCardSecurityMapper::toEmployeeRequestDto($r);
+        $permLookups = IdCardSecurityMapper::prefetchCardLookupsForPermApplies($permRows);
+        $permDtos = $permRows->map(function ($r) use ($permLookups) {
+            $dto = IdCardSecurityMapper::toEmployeeRequestDto($r, $permLookups);
             $hasA2 = $r->approvals
                 ? $r->approvals->where('status', SecurityParmIdApplyApproval::STATUS_APPROVAL_2)->isNotEmpty()
                 : false;
@@ -478,7 +547,11 @@ class EmployeeIDCardApprovalController extends Controller
         $deptMap = DB::table('department_master')->pluck('department_name', 'pk')->toArray();
         
         $contDtos = $contRows->map(function ($r) use ($contHasA2) {
-            $dto = IdCardSecurityMapper::toContractualRequestDto($r);
+            // Counting reads only status and card type, which the list mapper sets the same way
+            // without its ~12 lookups per row (PR #356 F-002: Approver II Home ran 1,496 queries).
+            $dto = $this->countingNewRows
+                ? IdCardSecurityMapper::toContractualRequestDtoForApprovalList($r, [], [])
+                : IdCardSecurityMapper::toContractualRequestDto($r);
 
             // If this contractual request already has Level 2 (A2) approval,
             // then at Approval 2 screen it should be view-only and marked
@@ -547,10 +620,13 @@ class EmployeeIDCardApprovalController extends Controller
         }
 
         // New Request: actionable pending rows (not view-only)
-        $newRows = $merged->filter(function ($r) {
+        $newRows = $this->newRowsForCardType($merged->filter(function ($r) {
             return (string) ($r->status ?? 'Pending') === 'Pending'
                 && !((bool) ($r->is_view_only ?? false));
-        })->values();
+        })->values(), $request);
+        if ($this->countingNewRows) {
+            return null; // the counts are in $this->newRowTypeCounts; the other tabs are not needed
+        }
 
         // Processed (in pipeline): view-only / non-pending — but not finally approved or rejected
         // (those belong only in Issued and Rejected tabs).
@@ -590,9 +666,11 @@ class EmployeeIDCardApprovalController extends Controller
         if ($request->filled('date_to')) {
             $issuedPermQuery->where('created_date', '<=', \Carbon\Carbon::parse($request->date_to)->endOfDay()->toDateTimeString());
         }
-        $issuedPermDtos = $issuedPermQuery->get()->map(function ($r) {
-            $dto = IdCardSecurityMapper::toEmployeeRequestDto($r);
-            $dto->id_card_physical_print_done = Schema::hasColumn('security_parm_id_apply', 'id_card_generate_date')
+        $issuedPermRows = $issuedPermQuery->get();
+        $issuedPermLookups = IdCardSecurityMapper::prefetchCardLookupsForPermApplies($issuedPermRows);
+        $issuedPermDtos = $issuedPermRows->map(function ($r) use ($issuedPermLookups) {
+            $dto = IdCardSecurityMapper::toEmployeeRequestDto($r, $issuedPermLookups);
+            $dto->id_card_physical_print_done = fc_schema_has_column('security_parm_id_apply', 'id_card_generate_date')
                 && ! empty($r->id_card_generate_date);
 
             return $dto;
@@ -640,7 +718,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'requested_section' => $r->department_name ?? null,
                 'request_type'      => 'duplicate',
                 'status'            => match ($idStatus) { 1 => 'Pending', 2 => 'Approved', 3 => 'Rejected', default => 'Unknown' },
-                'id_card_physical_print_done' => Schema::hasColumn('security_dup_perm_id_apply', 'id_card_generate_date')
+                'id_card_physical_print_done' => fc_schema_has_column('security_dup_perm_id_apply', 'id_card_generate_date')
                     && ! empty($r->id_card_generate_date ?? null),
             ];
         });
@@ -657,7 +735,7 @@ class EmployeeIDCardApprovalController extends Controller
         }
         $issuedContDtos = $issuedContQuery->get()->map(function ($r) {
             $dto = IdCardSecurityMapper::toContractualRequestDto($r);
-            $dto->id_card_physical_print_done = Schema::hasColumn('security_con_oth_id_apply', 'id_card_generate_date')
+            $dto->id_card_physical_print_done = fc_schema_has_column('security_con_oth_id_apply', 'id_card_generate_date')
                 && ! empty($r->id_card_generate_date ?? null);
 
             return $dto;
@@ -699,7 +777,7 @@ class EmployeeIDCardApprovalController extends Controller
                 'requested_section' => $requestedSection,
                 'request_type'      => 'duplicate',
                 'status'            => match ($idStatus) { 1 => 'Pending', 2 => 'Approved', 3 => 'Rejected', default => 'Unknown' },
-                'id_card_physical_print_done' => Schema::hasColumn('security_dup_other_id_apply', 'id_card_generate_date')
+                'id_card_physical_print_done' => fc_schema_has_column('security_dup_other_id_apply', 'id_card_generate_date')
                     && ! empty($r->id_card_generate_date ?? null),
             ];
         });
@@ -733,7 +811,9 @@ class EmployeeIDCardApprovalController extends Controller
         if ($request->filled('date_to')) {
             $rejectPermQuery->where('created_date', '<=', \Carbon\Carbon::parse($request->date_to)->endOfDay()->toDateTimeString());
         }
-        $rejectPermDtos = $rejectPermQuery->get()->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
+        $rejectPermRows = $rejectPermQuery->get();
+        $rejectPermLookups = IdCardSecurityMapper::prefetchCardLookupsForPermApplies($rejectPermRows);
+        $rejectPermDtos = $rejectPermRows->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r, $rejectPermLookups));
 
         $rejectDupPermQuery = DB::table('security_dup_perm_id_apply as dup')
             ->leftJoin('employee_master as emp', 'dup.employee_master_pk', '=', 'emp.pk')
@@ -1061,7 +1141,8 @@ class EmployeeIDCardApprovalController extends Controller
             $permQuery->where('created_date', '<=', $dateToDt);
         }
         $permRows = $permQuery->get();
-        $permDtos = $permRows->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r));
+        $permLookups = IdCardSecurityMapper::prefetchCardLookupsForPermApplies($permRows);
+        $permDtos = $permRows->map(fn ($r) => IdCardSecurityMapper::toEmployeeRequestDto($r, $permLookups));
 
         $dupPermRows = collect();
         if ($dupPermRecommended->isNotEmpty()) {
@@ -1206,10 +1287,10 @@ class EmployeeIDCardApprovalController extends Controller
             $merged = $merged->filter(fn ($d) => $this->approval2MatchesGlobalSearch($needle, $d))->values();
         }
 
-        $newRows = $merged->filter(function ($r) {
+        $newRows = $this->newRowsForCardType($merged->filter(function ($r) {
             return (string) ($r->status ?? 'Pending') === 'Pending'
                 && !((bool) ($r->is_view_only ?? false));
-        })->values();
+        })->values(), $request);
         $forApprovalRows = $merged->filter(function ($r) {
             $status = (string) ($r->status ?? 'Pending');
             if ($status === 'Rejected' || $status === 'Approved') {

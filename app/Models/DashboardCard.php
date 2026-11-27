@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\SidebarMenu\SidebarCategory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
 class DashboardCard extends Model
@@ -51,7 +52,10 @@ class DashboardCard extends Model
      */
     public static function gatedCardVisibility(): array
     {
-        $notSecurity = ! (hasRole('Security Card') || hasRole('Admin Security'));
+        // Only the Security queue cards follow the Security approver roles. The OT and faculty
+        // cards follow the login's own OT / faculty identity alone: an approver who is also
+        // faculty keeps their faculty cards (PR #356 F-004).
+        $isSecurity = hasRole('Security Card') || hasRole('Admin Security');
         $isStudentOT = hasRole('Student-OT');
         // Student-OT is a session pseudo-role; an OT holding only the Spatie
         // "Officer Trainee" role does not have it.
@@ -59,17 +63,31 @@ class DashboardCard extends Model
         $faculty = is_faculty_portal_user();
 
         return [
-            'my_groups' => $notSecurity && $isStudentOT,
-            'discipline_marks_deducted' => $notSecurity && $isOtUser,
-            'pending_feedback' => $notSecurity && $isOtUser,
-            'total_sessions' => $notSecurity && $faculty,
-            'total_feedback' => $notSecurity && $faculty,
-            'my_counsellees' => $notSecurity && $faculty,
-            'house_wise_details' => $notSecurity && $faculty,
-            'whos_who' => $notSecurity && $faculty,
+            // A Security approver's queue (Approval II / III): nobody else has one to count.
+            'pending_permanent_id' => $isSecurity,
+            'pending_contractual_id' => $isSecurity,
+            'duplicate_permanent_id' => $isSecurity,
+            'duplicate_contractual_id' => $isSecurity,
+            'requested_family_id' => $isSecurity,
+            'requested_vehicle_pass' => $isSecurity,
+            'my_groups' => $isStudentOT,
+            // Counted only for a Student-OT login; any other holder of the role would see 0.
+            'medical_exception' => $isStudentOT,
+            'ot_mdo_escort' => $isStudentOT,
+            // The ID card page lists every request to an admin, so "My ..." would show everyone's.
+            'my_idcard_requests_pending' => ! (hasRole('Admin') || hasRole('SuperAdmin')),
+            // Mess roles already have "Unpaid Mess Bills" (everyone's); "My ..." beside it confused.
+            'my_mess_bills_unpaid' => ! (hasRole('Mess Admin') || hasRole('Mess Billing')),
+            'discipline_marks_deducted' => $isOtUser,
+            'pending_feedback' => $isOtUser,
+            'total_sessions' => $faculty,
+            'total_feedback' => $faculty,
+            'my_counsellees' => $faculty,
+            'house_wise_details' => $faculty,
+            'whos_who' => $faculty,
             // The academy scope refuses trainees (PR #334 F-047).
-            'academic_timetable' => $notSecurity && $faculty && ! $isOtUser,
-            'my_timetable' => $notSecurity && ($faculty || $isOtUser),
+            'academic_timetable' => $faculty && ! $isOtUser,
+            'my_timetable' => $faculty || $isOtUser,
         ];
     }
 
@@ -85,6 +103,23 @@ class DashboardCard extends Model
             ->join('role_dashboard_cards', 'role_dashboard_cards.dashboard_card_id', '=', 'dashboard_cards.id')
             ->whereIn('role_dashboard_cards.role_id', $roleIds)
             ->distinct()->pluck('role_dashboard_cards.sidebar_category_id')->map(fn ($id) => (int) $id)->all();
+    }
+
+    /** Login $userId's own layout of module $moduleId's dashboard (user_dashboard_layouts): ['order' => keys, 'hidden' => keys]. */
+    public static function userLayout(int $userId, int $moduleId): array
+    {
+        $row = DB::table('user_dashboard_layouts')->where('user_id', $userId)->where('sidebar_category_id', $moduleId)->first();
+        $keys = fn ($json) => array_values(array_filter((array) json_decode((string) $json, true), 'is_string'));
+
+        return ['order' => $row ? $keys($row->card_order) : [], 'hidden' => $row ? $keys($row->hidden_cards) : []];
+    }
+
+    /** $cards in the login's chosen order: ordered keys first, the rest after them in their default order. */
+    public static function orderByLayout(Collection $cards, array $layout): Collection
+    {
+        $position = array_flip($layout['order']);
+
+        return $cards->values()->sortBy(fn ($card, $i) => $position[$card->key] ?? count($position) + $i)->values();
     }
 
     /** Cards any of $roleIds has on module $moduleId's dashboard. */

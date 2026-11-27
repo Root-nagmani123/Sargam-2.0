@@ -412,27 +412,38 @@
                 return;
             }
 
-            var $filterContainer = $('#estateHacApprovedTable_wrapper .dataTables_filter');
-            var $searchLabel = $filterContainer.find('label').first();
-            if (!$searchLabel.length) {
+            // By id: the global DataTable UI moves the search box out of the table wrapper,
+            // into a toolbar; the selects go beside it there (inside the search slot they
+            // would inherit its search icon and 300px width).
+            var $filterContainer = $('#estateHacApprovedTable_filter');
+            if (!$filterContainer.length) {
                 return;
             }
 
-            if (!$filterContainer.find('.hac-approved-filter-toolbar').length) {
-                $filterContainer.contents().wrapAll('<div class="hac-approved-filter-toolbar"></div>');
-            }
-
-            var typeFilterHtml = `
-                <label class="hac-approved-type-filter">
-                    <select id="hacApprovedTypeFilter" class="form-select form-select-sm">
+            var filtersHtml = `
+                <div class="d-flex flex-wrap align-items-center gap-2 hac-approved-filters">
+                    <select id="hacApprovedTypeFilter" class="form-select form-select-sm w-auto" aria-label="Type">
                         <option value="">All Types</option>
                         <option value="change">Change Request</option>
                         <option value="new">New Request</option>
                     </select>
-                </label>
+                    <select id="hacApprovedStatusFilter" class="form-select form-select-sm w-auto" aria-label="Status">
+                        <option value="">All Statuses</option>
+                        <option value="pending">Pending</option>
+                    </select>
+                </div>
             `;
 
-            $filterContainer.find('.hac-approved-filter-toolbar').prepend(typeFilterHtml);
+            var $toolbar = $filterContainer.closest('.sargam-dt-toolbar');
+            if ($toolbar.length) {
+                $toolbar.prepend(filtersHtml);
+            } else {
+                $filterContainer.prepend(filtersHtml);
+            }
+            // A dashboard card opens this page on ?status_filter=pending.
+            if (new URLSearchParams(window.location.search).get('status_filter') === 'pending') {
+                $('#hacApprovedStatusFilter').val('pending');
+            }
         }
 
         injectTypeFilter();
@@ -442,7 +453,7 @@
             }
         });
 
-        $(document).on('change', '#hacApprovedTypeFilter', function() {
+        $(document).on('change', '#hacApprovedTypeFilter, #hacApprovedStatusFilter', function() {
             var hacApprovedTable = getHacApprovedTable();
             if (hacApprovedTable) {
                 hacApprovedTable.ajax.reload();

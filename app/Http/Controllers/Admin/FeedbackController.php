@@ -4462,6 +4462,31 @@ class FeedbackController extends Controller
     }
 
     /**
+     * "Pending Feedback Students" dashboard card: the student total Pending Feedback – Students
+     * shows on landing (its default course, Active tab, Feedback "Not given"), read from the
+     * same grouped endpoint the page loads.
+     */
+    public function dashboardPendingStudentsCount(): int
+    {
+        $request = Request::create('/', 'GET', [
+            'course_pk' => $this->resolvePendingStudentsDefaultCourseId(),
+            'course_type' => 'active',
+            'filter_feedback_state' => 'not_given',
+        ]);
+
+        // The page's own total (pendingStudentsTotal(), what pendingStudentsGroupedData() falls back
+        // to) without the page of rows and their session details, which a count never shows.
+        try {
+            return $this->pendingStudentsTotal($request, DB::query()->fromSub($this->buildPendingStudentsAggregateSubquery($request), 'agg_students'));
+        } catch (\Exception $e) {
+            // As before: the grouped-data endpoint logged a failure and the card read 0.
+            \Log::error('Pending Students dashboard count error: '.$e->getMessage());
+
+            return 0;
+        }
+    }
+
+    /**
      * Return student-grouped pending feedback data for accordion view.
      * Uses SQL aggregation + pagination (no full scan into PHP).
      */

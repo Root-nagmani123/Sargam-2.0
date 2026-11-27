@@ -71,6 +71,7 @@ class EstateHacApprovedDataTable extends DataTable
 
         return [
             'type_filter' => trim((string) $r->input('type_filter', '')),
+            'status_filter' => $r->input('status_filter') === 'pending' ? 'pending' : '',
             'scope' => (string) $r->input('scope', ''),
             'emp' => $empScope,
             'can' => $canSeeHacApproved ? 1 : 0,
@@ -304,6 +305,12 @@ class EstateHacApprovedDataTable extends DataTable
             $q->whereRaw('1 = 0');
         }
 
+        // ?status_filter=pending: rows still waiting on Estate - new requests not yet allotted
+        // (no decision column, NULL) and change requests not yet approved / disapproved.
+        if (request('status_filter') === 'pending') {
+            $q->where(fn ($w) => $w->whereNull('change_ap_dis_status')->orWhere('change_ap_dis_status', 0));
+        }
+
         return $q;
     }
 
@@ -315,6 +322,8 @@ class EstateHacApprovedDataTable extends DataTable
             ->columns($this->getColumns())
             ->minifiedAjax('', null, [
                 'type_filter' => '$("#hacApprovedTypeFilter").val()',
+                // The select is injected after the first draw, so the first request reads the URL.
+                'status_filter' => '$("#hacApprovedStatusFilter").length ? $("#hacApprovedStatusFilter").val() : (new URLSearchParams(window.location.search).get("status_filter") || "")',
                 'scope' => 'new URLSearchParams(window.location.search).get("scope") || ""',
             ])
             ->parameters([

@@ -316,10 +316,6 @@ class VehiclePassApprovalController extends Controller
             $pk = substr($decryptedId, 3);
         }
 
-        $user = Auth::user();
-        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') || hasRole('Admin');
-
         if ($kind === 'fw') {
             $application = VehiclePassFWApply::with([
                 'vehicleType',
@@ -378,25 +374,7 @@ class VehiclePassApprovalController extends Controller
         // Determine phase for show page (same rules as index)
         $statusInt = (int) ($application->vech_card_status ?? 1);
         $vehicleKey = $kind === 'fw' ? $application->vehicle_fw_pk : $application->vehicle_tw_pk;
-        $stats = VehiclePassTWApplyApproval::select(
-                'vehicle_TW_pk',
-                DB::raw('MAX(CASE WHEN status = 1 OR veh_recommend_status = 1 THEN 1 ELSE 0 END) as has_level1'),
-                DB::raw('MAX(CASE WHEN status = 2 THEN 1 ELSE 0 END) as has_level2')
-            )
-            ->where('vehicle_TW_pk', $vehicleKey)
-            ->groupBy('vehicle_TW_pk')
-            ->first();
-        $hasLevel1 = $stats ? (bool) ($stats->has_level1 ?? false) : false;
-        $hasLevel2 = $stats ? (bool) ($stats->has_level2 ?? false) : false;
-
-        $canApprove = false;
-        if ($statusInt === 1) {
-            if ($isLevel1 && ! $hasLevel1) {
-                $canApprove = true;
-            } elseif ($isLevel2 && $hasLevel1 && ! $hasLevel2) {
-                $canApprove = true;
-            }
-        }
+        $canApprove = $statusInt === 1 && self::approvalAction($vehicleKey) !== null;
 
         return view('admin.security.vehicle_pass_approval.show', [
             'application' => $application,
@@ -422,10 +400,7 @@ class VehiclePassApprovalController extends Controller
         $user = Auth::user();
         $employeePk = $user->user_id ?? null;
 
-        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') || hasRole('Admin');
-
-        if (! $isLevel1 && ! $isLevel2) {
+        if (! hasRole('Security Card') && ! hasRole('Admin Security') && ! hasRole('Admin')) {
             return redirect()->back()->with('error', 'You are not authorized to approve this request.');
         }
 
@@ -439,15 +414,32 @@ class VehiclePassApprovalController extends Controller
             $pk = substr($decryptedId, 3);
         }
 
+        // The application row lock is the transaction's first read, so a second approve/reject of
+        // the same request waits here and then sees this one's rows (PR #356 F-009).
+        return DB::transaction(fn () => $this->approveAtStage($kind, $pk, $validated, $employeePk));
+    }
+
+    private function approveAtStage(string $kind, $pk, array $validated, $employeePk)
+    {
         $application = $kind === 'fw'
-            ? VehiclePassFWApply::findOrFail($pk)
-            : VehiclePassTWApply::findOrFail($pk);
+            ? VehiclePassFWApply::lockForUpdate()->findOrFail($pk)
+            : VehiclePassTWApply::lockForUpdate()->findOrFail($pk);
 
         if ((int) $application->vech_card_status !== 1) {
             return redirect()->back()->with('error', 'Application already processed');
         }
 
         $vehicleKey = $kind === 'fw' ? $application->vehicle_fw_pk : $application->vehicle_tw_pk;
+
+        // The request's stage decides the step, as on the approval list (PR #356 L-87): level 2
+        // never final-approves a request level 1 has not recommended, and a recommended request
+        // is not recommended again.
+        $action = self::approvalAction($vehicleKey);
+        if ($action === null) {
+            return redirect()->back()->with('error', 'This request is not at your approval stage.');
+        }
+        $isLevel1 = $action === 'level1';
+        $isLevel2 = $action === 'level2';
 
         if ($isLevel1) {
             // Level 1: recommend and create next pending step
@@ -509,11 +501,40 @@ class VehiclePassApprovalController extends Controller
         }
 
         if ($kind === 'tw') {
-            VehiclePassController::bumpIndexListCacheEpoch();
+            DB::afterCommit(fn () => VehiclePassController::bumpIndexListCacheEpoch());
         }
 
         return redirect()->route('admin.security.vehicle_pass_approval.index')
             ->with('success', 'Vehicle Pass approved successfully');
+    }
+
+    /**
+     * The step this login may take on vehicle pass $vehicleKey now: 'level1' (recommend) when no
+     * one has recommended it and the login holds Approval II, 'level2' (final approval) when it
+     * is recommended, not yet final-approved, and the login holds Approval III (or Admin); else
+     * null. The same rule the approval list uses for its Approve action.
+     */
+    private static function approvalAction($vehicleKey): ?string
+    {
+        $stats = VehiclePassTWApplyApproval::select(
+                'vehicle_TW_pk',
+                DB::raw('MAX(CASE WHEN status = 1 OR veh_recommend_status = 1 THEN 1 ELSE 0 END) as has_level1'),
+                DB::raw('MAX(CASE WHEN status = 2 THEN 1 ELSE 0 END) as has_level2')
+            )
+            ->where('vehicle_TW_pk', $vehicleKey)
+            ->groupBy('vehicle_TW_pk')
+            ->first();
+        $hasLevel1 = $stats && (bool) $stats->has_level1;
+        $hasLevel2 = $stats && (bool) $stats->has_level2;
+
+        if (! $hasLevel1) {
+            return hasRole('Security Card') ? 'level1' : null;
+        }
+        if (! $hasLevel2) {
+            return (hasRole('Admin Security') || hasRole('Admin')) ? 'level2' : null;
+        }
+
+        return null;
     }
 
     public function reject(Request $request, $id)
@@ -543,15 +564,26 @@ class VehiclePassApprovalController extends Controller
             $pk = substr($decryptedId, 3);
         }
 
+        // Locked like approve() (PR #356 F-009).
+        return DB::transaction(fn () => $this->rejectAtStage($kind, $pk, $validated, $employeePk));
+    }
+
+    private function rejectAtStage(string $kind, $pk, array $validated, $employeePk)
+    {
         $application = $kind === 'fw'
-            ? VehiclePassFWApply::findOrFail($pk)
-            : VehiclePassTWApply::findOrFail($pk);
+            ? VehiclePassFWApply::lockForUpdate()->findOrFail($pk)
+            : VehiclePassTWApply::lockForUpdate()->findOrFail($pk);
 
         if ((int) $application->vech_card_status !== 1) {
             return redirect()->back()->with('error', 'Application already processed');
         }
 
         $vehicleKey = $kind === 'fw' ? $application->vehicle_fw_pk : $application->vehicle_tw_pk;
+
+        // Only the approver at the request's current stage may reject it, as for approve().
+        if (self::approvalAction($vehicleKey) === null) {
+            return redirect()->back()->with('error', 'This request is not at your approval stage.');
+        }
 
         $application->vech_card_status = 3; // Rejected
         $application->save();
@@ -567,7 +599,7 @@ class VehiclePassApprovalController extends Controller
         ]);
 
         if ($kind === 'tw') {
-            VehiclePassController::bumpIndexListCacheEpoch();
+            DB::afterCommit(fn () => VehiclePassController::bumpIndexListCacheEpoch());
         }
 
         return redirect()->route('admin.security.vehicle_pass_approval.index')

@@ -6638,6 +6638,10 @@ class EstateController extends Controller
      */
     public function getMeterReadingList(Request $request)
     {
+        // The feed of the Update Meter Reading screen, on that screen's rule (PR #356 L-90): it
+        // had none, so any login could read residents' readings the screen refuses them.
+        abort_unless(isEstateAuthority(), 403, 'You do not have permission to access this estate section.');
+
         $billMonth = $request->get('bill_month');
         $billYear = $request->get('bill_year');
         $campusId = $request->get('campus_id');
@@ -9365,8 +9369,10 @@ class EstateController extends Controller
             return true;
         }
 
+        // Not 'Training Induction Admin': hasRole() now reads it as Training-Induction, who would list
+        // every bill while Print All refuses them (PR #356 L-91). Widen both together if intended.
         $hasPrivBill = isEstateAuthority()
-            || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST');
+            || hasRole('Training MCTP Admin') || hasRole('Training IST');
 
         return ! $hasPrivBill;
     }

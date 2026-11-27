@@ -8,7 +8,8 @@ $wishCount = $birthdayWishCounts[$employee->pk] ?? 0;
 $hasContact = $email !== '' || !empty($employee->mobile) || !empty($employee->office_extension_no);
 $showWish = $showWishButton ?? true;
 $variant = $variant ?? 'today';
-$wishLabel = ($variant === 'upcoming') ? 'Wish them Advanced' : 'Wish them';
+$wishPronoun = ($sameDayCount ?? 1) > 1 ? 'them' : (['Male' => 'him', 'Female' => 'her'][$employee->gender ?? ''] ?? 'them');
+$wishLabel = 'Wish ' . $wishPronoun . ($variant === 'upcoming' ? ' Advanced' : '');
 $itemClasses = 'dashboard-birthday-item dashboard-birthday-item--' . $variant . ' rounded-3 border p-3';
 @endphp
 <article class="{{ $itemClasses }}" @if($hasContact) tabindex="0" @endif

@@ -224,6 +224,7 @@ class UserController extends Controller
                 'employee_master.profile_picture',
                 'employee_master.last_name',
                 'designation_master.designation_name',
+                'employee_master.gender',
                 'employee_master.dob'
             )
             ->get();
@@ -269,6 +270,7 @@ class UserController extends Controller
                     'employee_master.first_name',
                     'employee_master.last_name',
                     'employee_master.profile_picture',
+                    'employee_master.gender',
                     'employee_master.dob',
                     'designation_master.designation_name'
                 )
@@ -280,149 +282,15 @@ class UserController extends Controller
             $upcomingBirthdays = $upcomingBirthdays->merge($upcoming);
         }
 
-        $totalActiveCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '<=', now()->toDateString())->where('end_date', '>=', now()->toDateString())->count();
-        $upcomingCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '>', now()->toDateString())->count();
-        $upcomingEventsCount = Holiday::active()->where('holiday_date', '>', now())->count();
-
-        $total_guest_faculty = FacultyMaster::where('active_inactive', 1)->where('faculty_type', 2)->count();
-        $total_internal_faculty = FacultyMaster::where('active_inactive', 1)->where('faculty_type', 1)->count();
-        //   print_r($emp_data);exit;
-        $exemptionCount = 0;
-        $MDO_count = 0;
-        $myGroupsCount = 0;
-        $todayTimetable = collect([]);
-        $totalSessions = 0;
-        $totalStudents = 0;
-        $facultyTotalSessions = 0;
-        $facultyTotalFeedback = 0;
-        $facultyCounsellees = 0;
-        $facultyHouses = 0;
-        $isCCorACC = false;
+        // Today's timetable for the logged-in student, or the faculty's when the login
+        // is both. The card counts are in dashboardCardDefinitions(), run per card shown.
         $userId = Auth::user()->user_id;
+        $todayTimetable = collect([]);
         if (hasRole('Student-OT')) {
-            $exemptionQuery = StudentMedicalExemption::where('student_master_pk', $userId)
-                ->where('active_inactive', 1);
-            $exemptionCount = $exemptionQuery->count();
-
-            $MDO_count = MDOEscotDutyMap::where('selected_student_list', $userId)
-                ->with(['courseMaster', 'mdoDutyTypeMaster', 'facultyMaster'])
-                ->count();
-
-            // "My Groups" card: how many Course Group Mapping groups this OT is in.
-            // Same trainee check as the page it opens (F-055).
-            $myGroupsCount = $this->isMyGroupsTrainee()
-                ? $this->myGroupsQuery($userId)->distinct()->count('gmap.pk')
-                : 0;
-
-            // Fetch today's timetable for the logged-in student
             $todayTimetable = $this->getTodayTimetableForStudent($userId);
         }
-
-         // "Total Marks Deducted in Discipline" — every concluded deduction against
-         // this OT, from BOTH registers: Discipline Memos and Memo/Notices. Counted
-         // through the service the page behind the card lists from, so the tile and
-         // the rows agree.
-         //
-         // Gated on isOfficerTraineeUser(), not hasRole('Student-OT') like the block
-         // above: Student-OT is a session pseudo-role set at login, so an OT who
-         // arrives holding only the Spatie "Officer Trainee" role would have been
-         // shown a card reading zero over real deductions.
-         //
-         // And only for user_category 'S' (PR #334 F-047): user_id is a student_master
-         // pk only for a trainee login. A staff login that also holds the role has an
-         // employee / faculty pk there, which can equal another trainee's pk — the
-         // pages behind both cards refuse it for that reason.
-         $disciplineMarksDeducted = 0;
-         $pendingFeedbackCount = 0;
-         if (isOfficerTraineeUser() && auth_student_master_pk() !== null) { // one identity rule (PR #334 F-074)
-             $disciplineMarksDeducted = app(OtMarksDeductedService::class)->totalFor((int) $userId);
-             $pendingFeedbackCount = $this->getOtPendingFeedbackCount($userId);
-         }
-
-         // Calculate total sessions for faculty portal users (Faculty / Internal / Guest)
-         if (is_faculty_portal_user()) {
-             $facultyPk = get_auth_faculty_master_pk();
-
-            if ($facultyPk) {
-                $totalSessions = CalendarEvent::where('active_inactive', 1)
-                    ->where(function ($query) use ($facultyPk) {
-                        $query->whereRaw('JSON_CONTAINS(faculty_master, ?)', ['"'.$facultyPk.'"'])
-                            ->orWhereRaw('FIND_IN_SET(?, faculty_master)', [$facultyPk]);
-                    })
-                    ->count();
-
-                 // "Total Sessions" card — the sessions this faculty TEACHES, across
-                 // active and ended courses alike. Counted through the same scope the
-                 // Timetable Session Report filters by, and the card links to that
-                 // report's All Courses tab with the Role filter on Teaching, so the
-                 // page it opens holds exactly these rows.
-                 $facultyTotalSessions = FacultySessionScope::countFor(
-                     $facultyPk,
-                     'all',
-                     FacultySessionScope::ROLE_TEACHING
-                 );
-
-                 // "Total Running Courses Feedback" card — this faculty's submitted
-                 // feedback on running (active, not yet ended) courses, counted the way
-                 // the Faculty Feedback with Comments page the card opens counts it, so
-                 // the figure is verifiable on the page it leads to.
-                 $facultyTotalFeedback = app(FacultyFeedbackReportService::class)
-                     ->getTotalFeedbackCount($facultyPk);
-
-                 // Both cards count students off the Course Group Mapping page, for
-                 // the groups mapped to THIS faculty, and open the OT / Participants
-                 // list on exactly that scope so the number and the rows agree.
-                 //
-                 //   My Counsellees     -> their Counsellor Groups (the cadres)
-                 //   House Wise Details -> their House Groups, i.e. how many
-                 //                         students their house holds
-                 //
-                 // Both on current courses only: a course switched off in the master,
-                 // or one whose end date has passed, stops counting.
-                 // A COUNT(DISTINCT) over the same mappings facultyGroupRows() reads,
-                 // not the full hydrated rows: this runs on every faculty dashboard
-                 // load (PR #334 F-010; measured 22 -> 6 queries, ~50 -> ~8 ms for a
-                 // faculty with 48 + 46 students, identical counts).
-                 $facultyCounsellees = $this->facultyGroupStudentCount($facultyPk, '%counsel%', true);
-
-                 $facultyHouses = $this->facultyGroupStudentCount($facultyPk, '%house%', true);
-
-                 // Check if faculty is CC or ACC
-                 $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
-
-                // Flag CC/ACC so the "Total Students" / "Student Details" cards
-                // become visible for them (card visibility is unchanged).
-                if ($coordinatorCourses->isNotEmpty()) {
-                    $isCCorACC = true;
-                }
-
-                // "Total Students" / "Student Details" both open the student list,
-                // so their count has to be that list's own roster — see
-                // dashboardCoordinatorStudentsCount(). A CC/ACC is reached through
-                // their faculty pk, which is also what makes the cards visible at
-                // all; counting by get_Role_by_course() instead read a DIFFERENT
-                // scope (role → course_master.user_role_master_pk) and showed a
-                // plain Faculty coordinator 0 while the page they opened listed
-                // their full roster, because that helper returns [-1] for a role
-                // with no mapped courses.
-                $totalStudents = $isCCorACC
-                    ? $this->dashboardCoordinatorStudentsCount($facultyPk)
-                    : $this->dashboardTotalStudentsCount(get_Role_by_course());
-            } else {
-                $totalSessions = 0;
-            }
-
-            // Fetch today's timetable for the logged-in faculty
+        if (is_faculty_portal_user()) {
             $todayTimetable = $this->getTodayTimetableForFaculty($userId);
-        }
-
-        // Super Admin / PA / Admin also see the "Total Students" / "Student Details"
-        // cards, but they are NOT faculty-portal users, so the block above skips them
-        // and $totalStudents stayed 0. Compute it here on the same basis as the
-        // faculty branch (see dashboardTotalStudentsCount()).
-        if (! hasRole('Student-OT') && ! is_faculty_portal_user()) {
-            $roleCourseIds = get_Role_by_course();
-            $totalStudents = $this->dashboardTotalStudentsCount($roleCourseIds);
         }
 
         if ($request->boolean('calendar_only')) {
@@ -439,127 +307,11 @@ class UserController extends Controller
             ]);
         }
 
-        $todayFamilyApprovals = $this->getTodayPendingFamilyApprovalsCount(true);
-        $fullFamilyApprovals = $this->getTodayPendingFamilyApprovalsCount(false);
-        $todayVehicleApprovals = $this->getTodayPendingVehicleApprovalsCount(true);
-        $fullVehicleApprovals = $this->getTodayPendingVehicleApprovalsCount(false);
-        $todayIdCardRequests = $this->getTodayPendingIdCardRequestsCount();
-        $todayPendingSplit = $this->getTodayPendingIdCardRequestsSplit(true);
-        $todayPendingPermanentIdCardRequests = (int) ($todayPendingSplit['perm'] ?? 0);
-        $todayPendingContractualIdCardRequests = (int) ($todayPendingSplit['cont'] ?? 0);
-        $fullPendingSplit = $this->getTodayPendingIdCardRequestsSplit(false);
-        $fullPendingPermanentIdCardRequests = (int) ($fullPendingSplit['perm'] ?? 0);
-        $fullPendingContractualIdCardRequests = (int) ($fullPendingSplit['cont'] ?? 0);
-        $todayApproval1Split = $this->getTodayPendingSecurityApproval1Split();
-        $todayApproval1IdCardRequests = (int) ($todayApproval1Split['idcard'] ?? 0);
-        $todayApproval1DuplicateIdCardRequests = (int) ($todayApproval1Split['duplicate'] ?? 0);
-        $todayDuplicatePermIdCardRequests = $this->getTodayDuplicatePermanentIdCardRequestsCount(true);
-        $todayDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount(true);
-        $fullDuplicatePermIdCardRequests = $this->getTodayDuplicatePermanentIdCardRequestsCount(false);
-        $fullDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount(false);
-        $idCardApprovalRoute = route('admin.security.employee_idcard_approval.all');
-
-        // Role flags used for card visibility
-        $isSecurityRole = hasRole('Security Card') || hasRole('Admin Security');
-        $isSuperAdmin   = hasRole('Super Admin');
-        $isStudentOT    = hasRole('Student-OT');
-        // Student-OT is a pseudo-role set at login; an OT who arrives holding only
-        // the Spatie "Officer Trainee" role does not have it. The OT cards below
-        // key off this instead, or their links would resolve to the staff pages —
-        // the same trap the discipline card documents.
-        $isOtUser       = $isStudentOT || isOfficerTraineeUser();
-        $isFacultyRole  = hasRole('Internal Faculty') || hasRole('Guest Faculty');
-        // The OT and faculty cards' visibility is DashboardCard::gatedCardVisibility().
-
-        // Role-scoped course IDs for "My Course Participant" ([] = all, [-1] = none, [pks] = restricted)
-        $myCourseIds = get_Role_by_course();
-
-        // Protocol Staff counts, same scope as the cards on the /protocol dashboard
-        $isProtocolStaff = Auth::user()->can('protocol.protocol_requests');
-        $protocolCounts = ['guesthouse' => 0, 'vehicle' => 0, 'ticket' => 0, 'pending' => 0, 'recommended' => 0];
-        if ($isProtocolStaff) {
-            $protocolApproval = app(\Modules\Protocol\Services\ApprovalService::class);
-            foreach ($protocolApproval->allowedRequestTypes() as $type) {
-                $protocolCounts[$type] = $protocolApproval->scopedQuery()->where('request_type', $type)->count();
-            }
-            $protocolCounts['pending'] = \Modules\Protocol\Entities\ProtocolRequest::awaitingProtocolStaff(Auth::id())->count();
-            // Recommended requests in the All Requests scope that still await a decision
-            $protocolCounts['recommended'] = $protocolApproval->scopedQuery()->where('status', \Modules\Protocol\Entities\ProtocolRequest::STATUS_RECOMMENDED)->count();
-        }
-
-        // Employee's own protocol requests, same count as the "All" tab on My Requests
-        $canRaiseProtocol = Auth::user()->can('protocol.my_requests');
-        $myProtocolCount = $canRaiseProtocol ? \Modules\Protocol\Entities\ProtocolRequest::forUser(Auth::id())->count() : 0;
-
-        // Hardcoded card definitions: count, link, visibility
-        $cardDefinitions = [
-            'pending_permanent_id'    => ['count' => $todayPendingPermanentIdCardRequests ?? 0,    'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
-            'pending_contractual_id'  => ['count' => $todayPendingContractualIdCardRequests ?? 0,  'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
-            'duplicate_permanent_id'  => ['count' => $todayDuplicatePermIdCardRequests ?? 0,       'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
-            'duplicate_contractual_id'=> ['count' => $todayDuplicateContractualIdCardRequests ?? 0,'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
-            'requested_family_id'     => ['count' => $todayFamilyApprovals ?? 0,                   'link' => route('admin.security.family_idcard_approval.index'),          'visible' => $isSecurityRole || $isSuperAdmin],
-            'requested_vehicle_pass'  => ['count' => $todayVehicleApprovals ?? 0,                  'link' => route('admin.security.vehicle_pass_approval.index'),           'visible' => $isSecurityRole || $isSuperAdmin],
-            'total_active_courses'    => ['count' => $totalActiveCourses,                          'link' => route('admin.dashboard.active_course'),                        'visible' => !$isSecurityRole],
-            'upcoming_courses'        => ['count' => $upcomingCourses,                             'link' => route('admin.dashboard.incoming_course'),                      'visible' => !$isSecurityRole],
-            'upcoming_events'         => ['count' => $upcomingEventsCount,                         'link' => route('admin.dashboard.upcoming_events'),                      'visible' => !$isSecurityRole],
-            'medical_exception'       => ['count' => $exemptionCount ?? 0,                         'link' => route('medical.exception.ot.view'),                            'visible' => !$isSecurityRole && $isStudentOT],
-            'total_guest_faculty'     => ['count' => $total_guest_faculty,                         'link' => route('admin.dashboard.guest_faculty'),                        'visible' => !$isSecurityRole && !$isStudentOT],
-            'pending_id_approval1'    => ['count' => $todayApproval1IdCardRequests ?? 0,           'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1IdCardRequests ?? 0) > 0],
-            'pending_dup_id_approval1'=> ['count' => $todayApproval1DuplicateIdCardRequests ?? 0,  'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1DuplicateIdCardRequests ?? 0) > 0],
-            'ot_mdo_escort'           => ['count' => $MDO_count ?? 0,                              'link' => route('ot.mdo.escrot.exemption.view'),                         'visible' => !$isSecurityRole && $isStudentOT],
-            'my_groups'               => ['count' => $myGroupsCount ?? 0,                          'link' => route('admin.dashboard.my-groups')],
-            'total_inhouse_faculty'   => ['count' => $total_internal_faculty,                      'link' => route('admin.dashboard.inhouse_faculty'),                      'visible' => !$isSecurityRole && !$isStudentOT],
-            'session_details'         => ['count' => $totalSessions,                               'link' => route('admin.dashboard.sessions'),                             'visible' => !$isSecurityRole && ($isFacultyRole || $isSuperAdmin)],
-            // Faculty-only cards. Both open a report that scopes itself to the
-            // logged-in faculty server-side, so the count and the page agree.
-            'total_sessions'          => ['count' => $facultyTotalSessions,                        'link' => route('timetable-report.index', ['course_mode' => 'all', 'faculty_role' => FacultySessionScope::ROLE_TEACHING])],
-            'total_feedback'          => ['count' => $facultyTotalFeedback,                        'link' => route('faculty.session_feedback.comments', ['course_type' => 'current', 'program_id' => 'all'])],
-            // No count on the two timetable cards: they open a calendar, not a list
-            // whose rows could be counted. Academic = the whole Academy's timetable
-            // (?scope=academy), My Timetable = the same page scoped to the viewer,
-            // which is what it already does for a faculty login. Faculty only: the
-            // academy scope refuses trainees (PR #334 F-047).
-            'academic_timetable'      => [                                                         'link' => route('calendar.index', ['scope' => 'academy'])],
-            // An OT's own timetable is their dedicated calendar — the sessions of
-            // the groups they are enrolled in. A faculty's is the same page scoped
-            // to their classes, which is what it already does for them.
-            'my_timetable'            => ['link' => $isOtUser ? route('calendar.ot.index') : route('calendar.index')],
-            // Both open the OT / Participants list — the second ordered by House so it
-            // opens house-wise, with the page's House filter to narrow to one.
-            'my_counsellees'          => ['count' => $facultyCounsellees,                          'link' => route('admin.dashboard.ot-participants', ['view' => 'counsellees'])],
-            'house_wise_details'      => ['count' => $facultyHouses,                               'link' => route('admin.dashboard.ot-participants', ['view' => 'house'])],
-            // No count: Who's Who opens on a course picker, so there is no single
-            // number the tile could honestly show — same as the timetable cards.
-            'whos_who'                => [                                                         'link' => route('admin.faculty.whos-who')],
-            'total_students'          => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
-            'student_details'         => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
-            'my_course_participant'   => ['count' => StudentMasterCourseMap::query()->when(!empty($myCourseIds), fn($q) => $q->whereIn('course_master_pk', $myCourseIds))->count(), 'link' => route('my.course.participant'),                                'visible' => true],
-            'discipline_marks_deducted' => ['count' => $disciplineMarksDeducted,                   'link' => route('memo.discipline.ot_marks')],
-            'pending_feedback'        => ['count' => $pendingFeedbackCount,                        'link' => route('feedback.get.studentFeedbackUrl')],
-            'protocol_guest_house_requests' => ['count' => $protocolCounts['guesthouse'],       'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'guesthouse']) : null, 'visible' => $isProtocolStaff],
-            'protocol_vehicle_pass_requests'=> ['count' => $protocolCounts['vehicle'],          'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'vehicle']) : null,    'visible' => $isProtocolStaff],
-            'protocol_ticket_requests'      => ['count' => $protocolCounts['ticket'],           'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'ticket']) : null,     'visible' => $isProtocolStaff],
-            'protocol_pending_my_action'    => ['count' => $protocolCounts['pending'],          'link' => $isProtocolStaff ? route('protocol.approval.queue') : null,                        'visible' => $isProtocolStaff],
-            'protocol_recommend_action'     => ['count' => $protocolCounts['recommended'],      'link' => $isProtocolStaff ? route('protocol.requests.all', ['status' => 'recommended']) : null,                         'visible' => $isProtocolStaff],
-            'my_protocol_request'         => ['count' => $myProtocolCount,                    'link' => $canRaiseProtocol ? route('protocol.requests.my') : null,                          'visible' => $canRaiseProtocol],
-        ];
-
-        // Count map for custom cards added via UI.
-        // Add an entry here when a custom card needs a real count.
-        $cardCounts = [
-            // 'my_card_key' => SomeModel::where('status', 'pending')->count(),
-        ];
-
         // The cards this user's roles have on the requested header module's
         // dashboard (?category=, the same parameter that selects the header tab);
         // no or an unknown module is Home.
         $dashboardModule = DashboardCard::resolveModule($request->query('category'));
-        $roleIds = (Auth::user()->roles ?? collect())->pluck('id')->all();
-        $enabledCards = ($roleIds !== [] && $dashboardModule)
-            ? DashboardCard::assignedTo($roleIds, $dashboardModule->id)->orderBy('sort_order')->get()
-            : collect();
-
-        $baseCards = $enabledCards;
+        $baseCards = $this->assignedDashboardCards($dashboardModule?->id);
 
         $enabledWidgetKeys = $baseCards->filter(fn ($c) => str_starts_with($c->key, 'widget_'))->pluck('key')->toArray();
 
@@ -577,30 +329,21 @@ class UserController extends Controller
 
         $issueReportModules = \App\Http\Controllers\Admin\IssueReportController::moduleOptions();
 
-        // Only the OT and faculty-portal cards are gated (DashboardCard::gatedCardVisibility(),
-        // shared with the header's module landing). The older cards' 'visible' flags
-        // above were never applied and their role mappings are what admins have
-        // tuned against, so they are left as they are.
-        $gatedCardVisibility = DashboardCard::gatedCardVisibility();
+        // The tiles without their figures: counts can take seconds (an unpaid-bills total
+        // alone is ~4s on a full database), so the page opens at once and the grid, the
+        // hero's action line and Home's module strip arrive from dashboardCards().
+        $cardsToRender = $this->dashboardStatCards($baseCards, null, false);
+        $hasCountedCards = $cardsToRender->contains(fn ($c) => $c['show_count']);
 
-        $cardsToRender = $baseCards->filter(fn ($c) => ! str_starts_with($c->key, 'widget_'))->filter(function ($card) use ($gatedCardVisibility) {
-            return $gatedCardVisibility[$card->key] ?? true;
-        })->map(function ($card) use ($cardDefinitions, $cardCounts) {
-            $def = $cardDefinitions[$card->key] ?? null;
-
-            return [
-                'key' => $card->key,
-                'label' => $card->label,
-                'icon' => $card->icon,
-                'color_class' => $card->color_class,
-                'link'        => $def['link'] ?? null,
-                'count'       => $def['count'] ?? ($cardCounts[$card->key] ?? 0),
-                // A definition that omits 'count' is a card that opens something
-                // rather than counting it (the timetables) — it renders as a tile
-                // with no number, not as a zero.
-                'show_count'  => $def === null || array_key_exists('count', $def),
-            ];
-        })->values();
+        // Customise: every card the login's roles have here, hidden ones included, in its order.
+        $layout = $dashboardModule ? DashboardCard::userLayout((int) Auth::id(), $dashboardModule->id) : ['order' => [], 'hidden' => []];
+        $allCards = DashboardCard::orderByLayout($this->assignedDashboardCards($dashboardModule?->id, false), $layout);
+        $customiseCards = $this->dashboardStatCards($allCards, null, false)
+            ->map(fn ($c) => $c + ['hidden' => in_array($c['key'], $layout['hidden'], true)]);
+        $customisePanels = $allCards->filter(fn ($c) => str_starts_with($c->key, 'widget_'))
+            ->map(fn ($c) => ['key' => $c->key, 'label' => $c->label, 'hidden' => in_array($c->key, $layout['hidden'], true)])
+            ->values();
+        $hiddenCardCount = count(array_intersect($layout['hidden'], $allCards->pluck('key')->all()));
 
         return view('admin.dashboard', compact(
             'year',
@@ -611,44 +354,380 @@ class UserController extends Controller
             'myBirthdayWishCount',
             'birthdayWishCounts',
             'upcomingBirthdays',
-            'totalActiveCourses',
-            'upcomingCourses',
-            'upcomingEventsCount',
-            'total_guest_faculty',
-            'total_internal_faculty',
-            'exemptionCount',
-            'MDO_count',
-            'disciplineMarksDeducted',
             'todayTimetable',
-            'totalSessions',
-            'totalStudents',
-            'facultyTotalSessions',
-            'facultyTotalFeedback',
-            'isCCorACC',
-            'todayFamilyApprovals',
-            'fullFamilyApprovals',
-            'todayVehicleApprovals',
-            'fullVehicleApprovals',
-            'todayIdCardRequests',
-            'todayPendingPermanentIdCardRequests',
-            'todayPendingContractualIdCardRequests',
-            'fullPendingPermanentIdCardRequests',
-            'fullPendingContractualIdCardRequests',
-            'todayApproval1IdCardRequests',
-            'todayApproval1DuplicateIdCardRequests',
-            'todayDuplicatePermIdCardRequests',
-            'todayDuplicateContractualIdCardRequests',
-            'fullDuplicatePermIdCardRequests',
-            'fullDuplicateContractualIdCardRequests',
-            'idCardApprovalRoute',
             'cardsToRender',
             'enabledWidgetKeys',
             'housePerformance',
             'houseCourses',
             'houseCourseFilter',
             'issueReportModules',
-            'dashboardModule'
+            'dashboardModule',
+            'hasCountedCards',
+            'customiseCards',
+            'customisePanels',
+            'hiddenCardCount'
         ));
+    }
+
+    /**
+     * The dashboard's count-bearing parts for ?category=, as the page fetches them: each
+     * card's figure, plus the card grid (busy queues first, one row), the hero's
+     * action line and, on Home, the Pending across modules strip, rendered here so the
+     * grouping rules live in one place.
+     */
+    public function dashboardCards(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $module = DashboardCard::resolveModule($request->query('category'));
+        // One definitions set for the response, so a count two lists share is run once.
+        $cardDefinitions = $this->dashboardCardDefinitions();
+        $cards = $this->dashboardStatCards($this->assignedDashboardCards($module?->id), $cardDefinitions);
+        $moduleQueues = $module && $module->slug === 'home'
+            ? $this->moduleQueues($module->id, $cardDefinitions)
+            : collect();
+
+        return response()->json([
+            'counts' => $cards->filter(fn ($c) => $c['show_count'])->pluck('count', 'key'),
+            'grid' => view('admin.dashboard.partials.card-grid', ['cardsToRender' => $cards])->render(),
+            'hero' => view('admin.dashboard.partials.hero-action', ['cardsToRender' => $cards])->render(),
+            'queues' => view('admin.dashboard.partials.module-queues', ['moduleQueues' => $moduleQueues])->render(),
+        ])->header('Cache-Control', 'no-store, private');
+    }
+
+    /**
+     * A training section admin, who oversees every course on the student list and the OT /
+     * Participants page like Super Admin. The Induction admins hold the role
+     * "Training-Induction"; "Training Induction Admin", which these checks named, is no role
+     * at all, so those ten logins were treated as plain users (their Total Students read 0
+     * and the roster page refused them).
+     */
+    private function isTrainingAdmin(): bool
+    {
+        return hasRole('Training-Induction') || hasRole('Training Induction Admin')
+            || hasRole('Training MCTP Admin') || hasRole('Training IST');
+    }
+
+    /**
+     * Every card (stat cards and widget panels) the logged-in user's roles have on module
+     * $moduleId's dashboard, in order. With $applyLayout, in the login's own order and without
+     * the cards it hid (user_dashboard_layouts); a layout only hides, it never adds a card.
+     */
+    private function assignedDashboardCards(?int $moduleId, bool $applyLayout = true): \Illuminate\Support\Collection
+    {
+        $roleIds = (Auth::user()->roles ?? collect())->pluck('id')->all();
+        if ($roleIds === [] || ! $moduleId) {
+            return collect();
+        }
+        $cards = DashboardCard::assignedTo($roleIds, $moduleId)->orderBy('sort_order')->get();
+        if (! $applyLayout || $cards->isEmpty()) {
+            return $cards;
+        }
+        $layout = DashboardCard::userLayout((int) Auth::id(), $moduleId);
+
+        return DashboardCard::orderByLayout($cards, $layout)
+            ->reject(fn ($c) => in_array($c->key, $layout['hidden'], true))
+            ->values();
+    }
+
+    /**
+     * For Home's "Across modules" strip: each other module where this login has queue cards
+     * with work in them, with the items waiting (summed) and the cards they come from.
+     * Only queue cards are counted, so the plain totals on those dashboards cost nothing here.
+     */
+    private function moduleQueues(int $homeId, array $cardDefinitions): \Illuminate\Support\Collection
+    {
+        return DashboardCard::modules()
+            ->reject(fn ($module) => $module->id === $homeId)
+            ->map(function ($module) use ($cardDefinitions) {
+                $queued = $this->assignedDashboardCards($module->id)->filter(fn ($c) => self::isActionableCardKey($c->key));
+                $cards = $this->dashboardStatCards($queued, $cardDefinitions)
+                    ->filter(fn ($c) => $c['show_count'] && is_numeric($c['count']) && $c['count'] > 0)
+                    ->values();
+
+                return $cards->isEmpty() ? null : ['module' => $module, 'total' => $cards->sum('count'), 'cards' => $cards];
+            })
+            ->filter()
+            ->values();
+    }
+
+    /**
+     * A queue someone must work through (pending / open / unpaid ...), as opposed to a plain total.
+     * shortcut: read from the key; a new queue card whose key has none of these words shows as
+     * a plain total until it is added here.
+     */
+    private static function isActionableCardKey(string $key): bool
+    {
+        return (bool) preg_match('/(^|_)(pending|open|unpaid|low_stock|reported|requested|duplicate|put_in_hac)(_|$)/', $key);
+    }
+
+    /** The stat cards of $cards the logged-in user may see, as the dashboard renders them. */
+    private function dashboardStatCards(\Illuminate\Support\Collection $cards, ?array $cardDefinitions = null, bool $withCounts = true): \Illuminate\Support\Collection
+    {
+        // Only the OT, faculty-portal and Security queue cards are gated (DashboardCard::gatedCardVisibility(),
+        // shared with the header's module landing). The older cards' role mappings are
+        // what admins have tuned against, so they show to whoever's role has them.
+        $gatedCardVisibility = DashboardCard::gatedCardVisibility();
+
+        $cards = $cards->filter(fn ($c) => ! str_starts_with($c->key, 'widget_'))
+            ->filter(fn ($card) => $gatedCardVisibility[$card->key] ?? true)
+            ->values();
+        $cardDefinitions ??= $this->dashboardCardDefinitions();
+
+        return $cards->map(function ($card) use ($cardDefinitions, $withCounts) {
+            $def = $cardDefinitions[$card->key] ?? null;
+            // A closure count runs only here, for a card this user actually sees, and only when
+            // asked: the page itself renders a placeholder (null).
+            $count = null;
+            $countFailed = false;
+            if ($withCounts) {
+                try {
+                    $count = value($def['count'] ?? 0);
+                } catch (\Illuminate\Auth\Access\AuthorizationException|\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $e) {
+                    throw $e; // a refusal is never hidden as a missing figure
+                } catch (\Throwable $e) {
+                    // One broken counter blanks its own card, not every figure (PR #356 F-007).
+                    \Illuminate\Support\Facades\Log::error('Dashboard card count failed', [
+                        'card' => $card->key,
+                        'user_id' => Auth::id(),
+                        'exception' => $e,
+                    ]);
+                    $countFailed = true;
+                }
+            }
+
+            return [
+                'key' => $card->key,
+                'label' => $card->label,
+                'icon' => $card->icon,
+                'color_class' => $card->color_class,
+                'link'        => $def['link'] ?? null,
+                'count'       => $count,
+                // The count threw: the card shows "–", not a loading placeholder or a zero.
+                'count_failed' => $countFailed,
+                // A definition that omits 'count' is a card that opens something
+                // rather than counting it (the timetables) — it renders as a tile
+                // with no number, not as a zero.
+                'show_count'  => $def === null || array_key_exists('count', $def),
+                'actionable'  => self::isActionableCardKey($card->key),
+            ];
+        })->values();
+    }
+
+    /**
+     * Every stat card's count and link, by dashboard_cards.key. Counts are closures,
+     * run only for a card that is shown, so a dashboard never counts a card nobody
+     * on it sees. A card also needs its dashboard_cards row assigned
+     * to a role; to give a custom card a real count, add its key here.
+     */
+    private function dashboardCardDefinitions(): array
+    {
+        // Memoises a count that two cards share, or one query that feeds several.
+        $once = static function (callable $fn): \Closure {
+            $done = false;
+            $value = null;
+
+            return static function () use ($fn, &$done, &$value) {
+                if (! $done) {
+                    $value = $fn();
+                    $done = true;
+                }
+
+                return $value;
+            };
+        };
+
+        $userId = Auth::user()->user_id;
+        $isStudentOT = hasRole('Student-OT');
+        // Student-OT is a pseudo-role set at login; an OT who arrives holding only
+        // the Spatie "Officer Trainee" role does not have it. The OT cards below
+        // key off this instead, or their links would resolve to the staff pages —
+        // the same trap the discipline card documents.
+        $isOtUser = $isStudentOT || isOfficerTraineeUser();
+        // "Total Marks Deducted in Discipline" and pending feedback: gated on
+        // isOfficerTraineeUser(), not hasRole('Student-OT'), so an OT holding only the
+        // Spatie role is not shown zero over real deductions. And only for user_category
+        // 'S' (PR #334 F-047): user_id is a student_master pk only for a trainee login;
+        // a staff login holding the role has an employee / faculty pk there, which can
+        // equal another trainee's pk. One identity rule (PR #334 F-074).
+        $isTraineeLogin = isOfficerTraineeUser() && auth_student_master_pk() !== null;
+        // The OT's medical exemption and MDO/Escort pages list only active courses that have not
+        // ended; their cards count the same, or an OT of a finished course read "7" over an empty page.
+        $runningCourse = fn ($q) => $q->where('active_inactive', 1)->where('end_date', '>=', now()->format('Y-m-d'));
+        $facultyPk = $once(fn () => is_faculty_portal_user() ? get_auth_faculty_master_pk() : null);
+
+        // Security cards: what waits at this login's approval level (Approval II for 'Security
+        // Card', III for 'Admin Security' alone), any date, counted on the New Request tab of the
+        // page each card opens, so the card and the tab agree by construction.
+        $securityLevel = (hasRole('Security Card') || hasRole('Admin Security'))
+            ? ((hasRole('Admin Security') && ! hasRole('Security Card')) ? 'approval3' : 'approval2')
+            : null;
+        $securityNewRows = $once(fn () => $securityLevel
+            ? app(\App\Http\Controllers\Admin\Security\EmployeeIDCardApprovalController::class)->dashboardNewRowCounts($securityLevel)
+            : []);
+        $idCardLink = fn (string $type) => $securityLevel
+            ? route('admin.security.employee_idcard_approval.'.$securityLevel, ['tab' => 'new', 'type' => $type])
+            : route('admin.security.employee_idcard_approval.all');
+        $newTabTotal = function (string $controller, array $query, string $key) use ($securityLevel): int {
+            return $securityLevel
+                ? (int) app($controller)->index(Request::create('/', 'GET', $query))->getData()[$key]->total()
+                : 0;
+        };
+        $approval1Split = $once(fn () => $this->getPendingSecurityApproval1Split());
+
+        // "Total Students" / "Student Details" both open the student list, so their
+        // count has to be that list's own roster — see dashboardCoordinatorStudentsCount().
+        // A CC/ACC is reached through their faculty pk; counting by get_Role_by_course()
+        // instead read a DIFFERENT scope (role → course_master.user_role_master_pk) and
+        // showed a plain Faculty coordinator 0 while the page they opened listed their
+        // full roster, because that helper returns [-1] for a role with no mapped courses.
+        $totalStudents = $once(function () use ($facultyPk, $isStudentOT) {
+            if (is_faculty_portal_user()) {
+                $pk = $facultyPk();
+                if (! $pk) {
+                    return 0;
+                }
+
+                return $this->getCoordinatorCourseIds($pk)->isNotEmpty()
+                    ? $this->dashboardCoordinatorStudentsCount($pk)
+                    : $this->dashboardTotalStudentsCount(get_Role_by_course());
+            }
+
+            // Super Admin / PA / Admin are not faculty-portal users: same basis as above. A
+            // training admin oversees every course, as the student list and roster show them.
+            return $isStudentOT ? 0 : $this->dashboardTotalStudentsCount($this->isTrainingAdmin() ? [] : get_Role_by_course());
+        });
+
+        // The student list opens on today's sessions, so the figure (the viewer's participants
+        // of the running courses) is shown on the OT / Participants roster instead: the whole
+        // roster for Super Admin, the All course participants tab (?scope=course) for a course
+        // coordinator. Other faculty, and a Super Admin that page refuses (an OT login), keep
+        // the student list.
+        $studentsLink = route('admin.dashboard.students');
+        if ((hasRole('Super Admin') || $this->isTrainingAdmin()) && $this->canUseOtParticipants()) {
+            $studentsLink = route('admin.dashboard.ot-participants');
+        } elseif (($coordinatorPk = $facultyPk()) && $this->getCoordinatorCourseIds($coordinatorPk)->isNotEmpty() && $this->canUseOtParticipants()) {
+            $studentsLink = route('admin.dashboard.ot-participants', ['scope' => 'course']);
+        }
+
+        // Protocol Staff counts, same scope as the cards on the /protocol dashboard
+        $isProtocolStaff = Auth::user()->can('protocol.protocol_requests');
+        $protocolCounts = $once(function () use ($isProtocolStaff) {
+            $counts = ['guesthouse' => 0, 'vehicle' => 0, 'ticket' => 0, 'pending' => 0, 'recommended' => 0];
+            if ($isProtocolStaff) {
+                $protocolApproval = app(\Modules\Protocol\Services\ApprovalService::class);
+                foreach ($protocolApproval->allowedRequestTypes() as $type) {
+                    $counts[$type] = $protocolApproval->scopedQuery()->where('request_type', $type)->count();
+                }
+                $counts['pending'] = \Modules\Protocol\Entities\ProtocolRequest::awaitingProtocolStaff(Auth::id())->count();
+                // Recommended requests in the All Requests scope that still await a decision
+                $counts['recommended'] = $protocolApproval->scopedQuery()->where('status', \Modules\Protocol\Entities\ProtocolRequest::STATUS_RECOMMENDED)->count();
+            }
+
+            return $counts;
+        });
+
+        // Employee's own protocol requests, same count as the "All" tab on My Requests
+        $canRaiseProtocol = Auth::user()->can('protocol.my_requests');
+
+        return [
+            'pending_permanent_id'    => ['count' => fn () => (int) ($securityNewRows()['perm'] ?? 0),     'link' => $idCardLink('perm')],
+            'pending_contractual_id'  => ['count' => fn () => (int) ($securityNewRows()['cont'] ?? 0),     'link' => $idCardLink('cont')],
+            'duplicate_permanent_id'  => ['count' => fn () => (int) ($securityNewRows()['dup_perm'] ?? 0), 'link' => $idCardLink('dup_perm')],
+            'duplicate_contractual_id'=> ['count' => fn () => (int) ($securityNewRows()['dup_cont'] ?? 0), 'link' => $idCardLink('dup_cont')],
+            'requested_family_id'     => ['count' => fn () => $newTabTotal(\App\Http\Controllers\Admin\Security\FamilyIDCardApprovalController::class, [], 'newFamilyGroups'), 'link' => route('admin.security.family_idcard_approval.index', ['tab' => 'new'])],
+            // wheeler=all: the page otherwise opens on two-wheelers only.
+            'requested_vehicle_pass'  => ['count' => fn () => $newTabTotal(\App\Http\Controllers\Admin\Security\VehiclePassApprovalController::class, ['wheeler' => 'all'], 'newApplications'), 'link' => route('admin.security.vehicle_pass_approval.index', ['tab' => 'new', 'wheeler' => 'all'])],
+            'total_active_courses'    => ['count' => fn () => CourseMaster::where('active_inactive', 1)->where('start_year', '<=', now()->toDateString())->where('end_date', '>=', now()->toDateString())->count(), 'link' => route('admin.dashboard.active_course')],
+            'upcoming_courses'        => ['count' => fn () => CourseMaster::where('active_inactive', 1)->where('start_year', '>', now()->toDateString())->count(), 'link' => route('admin.dashboard.incoming_course')],
+            'upcoming_events'         => ['count' => fn () => Holiday::active()->upcoming()->count(), 'link' => route('admin.dashboard.upcoming_events')],
+            'medical_exception'       => ['count' => fn () => $isStudentOT ? StudentMedicalExemption::where('student_master_pk', $userId)->where('active_inactive', 1)->whereHas('course', $runningCourse)->count() : 0, 'link' => route('medical.exception.ot.view')],
+            'total_guest_faculty'     => ['count' => fn () => FacultyMaster::where('active_inactive', 1)->where('faculty_type', 2)->count(), 'link' => route('admin.dashboard.guest_faculty')],
+            'pending_id_approval1'    => ['count' => fn () => (int) ($approval1Split()['idcard'] ?? 0),    'link' => route('admin.security.employee_idcard_approval.approval1', ['pending' => 1, 'type' => 'idcard'])],
+            'pending_dup_id_approval1'=> ['count' => fn () => (int) ($approval1Split()['duplicate'] ?? 0), 'link' => route('admin.security.employee_idcard_approval.approval1', ['pending' => 1, 'type' => 'duplicate'])],
+            'ot_mdo_escort'           => ['count' => fn () => $isStudentOT ? MDOEscotDutyMap::where('selected_student_list', $userId)->whereHas('courseMaster', $runningCourse)->count() : 0, 'link' => route('ot.mdo.escrot.exemption.view')],
+            // How many Course Group Mapping groups this OT is in. Same trainee check as
+            // the page it opens (F-055).
+            'my_groups'               => ['count' => fn () => $isStudentOT && $this->isMyGroupsTrainee() ? $this->myGroupsQuery($userId)->distinct()->count('gmap.pk') : 0, 'link' => route('admin.dashboard.my-groups')],
+            'total_inhouse_faculty'   => ['count' => fn () => FacultyMaster::where('active_inactive', 1)->where('faculty_type', 1)->count(), 'link' => route('admin.dashboard.inhouse_faculty')],
+            'session_details'         => ['count' => fn () => ($pk = $facultyPk()) ? CalendarEvent::where('active_inactive', 1)
+                ->where(fn ($query) => $query->whereRaw('JSON_CONTAINS(faculty_master, ?)', ['"'.$pk.'"'])->orWhereRaw('FIND_IN_SET(?, faculty_master)', [$pk]))
+                ->count() : 0, 'link' => route('admin.dashboard.sessions')],
+            // Faculty-only cards. Both open a report that scopes itself to the
+            // logged-in faculty server-side, so the count and the page agree.
+            // Total Sessions: the sessions this faculty TEACHES, across active and ended
+            // courses alike, through the scope the Timetable Session Report filters by.
+            'total_sessions'          => ['count' => fn () => ($pk = $facultyPk()) ? FacultySessionScope::countFor($pk, 'all', FacultySessionScope::ROLE_TEACHING) : 0, 'link' => route('timetable-report.index', ['course_mode' => 'all', 'faculty_role' => FacultySessionScope::ROLE_TEACHING])],
+            // Total Running Courses Feedback: counted the way the Faculty Feedback with
+            // Comments page it opens counts it.
+            'total_feedback'          => ['count' => fn () => ($pk = $facultyPk()) ? app(FacultyFeedbackReportService::class)->getTotalFeedbackCount($pk) : 0, 'link' => route('faculty.session_feedback.comments', ['course_type' => 'current', 'program_id' => 'all'])],
+            // No count on the two timetable cards: they open a calendar, not a list
+            // whose rows could be counted. Academic = the whole Academy's timetable
+            // (?scope=academy), My Timetable = the same page scoped to the viewer,
+            // which is what it already does for a faculty login. Faculty only: the
+            // academy scope refuses trainees (PR #334 F-047).
+            'academic_timetable'      => [                                                         'link' => route('calendar.index', ['scope' => 'academy'])],
+            // An OT's own timetable is their dedicated calendar — the sessions of
+            // the groups they are enrolled in. A faculty's is the same page scoped
+            // to their classes, which is what it already does for them.
+            'my_timetable'            => ['link' => $isOtUser ? route('calendar.ot.index') : route('calendar.index')],
+            // Both open the OT / Participants list — the second ordered by House so it
+            // opens house-wise, with the page's House filter to narrow to one.
+            'my_counsellees'          => ['count' => fn () => ($pk = $facultyPk()) ? $this->facultyGroupStudentCount($pk, '%counsel%', true) : 0,                          'link' => route('admin.dashboard.ot-participants', ['view' => 'counsellees'])],
+            'house_wise_details'      => ['count' => fn () => ($pk = $facultyPk()) ? $this->facultyGroupStudentCount($pk, '%house%', true) : 0,                               'link' => route('admin.dashboard.ot-participants', ['view' => 'house'])],
+            // No count: Who's Who opens on a course picker, so there is no single
+            // number the tile could honestly show — same as the timetable cards.
+            'whos_who'                => [                                                         'link' => route('admin.faculty.whos-who')],
+            'total_students'          => ['count' => $totalStudents,                               'link' => $studentsLink],
+            'student_details'         => ['count' => $totalStudents,                               'link' => $studentsLink],
+            // Role-scoped course IDs ([] = all, [-1] = none, [pks] = restricted)
+            'my_course_participant'   => ['count' => function () {
+                $myCourseIds = get_Role_by_course();
+
+                return StudentMasterCourseMap::query()->when(! empty($myCourseIds), fn ($q) => $q->whereIn('course_master_pk', $myCourseIds))->count();
+            }, 'link' => route('my.course.participant')],
+            'discipline_marks_deducted' => ['count' => fn () => $isTraineeLogin ? app(OtMarksDeductedService::class)->totalFor((int) $userId) : 0, 'link' => route('memo.discipline.ot_marks')],
+            'pending_feedback'        => ['count' => fn () => $isTraineeLogin ? $this->getOtPendingFeedbackCount($userId) : 0, 'link' => route('feedback.get.studentFeedbackUrl')],
+            'protocol_guest_house_requests' => ['count' => fn () => $protocolCounts()['guesthouse'],  'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'guesthouse']) : null],
+            'protocol_vehicle_pass_requests'=> ['count' => fn () => $protocolCounts()['vehicle'],     'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'vehicle']) : null],
+            'protocol_ticket_requests'      => ['count' => fn () => $protocolCounts()['ticket'],      'link' => $isProtocolStaff ? route('protocol.requests.all', ['type' => 'ticket']) : null],
+            'protocol_pending_my_action'    => ['count' => fn () => $protocolCounts()['pending'],     'link' => $isProtocolStaff ? route('protocol.approval.queue') : null],
+            'protocol_recommend_action'     => ['count' => fn () => $protocolCounts()['recommended'], 'link' => $isProtocolStaff ? route('protocol.requests.all', ['status' => 'recommended']) : null],
+            'my_protocol_request'         => ['count' => fn () => $canRaiseProtocol ? \Modules\Protocol\Entities\ProtocolRequest::forUser(Auth::id())->count() : 0, 'link' => $canRaiseProtocol ? route('protocol.requests.my') : null],
+            // Doctor: exemptions covering today on running courses. Opens the exemption
+            // listing filtered to Today (Active tab), which lists exactly these rows.
+            'medical_exemptions_today' => ['count' => fn () => StudentMedicalExemption::onRunningCourse()->overlapping(now()->toDateString(), now()->toDateString())->count(), 'link' => route('student.medical.exemption.index', ['from_date' => now()->toDateString(), 'to_date' => now()->toDateString()])],
+            // Mess cards. Each counts on the query of the page it opens, so the tile and the
+            // page's rows agree; closures, because the low-stock and bills counts are heavy.
+            'mess_pending_purchase_orders' => ['count' => fn () => \App\Models\Mess\PurchaseOrder::where('status', 'pending')->count(), 'link' => route('admin.mess.purchaseorders.index', ['status' => 'pending'])],
+            'mess_low_stock_items'         => ['count' => fn () => count(\App\Http\Controllers\Mess\ReportController::getLowStockAlertItems(now()->toDateString(), null)), 'link' => route('admin.mess.reports.low-stock')],
+            'mess_unpaid_bills'            => ['count' => fn () => app(\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class)->dashboardBillCount('unpaid'), 'link' => route('admin.mess.process-mess-bills-employee.index', ['status' => 'unpaid'])],
+            'mess_items_sold_today'        => ['count' => fn () => app(\App\Http\Controllers\Mess\KitchenIssueController::class)->dashboardItemsSoldTodayCount(), 'link' => route('admin.mess.material-management.index', ['start_date' => now()->toDateString(), 'end_date' => now()->toDateString()])],
+            // Estate cards: each counts the rows the page it opens lists, on that page's own query.
+            'estate_pending_requests'      => ['count' => fn () => $this->dataTableRowCount(\App\DataTables\EstateRequestForEstateDataTable::class, \App\Models\EstateHomeRequestDetails::class, ['status_filter' => '0']), 'link' => route('admin.estate.request-for-estate', ['status_filter' => '0'])],
+            'estate_put_in_hac'            => ['count' => fn () => $this->dataTableRowCount(\App\DataTables\EstateRequestPutInHacDataTable::class, \App\Models\EstateHomeRequestDetails::class), 'link' => route('admin.estate.put-in-hac')],
+            'estate_hac_pending'           => ['count' => fn () => $this->dataTableRowCount(\App\DataTables\EstateHacApprovedDataTable::class, \App\Models\EstateHacApprovedRow::class, ['status_filter' => 'pending']), 'link' => route('admin.estate.change-request-hac-approved', ['status_filter' => 'pending'])],
+            'estate_vacant_houses'         => ['count' => fn () => collect(app(\App\Http\Controllers\Admin\EstateController::class)->getHouseStatusData(request())->getData(true)['data'] ?? [])->where('status', 'Vacant')->count(), 'link' => route('admin.estate.reports.house-status', ['status' => 'Vacant'])],
+            // Training: the leave approval page's landing (Pending) tab, and the discipline memo
+            // listing on its "Open" status across all dates; each counted on that page's query.
+            'pending_leave_approvals'      => ['count' => fn () => app(\App\Http\Controllers\Admin\FacultyLeaveApprovalController::class)->dashboardPendingCount(), 'link' => route('faculty.leave-approval.index')],
+            'open_discipline_memos'        => ['count' => fn () => app(\App\Http\Controllers\Admin\MemoDisciplineController::class)->dashboardOpenCount(), 'link' => route('memo.discipline.index', ['status' => 'open', 'from_date' => '', 'to_date' => ''])],
+            // FC: Applications Registration Exemption page filtered by application type (totals,
+            // all time: the register has no pending state).
+            'fc_registration_applications' => ['count' => fn () => app(\App\Http\Controllers\Admin\Registration\FcExemptionMasterController::class)->dashboardApplicationCount(1), 'link' => route('exemptions.datalist', ['application_type' => 1])],
+            'fc_exemption_applications'    => ['count' => fn () => app(\App\Http\Controllers\Admin\Registration\FcExemptionMasterController::class)->dashboardApplicationCount(2), 'link' => route('exemptions.datalist', ['application_type' => 2])],
+            // Employee self-service: the signed-in user's own items, each counted on the page it opens.
+            'my_idcard_requests_pending'   => ['count' => fn () => app(\App\Http\Controllers\Admin\EmployeeIDCardRequestController::class)->dashboardPendingCount(), 'link' => route('admin.employee_idcard.index', ['list_status' => 'pending'])],
+            'my_estate_requests_pending'   => ['count' => fn () => $this->dataTableRowCount(\App\DataTables\EstateRequestForEstateDataTable::class, \App\Models\EstateHomeRequestDetails::class, ['scope' => 'self', 'status_filter' => '0']), 'link' => route('admin.estate.request-for-estate', ['scope' => 'self', 'status_filter' => '0'])],
+            'my_mess_bills_unpaid'         => ['count' => fn () => app(\App\Http\Controllers\Mess\ProcessMessBillsEmployeeController::class)->dashboardMyUnpaidCount(), 'link' => route('admin.mess.my-bills.index')],
+            'my_open_issues'               => ['count' => fn () => app(\App\Http\Controllers\Admin\IssueManagement\IssueManagementController::class)->dashboardMyOpenIssuesCount(), 'link' => route('admin.issue-management.index', ['raised_by' => 'self', 'status' => 'open'])],
+            'pending_feedback_students'    => ['count' => fn () => app(\App\Http\Controllers\Admin\FeedbackController::class)->dashboardPendingStudentsCount(), 'link' => route('admin.feedback.pending.students')],
+            'course_repository_folders'    => ['count' => fn () => app(\App\Http\Controllers\Admin\CourseRepositoryController::class)->dashboardRootFolderCount(), 'link' => route('course-repository.index')],
+            // Centcom: the complaints the Centcom Assigned grid lists for this user (nodal officer
+            // or handler), counted on that grid's query with the status the link selects.
+            'centcom_open_complaints'      => ['count' => fn () => app(\App\Http\Controllers\Admin\IssueManagement\IssueManagementController::class)->dashboardCentcomCount('open'), 'link' => route('admin.issue-management.centcom', ['status' => 'open'])],
+            'centcom_all_open_complaints'  => ['count' => fn () => app(\App\Http\Controllers\Admin\IssueManagement\IssueManagementController::class)->dashboardAllOpenCount(), 'link' => route('admin.issue-management.index', ['status' => 'open'])],
+            'centcom_reported_complaints'  => ['count' => fn () => app(\App\Http\Controllers\Admin\IssueManagement\IssueManagementController::class)->dashboardCentcomCount('0'), 'link' => route('admin.issue-management.centcom', ['status' => '0'])],
+            'estate_pending_meter_readings' => ['count' => fn () => count(app(\App\Http\Controllers\Admin\EstateController::class)->getPendingMeterReadingData(Request::create('/', 'GET', ['bill_month' => now()->format('Y-m'), 'bill_year' => now()->format('Y')]))->getData(true)['data'] ?? []), 'link' => route('admin.estate.reports.pending-meter-reading', ['bill_month' => now()->format('Y-m')])],
+        ];
     }
 
     /**
@@ -1546,6 +1625,7 @@ class UserController extends Controller
                 'employee_master.profile_picture',
                 'employee_master.last_name',
                 'designation_master.designation_name',
+                'employee_master.gender',
                 'employee_master.dob'
             )
             ->get();
@@ -1576,6 +1656,7 @@ class UserController extends Controller
                     'employee_master.mobile',
                     'employee_master.office_extension_no',
                     'employee_master.profile_picture',
+                    'employee_master.gender',
                     'employee_master.dob',
                     'designation_master.designation_name'
                 )
@@ -1631,263 +1712,32 @@ class UserController extends Controller
     }
 
     /**
-     * Split "today pending employee id requests" into:
-     * - perm: pending Permanent ID cards
-     * - cont: pending Contractual ID cards
-     *
-     * Logic matches existing getTodayPendingIdCardRequestsCount(), but returns both parts separately.
-     *
-     * @param  bool  $todayOnly  When true, only applications created today; when false, all actionable pending at this approval level (any request date).
+     * Rows a Yajra DataTable lists (its recordsTotal) for the query params $params: the
+     * class's own query(), which reads request(), built while the request carries $params.
+     * The request's query string is put back afterwards.
      */
-    private function getTodayPendingIdCardRequestsSplit(bool $todayOnly = true): array
+    private function dataTableRowCount(string $dataTable, string $model, array $params = []): int
     {
-        $user = Auth::user();
-        if (! $user) {
-            return ['perm' => 0, 'cont' => 0];
+        $query = request()->query;
+        $saved = $query->all();
+        // replace, not add: the card counts on its own filters, never on whatever
+        // query string (filters, search, scope) the calling page carries.
+        $query->replace($params);
+
+        try {
+            return DB::query()->fromSub(app($dataTable)->query(new $model), 'dt_rows')->count();
+        } finally {
+            $query->replace($saved);
         }
-
-        if (! (hasRole('Security Card') || hasRole('Admin Security'))) {
-            return ['perm' => 0, 'cont' => 0];
-        }
-
-        $start = Carbon::today()->startOfDay()->toDateTimeString();
-        $end = Carbon::today()->endOfDay()->toDateTimeString();
-
-        $isApproval2 = hasRole('Security Card') && ! hasRole('Admin Security');
-        $isApproval3 = hasRole('Admin Security') && ! hasRole('Security Card');
-
-        // If user has both roles, fall back to Approval II "actionable" definition.
-        if (! $isApproval2 && ! $isApproval3) {
-            $isApproval2 = true;
-        }
-
-        if ($isApproval2) {
-            // Match Approval II list: actionable “new request” contractual rows exclude L2-done
-            // (security_con_oth_id_apply_approval status=1, recommend_status=1). Rows with status=0 for
-            // Level 3 would incorrectly match legacy “pending ids with status 0”.
-            $contHasA2Recommended = DB::table('security_con_oth_id_apply_approval')
-                ->where('status', 1)
-                ->where('recommend_status', 1)
-                ->pluck('security_parm_id_apply_pk');
-
-            $permQuery = DB::table('security_parm_id_apply as spa')
-                ->where('spa.id_status', SecurityParmIdApply::ID_STATUS_PENDING)
-                ->whereNotExists(function ($q) {
-                    $q->select(DB::raw(1))
-                        ->from('security_parm_id_apply_approval as a')
-                        ->whereColumn('a.security_parm_id_apply_pk', 'spa.emp_id_apply')
-                        ->where('a.status', 2);
-                });
-            if (Schema::hasColumn('security_parm_id_apply', 'id_card_generate_date')) {
-                $permQuery->whereNull('spa.id_card_generate_date');
-            }
-            if ($todayOnly) {
-                $permQuery->whereBetween('spa.created_date', [$start, $end]);
-            }
-            $permCount = (int) $permQuery->count();
-
-            $contQuery = DB::table('security_con_oth_id_apply as sco')
-                ->where('sco.id_status', 1)
-                ->where('sco.depart_approval_status', 2);
-            if (Schema::hasColumn('security_con_oth_id_apply', 'id_card_generate_date')) {
-                $contQuery->whereNull('sco.id_card_generate_date');
-            }
-            if ($contHasA2Recommended->isNotEmpty()) {
-                $contQuery->whereNotIn('sco.emp_id_apply', $contHasA2Recommended);
-            }
-            if ($todayOnly) {
-                $contQuery->whereBetween('sco.created_date', [$start, $end]);
-            }
-            $contCount = (int) $contQuery->count();
-
-            return ['perm' => $permCount, 'cont' => $contCount];
-        }
-
-        // Approval III final pending
-        $permFinalQuery = DB::table('security_parm_id_apply as spa')
-            ->where('spa.id_status', SecurityParmIdApply::ID_STATUS_PENDING)
-            ->whereExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('security_parm_id_apply_approval as a')
-                    ->whereColumn('a.security_parm_id_apply_pk', 'spa.emp_id_apply')
-                    ->where('a.status', 2);
-            });
-        if ($todayOnly) {
-            $permFinalQuery->whereBetween('spa.created_date', [$start, $end]);
-        }
-        $permFinalPending = (int) $permFinalQuery->count();
-
-        $contRecommendedIds = DB::table('security_con_oth_id_apply_approval')
-            ->where('status', 1)
-            ->where('recommend_status', 1)
-            ->pluck('security_parm_id_apply_pk');
-        $contFinalDoneIds = DB::table('security_con_oth_id_apply_approval')
-            ->whereIn('status', [2, 3])
-            ->pluck('security_parm_id_apply_pk');
-
-        $contFinalPending = 0;
-        if ($contRecommendedIds->isNotEmpty()) {
-            $contQuery = DB::table('security_con_oth_id_apply as sco')
-                ->where('sco.id_status', 1)
-                ->where('sco.depart_approval_status', 2)
-                ->whereIn('sco.emp_id_apply', $contRecommendedIds);
-
-            if ($contFinalDoneIds->isNotEmpty()) {
-                $contQuery->whereNotIn('sco.emp_id_apply', $contFinalDoneIds);
-            }
-            if ($todayOnly) {
-                $contQuery->whereBetween('sco.created_date', [$start, $end]);
-            }
-
-            $contFinalPending = (int) $contQuery->count();
-        }
-
-        return ['perm' => $permFinalPending, 'cont' => $contFinalPending];
     }
 
     /**
-     * @param  bool  $todayOnly  When false, counts all actionable pending family ID requests (any date).
-     */
-    private function getTodayPendingFamilyApprovalsCount(bool $todayOnly = true): int
-    {
-        $user = Auth::user();
-        if (! $user) {
-            return 0;
-        }
-
-        $isLevel1 = hasRole('Security Card') && ! hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') && ! hasRole('Security Card');
-        if (! $isLevel1 && ! $isLevel2) {
-            return 0;
-        }
-
-        $q = SecurityFamilyIdApply::with('approvals');
-        if ($todayOnly) {
-            $q->whereDate('created_date', Carbon::today());
-        }
-        $rows = $q->get();
-
-        if ($rows->isEmpty()) {
-            return 0;
-        }
-
-        $groupKey = function ($r) {
-            $date = $r->created_date ? Carbon::parse($r->created_date)->format('Y-m-d H:i:s') : '';
-
-            return $r->emp_id_apply.'|'.($r->created_by ?? '').'|'.$date;
-        };
-
-        $groups = $rows->groupBy($groupKey);
-
-        $count = 0;
-        foreach ($groups as $rowsInGroup) {
-            $first = $rowsInGroup->sortBy('fml_id_apply')->first();
-            $statusInt = (int) ($first->id_status ?? 1);
-            $hasLevel1 = $first->approvals && $first->approvals->where('status', 1)->isNotEmpty();
-            $hasLevel2 = $first->approvals && $first->approvals->where('status', 2)->isNotEmpty();
-
-            $canApprove = false;
-            if ($statusInt === 1) {
-                if ($isLevel1 && ! $hasLevel1) {
-                    $canApprove = true;
-                } elseif ($isLevel2 && $hasLevel1 && ! $hasLevel2) {
-                    $canApprove = true;
-                }
-            }
-
-            if ($canApprove) {
-                $count++;
-            }
-        }
-
-        return $count;
-    }
-
-    /**
-     * @param  bool  $todayOnly  When false, counts all actionable pending vehicle pass requests (any date).
-     */
-    private function getTodayPendingVehicleApprovalsCount(bool $todayOnly = true): int
-    {
-        $user = Auth::user();
-        if (! $user) {
-            return 0;
-        }
-
-        $isLevel1 = hasRole('Security Card') && ! hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') && ! hasRole('Security Card');
-        if (! $isLevel1 && ! $isLevel2) {
-            return 0;
-        }
-
-        $today = Carbon::today();
-
-        $twQ = VehiclePassTWApply::with('approvals');
-        $fwQ = VehiclePassFWApply::with('approvals');
-        if ($todayOnly) {
-            $twQ->whereDate('created_date', $today);
-            $fwQ->whereDate('created_date', $today);
-        }
-        $twRows = $twQ->get();
-        $fwRows = $fwQ->get();
-
-        $rows = $twRows->map(function ($r) {
-            $r->kind = 'tw';
-
-            return $r;
-        })->concat(
-            $fwRows->map(function ($r) {
-                $r->kind = 'fw';
-
-                return $r;
-            })
-        );
-
-        if ($rows->isEmpty()) {
-            return 0;
-        }
-
-        $count = 0;
-        foreach ($rows as $r) {
-            $statusInt = (int) ($r->vech_card_status ?? 1);
-            $approvals = $r->approvals ?? collect();
-            $hasLevel1 = $approvals->where(function ($a) {
-                return (int) ($a->veh_recommend_status ?? 0) === 1 || (int) ($a->status ?? 0) === 1;
-            })->isNotEmpty();
-            $hasLevel2 = $approvals->where(function ($a) {
-                return (int) ($a->status ?? 0) === 2;
-            })->isNotEmpty();
-
-            $canApprove = false;
-            if ($statusInt === 1) {
-                if ($isLevel1 && ! $hasLevel1) {
-                    $canApprove = true;
-                } elseif ($isLevel2 && $hasLevel1 && ! $hasLevel2) {
-                    $canApprove = true;
-                }
-            }
-
-            if ($canApprove) {
-                $count++;
-            }
-        }
-
-        return $count;
-    }
-
-    private function getTodayPendingIdCardRequestsCount(): int
-    {
-        $split = $this->getTodayPendingIdCardRequestsSplit();
-
-        return (int) ($split['perm'] ?? 0) + (int) ($split['cont'] ?? 0);
-    }
-
-    /**
-     * Today's pending Security Approval-I for the logged-in department authority,
+     * Requests pending at Security Approval-I for the logged-in department authority (any date),
      * split into contractual new ID card vs contractual duplicate ID card (matches Approval I screen).
      *
      * @return array{idcard: int, duplicate: int}
      */
-    private function getTodayPendingSecurityApproval1Split(): array
+    private function getPendingSecurityApproval1Split(): array
     {
         $user = Auth::user();
         if (! $user) {
@@ -1899,12 +1749,11 @@ class UserController extends Controller
             return ['idcard' => 0, 'duplicate' => 0];
         }
 
-        $start = Carbon::today()->startOfDay()->toDateTimeString();
-        $end = Carbon::today()->endOfDay()->toDateTimeString();
-
+        // Every request still waiting at this authority's Approval I, whatever day it came in
+        // (was today's only, so a request left overnight vanished from the card). The page the
+        // cards open lists the same rows with ?pending=1&type=… (buildApproval1ListPayload()).
         // Contractual regular ID card: pending at Approval-I for this authority
         $contQuery = DB::table('security_con_oth_id_apply')
-            ->whereBetween('created_date', [$start, $end])
             ->where('id_status', 1)
             ->where('depart_approval_status', 1)
             ->where('department_approval_emp_pk', $employeePk);
@@ -1924,7 +1773,6 @@ class UserController extends Controller
             ->pluck('security_con_id_apply_pk');
 
         $dupQuery = DB::table('security_dup_other_id_apply')
-            ->whereBetween('created_date', [$start, $end])
             ->where('id_status', 1)
             ->where('card_type', 'Contractual')
             ->where('depart_approval_status', 1)
@@ -1937,121 +1785,6 @@ class UserController extends Controller
         $duplicateCount = (int) $dupQuery->count();
 
         return ['idcard' => $idcardCount, 'duplicate' => $duplicateCount];
-    }
-
-    /**
-     * @param  bool  $todayOnly  When false, counts all actionable pending duplicate permanent requests (any date).
-     */
-    private function getTodayDuplicatePermanentIdCardRequestsCount(bool $todayOnly = true): int
-    {
-        $user = Auth::user();
-        if (! $user) {
-            return 0;
-        }
-
-        if (! (hasRole('Security Card') || hasRole('Admin Security'))) {
-            return 0;
-        }
-
-        $start = Carbon::today()->startOfDay()->toDateTimeString();
-        $end = Carbon::today()->endOfDay()->toDateTimeString();
-        $isApproval2 = hasRole('Security Card') && ! hasRole('Admin Security');
-        $isApproval3 = hasRole('Admin Security') && ! hasRole('Security Card');
-
-        // Permanent Duplicate (security_dup_perm_id_apply)
-        $base = DB::table('security_dup_perm_id_apply as dup')
-            ->where('dup.id_status', 1);
-        if (Schema::hasColumn('security_dup_perm_id_apply', 'id_card_generate_date')) {
-            $base->whereNull('dup.id_card_generate_date');
-        }
-        if ($todayOnly) {
-            $base->whereBetween('dup.created_date', [$start, $end]);
-        }
-
-        if ($isApproval2) {
-            // Actionable at Approval II = not yet recommended
-            $base->whereNotExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('security_dup_perm_id_apply_approval as a')
-                    ->whereColumn('a.security_parm_id_apply_pk', 'dup.emp_id_apply')
-                    ->where('a.status', 1)
-                    ->where('a.recommend_status', 1);
-            });
-        } elseif ($isApproval3) {
-            // Pending final at Approval III = recommended, not finally approved/rejected
-            $base->whereExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('security_dup_perm_id_apply_approval as a')
-                    ->whereColumn('a.security_parm_id_apply_pk', 'dup.emp_id_apply')
-                    ->where('a.status', 1)
-                    ->where('a.recommend_status', 1);
-            })->whereNotExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('security_dup_perm_id_apply_approval as a2')
-                    ->whereColumn('a2.security_parm_id_apply_pk', 'dup.emp_id_apply')
-                    ->whereIn('a2.status', [2, 3]);
-            });
-        }
-
-        return (int) $base->count();
-    }
-
-    /**
-     * @param  bool  $todayOnly  When false, counts all actionable pending duplicate contractual requests (any date).
-     */
-    private function getTodayDuplicateContractualIdCardRequestsCount(bool $todayOnly = true): int
-    {
-        $user = Auth::user();
-        if (! $user) {
-            return 0;
-        }
-
-        if (! (hasRole('Security Card') || hasRole('Admin Security'))) {
-            return 0;
-        }
-
-        $start = Carbon::today()->startOfDay()->toDateTimeString();
-        $end = Carbon::today()->endOfDay()->toDateTimeString();
-        $isApproval2 = hasRole('Security Card') && ! hasRole('Admin Security');
-        $isApproval3 = hasRole('Admin Security') && ! hasRole('Security Card');
-
-        // Contractual Duplicate (security_dup_other_id_apply with depart_approval_status = 2)
-        $base = DB::table('security_dup_other_id_apply as duo')
-            ->where('duo.id_status', 1)
-            ->where('depart_approval_status', 2);
-        if (Schema::hasColumn('security_dup_other_id_apply', 'id_card_generate_date')) {
-            $base->whereNull('duo.id_card_generate_date');
-        }
-        if ($todayOnly) {
-            $base->whereBetween('duo.created_date', [$start, $end]);
-        }
-
-        if ($isApproval2) {
-            // Actionable at Approval II = not yet recommended
-            $base->whereNotExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('security_dup_other_id_apply_approval as a')
-                    ->whereColumn('a.security_con_id_apply_pk', 'duo.emp_id_apply')
-                    ->where('a.status', 1)
-                    ->where('a.recommend_status', 1);
-            });
-        } elseif ($isApproval3) {
-            // Pending final at Approval III = recommended, not finally approved/rejected
-            $base->whereExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('security_dup_other_id_apply_approval as a')
-                    ->whereColumn('a.security_con_id_apply_pk', 'duo.emp_id_apply')
-                    ->where('a.status', 1)
-                    ->where('a.recommend_status', 1);
-            })->whereNotExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('security_dup_other_id_apply_approval as a2')
-                    ->whereColumn('a2.security_con_id_apply_pk', 'duo.emp_id_apply')
-                    ->whereIn('a2.status', [2, 3]);
-            });
-        }
-
-        return (int) $base->count();
     }
 
     private function getOtPendingFeedbackCount(int $studentPk): int
@@ -2186,9 +1919,7 @@ class UserController extends Controller
         // scoped to their own courses. The filter dropdowns below follow the same
         // rule so they never offer a course the viewer has no students in.
         $seesAllCourses = hasRole('Super Admin')
-            || hasRole('Training Induction Admin')
-            || hasRole('Training MCTP Admin')
-            || hasRole('Training IST');
+            || $this->isTrainingAdmin();
 
         if ($request->ajax() && $request->has('draw')) {
             return $this->dashboardStudentListDataTableResponse($request, $students);
@@ -2608,10 +2339,39 @@ class UserController extends Controller
         // who also counsels four cadres was listing another counsellor's cadre
         // students. Only applied when the request carries a
         // view: otParticipantsViewerTypeScope() reads the unscoped roster.
+        //
+        // A faculty with no Counsellor or House group at all (a course coordinator and
+        // nothing else) has no groups to be narrowed to: they keep the roster the caller
+        // built, their coordinated courses' participants, the set otParticipantRosterPks()
+        // already lets them act on. Narrowing it to "own groups" emptied their page while
+        // their Total Students card counted those same participants.
+        //
+        // ?scope=course (the "All course participants" tab, coordinators only, see
+        // otParticipantsCourseScope()): every participant of the courses they coordinate
+        // instead, with the group data of anyone outside their own groups blanked, so the
+        // other counsellors' Cadre / House mapping stays theirs.
         $ownFacultyPk = $request->has('view') ? $this->otParticipantsScopedFacultyPk() : null;
-        if ($ownFacultyPk) {
+        $coursePks = $ownFacultyPk ? $this->participantCoursePks($participants) : [];
+        $courseScope = $ownFacultyPk ? $this->otParticipantsCourseScope($request) : null;
+        $ownGroups = $ownFacultyPk ? $this->otParticipantsGroupTypeScope($this->participantCourseScope($coursePks)) : null;
+        if ($courseScope !== null) {
+            $participants = $participants
+                ->filter(fn ($p) => array_intersect(array_map('strval', $p->course_pks), $courseScope) !== [])
+                ->values();
             $studentPks = $participants->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all();
-            $coursePks = $this->participantCoursePks($participants);
+            $counselled = $this->studentPksForCounsellorFaculty($ownFacultyPk, $studentPks, $coursePks);
+            $housed = $this->studentPksForHouseFaculty($ownFacultyPk, $studentPks, $coursePks);
+            foreach ($participants as $p) {
+                if (! isset($counselled[(int) $p->student_master_pk])) {
+                    $p->counsellor_group_name = $p->cadre_name = $p->counsellor_name = null;
+                }
+                if (! isset($housed[(int) $p->student_master_pk])) {
+                    $p->house_group_name = $p->house_group = $p->house_faculty_name = null;
+                    $p->house_groups = [];
+                }
+            }
+        } elseif ($ownFacultyPk && ($ownGroups['cadre'] || $ownGroups['house'])) {
+            $studentPks = $participants->pluck('student_master_pk')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all();
             $own = $this->otParticipantsGroupView($request) === 'house'
                 ? $this->studentPksForHouseFaculty($ownFacultyPk, $studentPks, $coursePks)
                 : $this->studentPksForCounsellorFaculty($ownFacultyPk, $studentPks, $coursePks);
@@ -2798,6 +2558,25 @@ class UserController extends Controller
     }
 
     /**
+     * ?scope=course on the OT participants page: the courses the viewer coordinates, as
+     * strings, when they are a scoped faculty (see otParticipantsScopedFacultyPk()) who
+     * coordinates any; else null, and the param changes nothing. Their default view stays
+     * their own groups (7af832b28); this is the "All course participants" tab beside it,
+     * the set their Total Students card counts.
+     *
+     * @return array<int, string>|null
+     */
+    private function otParticipantsCourseScope(Request $request): ?array
+    {
+        if ($request->input('scope') !== 'course' || ! ($facultyPk = $this->otParticipantsScopedFacultyPk())) {
+            return null;
+        }
+        $courses = $this->getCoordinatorCourseIds($facultyPk);
+
+        return $courses->isEmpty() ? null : $courses->map(fn ($v) => (string) $v)->values()->all();
+    }
+
+    /**
      * The faculty whose OWN Course Group Mapping scopes the OT participants page,
      * or null for a viewer who oversees the whole roster (Super Admin, Admin, PA,
      * the training admins, or a login with no faculty record).
@@ -2810,9 +2589,7 @@ class UserController extends Controller
         $facultyPk = get_auth_faculty_master_pk();
         if (! $facultyPk
             || hasRole('Super Admin') || hasRole('Admin') || hasRole('PA')
-            || hasRole('Training Induction Admin')
-            || hasRole('Training MCTP Admin')
-            || hasRole('Training IST')) {
+            || $this->isTrainingAdmin()) {
             return null;
         }
 
@@ -2912,6 +2689,10 @@ class UserController extends Controller
         $drop = $view === 'house'
             ? ['cadre', 'counsellor_faculty']
             : ['house_group', 'house_faculty'];
+        if ($this->otParticipantsCourseScope($request) !== null) {
+            // The whole course: no group filter applies (and none is offered).
+            $drop = ['cadre', 'counsellor_faculty', 'house_group', 'house_faculty'];
+        }
 
         $params = $request->query();
         foreach ($drop as $key) {
@@ -2990,7 +2771,11 @@ class UserController extends Controller
         // Cadre / Cadre Counsellor / House Group options, each scoped to the rows
         // reachable with that dropdown's own filter cleared — so an option can
         // never be offered that would return nothing.
-        $filterOptions = $this->otParticipantsFilterOptions($viewRequest, $payload['students'], $typeScope);
+        // The "All course participants" tab offers no group filter: the other
+        // counsellors' Cadre / House mapping is not this viewer's to filter by.
+        $courseScope = $this->otParticipantsCourseScope($viewRequest);
+        $filterOptions = $this->otParticipantsFilterOptions($viewRequest, $payload['students'],
+            $courseScope !== null ? ['cadre' => false, 'house' => false] : $typeScope);
 
         // ajax() reads a header, so that check stays on the original request; the
         // response itself is built from the scoped one.
@@ -3032,7 +2817,8 @@ class UserController extends Controller
         // Course Group Mapping page — which is where the faculty verifies this list
         // — not the students' own cadre master, where 70 of them have nothing. The
         // house view has no Cadre filter at all.
-        $cadreOptions = $isHouseView
+        // Nor does the All course participants tab, which takes no group filter.
+        $cadreOptions = $isHouseView || $courseScope !== null
             ? collect()
             : $students
                 ->map(fn ($m) => $isCounselleeView
@@ -3098,6 +2884,8 @@ class UserController extends Controller
             // (the card) — carried on every request the grid makes, or the card's
             // scope would be lost on the first filter change.
             'view' => $in('view'),
+            // Carried on every grid request, so the All course participants tab holds.
+            'scope' => $courseScope !== null ? 'course' : '',
         ];
 
         // Course filter scope: Super Admin / Admin / PA can pick ANY course for the
@@ -3125,12 +2913,31 @@ class UserController extends Controller
         }
 
         $groupColumns = $this->otParticipantsGroupColumns($groupView);
+        // A viewer with no Counsellor / House group but a roster (a course coordinator only)
+        // gets the list, not the "not available" notice: see otParticipantsRowsFor().
+        $rosterOnly = empty($typeScope['cadre']) && empty($typeScope['house']) && $totalParticipants > 0;
+        // A coordinator who also owns groups gets two tabs: My groups (the default, their
+        // own groups only) and All course participants (?scope=course), each with its count.
+        $scopeTabs = null;
+        if (($typeScope['cadre'] || $typeScope['house']) && $this->otParticipantsScopedFacultyPk()) {
+            $courseRequest = Request::create($viewRequest->url(), 'GET', ['scope' => 'course'] + $viewRequest->query());
+            if ($this->otParticipantsCourseScope($courseRequest) !== null) {
+                $mineRequest = Request::create($viewRequest->url(), 'GET', array_diff_key($viewRequest->query(), ['scope' => 1]));
+                $other = $courseScope !== null ? $mineRequest : $this->otParticipantsViewScopedRequest($courseRequest, $groupView);
+                $otherCount = $this->otParticipantsRowsFor($other, $payload['students'])->count();
+                $scopeTabs = [
+                    'active' => $courseScope !== null ? 'course' : 'mine',
+                    'mine' => $courseScope !== null ? $otherCount : $totalParticipants,
+                    'course' => $courseScope !== null ? $totalParticipants : $otherCount,
+                ];
+            }
+        }
         return view('admin.dashboard.ot_participants_list', compact(
             'availableCourses', 'courseOptions', 'filters', 'cadreOptions', 'houseOptions',
             'sessionOptions', 'participantOptions', 'isCounselleeView', 'isHouseView',
             'houseGroupOptions', 'sessionOptions', 'participantOptions',
             'counsellorsByCadre', 'facultyByHouseGroup', 'groupColumns',
-            'typeScope'
+            'typeScope', 'rosterOnly', 'scopeTabs'
         ));
     }
 
@@ -3932,9 +3739,7 @@ class UserController extends Controller
         $facultyPk = get_auth_faculty_master_pk();
 
         return hasRole('Super Admin')
-            || hasRole('Training Induction Admin')
-            || hasRole('Training MCTP Admin')
-            || hasRole('Training IST')
+            || $this->isTrainingAdmin()
             || is_faculty_portal_user()
             || ($facultyPk && ! hasRole('Student-OT'));
     }
@@ -3978,9 +3783,7 @@ class UserController extends Controller
         // their own — same treatment resolveDashboardStudentListPayload() gives
         // them, so their list and their endpoints agree.
         if (hasRole('Super Admin')
-            || hasRole('Training Induction Admin')
-            || hasRole('Training MCTP Admin')
-            || hasRole('Training IST')) {
+            || $this->isTrainingAdmin()) {
             return $this->otParticipantRoster = null;
         }
 
@@ -4918,9 +4721,7 @@ class UserController extends Controller
         // export 403s for users who see the on-screen table fine.
         $exportFacultyPk = get_auth_faculty_master_pk();
         if (! hasRole('Super Admin')
-            && ! hasRole('Training Induction Admin')
-            && ! hasRole('Training MCTP Admin')
-            && ! hasRole('Training IST')
+            && ! $this->isTrainingAdmin()
             && ! is_faculty_portal_user()
             && ! ($exportFacultyPk && ! hasRole('Student-OT'))) {
             abort(403, 'You are not authorized to export the student list.');
@@ -5079,9 +4880,7 @@ class UserController extends Controller
         // student-detail page already grants them Super-Admin-level access. Treat them
         // the same here so their student list isn't empty (they have no faculty pk).
         $seesAllCourses = $isSuperAdmin
-            || hasRole('Training Induction Admin')
-            || hasRole('Training MCTP Admin')
-            || hasRole('Training IST');
+            || $this->isTrainingAdmin();
 
         // Active vs Archive scope. Only the OT-participants page sends status=archive;
         // everything else (student list, export) omits it and stays on "active".
@@ -7919,12 +7718,14 @@ class UserController extends Controller
                 ->with('error', 'Student not found.');
         }
 
-        if (is_faculty_portal_user()
-            && ! hasRole('Super Admin')
-            && ! hasRole('Training Induction Admin')
-            && ! hasRole('Training MCTP Admin')
-            && ! hasRole('Training IST')) {
-            $facultyPk = get_auth_faculty_master_pk();
+        // Everyone but Super Admin and the training admins sees only the students the student
+        // list and OT / Participants show them (PR #356 L-93). This used to apply to faculty-portal
+        // logins alone, so an Employee-only login, with no students on either list, could open
+        // any student's record. A trainee is refused, as OT / Participants refuses one.
+        // Admin and PA are exempt: OT / Participants shows them every participant
+        // (otParticipantsScopedFacultyPk()), so its rows must open (PR #356 F-010).
+        if (! hasRole('Super Admin') && ! hasRole('Admin') && ! hasRole('PA') && ! $this->isTrainingAdmin()) {
+            $facultyPk = (isOfficerTraineeUser() || hasRole('Student-OT')) ? null : get_auth_faculty_master_pk();
             if (! $facultyPk || ! $this->canFacultyViewStudent($facultyPk, (int) $studentPk)) {
                 return redirect()->route('admin.dashboard.students')
                     ->with('error', 'You do not have access to view this student.');

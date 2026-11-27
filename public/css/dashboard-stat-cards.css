@@ -13,6 +13,64 @@
     margin-left: 0;
 }
 
+/* Every row as tall as its tallest tile. No top margin: Bootstrap's .row.g-3 pulls a row up by
+   its gutter (-1rem), which slid the grid over the group heading above it. */
+.dashboard-stats-grid.row {
+    grid-auto-rows: 1fr;
+    margin-top: 0;
+}
+
+/* The theme's .card margin-bottom would add 16px of dead space under the
+   content (the grid gap already spaces the tiles); centre what is left. */
+.dashboard-stats-grid .stat-card {
+    margin-bottom: 0;
+    justify-content: center;
+}
+
+/* The label gets two lines whether it needs them or not, and sits on their
+   bottom edge: a one-line label is then directly above its figure, and every
+   figure in a row lines up. Longer labels are cut at two lines (full text in
+   the tooltip). Clear of the hover arrow on the right. */
+.dashboard-stats-grid .stat-card-body {
+    padding-right: 1.25rem;
+}
+
+.dashboard-stats-grid .stat-title-box {
+    display: flex;
+    align-items: flex-end;
+    min-height: calc(2 * 1.3 * 0.875rem);
+    margin-bottom: 0.25rem;
+}
+
+.dashboard-stats-grid .stat-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+@media (max-width: 767.98px) {
+    .dashboard-stats-grid .stat-title-box {
+        min-height: calc(2 * 1.3 * 0.8125rem);
+    }
+}
+
+/* Phones (two narrow tiles a row): icon above the text so the label gets the
+   tile's full width instead of ~60px. No hover arrow on touch, so no padding.
+   !important only to beat the Bootstrap utilities on the markup. */
+@media (max-width: 575.98px) {
+    .dashboard-stats-grid .stat-card-row {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 0.5rem !important;
+    }
+
+    .dashboard-stats-grid .stat-card-body {
+        padding-right: 0;
+        width: 100%;
+    }
+}
+
 .dashboard-stats-grid.row > .col {
     flex: none;
     width: auto;
@@ -167,6 +225,13 @@
     outline-offset: 2px;
 }
 
+/* Module-page Dashboard Preview: keyboard focus lands on the links, not .stat-card, and
+   Bootstrap's 20%-alpha button ring is too faint to see (WCAG 2.4.7 / 1.4.11). */
+.module-dashboard-preview a:focus-visible {
+    outline: 2px solid #004384;
+    outline-offset: 2px;
+}
+
 @media (max-width: 767.98px) {
     .stat-icon-wrapper {
         width: 48px;
@@ -309,4 +374,269 @@
     .dashboard-house-students {
         display: none;
     }
+}
+
+/* ============================================================
+   Needs-action tiles, empty tiles, hero action line
+   ============================================================ */
+/* A queue with work in it: amber edge always on (not only on hover) and a badge. */
+.stat-card.stat-card--action::before { background: #c98a0e; }
+.stat-card.stat-card--action:hover::before { background: #c98a0e; }
+
+.stat-action-badge {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: var(--ds-space-2);
+    padding: 0.125rem var(--ds-space-2);
+    border-radius: var(--ds-radius);
+    background: rgba(232, 163, 23, 0.14);
+    color: #8a5d00;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+/* A zero steps back so the live figures stand out. Text stays at AA contrast. */
+.stat-card.stat-card--empty .stat-value { color: var(--ds-ink-muted); font-weight: 600; }
+.stat-card.stat-card--empty .stat-icon-wrapper { filter: grayscale(1); opacity: 0.6; }
+
+.dashboard-hero-action {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #8a5d00;
+}
+
+/* Right-hand panels sit beside the main column from xl up only (stacked below). */
+@media (min-width: 1200px) {
+    .dashboard-side-col { width: 480px; }
+}
+
+/* ============================================================
+   Dashboard Preview tab row
+   ============================================================ */
+.module-dashboard-preview-tabs {
+    display: flex;
+    gap: var(--ds-space-2);
+    overflow-x: auto;
+    padding-bottom: var(--ds-space-2);
+    margin-bottom: var(--ds-space-2);
+    scrollbar-width: thin;
+}
+
+/* From tablet width the tabs wrap: a row that ran off the right edge cut the last tab in half
+   with nothing saying more were there. Phones keep the one swipeable row. */
+@media (min-width: 768px) {
+    .module-dashboard-preview-tabs { flex-wrap: wrap; overflow-x: visible; padding-bottom: 0; }
+}
+
+.module-dashboard-preview-tab {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    min-height: var(--ds-control-h-sm);
+    padding: 0 var(--ds-space-3);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius);
+    background: var(--ds-surface);
+    color: var(--ds-ink);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.module-dashboard-preview-tab:hover { background: var(--ds-surface-2); }
+
+.module-dashboard-preview-tab[aria-pressed="true"] {
+    border-color: #004384;
+    background: #004384;
+    color: #fff;
+}
+
+.module-dashboard-preview-tab:focus-visible {
+    outline: 2px solid #004384;
+    outline-offset: 2px;
+}
+
+.module-dashboard-preview-tab__count {
+    min-width: 1.5rem;
+    padding: 0 var(--ds-space-1);
+    border-radius: var(--ds-radius);
+    background: var(--ds-surface-2);
+    color: var(--ds-ink-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
+
+.module-dashboard-preview-tab__count.is-action { background: rgba(232, 163, 23, 0.18); color: #8a5d00; }
+.module-dashboard-preview-tab[aria-pressed="true"] .module-dashboard-preview-tab__count { background: rgba(255, 255, 255, 0.2); color: #fff; }
+
+/* ============================================================
+   Card groups (Needs your action / Overview)
+   ============================================================ */
+.dashboard-card-group-title {
+    margin-bottom: var(--ds-space-2);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ds-ink-muted);
+}
+
+/* ============================================================
+   Home: pending across modules
+   ============================================================ */
+.dashboard-module-queues {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ds-space-2);
+}
+
+.dashboard-module-queues__title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ds-ink-muted);
+    margin-right: var(--ds-space-1);
+}
+
+.dashboard-module-queue {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    min-height: var(--ds-control-h-sm);
+    padding: 0 var(--ds-space-2) 0 var(--ds-space-3);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius);
+    background: var(--ds-surface);
+    color: var(--ds-ink);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.dashboard-module-queue:hover,
+.dashboard-module-queue:focus {
+    background: var(--ds-surface-2);
+    border-color: #c98a0e;
+    color: var(--ds-ink);
+    text-decoration: none;
+}
+
+.dashboard-module-queue:focus-visible {
+    outline: 2px solid #004384;
+    outline-offset: 2px;
+}
+
+.dashboard-module-queue__count {
+    min-width: 1.5rem;
+    padding: 0 var(--ds-space-1);
+    border-radius: var(--ds-radius);
+    background: rgba(232, 163, 23, 0.18);
+    color: #8a5d00;
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+}
+
+/* ============================================================
+   Figure placeholder while admin.dashboard.cards loads
+   ============================================================ */
+.stat-value-skeleton {
+    display: inline-block;
+    width: 3.5rem;
+    height: 1.75rem;
+    border-radius: var(--ds-radius);
+    background: linear-gradient(90deg, var(--ds-surface-2) 25%, var(--ds-line) 50%, var(--ds-surface-2) 75%);
+    background-size: 200% 100%;
+    animation: stat-skeleton 1.2s ease-in-out infinite;
+    vertical-align: middle;
+}
+
+@keyframes stat-skeleton {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stat-value-skeleton { animation: none; }
+}
+
+/* ============================================================
+   Customise modal
+   ============================================================ */
+.dashboard-customise-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-1);
+}
+
+.dashboard-customise-item {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    padding: var(--ds-space-2) var(--ds-space-3);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-2);
+    background: var(--ds-surface);
+}
+
+.dashboard-customise-item .form-check-label { font-size: 0.875rem; }
+
+.dashboard-card-group-count {
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+/* ============================================================
+   Folded zero cards ("N cards with nothing to show")
+   ============================================================ */
+.dashboard-empty-cards > summary {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    min-height: var(--ds-control-h-sm);
+    padding: var(--ds-space-2) var(--ds-space-3);
+    border: 1px dashed var(--ds-line);
+    border-radius: var(--ds-radius-2);
+    background: var(--ds-surface);
+    color: var(--ds-ink-muted);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+}
+
+.dashboard-empty-cards > summary::-webkit-details-marker { display: none; }
+
+.dashboard-empty-cards > summary::before {
+    content: "\25B8";
+    flex: 0 0 auto;
+    transition: transform 0.15s ease;
+}
+
+.dashboard-empty-cards[open] > summary::before { transform: rotate(90deg); }
+
+.dashboard-empty-cards > summary:hover { background: var(--ds-surface-2); }
+
+.dashboard-empty-cards > summary:focus-visible {
+    outline: 2px solid #004384;
+    outline-offset: 2px;
+}
+
+/* The count stays on one line; the names take what is left. */
+.dashboard-empty-cards > summary > span:first-child { flex: 0 0 auto; white-space: nowrap; }
+
+/* The names, so a user looking for one card knows it is in here; cut to one line. */
+.dashboard-empty-cards__names {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 400;
 }

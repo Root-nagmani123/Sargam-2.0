@@ -176,13 +176,51 @@ class IdCardSecurityMapper
             ? DB::table('sec_id_cardno_config_map')->whereIn('pk', $configPks)->pluck('config_name', 'pk')->all()
             : [];
 
-        return ['masters' => $masters, 'configs' => $configs];
+        return ['masters' => $masters, 'configs' => $configs, 'creators' => static::prefetchCreators($rows)];
+    }
+
+    /**
+     * created_by => {name, section}: the per-row creator fallback in toEmployeeRequestDto()
+     * (hit whenever created_by holds pk_old, so the eager-loaded creator misses), in one query.
+     * Each id takes the lowest-pk employee whose pk or pk_old matches, as that fallback's first() did.
+     *
+     * @return array<string, object{name: string, section: ?string}>
+     */
+    private static function prefetchCreators(iterable $rows): array
+    {
+        $ids = [];
+        foreach ($rows as $row) {
+            if (! empty($row->created_by)) {
+                $ids[] = $row->created_by;
+            }
+        }
+        $ids = array_values(array_unique($ids));
+        if ($ids === []) {
+            return [];
+        }
+        $employees = DB::table('employee_master as e')
+            ->leftJoin('department_master as d', 'd.pk', '=', 'e.department_master_pk')
+            ->where(fn ($q) => $q->whereIn('e.pk', $ids)->orWhereIn('e.pk_old', $ids))
+            ->orderBy('e.pk')
+            ->get(['e.pk', 'e.pk_old', 'e.first_name', 'e.last_name', 'e.department_master_pk', 'd.department_name']);
+        $creators = [];
+        foreach ($ids as $id) {
+            $emp = $employees->first(fn ($e) => (string) $e->pk === (string) $id || (string) $e->pk_old === (string) $id);
+            if ($emp) {
+                $creators[(string) $id] = (object) [
+                    'name' => trim(($emp->first_name ?? '').' '.($emp->last_name ?? '')),
+                    'section' => ! empty($emp->department_master_pk) ? $emp->department_name : null,
+                ];
+            }
+        }
+
+        return $creators;
     }
 
     /**
      * Map SecurityParmIdApply to object compatible with employee_idcard views.
      *
-     * @param  array{masters?: array<int, string>, configs?: array<int, string>}|null  $cardLookups  Preloaded labels from {@see prefetchCardLookupsForPermApplies}
+     * @param  array{masters?: array<int, string>, configs?: array<int, string>, creators?: array<string, object>}|null  $cardLookups  Preloaded labels from {@see prefetchCardLookupsForPermApplies}
      */
     public static function toEmployeeRequestDto(SecurityParmIdApply $row, ?array $cardLookups = null): stdClass
     {
@@ -285,7 +323,16 @@ class IdCardSecurityMapper
                 $dto->requested_section = $row->creator->department->department_name ?? null;
             }
         }
-        if ($dto->requested_by === null && !empty($row->created_by)) {
+        $prefetched = $cardLookups !== null && array_key_exists('creators', $cardLookups) && ! empty($row->created_by)
+            ? ($cardLookups['creators'][(string) $row->created_by] ?? false)
+            : null;
+        if ($dto->requested_by === null && $prefetched !== null) {
+            // Prefetched (false = no such employee): same values as the lookup below, no query.
+            if ($prefetched) {
+                $dto->requested_by = $prefetched->name;
+                $dto->requested_section = $prefetched->section;
+            }
+        } elseif ($dto->requested_by === null && !empty($row->created_by)) {
             $creator = DB::table('employee_master')
                 ->where(function ($q) use ($row) {
                     $q->where('pk', $row->created_by)->orWhere('pk_old', $row->created_by);
@@ -305,7 +352,9 @@ class IdCardSecurityMapper
             $dto->created_by_name = $n !== '' ? $n : null;
         }
         if ($dto->created_by_name === null) {
-            $dto->created_by_name = static::resolveEmployeeNameFromEmployeePk($row->created_by);
+            $dto->created_by_name = $prefetched !== null
+                ? (($prefetched && $prefetched->name !== '') ? $prefetched->name : null)
+                : static::resolveEmployeeNameFromEmployeePk($row->created_by);
         }
         $dto->approval_authority = null;
         $dto->approval_authority_name = null;

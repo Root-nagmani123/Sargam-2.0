@@ -27,28 +27,52 @@ class OtDashboardCardsTraineeCategoryTest extends TestCase
         $this->app->instance(OtMarksDeductedService::class, $mock);
     }
 
+    /**
+     * The marks card's figure on $user's Home dashboard. The count runs only for a
+     * card that is shown, so the card is assigned to a throwaway role of theirs
+     * (rolled back); null when the card did not render.
+     */
+    private function marksCardFor(User $user, array $sessionRoles): mixed
+    {
+        $card = DB::table('dashboard_cards')->where('key', 'discipline_marks_deducted')->value('id');
+        $home = DB::table('sidebar_categories')->where('slug', 'home')->value('id');
+        if (! $card || ! $home) {
+            $this->markTestSkipped('needs the discipline_marks_deducted card and the home module');
+        }
+        $role = DB::table('roles')->insertGetId([
+            'name' => 'OT marks card test '.uniqid(), 'guard_name' => 'web', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        DB::table('model_has_roles')->insert(['role_id' => $role, 'model_type' => User::class, 'model_id' => $user->pk]);
+        DB::table('role_dashboard_cards')->insert(['role_id' => $role, 'dashboard_card_id' => $card, 'sidebar_category_id' => $home]);
+
+        return $this->as($user->fresh(), $sessionRoles)->getJson(route('admin.dashboard.cards'))
+            ->assertOk()->json('counts.discipline_marks_deducted');
+    }
+
     public function test_a_non_trainee_login_holding_the_ot_role_sees_no_marks(): void
     {
+        // Not a Security approver: OT cards are hidden from Security logins altogether
+        // (DashboardCard::gatedCardVisibility()), which would prove nothing here.
         $pk = DB::table('user_credentials')->where('user_category', '!=', 'S')
-            ->whereNotNull('user_id')->orderBy('pk')->value('pk');
+            ->whereNotNull('user_id')
+            ->whereNotIn('pk', DB::table('model_has_roles as m')->join('roles as r', 'r.id', '=', 'm.role_id')
+                ->whereIn('r.name', ['Security Approver II', 'Security Approver III'])->select('m.model_id'))
+            ->orderBy('pk')->value('pk');
         if (! $pk) {
             $this->markTestSkipped('no non-trainee login');
         }
         $this->fakeMarks();
 
-        $response = $this->as(User::findOrFail($pk), ['Student-OT'])->get(route('admin.dashboard'));
+        $count = $this->marksCardFor(User::findOrFail($pk), ['Student-OT']);
 
-        $response->assertOk();
-        $this->assertEquals(0, $response->viewData('disciplineMarksDeducted'));
+        $this->assertNotNull($count, 'the card must render, or this proves nothing');
+        $this->assertEquals(0, $count);
     }
 
     public function test_a_trainee_login_still_sees_their_marks(): void
     {
         $this->fakeMarks();
 
-        $response = $this->as($this->officerTrainee(), ['Student-OT'])->get(route('admin.dashboard'));
-
-        $response->assertOk();
-        $this->assertEquals(7, $response->viewData('disciplineMarksDeducted'));
+        $this->assertEquals(7, $this->marksCardFor($this->officerTrainee(), ['Student-OT']));
     }
 }

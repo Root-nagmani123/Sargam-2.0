@@ -3,60 +3,69 @@
 @section('title', 'Upcoming Events')
 
 @section('content')
+{{-- The Upcoming Events card's page: the academy holidays still ahead, the same rows the card
+     counts (Holiday::active()->upcoming(), see the route). Was a static template sample. --}}
+@php
+    $typeBadge = [
+        'gazetted' => ['Gazetted', 'bg-danger-subtle text-danger-emphasis'],
+        'restricted' => ['Restricted', 'bg-warning-subtle text-warning-emphasis'],
+        'optional' => ['Optional', 'bg-success-subtle text-success-emphasis'],
+    ];
+@endphp
 <div class="container-fluid">
-
     <x-breadcrum title="Upcoming Events" :showBack="true"></x-breadcrum>
-    <div class="card" >
+
+    <div class="card border-0 shadow-sm">
         <div class="card-body">
-          <div class="row">
-            <div class="col-6">
-                  <h4>Upcoming Events</h4>
+            <div class="d-flex flex-wrap align-items-baseline justify-content-between gap-2 mb-3">
+                <h1 class="h4 mb-0">Upcoming Events</h1>
+                <p class="text-body-secondary small mb-0">
+                    {{ $holidays->count() }} academy {{ \Illuminate\Support\Str::plural('holiday', $holidays->count()) }} ahead
+                </p>
             </div>
-            <div class="col-6">
-                    <div class="d-flex justify-content-end">
-                        <button class="btn btn-primary">Add New Events</button>
-                    </div>
+
+            @if($holidays->isEmpty())
+            <div class="ds-empty-state">
+                <i class="material-icons material-symbols-rounded fs-1 d-block mb-2 opacity-50" aria-hidden="true">event_available</i>
+                <p class="mb-0">No upcoming holidays on the academy calendar.</p>
             </div>
-          </div>
-            <hr class="my-2">
-            <div class="row">
-                <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card blog position-relative overflow-hidden hover-img" style="background: url('https://bootstrapdemos.adminmart.com/matdash/dist/assets/images/blog/blog-img9.jpg') no-repeat center center / cover; height: 250px;">
-                        <div class="card-body position-relative">
-                            <div class="d-flex flex-column justify-content-between h-100">
-                                <div class="d-flex align-items-start justify-content-between">
-                                    <div class="position-relative" data-bs-toggle="tooltip" data-bs-placement="top"
-                                        data-bs-title="Mollie Underwood">
-                                        <img src="{{ asset('assets/images/profile/user-4.jpg') }}" alt="matdash-img"
-                                            class="rounded-circle img-fluid" width="40" height="40">
-                                    </div>
-                                    <span class="badge text-bg-primary fs-2 fw-semibold">Gadget</span>
-                                </div>
-                                <div>
-                                    <a href="#"
-                                        class="fs-7 my-4 fw-semibold text-white d-block lh-sm text-primary">Early Black
-                                        Friday
-                                        Amazon deals: cheap TVs, headphones, laptops</a>
-                                    <div class="d-flex align-items-center gap-4">
-                                        <div class="d-flex align-items-center gap-2 text-white fs-3 fw-normal">
-                                            <i class="material-icons fs-5">person</i>
-                                            6006
-                                        </div>
-                                        <div class="d-flex align-items-center gap-2 text-white fs-3 fw-normal">
-                                            <i class="material-icons fs-5">message</i>
-                                            3
-                                        </div>
-                                        <div class="d-flex align-items-center gap-1 text-white fw-normal ms-auto">
-                                            <i class="material-icons fs-5">location_on</i>
-                                            <small>Fri, Jan 13</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            @else
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">Date</th>
+                            <th scope="col">Holiday</th>
+                            <th scope="col">Type</th>
+                            <th scope="col" class="text-end">In</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($holidays as $holiday)
+                        @php
+                            $type = $typeBadge[strtolower((string) $holiday->holiday_type)] ?? [ucfirst((string) $holiday->holiday_type) ?: '—', 'bg-secondary-subtle text-secondary-emphasis'];
+                            $days = (int) now()->startOfDay()->diffInDays($holiday->holiday_date->copy()->startOfDay());
+                            $description = trim((string) $holiday->description);
+                        @endphp
+                        <tr>
+                            <td class="text-nowrap">
+                                <span class="fw-semibold">{{ $holiday->holiday_date->format('d M Y') }}</span>
+                                <span class="d-block small text-body-secondary">{{ $holiday->holiday_date->format('l') }}</span>
+                            </td>
+                            <td>
+                                {{ $holiday->holiday_name }}
+                                @if($description !== '' && $description !== trim((string) $holiday->holiday_name))
+                                <span class="d-block small text-body-secondary">{{ $description }}</span>
+                                @endif
+                            </td>
+                            <td><span class="badge {{ $type[1] }}">{{ $type[0] }}</span></td>
+                            <td class="text-end text-nowrap">{{ $days === 1 ? 'Tomorrow' : $days.' days' }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
+            @endif
         </div>
     </div>
 </div>

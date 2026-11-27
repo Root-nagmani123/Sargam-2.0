@@ -926,6 +926,15 @@ $(document).ready(function() {
         if (courseFilterSelect2) { $sel.trigger('change.select2'); }
     }
 
+    // A dashboard card opens this page pre-filtered (?from_date=&to_date=, Y-m-d).
+    (function () {
+        var params = new URLSearchParams(window.location.search);
+        ['from_date', 'to_date'].forEach(function (key) {
+            var value = params.get(key);
+            if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) { $('#' + key + '_filter').val(value); }
+        });
+    })();
+
     let table = $('#medicalExemptionTable').DataTable({
         processing: true,
         serverSide: true,
@@ -1103,13 +1112,18 @@ $(document).ready(function() {
     function updateTimePeriodLabel() {
         var from = $('#from_date_filter').val();
         var to   = $('#to_date_filter').val();
-        if (from || to) {
+        var d = new Date();
+        var today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        if (from && from === to && from === today) {
+            $('#timePeriodLabel').text('Today');
+        } else if (from || to) {
             $('#timePeriodLabel').text((from || '…') + ' → ' + (to || '…'));
         } else {
             $('#timePeriodLabel').text('Time Period');
         }
     }
     $('#from_date_filter, #to_date_filter').on('change', updateTimePeriodLabel);
+    updateTimePeriodLabel();
 
     $('#clearPeriod').on('click', function() {
         $('#from_date_filter').val('');
@@ -1124,6 +1138,11 @@ $(document).ready(function() {
         var DOW = ['Mo','Tu','We','Th','Fr','Sa','Su'];
         var view = new Date(); view.setDate(1);
         var startD = null, endD = null;
+        // Start from a period already set from the URL.
+        function parseYmd(s){ var p = String(s || '').split('-'); return p.length === 3 ? new Date(+p[0], +p[1] - 1, +p[2]) : null; }
+        startD = parseYmd($('#from_date_filter').val());
+        endD = parseYmd($('#to_date_filter').val());
+        if (startD) { view = new Date(startD.getFullYear(), startD.getMonth(), 1); }
 
         function pad(n){ return (n < 10 ? '0' : '') + n; }
         function ymd(d){ return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }

@@ -665,6 +665,18 @@ class KitchenIssueController extends Controller
     }
 
     /**
+     * "Items Sold Today" dashboard card: the rows the Selling Voucher grid lists for
+     * ?start_date=today&end_date=today, counted on the grid's own query.
+     */
+    public function dashboardItemsSoldTodayCount(): int
+    {
+        $today = now()->toDateString();
+
+        return (int) $this->sellingVoucherItemRowsBaseQuery(Request::create('/', 'GET', ['start_date' => $today, 'end_date' => $today]))
+            ->count('kii.pk');
+    }
+
+    /**
      * @return Builder
      */
     private function sellingVoucherItemRowsBaseQuery(Request $request)
