@@ -15,6 +15,18 @@
  */
 
 return [
+    // Account deletion: open the stage's queue filtered to the requests waiting on it.
+    'account_deletion' => [
+        'Review' => [
+            'route' => 'admin.account-deletion-review.index',
+            'params' => ['status' => 'pending'],
+        ],
+        'Approval' => [
+            'route' => 'admin.account-deletion-requests.index',
+            'params' => ['status' => 'verified'],
+        ],
+    ],
+
     // Course/Programme Notifications
     'course_create' => [
         'course' => [

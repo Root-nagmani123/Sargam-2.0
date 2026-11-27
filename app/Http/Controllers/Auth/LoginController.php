@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\AccountDeletionRequest;
 use App\Models\User;
 use Adldap\Laravel\Facades\Adldap;
 use Illuminate\Support\Facades\Session;
@@ -147,6 +148,15 @@ class LoginController extends Controller
             $request->session()->regenerate();
             $this->resetLoginAttempts($username);
             Auth::login($user);
+        }
+
+        // An approved account-deletion request closes the account for good.
+        if (AccountDeletionRequest::blocksLogin((int) $user->pk)) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->back()->with('error', 'This account was deleted on request. Please contact the Computer Section, LBSNAA.');
         }
 
         /* ================= COMMON ================= */

@@ -4,6 +4,7 @@ namespace App\Http;
 
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\BindSessionToUserAgent;
+use App\Http\Middleware\LogoutClosedAccount;
 use App\Http\Middleware\BlockFcFormBuilderAction;
 use App\Http\Middleware\BlockFcFormBuilderDelete;
 use App\Http\Middleware\CompressResponse;
@@ -77,6 +78,8 @@ class Kernel extends HttpKernel
             // Reject a session cookie replayed from a different browser (copied-cookie
             // hijacking). Runs right after the session is available.
             BindSessionToUserAgent::class,
+            // End sessions still open for an account whose deletion was approved.
+            LogoutClosedAccount::class,
             ShareErrorsFromSession::class,
             VerifyCsrfToken::class,
             SubstituteBindings::class,

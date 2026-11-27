@@ -70,6 +70,8 @@ use App\Http\Controllers\Admin\Setup\DesignationMasterSetupController;
 use App\Http\Controllers\Admin\Setup\EmployeeGroupController;
 use App\Http\Controllers\Admin\Setup\EmployeeTypeController;
 use App\Http\Controllers\Admin\Setup\QuickLinksSetupController;
+use App\Http\Controllers\AccountDeletionController;
+use App\Http\Controllers\Admin\AccountDeletionRequestController;
 use App\Http\Controllers\Admin\Setup\UsefulLinksSetupController;
 use App\Http\Controllers\Admin\StationedLeaveMasterController;
 use App\Http\Controllers\Admin\StreamController;
@@ -1460,6 +1462,22 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/change_password', [UserController::class, 'change_password'])->name('admin.password.change_password');
 
     Route::post('/submit_change_password', [UserController::class, 'submit_change_password'])->name('admin.password.submit_change_password');
+
+    // Account deletion: any signed-in user may request it; the reviewer (Computer Section)
+    // verifies, then the admin approves or disapproves. Each stage has its own permission.
+    Route::prefix('account-deletion')->name('account-deletion.')->controller(AccountDeletionController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/otp', 'sendOtp')->middleware('throttle:10,1')->name('otp');
+        Route::post('/verify', 'verify')->middleware('throttle:10,1')->name('verify');
+    });
+    foreach (['review' => 'account-deletion-review', 'approve' => 'account-deletion-requests'] as $stage => $slug) {
+        Route::prefix('admin/setup/'.$slug)->name('admin.'.$slug.'.')
+            ->middleware([EnsureMenuPermission::class.':'.str_replace('-', '_', $slug)])
+            ->controller(AccountDeletionRequestController::class)->group(function () use ($stage) {
+                Route::get('/', 'index')->defaults('stage', $stage)->name('index');
+                Route::post('/{deletionRequest}/decide', 'decide')->defaults('stage', $stage)->whereNumber('deletionRequest')->name('decide');
+            });
+    }
 
     // Report walal route
 
