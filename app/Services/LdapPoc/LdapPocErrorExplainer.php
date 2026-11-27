@@ -79,8 +79,8 @@ class LdapPocErrorExplainer
         }
 
         $map = [
-            -1 => ['LDAP connection failure', 'The LDAP server could not be reached (host, port, firewall, or SSL handshake).',
-                'Check LDAP_HOSTS / port and that this server can reach the domain controller. For LDAPS, check the certificate is trusted by PHP (TLS_REQCERT / ldap.conf).'],
+            -1 => ['LDAP connection failure', 'The LDAP server could not be reached, or the LDAPS (636) TLS handshake failed — most often because the CA certificate is not trusted, or the host name connected to does not match the name on the DC certificate.',
+                'Check this server can reach port 636. Set LDAP_POC_CA_CERT to the existing LDAP CA certificate (PEM) or TLS_CACERT in the system ldap.conf. If LDAP_HOSTS is an IP, set LDAP_POC_HOSTS to the DC host name on its certificate.'],
             1 => ['Operations error', 'The server could not perform the operation in the current state — usually the connection is not bound.',
                 'Confirm the bind succeeded before the operation.'],
             2 => ['Protocol error', 'The request was malformed for the server, often an LDAP v2/v3 mismatch.',

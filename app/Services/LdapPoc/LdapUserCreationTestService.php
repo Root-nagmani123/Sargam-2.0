@@ -60,6 +60,8 @@ class LdapUserCreationTestService
             'use_ssl' => (bool) $settings['use_ssl'],
             'use_tls' => (bool) $settings['use_tls'],
             'secure_channel' => (bool) $settings['use_ssl'] || (bool) $settings['use_tls'],
+            'hosts_overridden' => trim((string) ($this->config['connection']['hosts'] ?? '')) !== '',
+            'ca_cert' => $this->caCertPath() !== null ? basename($this->caCertPath()) : null,
             'problems' => $this->configurationProblems(),
         ];
     }
@@ -89,6 +91,16 @@ class LdapUserCreationTestService
 
         if ($this->upnSuffix() === '') {
             $problems[] = 'No UPN suffix: set LDAP_POC_UPN_SUFFIX or LDAP_ACCOUNT_SUFFIX.';
+        }
+
+        $settings = $this->connectionSettings();
+        if ($settings['use_ssl'] && $settings['use_tls']) {
+            $problems[] = 'Set only one of LDAP_POC_USE_SSL (LDAPS, port 636) and LDAP_POC_USE_TLS (StartTLS, port 389).';
+        }
+
+        $ca = $this->caCertPath();
+        if ($ca !== null && ! is_readable($ca)) {
+            $problems[] = 'LDAP_POC_CA_CERT points to a file that does not exist or is not readable by PHP: '.$ca;
         }
 
         return $problems;
@@ -213,7 +225,7 @@ class LdapUserCreationTestService
             if (! $conn->canChangePasswords()) {
                 $this->step($report, E::STAGE_PASSWORD, 'warn',
                     'Password NOT set: this connection is plain LDAP (no SSL/TLS). Active Directory only accepts password writes over LDAPS or StartTLS. '
-                    .'Set LDAP_POC_PORT=636 and LDAP_POC_USE_SSL=true (POC only — the login connection is unaffected), then delete and recreate the test user.');
+                    .'The POC defaults to LDAPS on 636 — remove the LDAP_POC_PORT / LDAP_POC_USE_SSL overrides from .env (POC only — the login connection is unaffected), then delete and recreate the test user.');
                 $report['warnings'][] = 'User creation works, but passwords cannot be set over the current (unencrypted) connection.';
                 $report['ok'] = true;
 
@@ -400,6 +412,7 @@ class LdapUserCreationTestService
     private function connect(array &$report): ?Provider
     {
         try {
+            $this->applyTlsTrust();
             $provider = new Provider($this->connectionSettings(), new Ldap('ldap-poc'));
         } catch (Throwable $e) {
             $this->fail($report, E::STAGE_CONNECT, 'LDAP connection failure', $this->safeMessage($e),
@@ -534,6 +547,7 @@ class LdapUserCreationTestService
     private function verifyLogin(array &$report, string $upn, #[\SensitiveParameter] string $password): bool
     {
         try {
+            $this->applyTlsTrust();
             $provider = new Provider($this->connectionSettings(), new Ldap('ldap-poc-verify'));
             $provider->connect($upn, $password);
             $this->step($report, E::STAGE_VERIFY_LOGIN, 'ok', 'Bound successfully as the new test account — it can log in.');
@@ -563,6 +577,9 @@ class LdapUserCreationTestService
         $s = $this->ldapSettings;
         $o = (array) ($this->config['connection'] ?? []);
 
+        if (trim((string) ($o['hosts'] ?? '')) !== '') {
+            $s['hosts'] = preg_split('/\s+/', trim($o['hosts']));
+        }
         if (($o['port'] ?? null) !== null && $o['port'] !== '') {
             $s['port'] = (int) $o['port'];
         }
@@ -574,6 +591,37 @@ class LdapUserCreationTestService
         $s['timeout'] = max(1, (int) ($o['timeout'] ?? 10));
 
         return $s;
+    }
+
+    private function caCertPath(): ?string
+    {
+        $path = trim((string) ($this->config['connection']['ca_cert'] ?? ''));
+
+        return $path === '' ? null : $path;
+    }
+
+    /**
+     * Point OpenLDAP at the CA for LDAPS and require a valid certificate.
+     *
+     * Set globally (null link) because this PHP build has no
+     * LDAP_OPT_X_TLS_NEWCTX, so per-connection TLS options set after
+     * ldap_connect() are not guaranteed to be honoured. The global only adds
+     * trust in this CA for this PHP process; the login connection is plain
+     * LDAP and does not use TLS. Without LDAP_POC_CA_CERT the system
+     * ldap.conf (TLS_CACERT) applies.
+     */
+    private function applyTlsTrust(): void
+    {
+        $settings = $this->connectionSettings();
+        if (! $settings['use_ssl'] && ! $settings['use_tls']) {
+            return;
+        }
+
+        @ldap_set_option(null, LDAP_OPT_X_TLS_REQUIRE_CERT, LDAP_OPT_X_TLS_DEMAND);
+
+        if ($ca = $this->caCertPath()) {
+            @ldap_set_option(null, LDAP_OPT_X_TLS_CACERTFILE, $ca);
+        }
     }
 
     private function guardConfiguration(array &$report): bool

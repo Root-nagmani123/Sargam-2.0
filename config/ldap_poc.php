@@ -43,16 +43,29 @@ return [
     'registry_path' => storage_path('app/ldap-poc/registry.json'),
 
     /*
-    | Client-side transport overrides for the POC connection only. null means
-    | "inherit the login connection's value". Active Directory refuses to set
-    | a password (unicodePwd) over plain LDAP on 389, so to test the password
-    | step without touching the login settings, set e.g.
-    | LDAP_POC_PORT=636 + LDAP_POC_USE_SSL=true here.
+    | Transport for the POC connection only — the login connection keeps its
+    | own settings. Active Directory refuses to set a password (unicodePwd)
+    | over plain LDAP, so the POC defaults to LDAPS on 636. Set
+    | LDAP_POC_PORT=389 + LDAP_POC_USE_SSL=false to fall back to plain LDAP
+    | (account creation only, no password).
     */
     'connection' => [
-        'port' => env('LDAP_POC_PORT'),
-        'use_ssl' => env('LDAP_POC_USE_SSL'),
-        'use_tls' => env('LDAP_POC_USE_TLS'),
+        // Space-separated, like LDAP_HOSTS; null inherits LDAP_HOSTS. LDAPS
+        // verifies the certificate's host name, so if LDAP_HOSTS is an IP and
+        // the DC certificate is issued to its FQDN, put the FQDN here.
+        'hosts' => env('LDAP_POC_HOSTS'),
+        'port' => env('LDAP_POC_PORT', 636),
+        'use_ssl' => env('LDAP_POC_USE_SSL', true),
+        'use_tls' => env('LDAP_POC_USE_TLS', false),
+
+        // CA certificate (PEM) that signed the domain controller's LDAPS
+        // certificate — the existing LDAP certificate. Optional: when unset,
+        // PHP's OpenLDAP uses TLS_CACERT from the system ldap.conf
+        // (Linux: /etc/ldap/ldap.conf or /etc/openldap/ldap.conf;
+        //  Windows: C:\OpenLDAP\sysconf\ldap.conf).
+        // The certificate is always verified; there is no "skip" option.
+        'ca_cert' => env('LDAP_POC_CA_CERT'),
+
         // The login connection inherits a 1000s timeout; a test page should
         // fail fast instead of hanging the request.
         'timeout' => (int) env('LDAP_POC_TIMEOUT', 10),

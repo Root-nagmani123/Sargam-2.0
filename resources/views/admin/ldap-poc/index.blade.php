@@ -122,7 +122,11 @@
             <tr><th>Username prefix</th><td><code>{{ $summary['username_prefix'] }}</code></td></tr>
             <tr><th>UPN suffix</th><td>{{ $summary['upn_suffix'] }}</td></tr>
             <tr><th>Transport</th><td class="{{ $summary['secure_channel'] ? 'ok' : 'warn' }}">
-                port {{ $summary['port'] }}, {{ $summary['use_ssl'] ? 'SSL' : ($summary['use_tls'] ? 'StartTLS' : 'plain LDAP (passwords cannot be set)') }}</td></tr>
+                port {{ $summary['port'] }}, {{ $summary['use_ssl'] ? 'LDAPS (SSL)' : ($summary['use_tls'] ? 'StartTLS' : 'plain LDAP (passwords cannot be set)') }}</td></tr>
+            @if ($summary['secure_channel'])
+                <tr><th>CA certificate</th><td>{{ $summary['ca_cert'] ?? 'not set — using TLS_CACERT from the system ldap.conf' }}; server certificate is always verified</td></tr>
+                <tr><th>Host</th><td>{{ $summary['hosts_overridden'] ? 'LDAP_POC_HOSTS (POC override)' : 'LDAP_HOSTS (same as login)' }}</td></tr>
+            @endif
         </table>
         @foreach ($summary['problems'] as $p)
             <p class="fail">&#10007; {{ $p }}</p>
