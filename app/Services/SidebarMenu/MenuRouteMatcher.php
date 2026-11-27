@@ -164,6 +164,13 @@ class MenuRouteMatcher
 
         $menuRoute = trim($menuRoute);
 
+        // {username} / {email} / {phone}: filled in for the signed-in user on
+        // every call - see MenuUrlVariables. Not withMenuParam()'d, like any
+        // other absolute Url below.
+        if (MenuUrlVariables::hasVariables($menuRoute)) {
+            return MenuUrlVariables::href($menuRoute, $menuId);
+        }
+
         if (preg_match('#^https?://#i', $menuRoute)) {
             return $menuRoute;
         }

@@ -734,7 +734,9 @@ class MenuService
                         // non-existent slug (menus has no `slug` column, so the
                         // fallback resolved to url('#')).
                         $menu->url = $menu->route
-                            ? url($menu->route)
+                            ? (MenuUrlVariables::hasVariables($menu->route)
+                                ? MenuUrlVariables::href($menu->route, $menu->id)
+                                : url($menu->route))
                             : (filled($menu->attachment)
                                 ? asset('storage/'.ltrim((string) $menu->attachment, '/'))
                                 : url($menu->slug ?? '#'));

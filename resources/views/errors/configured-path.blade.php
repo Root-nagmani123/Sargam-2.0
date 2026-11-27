@@ -12,6 +12,7 @@
                         $messages = [
                             'missing_path' => 'Path is not added to this page.',
                             'invalid_route' => 'Incorrect route/path configured.',
+                            'missing_profile' => 'Missing profile details.',
                             'not_found' => 'Requested page not found.',
                         ];
                         $message = $messages[$reason ?? 'not_found'] ?? $messages['not_found'];
@@ -22,7 +23,11 @@
                         <p class="text-muted small mb-4">Menu reference ID: {{ $menu_id }}</p>
                     @endif
                     <p class="text-body-secondary mb-4">
-                        The link may be misconfigured in the menu setup. Contact your administrator or return to the dashboard.
+                        @if (($reason ?? null) === 'missing_profile')
+                            This link needs your username, email or phone number, and your profile does not have it. Contact your administrator to update your profile.
+                        @else
+                            The link may be misconfigured in the menu setup. Contact your administrator or return to the dashboard.
+                        @endif
                     </p>
                     <div class="d-flex flex-wrap gap-2 justify-content-center">
                         <a href="{{ route('admin.dashboard') }}" class="btn btn-primary">Go to Dashboard</a>

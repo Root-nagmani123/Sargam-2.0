@@ -255,6 +255,28 @@
                             <input type="text" class="form-control sbm-control font-monospace" name="route" id="route"
                                    placeholder="e.g. admin/course-master"
                                    autocomplete="off" maxlength="255">
+                            {{-- Per-user variables (MenuUrlVariables): the token is
+                                 stored as typed and filled in for whoever clicks. --}}
+                            @php($sbmUrlVariableHosts = \App\Services\SidebarMenu\MenuUrlVariables::allowedHosts())
+                            <div class="d-flex align-items-center gap-2 mt-2">
+                                <label class="sbm-form-label mb-0 text-nowrap" for="routeVariable">Insert variable</label>
+                                <select class="form-select form-select-sm sbm-control" id="routeVariable" aria-describedby="routeVariableHelp">
+                                    <option value="">None</option>
+                                    @foreach (\App\Services\SidebarMenu\MenuUrlVariables::LABELS as $sbmToken => $sbmLabel)
+                                        <option value="{{ '{'.$sbmToken.'}' }}">{{ $sbmLabel }} — {{ '{'.$sbmToken.'}' }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <p class="sbm-form-help" id="routeVariableHelp">
+                                Replaced with the signed-in user's own value when the menu is clicked, e.g.
+                                <code>https://sargam.lbsnaa.gov.in/LBSNA/page?uname={username}</code>.
+                                One variable per Url, in the query string only, on an https:// Url
+                                @if ($sbmUrlVariableHosts)
+                                    on {{ implode(', ', $sbmUrlVariableHosts) }}.
+                                @else
+                                    — no host is approved yet, so variables cannot be saved.
+                                @endif
+                            </p>
                         </div>
 
                         {{-- A parent menu that only opens a sub-list has no
@@ -1019,6 +1041,7 @@ $(function () {
         var isContainer = $('#is_container').is(':checked');
 
         $('#route').prop('disabled', isContainer);
+        $('#routeVariable').prop('disabled', isContainer);
         $('#attachment').prop('disabled', isContainer);
 
         if (isContainer) {
@@ -1028,9 +1051,56 @@ $(function () {
         }
 
         $('#attachmentCurrentWrap').toggleClass('sbm-dim', isContainer);
+
+        // Add and Edit both end here after filling #route (.val() fires no
+        // event), so this is what shows the saved variable on Edit.
+        sbmSyncRouteVariable();
     }
 
     $('#is_container').on('change', sbmSyncContainerFields);
+
+    // A Url carries at most ONE {variable} (MenuUrlVariables). The picker shows
+    // the one in the Url field; choosing another replaces it in place, choosing
+    // None removes it, and with no variable yet the choice goes in at the cursor.
+    var SBM_URL_VARIABLE = /\{(username|email|phone)\}/g;
+
+    function sbmSyncRouteVariable() {
+        var found = ($('#route').val() || '').match(SBM_URL_VARIABLE);
+        $('#routeVariable').val(found ? found[0] : '');
+    }
+
+    $('#route').on('input change', sbmSyncRouteVariable);
+
+    $('#routeVariable').on('change', function () {
+        var token = $(this).val();
+        var input = document.getElementById('route');
+        if (!input || input.disabled) { sbmSyncRouteVariable(); return; }
+
+        var value = input.value;
+        var first = value.search(SBM_URL_VARIABLE);
+        var caret;
+        var next;
+
+        if (first !== -1) {
+            // Replace: drop every variable, put the chosen one where the first was.
+            var stripped = value.replace(SBM_URL_VARIABLE, '');
+            next = stripped.slice(0, first) + token + stripped.slice(first);
+            caret = first + token.length;
+        } else {
+            if (!token) { return; }
+            var start = typeof input.selectionStart === 'number' ? input.selectionStart : value.length;
+            var end = typeof input.selectionEnd === 'number' ? input.selectionEnd : value.length;
+            next = value.slice(0, start) + token + value.slice(end);
+            caret = start + token.length;
+        }
+
+        if (next.length > 255) { sbmSyncRouteVariable(); return; }
+
+        input.value = next;
+        input.focus();
+        input.setSelectionRange(caret, caret);
+        $(input).trigger('input').trigger('change');
+    });
 
     $('#sbmAddBtn').on('click', openAddModal);
 

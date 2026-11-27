@@ -745,6 +745,14 @@ class SidebarNavResolver
             return null;
         }
 
+        // Per-user Url: link it only when it resolves for this user; otherwise the
+        // crumb renders as plain text, as for any other unlinkable menu.
+        if (MenuUrlVariables::hasVariables($route)) {
+            $href = MenuUrlVariables::href($route, $menu->id);
+
+            return str_contains($href, 'navigation-error') ? null : $href;
+        }
+
         if (preg_match('#^https?://#i', $route)) {
             return $route;
         }

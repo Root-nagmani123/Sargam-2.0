@@ -9,6 +9,7 @@
 ######################################
 
 namespace App\Http\Requests\SidebarMenu;
+use App\Services\SidebarMenu\MenuUrlVariables;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -30,7 +31,19 @@ class MenuRequest extends FormRequest
             'group_id' => 'required|exists:menu_groups,id',
             'parent_id' => 'nullable|exists:menus,id',
             'name' => 'required',
-            'route' => 'nullable|string|max:255',
+            // {username} / {email} / {phone}: known tokens, query string only,
+            // https on an approved host. Static Urls are never touched by it.
+            'route' => [
+                'nullable',
+                'string',
+                'max:255',
+                function ($attribute, $value, $fail) {
+                    $problem = MenuUrlVariables::problem($value);
+                    if ($problem !== null) {
+                        $fail($problem);
+                    }
+                },
+            ],
             'permission_name' => [
                 'nullable',
                 'string',

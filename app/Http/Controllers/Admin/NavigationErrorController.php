@@ -10,7 +10,7 @@ class NavigationErrorController extends Controller
     public function show(Request $request)
     {
         $reason = $request->query('reason', 'not_found');
-        $allowed = ['missing_path', 'invalid_route', 'not_found'];
+        $allowed = ['missing_path', 'invalid_route', 'missing_profile', 'not_found'];
         if (!in_array($reason, $allowed, true)) {
             $reason = 'not_found';
         }
