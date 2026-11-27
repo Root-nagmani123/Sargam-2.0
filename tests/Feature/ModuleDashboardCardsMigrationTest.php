@@ -48,6 +48,28 @@ class ModuleDashboardCardsMigrationTest extends TestCase
         }
 
         $this->assertEqualsCanonicalizing($this->expectedAssignments(), $this->actualAssignments());
+        // Every assignment up() attempts is either made or reported as skipped (PR #356 F-015): 44 for the
+        // new cards, plus two per existing Security card (56 where all six exist).
+        $attempted = 44 + 2 * DB::table('dashboard_cards')->whereIn('key', $this->migration::SECURITY_APPROVER_CARDS)->count();
+        $this->assertCount($attempted, array_merge($this->expectedAssignments(), $this->migration->skipped));
+    }
+
+    /** PR #356 F-015: an assignment whose role does not exist here is reported, not dropped silently. */
+    public function test_an_assignment_whose_role_is_missing_is_reported(): void
+    {
+        if (! DB::table('roles')->where('name', 'CR-Admin')->exists()) {
+            $this->markTestSkipped('needs the CR-Admin role');
+        }
+        DB::table('roles')->where('name', 'CR-Admin')->update(['name' => 'CR-Admin (renamed by test)']);
+
+        $this->migration->up();
+
+        $this->assertContains('CR-Admin|course_repository_folders|setup', $this->migration->skipped);
+        $this->assertFalse(DB::table('role_dashboard_cards as rdc')->join('roles as r', 'r.id', '=', 'rdc.role_id')
+            ->join('dashboard_cards as c', 'c.id', '=', 'rdc.dashboard_card_id')
+            ->where('r.name', 'CR-Admin (renamed by test)')->where('c.key', 'course_repository_folders')->exists());
+        // The card itself is still created, so a count of the 23 card rows alone would pass.
+        $this->assertTrue(DB::table('dashboard_cards')->where('key', 'course_repository_folders')->exists());
     }
 
     public function test_every_card_the_dashboard_defines_has_a_row(): void

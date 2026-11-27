@@ -475,6 +475,9 @@ class RoleAliasCapabilityTest extends TestCase
     /** A running-course student who has a trainee login, so Notify OT has someone to reach. */
     private function runningStudentWithLogin(): int
     {
+        $this->ensureRunningCourse(fn ($q) => $q->whereExists(fn ($e) => $e->from('student_master_course__map as s')
+            ->join('user_credentials as u', fn ($j) => $j->on('u.user_id', '=', 's.student_master_pk')->where('u.user_category', 'S'))
+            ->whereColumn('s.course_master_pk', 'c.pk')->where('s.active_inactive', 1)));
         $pk = DB::table('student_master_course__map as s')
             ->join('course_master as c', 'c.pk', '=', 's.course_master_pk')
             ->join('user_credentials as u', fn ($j) => $j->on('u.user_id', '=', 's.student_master_pk')->where('u.user_category', 'S'))
@@ -671,9 +674,34 @@ class RoleAliasCapabilityTest extends TestCase
         return [$r->status(), $r->status() === 200 ? $r->json('recordsTotal') : null];
     }
 
+    /**
+     * PR #356 F-014: these tests need a course that is running today, and the dev databases' courses
+     * age out (none was running on testsargam8 or testsargam9 after 2026-11-25, so the tests skipped
+     * and the file still reported OK). When no qualifying course runs, reopen the most recently ended
+     * one by moving its end_date forward, inside this test's rolled-back transaction. $where narrows
+     * which courses qualify (students with a trainee login, a Faculty-login coordinator).
+     */
+    private function ensureRunningCourse(?\Closure $where = null): void
+    {
+        $courses = fn () => DB::table('course_master as c')
+            ->where('c.active_inactive', 1)
+            ->whereExists(fn ($q) => $q->from('student_master_course__map as s')
+                ->whereColumn('s.course_master_pk', 'c.pk')->where('s.active_inactive', 1))
+            ->when($where, $where);
+        if ($courses()->where('c.end_date', '>=', now()->toDateString())->exists()) {
+            return;
+        }
+        $pk = $courses()->orderByDesc('c.end_date')->orderByDesc('c.pk')->value('c.pk');
+        if (! $pk) {
+            $this->markTestSkipped('no course with active students to run');
+        }
+        DB::table('course_master')->where('pk', $pk)->update(['end_date' => now()->addDays(30)->toDateString()]);
+    }
+
     /** A student enrolled on a running course. */
     private function runningStudentPk(): int
     {
+        $this->ensureRunningCourse();
         $pk = DB::table('student_master_course__map as s')
             ->join('course_master as c', 'c.pk', '=', 's.course_master_pk')
             ->where('s.active_inactive', 1)->where('c.active_inactive', 1)
@@ -746,6 +774,13 @@ class RoleAliasCapabilityTest extends TestCase
     public function test_faculty_student_detail_follows_the_access_service(): void
     {
         $access = app(StudentDetailAccessService::class);
+        // A running course whose coordinator is a Faculty login, so some faculty may view its students.
+        $this->ensureRunningCourse(fn ($q) => $q->whereExists(fn ($e) => $e->from('course_coordinator_master as cc')
+            ->join('faculty_master as f', 'f.pk', '=', 'cc.Coordinator_name')
+            ->join('user_credentials as u', 'u.user_id', '=', 'f.employee_master_pk')
+            ->join('model_has_roles as m', fn ($j) => $j->on('m.model_id', '=', 'u.pk')->where('m.model_type', User::class))
+            ->join('roles as r', fn ($j) => $j->on('r.id', '=', 'm.role_id')->where('r.name', 'Faculty'))
+            ->whereColumn('cc.courses_master_pk', 'c.pk')));
         $students = DB::table('student_master_course__map as s')
             ->join('course_master as c', 'c.pk', '=', 's.course_master_pk')
             ->where('s.active_inactive', 1)->where('c.active_inactive', 1)

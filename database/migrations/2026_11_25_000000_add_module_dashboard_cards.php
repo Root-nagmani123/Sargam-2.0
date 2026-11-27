@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -12,7 +13,8 @@ use Illuminate\Support\Facades\Schema;
  *
  * Insert-only (PR #356 F-008): a card whose key exists is left as it is (an admin may have
  * relabelled or reordered it), an existing assignment stays, and a role or tab missing from the
- * environment is skipped. Nothing is updated or deleted, unlike the removed align migration (F-003).
+ * environment is skipped and reported (see $skipped). Nothing is updated or deleted, unlike the removed
+ * align migration (F-003).
  * Tests seed through this same up() (tests/Feature/Concerns/SeedsModuleDashboardCards.php).
  */
 return new class extends Migration
@@ -50,21 +52,28 @@ return new class extends Migration
         'duplicate_contractual_id', 'requested_family_id', 'requested_vehicle_pass',
     ];
 
+    /** "role|card key|tab" for every assignment the last up() skipped because the role or tab is missing here. */
+    public array $skipped = [];
+
     public function up(): void
     {
         if (! Schema::hasColumn('role_dashboard_cards', 'sidebar_category_id')) {
             throw new RuntimeException('Run 2026_11_13_000000_add_module_to_role_dashboard_cards first: assignments are per header tab.');
         }
 
+        $this->skipped = [];
         $roles = DB::table('roles')->pluck('id', 'name');
         $tabs = DB::table('sidebar_categories')->whereNull('deleted_at')->pluck('id', 'slug');
         // The primary key is (role, card, tab), so an existing assignment is ignored.
-        $assign = function (int $cardId, string $role, string $tab) use ($roles, $tabs) {
-            if (isset($roles[$role], $tabs[$tab])) {
-                DB::table('role_dashboard_cards')->insertOrIgnore([
-                    'role_id' => $roles[$role], 'dashboard_card_id' => $cardId, 'sidebar_category_id' => $tabs[$tab],
-                ]);
+        $assign = function (int $cardId, string $key, string $role, string $tab) use ($roles, $tabs) {
+            if (! isset($roles[$role], $tabs[$tab])) {
+                $this->skipped[] = "$role|$key|$tab";
+
+                return;
             }
+            DB::table('role_dashboard_cards')->insertOrIgnore([
+                'role_id' => $roles[$role], 'dashboard_card_id' => $cardId, 'sidebar_category_id' => $tabs[$tab],
+            ]);
         };
 
         foreach (self::CARDS as $key => [$label, $icon, $colour, $assignments]) {
@@ -75,21 +84,43 @@ return new class extends Migration
                     'created_at' => now(), 'updated_at' => now(),
                 ]);
             foreach ($assignments as [$role, $tab]) {
-                $assign($cardId, $role, $tab);
+                $assign($cardId, $key, $role, $tab);
             }
         }
 
-        foreach (DB::table('dashboard_cards')->whereIn('key', self::SECURITY_APPROVER_CARDS)->pluck('id') as $cardId) {
-            $assign($cardId, 'Security Approver II', 'home');
-            $assign($cardId, 'Security Approver III', 'home');
+        foreach (DB::table('dashboard_cards')->whereIn('key', self::SECURITY_APPROVER_CARDS)->pluck('id', 'key') as $key => $cardId) {
+            $assign($cardId, $key, 'Security Approver II', 'home');
+            $assign($cardId, $key, 'Security Approver III', 'home');
+        }
+
+        // A skipped assignment leaves that role without the card while the cards themselves exist, so a
+        // count of the card rows cannot show it (PR #356 F-015). Say so where the deploy sees it.
+        if ($this->skipped !== []) {
+            $message = 'add_module_dashboard_cards: '.count($this->skipped).' assignment(s) skipped, role or tab missing: '.implode(', ', $this->skipped);
+            Log::warning($message);
+            if (! app()->runningUnitTests() && defined('STDERR')) {
+                fwrite(STDERR, $message.PHP_EOL);
+            }
         }
     }
 
     /**
      * Deliberately a no-op: up() cannot tell a row it created from one that predates it (testsargam8
      * got these cards from the removed 2026-11-19 migrations), so deleting here could remove a card an
-     * admin set up. Re-running up() is safe. To remove the cards by hand, delete the CARDS keys from
-     * dashboard_cards; their assignments go with them (ON DELETE CASCADE).
+     * admin set up. Re-running up() is safe.
+     *
+     * Rolling the release back therefore takes a manual step (PR #356 F-015): revert the code, then
+     * delete the CARDS keys from dashboard_cards; their assignments go with them (ON DELETE CASCADE).
+     * Without it the previous code shows each of these cards as "00" with no link, because it has no
+     * definition for their keys:
+     *
+     *   DELETE FROM dashboard_cards WHERE `key` IN ('medical_exemptions_today', 'mess_pending_purchase_orders',
+     *     'mess_low_stock_items', 'mess_unpaid_bills', 'mess_items_sold_today', 'estate_pending_requests',
+     *     'estate_put_in_hac', 'estate_hac_pending', 'estate_vacant_houses', 'estate_pending_meter_readings',
+     *     'centcom_open_complaints', 'centcom_reported_complaints', 'centcom_all_open_complaints',
+     *     'pending_leave_approvals', 'open_discipline_memos', 'fc_registration_applications',
+     *     'fc_exemption_applications', 'course_repository_folders', 'pending_feedback_students',
+     *     'my_idcard_requests_pending', 'my_estate_requests_pending', 'my_mess_bills_unpaid', 'my_open_issues');
      */
     public function down(): void
     {
