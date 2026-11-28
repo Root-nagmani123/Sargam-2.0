@@ -46,7 +46,7 @@
 
                 <!-- Username -->
                 <div class="col-md-12">
-                    <label class="form-label">User Name</label>
+                    <label class="form-label">Generate Username</label>
                     <input type="text" class="form-control" placeholder="Enter your User Name" name="reg_name"
                         id="reg_name" value="{{ strtolower((string) old('reg_name', '')) }}" required
                         autocomplete="username" autocapitalize="none" spellcheck="false"
